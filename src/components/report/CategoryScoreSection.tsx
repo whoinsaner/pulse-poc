@@ -2,8 +2,11 @@ import { useState } from 'react';
 import { ParameterScoreData, StakeholderLens, CATEGORY_COLORS } from '@/types/database';
 import { ScoreRing } from '@/components/ScoreRing';
 import { ParameterScoreCard } from './ParameterScoreCard';
+import { CategoryRadarChart } from '@/components/charts/CategoryRadarChart';
+import { CategoryBarChart } from '@/components/charts/CategoryBarChart';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
-import { BarChart3, ChevronDown, ChevronUp } from 'lucide-react';
+import { BarChart3, ChevronDown, ChevronUp, Radar } from 'lucide-react';
 
 interface CategoryScoreSectionProps {
   categoryScores: Record<string, number>;
@@ -17,6 +20,7 @@ export function CategoryScoreSection({
   activeLens,
 }: CategoryScoreSectionProps) {
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
+  const [chartView, setChartView] = useState<'radar' | 'bar'>('radar');
 
   const categories = Object.entries(categoryScores).sort(([, a], [, b]) => b - a);
 
@@ -26,11 +30,36 @@ export function CategoryScoreSection({
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
-      <div className="flex items-center gap-3 mb-8">
-        <div className="p-2 rounded-lg bg-primary/10">
-          <BarChart3 className="h-5 w-5 text-primary" />
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-primary/10">
+            <BarChart3 className="h-5 w-5 text-primary" />
+          </div>
+          <h2 className="text-2xl sm:text-3xl font-bold">Score Breakdown</h2>
         </div>
-        <h2 className="text-2xl sm:text-3xl font-bold">Score Breakdown</h2>
+        
+        {/* Chart toggle */}
+        <Tabs value={chartView} onValueChange={(v) => setChartView(v as 'radar' | 'bar')}>
+          <TabsList className="bg-muted/50">
+            <TabsTrigger value="radar" className="gap-2">
+              <Radar className="h-4 w-4" />
+              <span className="hidden sm:inline">Radar</span>
+            </TabsTrigger>
+            <TabsTrigger value="bar" className="gap-2">
+              <BarChart3 className="h-4 w-4" />
+              <span className="hidden sm:inline">Bar</span>
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
+
+      {/* Charts Section */}
+      <div className="mb-10 p-6 rounded-xl bg-card border border-border animate-fade-up">
+        {chartView === 'radar' ? (
+          <CategoryRadarChart categoryScores={categoryScores} />
+        ) : (
+          <CategoryBarChart categoryScores={categoryScores} horizontal />
+        )}
       </div>
 
       {/* Category overview grid */}
