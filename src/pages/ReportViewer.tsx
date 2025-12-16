@@ -9,9 +9,11 @@ import { ExecutiveSummary } from '@/components/report/ExecutiveSummary';
 import { CategoryScoreSection } from '@/components/report/CategoryScoreSection';
 import { InsightsSection } from '@/components/report/InsightsSection';
 import { CharactersSection } from '@/components/report/CharactersSection';
+import { PlatformComparison } from '@/components/report/PlatformComparison';
+import { ExportDialog } from '@/components/report/ExportDialog';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, Download, Share2 } from 'lucide-react';
+import { ArrowLeft, Share2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export default function ReportViewer() {
@@ -108,6 +110,7 @@ export default function ReportViewer() {
     { id: 'overview', label: 'Overview' },
     { id: 'summary', label: 'Executive Summary' },
     { id: 'scores', label: 'Score Breakdown' },
+    { id: 'platform', label: 'Platform Fit' },
     { id: 'insights', label: 'Key Insights' },
     { id: 'characters', label: 'Characters' },
   ];
@@ -137,10 +140,7 @@ export default function ReportViewer() {
                 <Share2 className="h-4 w-4 mr-2" />
                 Share
               </Button>
-              <Button variant="outline" size="sm">
-                <Download className="h-4 w-4 mr-2" />
-                Export
-              </Button>
+              <ExportDialog reportId={report.id} reportTitle={report.title} />
             </div>
           </div>
           
@@ -266,6 +266,18 @@ export default function ReportViewer() {
           activeLens={activeLens}
         />
       </section>
+
+      {/* Platform Fit Analysis */}
+      {reportData.lensScores && (
+        <section
+          ref={(el) => (sectionsRef.current['platform'] = el)}
+          className="scroll-section"
+        >
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
+            <PlatformComparison lensScores={reportData.lensScores} />
+          </div>
+        </section>
+      )}
 
       {/* Key Insights */}
       <section
