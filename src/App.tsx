@@ -10,6 +10,7 @@ import Onboarding from "./pages/Onboarding";
 import Dashboard from "./pages/Dashboard";
 import Upload from "./pages/Upload";
 import Scripts from "./pages/Scripts";
+import ReportViewer from "./pages/ReportViewer";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +29,7 @@ const App = () => (
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/upload" element={<Upload />} />
             <Route path="/scripts" element={<Scripts />} />
+            <Route path="/reports/:runId" element={<ReportViewer />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
