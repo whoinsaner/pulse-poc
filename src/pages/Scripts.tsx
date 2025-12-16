@@ -8,6 +8,12 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
   ArrowLeft,
   Upload,
   FileText,
@@ -16,6 +22,7 @@ import {
   MoreVertical,
   Play,
   Trash2,
+  BarChart3,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -25,6 +32,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { AnalysisTrigger } from '@/components/AnalysisTrigger';
 import type { Script, ScriptFormat, ScriptType } from '@/types/database';
 
 const FORMAT_LABELS: Record<ScriptFormat, string> = {
@@ -49,6 +57,8 @@ export default function Scripts() {
   const { toast } = useToast();
   const [scripts, setScripts] = useState<Script[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedScript, setSelectedScript] = useState<Script | null>(null);
+  const [showAnalyzeDialog, setShowAnalyzeDialog] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -112,8 +122,9 @@ export default function Scripts() {
     }
   };
 
-  const handleAnalyze = (scriptId: string) => {
-    navigate(`/analysis/${scriptId}`);
+  const handleAnalyze = (script: Script) => {
+    setSelectedScript(script);
+    setShowAnalyzeDialog(true);
   };
 
   if (authLoading) {
@@ -194,7 +205,7 @@ export default function Scripts() {
               <Card
                 key={script.id}
                 className="card-hover group cursor-pointer"
-                onClick={() => handleAnalyze(script.id)}
+                onClick={() => handleAnalyze(script)}
               >
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between mb-4">
@@ -210,7 +221,7 @@ export default function Scripts() {
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={(e) => {
                           e.stopPropagation();
-                          handleAnalyze(script.id);
+                          handleAnalyze(script);
                         }}>
                           <Play className="h-4 w-4 mr-2" />
                           Analyze
@@ -261,6 +272,25 @@ export default function Scripts() {
             ))}
           </div>
         )}
+
+        {/* Analyze Dialog */}
+        <Dialog open={showAnalyzeDialog} onOpenChange={setShowAnalyzeDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Analyze Script</DialogTitle>
+            </DialogHeader>
+            {selectedScript && (
+              <AnalysisTrigger
+                scriptId={selectedScript.id}
+                scriptTitle={selectedScript.title}
+                onAnalysisComplete={(runId) => {
+                  setShowAnalyzeDialog(false);
+                  navigate(`/reports/${runId}`);
+                }}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
       </main>
     </div>
   );
