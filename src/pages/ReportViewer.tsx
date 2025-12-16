@@ -4,10 +4,11 @@ import { useAuth } from '@/lib/auth';
 import { supabase } from '@/integrations/supabase/client';
 import { Report, StakeholderLens, ReportData, LENS_CONFIG } from '@/types/database';
 import { LensSelector } from '@/components/LensToggle';
-import { ScoreRing } from '@/components/ScoreRing';
-import { ExecutiveSummary } from '@/components/report/ExecutiveSummary';
-import { CategoryScoreSection } from '@/components/report/CategoryScoreSection';
-import { InsightsSection } from '@/components/report/InsightsSection';
+import { ProjectSnapshot } from '@/components/report/ProjectSnapshot';
+import { StudioRecommendation } from '@/components/report/StudioRecommendation';
+import { StrengthsWeaknesses } from '@/components/report/StrengthsWeaknesses';
+import { ParameterScoring } from '@/components/report/ParameterScoring';
+import { RiskMap } from '@/components/report/RiskMap';
 import { CharactersSection } from '@/components/report/CharactersSection';
 import { PlatformComparison } from '@/components/report/PlatformComparison';
 import { ExportDialog } from '@/components/report/ExportDialog';
@@ -108,10 +109,11 @@ export default function ReportViewer() {
 
   const sections = [
     { id: 'overview', label: 'Overview' },
-    { id: 'summary', label: 'Executive Summary' },
-    { id: 'scores', label: 'Score Breakdown' },
+    { id: 'recommendation', label: 'Recommendation' },
+    { id: 'analysis', label: 'Analysis' },
+    { id: 'scores', label: 'Scoring' },
     { id: 'platform', label: 'Platform Fit' },
-    { id: 'insights', label: 'Key Insights' },
+    { id: 'risk', label: 'Risk Map' },
     { id: 'characters', label: 'Characters' },
   ];
 
@@ -136,6 +138,11 @@ export default function ReportViewer() {
             </div>
             
             <div className="flex items-center gap-2">
+              <LensSelector
+                activeLens={activeLens}
+                onLensChange={setActiveLens}
+                compact
+              />
               <Button variant="outline" size="sm" className="hidden sm:flex">
                 <Share2 className="h-4 w-4 mr-2" />
                 Share
@@ -164,106 +171,46 @@ export default function ReportViewer() {
         </div>
       </nav>
 
-      {/* Hero Section */}
+      {/* Project Snapshot / Overview */}
       <section
         ref={(el) => (sectionsRef.current['overview'] = el)}
-        className="scroll-section relative overflow-hidden"
-      >
-        <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-transparent to-transparent" />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-20">
-          <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
-            {/* Left: Score and metadata */}
-            <div className="flex flex-col items-center lg:items-start animate-fade-up">
-              <ScoreRing
-                score={getCurrentScore()}
-                size="xl"
-                showLabel
-                label={LENS_CONFIG[activeLens].label}
-              />
-              <div className="mt-6 text-center lg:text-left">
-                <h2 className="text-3xl sm:text-4xl font-bold text-balance">
-                  {reportData.scriptMetadata?.title || report.title}
-                </h2>
-                {reportData.scriptMetadata?.logline && (
-                  <p className="mt-3 text-lg text-muted-foreground max-w-xl">
-                    {reportData.scriptMetadata.logline}
-                  </p>
-                )}
-                <div className="mt-4 flex flex-wrap gap-3 justify-center lg:justify-start">
-                  {reportData.scriptMetadata?.genre && (
-                    <span className="px-3 py-1 rounded-full bg-secondary text-secondary-foreground text-sm">
-                      {reportData.scriptMetadata.genre}
-                    </span>
-                  )}
-                  {reportData.scriptMetadata?.scriptType && (
-                    <span className="px-3 py-1 rounded-full bg-secondary text-secondary-foreground text-sm capitalize">
-                      {reportData.scriptMetadata.scriptType}
-                    </span>
-                  )}
-                  {reportData.scriptMetadata?.pageCount && (
-                    <span className="px-3 py-1 rounded-full bg-secondary text-secondary-foreground text-sm">
-                      {reportData.scriptMetadata.pageCount} pages
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Right: Lens selector */}
-            <div className="animate-fade-up animation-delay-200">
-              <div className="p-6 rounded-xl bg-card border border-border">
-                <h3 className="text-sm font-medium text-muted-foreground mb-4">
-                  View as Stakeholder
-                </h3>
-                <LensSelector
-                  activeLens={activeLens}
-                  onLensChange={setActiveLens}
-                />
-                <div className="mt-6 grid grid-cols-2 gap-4">
-                  {Object.entries(reportData.lensScores || {}).slice(0, 4).map(([lens, score]) => (
-                    <button
-                      key={lens}
-                      onClick={() => setActiveLens(lens as StakeholderLens)}
-                      className={cn(
-                        'p-3 rounded-lg text-left transition-all',
-                        activeLens === lens
-                          ? 'bg-primary/10 border border-primary/30'
-                          : 'bg-muted/50 hover:bg-muted border border-transparent'
-                      )}
-                    >
-                      <p className="text-xs text-muted-foreground">
-                        {LENS_CONFIG[lens as StakeholderLens]?.label}
-                      </p>
-                      <p className="text-lg font-bold">{Math.round(score as number)}</p>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Executive Summary */}
-      <section
-        ref={(el) => (sectionsRef.current['summary'] = el)}
         className="scroll-section"
       >
-        <ExecutiveSummary
-          summary={report.executive_summary || ''}
-          scriptMetadata={reportData.scriptMetadata}
+        <ProjectSnapshot
+          reportData={reportData}
+          reportTitle={report.title}
+          currentScore={getCurrentScore()}
+          activeLens={activeLens}
         />
       </section>
 
-      {/* Score Breakdown */}
+      {/* Studio Recommendation */}
       <section
-        ref={(el) => (sectionsRef.current['scores'] = el)}
+        ref={(el) => (sectionsRef.current['recommendation'] = el)}
+        className="scroll-section bg-card/30"
+      >
+        <StudioRecommendation
+          score={getCurrentScore()}
+          summary={report.executive_summary || ''}
+        />
+      </section>
+
+      {/* Strengths & Weaknesses */}
+      <section
+        ref={(el) => (sectionsRef.current['analysis'] = el)}
         className="scroll-section"
       >
-        <CategoryScoreSection
+        <StrengthsWeaknesses insights={reportData.insights || []} />
+      </section>
+
+      {/* Parameter Scoring */}
+      <section
+        ref={(el) => (sectionsRef.current['scores'] = el)}
+        className="scroll-section bg-card/30"
+      >
+        <ParameterScoring
           categoryScores={reportData.categoryScores || {}}
-          parameterScores={reportData.parameterScores || []}
-          activeLens={activeLens}
+          parameterScores={reportData.parameterScores}
         />
       </section>
 
@@ -279,12 +226,15 @@ export default function ReportViewer() {
         </section>
       )}
 
-      {/* Key Insights */}
+      {/* Risk Map & Maturity */}
       <section
-        ref={(el) => (sectionsRef.current['insights'] = el)}
-        className="scroll-section"
+        ref={(el) => (sectionsRef.current['risk'] = el)}
+        className="scroll-section bg-card/30"
       >
-        <InsightsSection insights={reportData.insights || []} />
+        <RiskMap
+          score={getCurrentScore()}
+          categoryScores={reportData.categoryScores || {}}
+        />
       </section>
 
       {/* Characters */}

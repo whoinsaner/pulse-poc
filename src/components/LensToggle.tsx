@@ -98,14 +98,68 @@ export function LensToggle({
   );
 }
 
+interface LensSelectorProps extends LensToggleProps {
+  compact?: boolean;
+}
+
 export function LensSelector({
   activeLens,
   onLensChange,
   className,
-}: LensToggleProps) {
+  compact = false,
+}: LensSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const activeConfig = LENS_CONFIG[activeLens];
   const ActiveIcon = LENS_ICONS[activeLens];
+
+  if (compact) {
+    return (
+      <div className={cn('relative', className)}>
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className={cn(
+            'flex items-center gap-2 px-3 py-2 rounded-lg',
+            'bg-muted/50 border border-border hover:border-primary/50',
+            'transition-all duration-200'
+          )}
+        >
+          <ActiveIcon className="h-4 w-4 text-primary" />
+          <span className="text-sm font-medium hidden sm:inline">{activeConfig.label}</span>
+          <svg
+            className={cn('h-4 w-4 text-muted-foreground transition-transform', isOpen && 'rotate-180')}
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+        {isOpen && (
+          <div className="absolute top-full right-0 mt-2 z-50 bg-card border border-border rounded-lg shadow-xl overflow-hidden animate-scale-in min-w-[200px]">
+            {LENS_ORDER.map((lens) => {
+              const config = LENS_CONFIG[lens];
+              const Icon = LENS_ICONS[lens];
+              const isActiveLens = lens === activeLens;
+              return (
+                <button
+                  key={lens}
+                  onClick={() => { onLensChange(lens); setIsOpen(false); }}
+                  className={cn(
+                    'flex items-center gap-2 px-3 py-2 w-full text-left text-sm',
+                    'hover:bg-accent/50 transition-colors',
+                    isActiveLens && 'bg-primary/10 text-primary'
+                  )}
+                >
+                  <Icon className="h-4 w-4" />
+                  {config.label}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className={cn('relative', className)}>
