@@ -177,30 +177,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { organization: null, error: new Error('Not authenticated') };
     }
 
-    const slug = name
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '')
-      + '-' + Date.now().toString(36);
+    const slug =
+      name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '') +
+      '-' +
+      Date.now().toString(36);
 
-    const { data: org, error: orgError } = await supabase
+    // IMPORTANT: Avoid `insert(...).select()` here.
+    // If we request RETURNING data before the user is a member of the org,
+    // the SELECT RLS policy can block the INSERT response.
+    const organizationId = crypto.randomUUID();
+
+    const { error: orgError } = await supabase
       .from('organizations')
-      .insert({ name, slug })
-      .select()
-      .single();
+      .insert({ id: organizationId, name, slug });
 
     if (orgError) {
       return { organization: null, error: orgError as Error };
     }
 
     // Add user as admin of the new org
-    const { error: roleError } = await supabase
-      .from('user_roles')
-      .insert({
-        user_id: user.id,
-        organization_id: org.id,
-        role: 'admin',
-      });
+    const { error: roleError } = await supabase.from('user_roles').insert({
+      user_id: user.id,
+      organization_id: organizationId,
+      role: 'admin',
+    });
 
     if (roleError) {
       return { organization: null, error: roleError as Error };
@@ -209,13 +212,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Update profile with current org
     await supabase
       .from('profiles')
-      .update({ current_organization_id: org.id })
+      .update({ current_organization_id: organizationId })
       .eq('user_id', user.id);
+
+    // Now that the user belongs to the org, we can safely fetch it (optional but nice for callers)
+    const { data: orgRow } = await supabase
+      .from('organizations')
+      .select('*')
+      .eq('id', organizationId)
+      .maybeSingle();
 
     // Refresh user data
     await loadUserData(user.id);
 
-    return { organization: org as Organization, error: null };
+    const nowIso = new Date().toISOString();
+    const org =
+      (orgRow as Organization | null) ??
+      ({
+        id: organizationId,
+        name,
+        slug,
+        logo_url: null,
+        created_at: nowIso,
+        updated_at: nowIso,
+      } as Organization);
+
+    return { organization: org, error: null };
   };
 
   const switchOrganization = async (orgId: string) => {
