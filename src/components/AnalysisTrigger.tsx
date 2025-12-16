@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Loader2, Play, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { Loader2, Play, CheckCircle, XCircle, Clock, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { AnalysisStatus, AgentProgress } from '@/types/database';
 
@@ -46,6 +46,62 @@ export function AnalysisTrigger({ scriptId, scriptTitle, onAnalysisComplete }: A
   const [status, setStatus] = useState<AnalysisStatus>('pending');
   const [agentProgress, setAgentProgress] = useState<Record<string, AgentProgress>>({});
   const [error, setError] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+
+  // Handle realtime updates
+  const handleRealtimeUpdate = useCallback((payload: any) => {
+    const newRecord = payload.new;
+    console.log('[AnalysisTrigger] Realtime update received:', newRecord.status);
+    
+    setStatus(newRecord.status as AnalysisStatus);
+    setAgentProgress((newRecord.agent_progress as unknown as Record<string, AgentProgress>) || {});
+    setLastUpdated(new Date());
+
+    if (newRecord.status === 'completed') {
+      setIsAnalyzing(false);
+      toast({
+        title: 'Analysis complete',
+        description: `"${scriptTitle}" has been analyzed successfully`,
+      });
+      onAnalysisComplete?.(newRecord.id);
+    } else if (newRecord.status === 'failed') {
+      setIsAnalyzing(false);
+      setError(newRecord.error_message || 'Analysis failed');
+      toast({
+        title: 'Analysis failed',
+        description: newRecord.error_message || 'An error occurred during analysis',
+        variant: 'destructive',
+      });
+    }
+  }, [scriptTitle, onAnalysisComplete, toast]);
+
+  // Subscribe to realtime updates when analysis starts
+  useEffect(() => {
+    if (!analysisRunId || !isAnalyzing) return;
+
+    console.log('[AnalysisTrigger] Subscribing to realtime updates for:', analysisRunId);
+
+    const channel = supabase
+      .channel(`analysis-progress-${analysisRunId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'analysis_runs',
+          filter: `id=eq.${analysisRunId}`,
+        },
+        handleRealtimeUpdate
+      )
+      .subscribe((status) => {
+        console.log('[AnalysisTrigger] Subscription status:', status);
+      });
+
+    return () => {
+      console.log('[AnalysisTrigger] Unsubscribing from realtime updates');
+      supabase.removeChannel(channel);
+    };
+  }, [analysisRunId, isAnalyzing, handleRealtimeUpdate]);
 
   const startAnalysis = async () => {
     if (!user) {
@@ -62,6 +118,7 @@ export function AnalysisTrigger({ scriptId, scriptTitle, onAnalysisComplete }: A
       setError(null);
       setStatus('pending');
       setAgentProgress({});
+      setLastUpdated(null);
 
       // Create analysis run
       const { data: run, error: createError } = await supabase
@@ -77,53 +134,21 @@ export function AnalysisTrigger({ scriptId, scriptTitle, onAnalysisComplete }: A
       if (createError) throw createError;
 
       setAnalysisRunId(run.id);
+      console.log('[AnalysisTrigger] Created analysis run:', run.id);
 
-      // Start polling for progress
-      const pollInterval = setInterval(async () => {
-        const { data: updatedRun } = await supabase
-          .from('analysis_runs')
-          .select('status, agent_progress, error_message')
-          .eq('id', run.id)
-          .single();
-
-        if (updatedRun) {
-          setStatus(updatedRun.status as AnalysisStatus);
-          setAgentProgress((updatedRun.agent_progress as unknown as Record<string, AgentProgress>) || {});
-
-          if (updatedRun.status === 'completed' || updatedRun.status === 'failed') {
-            clearInterval(pollInterval);
-            setIsAnalyzing(false);
-
-            if (updatedRun.status === 'completed') {
-              toast({
-                title: 'Analysis complete',
-                description: `"${scriptTitle}" has been analyzed successfully`,
-              });
-              onAnalysisComplete?.(run.id);
-            } else {
-              setError(updatedRun.error_message || 'Analysis failed');
-              toast({
-                title: 'Analysis failed',
-                description: updatedRun.error_message || 'An error occurred during analysis',
-                variant: 'destructive',
-              });
-            }
-          }
-        }
-      }, 2000);
-
-      // Trigger analysis edge function
-      const { error: invokeError } = await supabase.functions.invoke('analyze-script', {
+      // Trigger analysis edge function (non-blocking)
+      supabase.functions.invoke('analyze-script', {
         body: {
           scriptId,
           analysisRunId: run.id,
         },
+      }).then(({ error: invokeError }) => {
+        if (invokeError) {
+          console.error('[AnalysisTrigger] Edge function error:', invokeError);
+          setError(invokeError.message);
+          setIsAnalyzing(false);
+        }
       });
-
-      if (invokeError) {
-        clearInterval(pollInterval);
-        throw invokeError;
-      }
 
     } catch (err) {
       console.error('Analysis error:', err);
@@ -170,15 +195,29 @@ export function AnalysisTrigger({ scriptId, scriptTitle, onAnalysisComplete }: A
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="font-medium">
-          {status === 'processing' ? 'Analyzing Script...' : 
-           status === 'completed' ? 'Analysis Complete' : 
-           status === 'failed' ? 'Analysis Failed' : 'Starting Analysis...'}
-        </h3>
+        <div className="flex items-center gap-2">
+          <h3 className="font-medium">
+            {status === 'processing' ? 'Analyzing Script...' : 
+             status === 'completed' ? 'Analysis Complete' : 
+             status === 'failed' ? 'Analysis Failed' : 'Starting Analysis...'}
+          </h3>
+          {isAnalyzing && (
+            <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-success/10 text-success text-xs font-medium animate-pulse">
+              <Zap className="h-3 w-3" />
+              LIVE
+            </span>
+          )}
+        </div>
         <span className="text-sm text-muted-foreground">{getProgressPercentage()}%</span>
       </div>
 
       <Progress value={getProgressPercentage()} className="h-2" />
+
+      {lastUpdated && isAnalyzing && (
+        <p className="text-xs text-muted-foreground">
+          Last update: {lastUpdated.toLocaleTimeString()}
+        </p>
+      )}
 
       <div className="grid grid-cols-3 gap-2">
         {AGENT_NAMES.map((agent) => {
@@ -187,9 +226,9 @@ export function AnalysisTrigger({ scriptId, scriptTitle, onAnalysisComplete }: A
             <div
               key={agent}
               className={cn(
-                'flex items-center gap-2 p-2 rounded-lg text-sm',
-                progress?.status === 'completed' && 'bg-success/10',
-                progress?.status === 'running' && 'bg-primary/10',
+                'flex items-center gap-2 p-2 rounded-lg text-sm transition-all duration-300',
+                progress?.status === 'completed' && 'bg-success/10 scale-[1.02]',
+                progress?.status === 'running' && 'bg-primary/10 ring-1 ring-primary/30',
                 progress?.status === 'failed' && 'bg-destructive/10',
                 !progress?.status && 'bg-muted/50'
               )}
