@@ -12,6 +12,7 @@ import Upload from "./pages/Upload";
 import Scripts from "./pages/Scripts";
 import ReportViewer from "./pages/ReportViewer";
 import Reports from "./pages/Reports";
+import Team from "./pages/Team";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -32,6 +33,7 @@ const App = () => (
             <Route path="/scripts" element={<Scripts />} />
             <Route path="/reports" element={<Reports />} />
             <Route path="/reports/:runId" element={<ReportViewer />} />
+            <Route path="/team" element={<Team />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
