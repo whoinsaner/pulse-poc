@@ -318,18 +318,10 @@ async function parsePDFWithAI(
   pdfBytes: ArrayBuffer,
   scriptId: string
 ): Promise<{ scenes: Scene[]; characters: Character[]; rawText: string }> {
-  // For PDF, we'll use a simpler extraction approach
-  // In production, you'd use a PDF parsing library or OCR service
-  
-  // Convert PDF bytes to base64 for potential AI processing
-  const base64 = btoa(String.fromCharCode(...new Uint8Array(pdfBytes)));
-  
-  // Use Lovable AI to extract structure from PDF
   const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
   
   if (!lovableApiKey) {
     console.log('[script-parser] No Lovable API key, using placeholder parsing for PDF');
-    // Return placeholder data for now
     return {
       scenes: [{
         scene_number: 1,
@@ -345,6 +337,19 @@ async function parsePDFWithAI(
       rawText: 'PDF content - full text extraction pending',
     };
   }
+
+  // Convert first 100KB of PDF to base64 safely (avoid stack overflow)
+  const maxBytes = Math.min(pdfBytes.byteLength, 100000);
+  const uint8Array = new Uint8Array(pdfBytes).slice(0, maxBytes);
+  let base64 = '';
+  
+  // Process in chunks to avoid stack overflow
+  const chunkSize = 8192;
+  for (let i = 0; i < uint8Array.length; i += chunkSize) {
+    const chunk = uint8Array.slice(i, Math.min(i + chunkSize, uint8Array.length));
+    base64 += String.fromCharCode.apply(null, Array.from(chunk));
+  }
+  base64 = btoa(base64);
 
   try {
     // Call Lovable AI for PDF analysis
@@ -369,7 +374,7 @@ async function parsePDFWithAI(
           },
           {
             role: 'user',
-            content: `Parse this screenplay PDF (base64 encoded, first 50KB): ${base64.substring(0, 50000)}`
+            content: `Parse this screenplay PDF (base64 encoded, truncated): ${base64.substring(0, 30000)}`
           }
         ],
         max_tokens: 4000,
