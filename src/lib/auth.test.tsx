@@ -243,9 +243,10 @@ describe('useAuth', () => {
     });
 
     it('creates organization and assigns admin role', async () => {
+      const testOrgId = '00000000-0000-4000-8000-000000000001' as const;
       const uuidSpy = vi
         .spyOn(globalThis.crypto, 'randomUUID')
-        .mockReturnValue('test-org-id');
+        .mockReturnValue(testOrgId);
 
       mockGetSession.mockResolvedValue({ data: { session: mockSession }, error: null });
       mockOnAuthStateChange.mockImplementation((callback) => {
@@ -271,7 +272,7 @@ describe('useAuth', () => {
       // Org insert must include client-generated id (prevents RLS issues on RETURNING)
       expect(mockFromInsert).toHaveBeenCalledWith(
         expect.objectContaining({
-          id: 'test-org-id',
+          id: testOrgId,
           name: 'My Org',
           slug: expect.stringMatching(/^my-org-[a-z0-9]+$/),
         })
@@ -281,7 +282,7 @@ describe('useAuth', () => {
       expect(mockFromInsert).toHaveBeenCalledWith(
         expect.objectContaining({
           user_id: mockUser.id,
-          organization_id: 'test-org-id',
+          organization_id: testOrgId,
           role: 'admin',
         })
       );
