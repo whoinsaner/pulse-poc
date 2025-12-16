@@ -35,3 +35,18 @@ global.IntersectionObserver = vi.fn().mockImplementation(() => ({
   unobserve: vi.fn(),
   disconnect: vi.fn(),
 }));
+
+// Ensure crypto.randomUUID exists in the test environment
+if (!globalThis.crypto) {
+  // @ts-expect-error - define crypto for test environment
+  globalThis.crypto = {};
+}
+if (!('randomUUID' in globalThis.crypto) || typeof globalThis.crypto.randomUUID !== 'function') {
+  // @ts-expect-error - add randomUUID polyfill for tests
+  globalThis.crypto.randomUUID = () =>
+    'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+      const r = (Math.random() * 16) | 0;
+      const v = c === 'x' ? r : (r & 0x3) | 0x8;
+      return v.toString(16);
+    });
+}

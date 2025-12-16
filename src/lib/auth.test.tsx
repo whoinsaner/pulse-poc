@@ -50,12 +50,11 @@ vi.mock('@/integrations/supabase/client', () => ({
         return {
           select: () => ({
             in: mockFromSelect,
-          }),
-          insert: () => ({
-            select: () => ({
-              single: mockFromInsert,
+            eq: () => ({
+              maybeSingle: mockFromSelect,
             }),
           }),
+          insert: mockFromInsert,
         };
       }
       return {
@@ -229,18 +228,65 @@ describe('useAuth', () => {
   describe('createOrganization', () => {
     it('returns error when not authenticated', async () => {
       const { result } = renderHook(() => useAuth(), { wrapper });
-      
+
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false);
       });
-      
+
       let createResult: { organization: unknown; error: Error | null };
       await act(async () => {
         createResult = await result.current.createOrganization('Test Org');
       });
-      
+
       expect(createResult!.error?.message).toBe('Not authenticated');
       expect(createResult!.organization).toBeNull();
+    });
+
+    it('creates organization and assigns admin role', async () => {
+      const uuidSpy = vi
+        .spyOn(globalThis.crypto, 'randomUUID')
+        .mockReturnValue('test-org-id');
+
+      mockGetSession.mockResolvedValue({ data: { session: mockSession }, error: null });
+      mockOnAuthStateChange.mockImplementation((callback) => {
+        callback('SIGNED_IN', mockSession);
+        return { data: { subscription: { unsubscribe: vi.fn() } } };
+      });
+
+      // Keep selects simple for this test; we mainly assert the inserts
+      mockFromSelect.mockResolvedValue({ data: null, error: null });
+      mockFromInsert.mockResolvedValue({ data: null, error: null });
+      mockFromUpdate.mockResolvedValue({ data: null, error: null });
+
+      const { result } = renderHook(() => useAuth(), { wrapper });
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      await act(async () => {
+        await result.current.createOrganization('My Org');
+      });
+
+      // Org insert must include client-generated id (prevents RLS issues on RETURNING)
+      expect(mockFromInsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'test-org-id',
+          name: 'My Org',
+          slug: expect.stringMatching(/^my-org-[a-z0-9]+$/),
+        })
+      );
+
+      // Creator is granted admin role in org
+      expect(mockFromInsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          user_id: mockUser.id,
+          organization_id: 'test-org-id',
+          role: 'admin',
+        })
+      );
+
+      uuidSpy.mockRestore();
     });
   });
 });
