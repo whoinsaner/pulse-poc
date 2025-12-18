@@ -11,6 +11,7 @@ import { ParameterScoring } from '@/components/report/ParameterScoring';
 import { RiskMap } from '@/components/report/RiskMap';
 import { CharactersSection } from '@/components/report/CharactersSection';
 import { PlatformComparison } from '@/components/report/PlatformComparison';
+import { LensComparison } from '@/components/report/LensComparison';
 import { PanelGallery } from '@/components/report/PanelGallery';
 import { ArtReferenceSheet } from '@/components/report/ArtReferenceSheet';
 import { ExportDialog } from '@/components/report/ExportDialog';
@@ -113,6 +114,7 @@ export default function ReportViewer() {
   // Define sections based on script type
   const sections = isComic ? [
     { id: 'overview', label: 'Overview' },
+    { id: 'lenses', label: 'Stakeholders' },
     { id: 'recommendation', label: 'Recommendation' },
     { id: 'analysis', label: 'Analysis' },
     { id: 'scores', label: 'Scoring' },
@@ -121,6 +123,7 @@ export default function ReportViewer() {
     { id: 'characters', label: 'Characters' },
   ] : [
     { id: 'overview', label: 'Overview' },
+    { id: 'lenses', label: 'Stakeholders' },
     { id: 'recommendation', label: 'Recommendation' },
     { id: 'analysis', label: 'Analysis' },
     { id: 'scores', label: 'Scoring' },
@@ -195,6 +198,23 @@ export default function ReportViewer() {
           activeLens={activeLens}
         />
       </section>
+
+      {/* Lens Comparison - All Stakeholder Views */}
+      {reportData.lensScores && (
+        <section
+          ref={(el) => (sectionsRef.current['lenses'] = el)}
+          className="scroll-section bg-card/30"
+        >
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
+            <LensComparison
+              lensScores={reportData.lensScores}
+              overallScore={reportData.overallScore || report.overall_score || 0}
+              activeLens={activeLens}
+              onLensSelect={setActiveLens}
+            />
+          </div>
+        </section>
+      )}
 
       {/* Studio Recommendation */}
       <section
