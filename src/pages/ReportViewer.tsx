@@ -10,6 +10,7 @@ import { FullParameterSection } from '@/components/report/FullParameterSection';
 import { FullInsightsSection } from '@/components/report/FullInsightsSection';
 import { FullLensComparison } from '@/components/report/FullLensComparison';
 import { FullCharactersSection } from '@/components/report/FullCharactersSection';
+import { NarrativeTimeline } from '@/components/report/NarrativeTimeline';
 import { RiskMap } from '@/components/report/RiskMap';
 import { PlatformComparison } from '@/components/report/PlatformComparison';
 import { PanelGallery } from '@/components/report/PanelGallery';
@@ -114,6 +115,7 @@ export default function ReportViewer() {
     { id: 'overview', label: 'Overview' },
     { id: 'agents', label: 'AI Agents' },
     { id: 'lenses', label: 'Stakeholders' },
+    { id: 'narrative', label: 'Narrative' },
     { id: 'insights', label: 'Insights' },
     { id: 'parameters', label: 'Parameters' },
     { id: 'panels', label: 'Panels' },
@@ -122,6 +124,7 @@ export default function ReportViewer() {
     { id: 'overview', label: 'Overview' },
     { id: 'agents', label: 'AI Agents' },
     { id: 'lenses', label: 'Stakeholders' },
+    { id: 'narrative', label: 'Narrative' },
     { id: 'insights', label: 'Insights' },
     { id: 'parameters', label: 'Parameters' },
     { id: 'platform', label: 'Platform' },
@@ -211,6 +214,15 @@ export default function ReportViewer() {
           />
         </section>
       )}
+
+      {/* Narrative Timeline */}
+      <section ref={(el) => (sectionsRef.current['narrative'] = el)} className="scroll-section">
+        <NarrativeTimeline 
+          scenes={reportData.scenes || []} 
+          narrativeGraph={reportData.narrativeGraph}
+          totalPages={reportData.scriptMetadata?.pageCount}
+        />
+      </section>
 
       {/* Insights */}
       <section ref={(el) => (sectionsRef.current['insights'] = el)} className="scroll-section">
