@@ -3,7 +3,7 @@
 
 export type AppRole = 'admin' | 'analyst' | 'viewer';
 export type ScriptFormat = 'pdf' | 'fdx' | 'fountain' | 'highland' | 'txt';
-export type ScriptType = 'feature' | 'pilot' | 'episode' | 'short' | 'documentary';
+export type ScriptType = 'feature' | 'pilot' | 'episode' | 'short' | 'documentary' | 'comic';
 export type AnalysisStatus = 'pending' | 'processing' | 'completed' | 'failed';
 export type StakeholderLens = 
   | 'studio_executive' 

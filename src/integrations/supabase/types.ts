@@ -681,7 +681,13 @@ export type Database = {
       analysis_status: "pending" | "processing" | "completed" | "failed"
       app_role: "admin" | "analyst" | "viewer"
       script_format: "pdf" | "fdx" | "fountain" | "highland" | "txt"
-      script_type: "feature" | "pilot" | "episode" | "short" | "documentary"
+      script_type:
+        | "feature"
+        | "pilot"
+        | "episode"
+        | "short"
+        | "documentary"
+        | "comic"
       stakeholder_lens:
         | "studio_executive"
         | "producer"
@@ -821,7 +827,14 @@ export const Constants = {
       analysis_status: ["pending", "processing", "completed", "failed"],
       app_role: ["admin", "analyst", "viewer"],
       script_format: ["pdf", "fdx", "fountain", "highland", "txt"],
-      script_type: ["feature", "pilot", "episode", "short", "documentary"],
+      script_type: [
+        "feature",
+        "pilot",
+        "episode",
+        "short",
+        "documentary",
+        "comic",
+      ],
       stakeholder_lens: [
         "studio_executive",
         "producer",
