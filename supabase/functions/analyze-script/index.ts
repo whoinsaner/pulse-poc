@@ -937,12 +937,25 @@ async function runStakeholderLensAgent(
 
   console.log('[analyze-script] StakeholderLensAgent computed lens scores:', lensScores);
   
-  // Store lens scores in the analysis run for later report generation
+  // Fetch current agent_progress, merge with new data, then update
+  const { data: currentRun } = await supabase
+    .from('analysis_runs')
+    .select('agent_progress')
+    .eq('id', analysisRunId)
+    .single();
+
+  const updatedProgress = {
+    ...(currentRun?.agent_progress || {}),
+    StakeholderLensAgent: {
+      status: 'completed',
+      completedAt: new Date().toISOString(),
+      lensScores,
+    }
+  };
+
   await supabase
     .from('analysis_runs')
-    .update({ 
-      agent_progress: supabase.sql`agent_progress || '{"StakeholderLensAgent": {"status": "completed", "lensScores": ${JSON.stringify(lensScores)}}}'::jsonb`
-    })
+    .update({ agent_progress: updatedProgress })
     .eq('id', analysisRunId);
 }
 
