@@ -11,6 +11,8 @@ import { ParameterScoring } from '@/components/report/ParameterScoring';
 import { RiskMap } from '@/components/report/RiskMap';
 import { CharactersSection } from '@/components/report/CharactersSection';
 import { PlatformComparison } from '@/components/report/PlatformComparison';
+import { PanelGallery } from '@/components/report/PanelGallery';
+import { ArtReferenceSheet } from '@/components/report/ArtReferenceSheet';
 import { ExportDialog } from '@/components/report/ExportDialog';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -98,7 +100,7 @@ export default function ReportViewer() {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <h2 className="text-2xl font-bold mb-2">Report Not Found</h2>
-          <p className="text-muted-foreground mb-4">The report you're looking for doesn't exist.</p>
+          <p className="text-muted-foreground mb-4">The report you are looking for does not exist.</p>
           <Button onClick={() => navigate('/scripts')}>Back to Scripts</Button>
         </div>
       </div>
@@ -106,8 +108,18 @@ export default function ReportViewer() {
   }
 
   const reportData = report.full_report_data as ReportData;
+  const isComic = reportData.scriptMetadata?.scriptType === 'comic';
 
-  const sections = [
+  // Define sections based on script type
+  const sections = isComic ? [
+    { id: 'overview', label: 'Overview' },
+    { id: 'recommendation', label: 'Recommendation' },
+    { id: 'analysis', label: 'Analysis' },
+    { id: 'scores', label: 'Scoring' },
+    { id: 'panels', label: 'Panel Gallery' },
+    { id: 'artref', label: 'Art Reference' },
+    { id: 'characters', label: 'Characters' },
+  ] : [
     { id: 'overview', label: 'Overview' },
     { id: 'recommendation', label: 'Recommendation' },
     { id: 'analysis', label: 'Analysis' },
@@ -214,28 +226,57 @@ export default function ReportViewer() {
         />
       </section>
 
-      {/* Platform Fit Analysis */}
-      {reportData.lensScores && (
-        <section
-          ref={(el) => (sectionsRef.current['platform'] = el)}
-          className="scroll-section"
-        >
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
-            <PlatformComparison lensScores={reportData.lensScores} />
-          </div>
-        </section>
+      {/* Comic-specific sections */}
+      {isComic && (
+        <>
+          {/* Panel Gallery */}
+          <section
+            ref={(el) => (sectionsRef.current['panels'] = el)}
+            className="scroll-section"
+          >
+            <PanelGallery scenes={reportData.scenes || []} />
+          </section>
+
+          {/* Art Reference Sheet */}
+          <section
+            ref={(el) => (sectionsRef.current['artref'] = el)}
+            className="scroll-section bg-card/30"
+          >
+            <ArtReferenceSheet 
+              characters={reportData.characters || []} 
+              scenes={reportData.scenes || []}
+            />
+          </section>
+        </>
       )}
 
-      {/* Risk Map & Maturity */}
-      <section
-        ref={(el) => (sectionsRef.current['risk'] = el)}
-        className="scroll-section bg-card/30"
-      >
-        <RiskMap
-          score={getCurrentScore()}
-          categoryScores={reportData.categoryScores || {}}
-        />
-      </section>
+      {/* Screenplay-specific sections */}
+      {!isComic && (
+        <>
+          {/* Platform Fit Analysis */}
+          {reportData.lensScores && (
+            <section
+              ref={(el) => (sectionsRef.current['platform'] = el)}
+              className="scroll-section"
+            >
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
+                <PlatformComparison lensScores={reportData.lensScores} />
+              </div>
+            </section>
+          )}
+
+          {/* Risk Map & Maturity */}
+          <section
+            ref={(el) => (sectionsRef.current['risk'] = el)}
+            className="scroll-section bg-card/30"
+          >
+            <RiskMap
+              score={getCurrentScore()}
+              categoryScores={reportData.categoryScores || {}}
+            />
+          </section>
+        </>
+      )}
 
       {/* Characters */}
       <section
