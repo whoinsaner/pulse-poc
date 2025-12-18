@@ -11,6 +11,8 @@ import { FullInsightsSection } from '@/components/report/FullInsightsSection';
 import { FullLensComparison } from '@/components/report/FullLensComparison';
 import { FullCharactersSection } from '@/components/report/FullCharactersSection';
 import { NarrativeTimeline } from '@/components/report/NarrativeTimeline';
+import { SceneHeatmap } from '@/components/report/SceneHeatmap';
+import { CharacterNetwork } from '@/components/report/CharacterNetwork';
 import { RiskMap } from '@/components/report/RiskMap';
 import { PlatformComparison } from '@/components/report/PlatformComparison';
 import { PanelGallery } from '@/components/report/PanelGallery';
@@ -116,19 +118,23 @@ export default function ReportViewer() {
     { id: 'agents', label: 'AI Agents' },
     { id: 'lenses', label: 'Stakeholders' },
     { id: 'narrative', label: 'Narrative' },
+    { id: 'heatmap', label: 'Heatmap' },
     { id: 'insights', label: 'Insights' },
     { id: 'parameters', label: 'Parameters' },
     { id: 'panels', label: 'Panels' },
+    { id: 'network', label: 'Network' },
     { id: 'characters', label: 'Characters' },
   ] : [
     { id: 'overview', label: 'Overview' },
     { id: 'agents', label: 'AI Agents' },
     { id: 'lenses', label: 'Stakeholders' },
     { id: 'narrative', label: 'Narrative' },
+    { id: 'heatmap', label: 'Heatmap' },
     { id: 'insights', label: 'Insights' },
     { id: 'parameters', label: 'Parameters' },
     { id: 'platform', label: 'Platform' },
     { id: 'risk', label: 'Risk' },
+    { id: 'network', label: 'Network' },
     { id: 'characters', label: 'Characters' },
   ];
 
@@ -224,6 +230,11 @@ export default function ReportViewer() {
         />
       </section>
 
+      {/* Scene Heatmap */}
+      <section ref={(el) => (sectionsRef.current['heatmap'] = el)} className="scroll-section">
+        <SceneHeatmap scenes={reportData.scenes || []} />
+      </section>
+
       {/* Insights */}
       <section ref={(el) => (sectionsRef.current['insights'] = el)} className="scroll-section">
         <FullInsightsSection insights={reportData.insights || []} />
@@ -276,6 +287,11 @@ export default function ReportViewer() {
           </section>
         </>
       )}
+
+      {/* Character Network */}
+      <section ref={(el) => (sectionsRef.current['network'] = el)} className="scroll-section">
+        <CharacterNetwork characters={reportData.characters || []} />
+      </section>
 
       {/* Characters */}
       <section ref={(el) => (sectionsRef.current['characters'] = el)} className="scroll-section">
