@@ -33,6 +33,69 @@ interface Character {
   description: string | null;
 }
 
+interface ParseResult {
+  scenes: Scene[];
+  characters: Character[];
+  rawText: string;
+  isComplete: boolean;
+  extractedPages: number;
+  expectedPages: number | null;
+  errorMessage: string | null;
+}
+
+// Estimate page count from file size and format
+function estimatePageCount(fileSize: number, format: string): number {
+  // Average bytes per page varies by format
+  const bytesPerPage: Record<string, number> = {
+    pdf: 3500,      // PDFs with formatting
+    fdx: 5000,      // XML is verbose
+    fountain: 2500, // Plain text screenplay
+    highland: 2500, // Similar to fountain
+    txt: 2500,      // Plain text
+    docx: 4000,     // Word docs with formatting
+  };
+  
+  const avgBytes = bytesPerPage[format] || 3000;
+  return Math.max(1, Math.ceil(fileSize / avgBytes));
+}
+
+// Validate extraction completeness
+function validateExtraction(
+  result: Omit<ParseResult, 'isComplete' | 'extractedPages' | 'expectedPages' | 'errorMessage'>,
+  expectedPages: number,
+  format: string
+): ParseResult {
+  const extractedPages = Math.max(
+    ...result.scenes.map(s => s.page_end || s.page_start || 0),
+    Math.ceil(result.rawText.length / 3000)
+  );
+  
+  // Calculate coverage percentage
+  const coveragePercent = expectedPages > 0 ? (extractedPages / expectedPages) * 100 : 100;
+  
+  // Determine if extraction is complete (at least 90% coverage for AI formats, 100% for text formats)
+  const minCoverage = ['pdf', 'docx'].includes(format) ? 85 : 95;
+  const isComplete = coveragePercent >= minCoverage && result.scenes.length > 0;
+  
+  let errorMessage: string | null = null;
+  
+  if (!isComplete) {
+    if (result.scenes.length === 0) {
+      errorMessage = `Failed to extract any scenes from the ${format.toUpperCase()} file. The file may be corrupted, password-protected, or in an unsupported format.`;
+    } else if (coveragePercent < minCoverage) {
+      errorMessage = `Incomplete extraction: Only ${Math.round(coveragePercent)}% of the script was extracted (${extractedPages} of ~${expectedPages} pages). Some pages may be unreadable or in an unsupported format.`;
+    }
+  }
+  
+  return {
+    ...result,
+    isComplete,
+    extractedPages,
+    expectedPages,
+    errorMessage,
+  };
+}
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -59,10 +122,13 @@ serve(async (req) => {
       throw new Error(`Failed to download script: ${downloadError.message}`);
     }
 
-    console.log(`[script-parser] Downloaded file, size: ${fileData.size} bytes`);
+    const fileSize = fileData.size;
+    const expectedPages = estimatePageCount(fileSize, format);
+    
+    console.log(`[script-parser] Downloaded file, size: ${fileSize} bytes, estimated pages: ${expectedPages}`);
 
     // Parse based on format and script type
-    let parsedContent: { scenes: Scene[]; characters: Character[]; rawText: string };
+    let rawResult: { scenes: Scene[]; characters: Character[]; rawText: string };
     const isComic = scriptType === 'comic';
     
     switch (format) {
@@ -70,29 +136,35 @@ serve(async (req) => {
       case 'highland':
       case 'txt':
         const textContent = await fileData.text();
-        parsedContent = isComic ? parseComicFormat(textContent) : parseTextFormat(textContent, format);
+        rawResult = isComic ? parseComicFormat(textContent) : parseTextFormat(textContent, format);
         break;
       case 'fdx':
         const fdxContent = await fileData.text();
-        parsedContent = parseFinalDraft(fdxContent);
+        rawResult = parseFinalDraft(fdxContent);
         break;
       case 'docx':
-        // For DOCX, extract text and parse as screenplay
         const docxBytes = await fileData.arrayBuffer();
-        parsedContent = await parseDocxWithAI(supabase, docxBytes, scriptId, isComic);
+        rawResult = await parseDocxWithAI(supabase, docxBytes, scriptId, isComic, expectedPages);
         break;
       case 'pdf':
-        // For PDF, we'll use AI to extract structure
         const pdfBytes = await fileData.arrayBuffer();
-        parsedContent = isComic 
-          ? await parseComicPDFWithAI(supabase, pdfBytes, scriptId)
-          : await parsePDFWithAI(supabase, pdfBytes, scriptId);
+        rawResult = isComic 
+          ? await parseComicPDFWithAI(supabase, pdfBytes, scriptId, expectedPages)
+          : await parsePDFWithAI(supabase, pdfBytes, scriptId, expectedPages);
         break;
       default:
         throw new Error(`Unsupported format: ${format}`);
     }
 
+    // Validate extraction completeness
+    const parsedContent = validateExtraction(rawResult, expectedPages, format);
+
     console.log(`[script-parser] Parsed ${parsedContent.scenes.length} scenes, ${parsedContent.characters.length} characters`);
+    console.log(`[script-parser] Extraction complete: ${parsedContent.isComplete}, pages: ${parsedContent.extractedPages}/${parsedContent.expectedPages}`);
+
+    if (!parsedContent.isComplete) {
+      console.error(`[script-parser] Incomplete extraction: ${parsedContent.errorMessage}`);
+    }
 
     // Insert scenes
     if (parsedContent.scenes.length > 0) {
@@ -136,28 +208,36 @@ serve(async (req) => {
         graph_type: 'scene_flow',
         nodes: narrativeGraph.nodes,
         edges: narrativeGraph.edges,
-        metadata: { parsed_at: new Date().toISOString() },
+        metadata: { 
+          parsed_at: new Date().toISOString(),
+          extraction_complete: parsedContent.isComplete,
+          extracted_pages: parsedContent.extractedPages,
+          expected_pages: parsedContent.expectedPages,
+        },
       });
 
     if (graphError) {
       console.error('[script-parser] Graph insert error:', graphError);
     }
 
-    // Update script with page count estimate
-    const estimatedPages = Math.ceil(parsedContent.rawText.length / 3000); // ~3000 chars per page
+    // Update script with page count
     await supabase
       .from('scripts')
-      .update({ page_count: estimatedPages })
+      .update({ page_count: parsedContent.extractedPages })
       .eq('id', scriptId);
 
-    console.log(`[script-parser] Parse complete for script ${scriptId}`);
+    console.log(`[script-parser] Parse complete for script ${scriptId}, ready for AI: ${parsedContent.isComplete}`);
 
     return new Response(
       JSON.stringify({
         success: true,
         scenesCount: parsedContent.scenes.length,
         charactersCount: parsedContent.characters.length,
-        estimatedPages,
+        estimatedPages: parsedContent.expectedPages,
+        extractedPages: parsedContent.extractedPages,
+        isComplete: parsedContent.isComplete,
+        readyForAnalysis: parsedContent.isComplete,
+        errorMessage: parsedContent.errorMessage,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
@@ -166,7 +246,11 @@ serve(async (req) => {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('[script-parser] Error:', errorMessage);
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ 
+        error: errorMessage,
+        success: false,
+        readyForAnalysis: false,
+      }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
@@ -182,18 +266,39 @@ function parseTextFormat(content: string, format: string): { scenes: Scene[]; ch
   let currentScene: Scene | null = null;
   let inDialogue = false;
   let currentCharacter: string | null = null;
+  let currentPage = 1;
   
   // Fountain scene heading pattern
   const sceneHeadingPattern = /^(INT\.|EXT\.|INT\/EXT\.|I\/E\.)\s*(.+?)(?:\s*-\s*(.+))?$/i;
   // Character name pattern (ALL CAPS at start of line, followed by dialogue)
   const characterPattern = /^([A-Z][A-Z\s\.']+)(\s*\(.*\))?$/;
+  // Page break pattern
+  const pageBreakPattern = /^={3,}$|^\*{3,}$|^-{3,}$|^PAGE\s*BREAK/i;
   
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
     
+    // Check for page break
+    if (pageBreakPattern.test(line)) {
+      currentPage++;
+      if (currentScene) {
+        currentScene.page_end = currentPage - 1;
+      }
+      continue;
+    }
+    
+    // Estimate page from line count (55 lines per page)
+    const estimatedPage = Math.ceil((i + 1) / 55);
+    currentPage = Math.max(currentPage, estimatedPage);
+    
     // Check for scene heading
     const sceneMatch = line.match(sceneHeadingPattern);
     if (sceneMatch) {
+      // Close previous scene
+      if (currentScene) {
+        currentScene.page_end = currentPage;
+      }
+      
       currentSceneNumber++;
       const intExt = sceneMatch[1].replace('.', '').toUpperCase();
       const locationAndTime = sceneMatch[2] || '';
@@ -206,7 +311,7 @@ function parseTextFormat(content: string, format: string): { scenes: Scene[]; ch
         location: locationAndTime.trim(),
         time_of_day: timeOfDay?.trim() || null,
         description: null,
-        page_start: Math.ceil(i / 55), // Estimate page from line number
+        page_start: currentPage,
         page_end: null,
       };
       scenes.push(currentScene);
@@ -244,9 +349,13 @@ function parseTextFormat(content: string, format: string): { scenes: Scene[]; ch
     }
   }
   
+  // Close last scene
+  if (currentScene) {
+    currentScene.page_end = currentPage;
+  }
+  
   // Update scene_count for characters
   characterMap.forEach(char => {
-    // Simple heuristic: count unique scenes
     char.scene_count = Math.max(1, Math.ceil(char.dialogue_count / 5));
   });
   
@@ -264,6 +373,10 @@ function parseFinalDraft(content: string): { scenes: Scene[]; characters: Charac
   
   let sceneNumber = 0;
   let rawText = '';
+  let currentPage = 1;
+  
+  // FDX page break pattern
+  const pageBreakRegex = /<Paragraph[^>]*>\s*<Text[^>]*>={3,}<\/Text>/gi;
   
   // Simple XML parsing for FDX format
   const sceneHeadingRegex = /<Paragraph Type="Scene Heading"[^>]*>([^<]*(?:<[^>]+>[^<]*)*)<\/Paragraph>/gi;
@@ -274,6 +387,10 @@ function parseFinalDraft(content: string): { scenes: Scene[]; characters: Charac
   let textMatch;
   while ((textMatch = textRegex.exec(content)) !== null) {
     rawText += textMatch[1] + '\n';
+    // Check for page breaks
+    if (textMatch[1].match(/^={3,}$/)) {
+      currentPage++;
+    }
   }
   
   // Extract scene headings
@@ -285,6 +402,10 @@ function parseFinalDraft(content: string): { scenes: Scene[]; characters: Charac
     const intExtMatch = headingText.match(/^(INT\.|EXT\.|INT\/EXT\.)/i);
     const intExt = intExtMatch ? intExtMatch[1].replace('.', '').toUpperCase() : null;
     
+    // Estimate page based on position in file
+    const positionPercent = sceneMatch.index / content.length;
+    const estimatedPage = Math.ceil(positionPercent * currentPage) || 1;
+    
     scenes.push({
       scene_number: sceneNumber,
       heading: headingText,
@@ -292,8 +413,8 @@ function parseFinalDraft(content: string): { scenes: Scene[]; characters: Charac
       location: headingText.replace(/^(INT\.|EXT\.|INT\/EXT\.)\s*/i, '').split('-')[0]?.trim() || null,
       time_of_day: headingText.split('-')[1]?.trim() || null,
       description: null,
-      page_start: null,
-      page_end: null,
+      page_start: estimatedPage,
+      page_end: estimatedPage,
     });
   }
   
@@ -325,121 +446,149 @@ function parseFinalDraft(content: string): { scenes: Scene[]; characters: Charac
 async function parsePDFWithAI(
   supabase: any,
   pdfBytes: ArrayBuffer,
-  scriptId: string
+  scriptId: string,
+  expectedPages: number
 ): Promise<{ scenes: Scene[]; characters: Character[]; rawText: string }> {
   const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
   
   if (!lovableApiKey) {
-    console.log('[script-parser] No Lovable API key, using placeholder parsing for PDF');
+    console.error('[script-parser] No Lovable API key available for PDF parsing');
     return {
-      scenes: [{
-        scene_number: 1,
-        heading: 'PDF CONTENT - PARSING PENDING',
-        int_ext: null,
-        location: 'Unknown',
-        time_of_day: null,
-        description: 'PDF parsing requires AI assistance. Please re-upload in Fountain or FDX format for better results.',
-        page_start: 1,
-        page_end: null,
-      }],
+      scenes: [],
       characters: [],
-      rawText: 'PDF content - full text extraction pending',
+      rawText: '',
     };
   }
 
-  // Convert first 100KB of PDF to base64 safely (avoid stack overflow)
-  const maxBytes = Math.min(pdfBytes.byteLength, 100000);
-  const uint8Array = new Uint8Array(pdfBytes).slice(0, maxBytes);
-  let base64 = '';
+  // Process the entire PDF for complete extraction
+  const totalBytes = pdfBytes.byteLength;
+  const uint8Array = new Uint8Array(pdfBytes);
   
-  // Process in chunks to avoid stack overflow
-  const chunkSize = 8192;
-  for (let i = 0; i < uint8Array.length; i += chunkSize) {
-    const chunk = uint8Array.slice(i, Math.min(i + chunkSize, uint8Array.length));
-    base64 += String.fromCharCode.apply(null, Array.from(chunk));
-  }
-  base64 = btoa(base64);
-
-  try {
-    // Call Lovable AI for PDF analysis
-    const response = await fetch('https://api.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${lovableApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          {
-            role: 'system',
-            content: `You are a screenplay parser. Extract scenes and characters from the provided screenplay content. 
-            Return JSON in this exact format:
-            {
-              "scenes": [{"scene_number": 1, "heading": "INT. LOCATION - DAY", "int_ext": "INT", "location": "LOCATION", "time_of_day": "DAY"}],
-              "characters": [{"name": "CHARACTER NAME", "dialogue_count": 5}]
-            }
-            Only return valid JSON, no markdown or explanations.`
-          },
-          {
-            role: 'user',
-            content: `Parse this screenplay PDF (base64 encoded, truncated): ${base64.substring(0, 30000)}`
-          }
-        ],
-        max_tokens: 4000,
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`AI API error: ${response.status}`);
-    }
-
-    const aiResult = await response.json();
-    const content = aiResult.choices?.[0]?.message?.content || '';
+  // For larger files, we need to process in chunks
+  const chunkSizeBytes = 150000; // 150KB per chunk
+  const numChunks = Math.ceil(totalBytes / chunkSizeBytes);
+  
+  console.log(`[script-parser] Processing PDF: ${totalBytes} bytes in ${numChunks} chunk(s), expected ${expectedPages} pages`);
+  
+  const allScenes: Scene[] = [];
+  const allCharacters: Map<string, Character> = new Map();
+  let fullRawText = '';
+  let totalPagesProcessed = 0;
+  
+  for (let chunkIndex = 0; chunkIndex < numChunks; chunkIndex++) {
+    const startByte = chunkIndex * chunkSizeBytes;
+    const endByte = Math.min((chunkIndex + 1) * chunkSizeBytes, totalBytes);
+    const chunkData = uint8Array.slice(startByte, endByte);
     
-    // Try to parse the AI response as JSON
-    const jsonMatch = content.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      const parsed = JSON.parse(jsonMatch[0]);
-      return {
-        scenes: (parsed.scenes || []).map((s: any, i: number) => ({
-          scene_number: s.scene_number || i + 1,
-          heading: s.heading || 'UNKNOWN',
-          int_ext: s.int_ext || null,
-          location: s.location || null,
-          time_of_day: s.time_of_day || null,
-          description: s.description || null,
-          page_start: s.page_start || null,
-          page_end: s.page_end || null,
-        })),
-        characters: (parsed.characters || []).map((c: any) => ({
-          name: c.name || 'UNKNOWN',
-          dialogue_count: c.dialogue_count || 1,
-          scene_count: c.scene_count || 1,
-          first_appearance: c.first_appearance || 1,
-          description: c.description || null,
-        })),
-        rawText: content,
-      };
+    // Convert chunk to base64
+    let base64 = '';
+    const b64ChunkSize = 8192;
+    for (let i = 0; i < chunkData.length; i += b64ChunkSize) {
+      const chunk = chunkData.slice(i, Math.min(i + b64ChunkSize, chunkData.length));
+      base64 += String.fromCharCode.apply(null, Array.from(chunk));
     }
-  } catch (aiError) {
-    console.error('[script-parser] AI parsing error:', aiError);
+    base64 = btoa(base64);
+    
+    try {
+      const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${lovableApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'google/gemini-2.5-flash',
+          messages: [
+            {
+              role: 'system',
+              content: `You are a screenplay parser. Extract ALL scenes and characters from the provided screenplay content. This is chunk ${chunkIndex + 1} of ${numChunks}.
+              
+              IMPORTANT: Extract every single scene heading you find. Do not skip any scenes.
+              
+              Return JSON in this exact format:
+              {
+                "scenes": [{"scene_number": 1, "heading": "INT. LOCATION - DAY", "int_ext": "INT", "location": "LOCATION", "time_of_day": "DAY", "page_start": 1, "page_end": 2}],
+                "characters": [{"name": "CHARACTER NAME", "dialogue_count": 5}],
+                "pages_processed": 10,
+                "extraction_notes": "Any issues or notes about extraction"
+              }
+              Only return valid JSON, no markdown or explanations.`
+            },
+            {
+              role: 'user',
+              content: `Parse this screenplay PDF chunk (base64 encoded). Extract ALL scenes with their page numbers: ${base64.substring(0, 50000)}`
+            }
+          ],
+          max_tokens: 8000,
+        }),
+      });
+
+      if (!response.ok) {
+        console.error(`[script-parser] AI API error for chunk ${chunkIndex + 1}: ${response.status}`);
+        continue;
+      }
+
+      const aiResult = await response.json();
+      const content = aiResult.choices?.[0]?.message?.content || '';
+      
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        
+        // Add scenes with offset for chunk number
+        const sceneOffset = allScenes.length;
+        (parsed.scenes || []).forEach((s: any, i: number) => {
+          allScenes.push({
+            scene_number: sceneOffset + (s.scene_number || i + 1),
+            heading: s.heading || 'UNKNOWN',
+            int_ext: s.int_ext || null,
+            location: s.location || null,
+            time_of_day: s.time_of_day || null,
+            description: s.description || null,
+            page_start: s.page_start || null,
+            page_end: s.page_end || null,
+          });
+        });
+        
+        // Merge characters
+        (parsed.characters || []).forEach((c: any) => {
+          const name = c.name || 'UNKNOWN';
+          if (allCharacters.has(name)) {
+            const existing = allCharacters.get(name)!;
+            existing.dialogue_count += c.dialogue_count || 1;
+          } else {
+            allCharacters.set(name, {
+              name,
+              dialogue_count: c.dialogue_count || 1,
+              scene_count: c.scene_count || 1,
+              first_appearance: c.first_appearance || 1,
+              description: c.description || null,
+            });
+          }
+        });
+        
+        totalPagesProcessed += parsed.pages_processed || Math.ceil(chunkData.length / 3500);
+        fullRawText += content + '\n';
+        
+        if (parsed.extraction_notes) {
+          console.log(`[script-parser] Chunk ${chunkIndex + 1} notes: ${parsed.extraction_notes}`);
+        }
+      }
+    } catch (aiError) {
+      console.error(`[script-parser] AI parsing error for chunk ${chunkIndex + 1}:`, aiError);
+    }
+  }
+  
+  console.log(`[script-parser] PDF extraction complete: ${allScenes.length} scenes, ${allCharacters.size} characters, ${totalPagesProcessed} pages processed`);
+
+  if (allScenes.length === 0) {
+    console.error('[script-parser] Failed to extract any scenes from PDF');
   }
 
-  // Fallback
   return {
-    scenes: [{
-      scene_number: 1,
-      heading: 'PDF CONTENT',
-      int_ext: null,
-      location: null,
-      time_of_day: null,
-      description: 'PDF parsing completed with limited extraction',
-      page_start: 1,
-      page_end: null,
-    }],
-    characters: [],
-    rawText: '',
+    scenes: allScenes,
+    characters: Array.from(allCharacters.values()),
+    rawText: fullRawText,
   };
 }
 
@@ -448,103 +597,134 @@ async function parseDocxWithAI(
   supabase: any,
   docxBytes: ArrayBuffer,
   scriptId: string,
-  isComic: boolean
+  isComic: boolean,
+  expectedPages: number
 ): Promise<{ scenes: Scene[]; characters: Character[]; rawText: string }> {
   const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
   
   if (!lovableApiKey) {
-    console.log('[script-parser] No Lovable API key, using placeholder parsing for DOCX');
+    console.error('[script-parser] No Lovable API key available for DOCX parsing');
     return {
-      scenes: [{
-        scene_number: 1,
-        heading: 'DOCX CONTENT - PARSING PENDING',
-        int_ext: null,
-        location: 'Unknown',
-        time_of_day: null,
-        description: 'DOCX parsing requires AI assistance.',
-        page_start: 1,
-        page_end: null,
-      }],
+      scenes: [],
       characters: [],
-      rawText: 'DOCX content - full text extraction pending',
+      rawText: '',
     };
   }
 
-  // Convert first 100KB of DOCX to base64
-  const maxBytes = Math.min(docxBytes.byteLength, 100000);
-  const uint8Array = new Uint8Array(docxBytes).slice(0, maxBytes);
-  let base64 = '';
-  const chunkSize = 8192;
-  for (let i = 0; i < uint8Array.length; i += chunkSize) {
-    const chunk = uint8Array.slice(i, Math.min(i + chunkSize, uint8Array.length));
-    base64 += String.fromCharCode.apply(null, Array.from(chunk));
-  }
-  base64 = btoa(base64);
-
-  try {
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${lovableApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          {
-            role: 'system',
-            content: `You are a screenplay parser. Extract scenes and characters from the provided ${isComic ? 'comic script' : 'screenplay'} content. 
-            Return JSON in this exact format:
-            {
-              "scenes": [{"scene_number": 1, "heading": "INT. LOCATION - DAY", "int_ext": "INT", "location": "LOCATION", "time_of_day": "DAY"}],
-              "characters": [{"name": "CHARACTER NAME", "dialogue_count": 5}]
-            }
-            Only return valid JSON, no markdown or explanations.`
-          },
-          {
-            role: 'user',
-            content: `Parse this ${isComic ? 'comic script' : 'screenplay'} DOCX (base64 encoded): ${base64.substring(0, 30000)}`
-          }
-        ],
-      }),
-    });
-
-    if (!response.ok) throw new Error(`AI API error: ${response.status}`);
-    const aiResult = await response.json();
-    const content = aiResult.choices?.[0]?.message?.content || '';
+  // Process entire DOCX
+  const totalBytes = docxBytes.byteLength;
+  const uint8Array = new Uint8Array(docxBytes);
+  
+  const chunkSizeBytes = 150000;
+  const numChunks = Math.ceil(totalBytes / chunkSizeBytes);
+  
+  console.log(`[script-parser] Processing DOCX: ${totalBytes} bytes in ${numChunks} chunk(s), expected ${expectedPages} pages`);
+  
+  const allScenes: Scene[] = [];
+  const allCharacters: Map<string, Character> = new Map();
+  let fullRawText = '';
+  
+  for (let chunkIndex = 0; chunkIndex < numChunks; chunkIndex++) {
+    const startByte = chunkIndex * chunkSizeBytes;
+    const endByte = Math.min((chunkIndex + 1) * chunkSizeBytes, totalBytes);
+    const chunkData = uint8Array.slice(startByte, endByte);
     
-    const jsonMatch = content.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      const parsed = JSON.parse(jsonMatch[0]);
-      return {
-        scenes: (parsed.scenes || []).map((s: any, i: number) => ({
-          scene_number: s.scene_number || i + 1,
-          heading: s.heading || 'UNKNOWN',
-          int_ext: s.int_ext || null,
-          location: s.location || null,
-          time_of_day: s.time_of_day || null,
-          description: s.description || null,
-          page_start: s.page_start || null,
-          page_end: s.page_end || null,
-        })),
-        characters: (parsed.characters || []).map((c: any) => ({
-          name: c.name || 'UNKNOWN',
-          dialogue_count: c.dialogue_count || 1,
-          scene_count: c.scene_count || 1,
-          first_appearance: c.first_appearance || 1,
-          description: c.description || null,
-        })),
-        rawText: content,
-      };
+    let base64 = '';
+    const b64ChunkSize = 8192;
+    for (let i = 0; i < chunkData.length; i += b64ChunkSize) {
+      const chunk = chunkData.slice(i, Math.min(i + b64ChunkSize, chunkData.length));
+      base64 += String.fromCharCode.apply(null, Array.from(chunk));
     }
-  } catch (aiError) {
-    console.error('[script-parser] DOCX AI parsing error:', aiError);
+    base64 = btoa(base64);
+
+    try {
+      const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${lovableApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'google/gemini-2.5-flash',
+          messages: [
+            {
+              role: 'system',
+              content: `You are a ${isComic ? 'comic script' : 'screenplay'} parser. Extract ALL scenes/panels and characters. This is chunk ${chunkIndex + 1} of ${numChunks}.
+              
+              IMPORTANT: Extract every single scene heading or panel you find. Do not skip any.
+              
+              Return JSON in this exact format:
+              {
+                "scenes": [{"scene_number": 1, "heading": "INT. LOCATION - DAY", "int_ext": "INT", "location": "LOCATION", "time_of_day": "DAY", "page_start": 1, "page_end": 2}],
+                "characters": [{"name": "CHARACTER NAME", "dialogue_count": 5}],
+                "pages_processed": 10
+              }
+              Only return valid JSON, no markdown or explanations.`
+            },
+            {
+              role: 'user',
+              content: `Parse this ${isComic ? 'comic script' : 'screenplay'} DOCX chunk (base64 encoded): ${base64.substring(0, 50000)}`
+            }
+          ],
+          max_tokens: 8000,
+        }),
+      });
+
+      if (!response.ok) {
+        console.error(`[script-parser] AI API error for DOCX chunk ${chunkIndex + 1}: ${response.status}`);
+        continue;
+      }
+      
+      const aiResult = await response.json();
+      const content = aiResult.choices?.[0]?.message?.content || '';
+      
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        
+        const sceneOffset = allScenes.length;
+        (parsed.scenes || []).forEach((s: any, i: number) => {
+          allScenes.push({
+            scene_number: sceneOffset + (s.scene_number || i + 1),
+            heading: s.heading || 'UNKNOWN',
+            int_ext: s.int_ext || null,
+            location: s.location || null,
+            time_of_day: s.time_of_day || null,
+            description: s.description || null,
+            page_start: s.page_start || null,
+            page_end: s.page_end || null,
+          });
+        });
+        
+        (parsed.characters || []).forEach((c: any) => {
+          const name = c.name || 'UNKNOWN';
+          if (allCharacters.has(name)) {
+            const existing = allCharacters.get(name)!;
+            existing.dialogue_count += c.dialogue_count || 1;
+          } else {
+            allCharacters.set(name, {
+              name,
+              dialogue_count: c.dialogue_count || 1,
+              scene_count: c.scene_count || 1,
+              first_appearance: c.first_appearance || 1,
+              description: c.description || null,
+            });
+          }
+        });
+        
+        fullRawText += content + '\n';
+      }
+    } catch (aiError) {
+      console.error(`[script-parser] DOCX AI parsing error for chunk ${chunkIndex + 1}:`, aiError);
+    }
   }
+
+  console.log(`[script-parser] DOCX extraction complete: ${allScenes.length} scenes, ${allCharacters.size} characters`);
 
   return {
-    scenes: [{ scene_number: 1, heading: 'DOCX CONTENT', int_ext: null, location: null, time_of_day: null, description: 'DOCX parsing completed', page_start: 1, page_end: null }],
-    characters: [],
-    rawText: '',
+    scenes: allScenes,
+    characters: Array.from(allCharacters.values()),
+    rawText: fullRawText,
   };
 }
 
@@ -697,16 +877,7 @@ function parseComicFormat(content: string): { scenes: Scene[]; characters: Chara
   
   // If no panels were found, create a basic structure
   if (scenes.length === 0) {
-    scenes.push({
-      scene_number: 1,
-      heading: 'PAGE 1 - PANEL 1',
-      int_ext: null,
-      location: null,
-      time_of_day: null,
-      description: 'Comic script content extracted',
-      page_start: 1,
-      page_end: null,
-    });
+    console.warn('[script-parser] No panels found in comic format, may indicate parsing failure');
   }
   
   return {
@@ -720,117 +891,133 @@ function parseComicFormat(content: string): { scenes: Scene[]; characters: Chara
 async function parseComicPDFWithAI(
   supabase: any,
   pdfBytes: ArrayBuffer,
-  scriptId: string
+  scriptId: string,
+  expectedPages: number
 ): Promise<{ scenes: Scene[]; characters: Character[]; rawText: string }> {
   const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
   
   if (!lovableApiKey) {
-    console.log('[script-parser] No Lovable API key, using placeholder parsing for comic PDF');
+    console.error('[script-parser] No Lovable API key available for comic PDF parsing');
     return {
-      scenes: [{
-        scene_number: 1,
-        heading: 'PAGE 1 - PANEL 1',
-        int_ext: null,
-        location: 'Comic Script',
-        time_of_day: null,
-        description: 'Comic PDF parsing requires AI assistance.',
-        page_start: 1,
-        page_end: null,
-      }],
+      scenes: [],
       characters: [],
-      rawText: 'Comic PDF content - full text extraction pending',
+      rawText: '',
     };
   }
 
-  // Convert first 100KB of PDF to base64 safely
-  const maxBytes = Math.min(pdfBytes.byteLength, 100000);
-  const uint8Array = new Uint8Array(pdfBytes).slice(0, maxBytes);
-  let base64 = '';
+  // Process entire PDF for complete extraction
+  const totalBytes = pdfBytes.byteLength;
+  const uint8Array = new Uint8Array(pdfBytes);
   
-  const chunkSize = 8192;
-  for (let i = 0; i < uint8Array.length; i += chunkSize) {
-    const chunk = uint8Array.slice(i, Math.min(i + chunkSize, uint8Array.length));
-    base64 += String.fromCharCode.apply(null, Array.from(chunk));
-  }
-  base64 = btoa(base64);
+  const chunkSizeBytes = 150000;
+  const numChunks = Math.ceil(totalBytes / chunkSizeBytes);
+  
+  console.log(`[script-parser] Processing comic PDF: ${totalBytes} bytes in ${numChunks} chunk(s), expected ${expectedPages} pages`);
+  
+  const allScenes: Scene[] = [];
+  const allCharacters: Map<string, Character> = new Map();
+  let fullRawText = '';
 
-  try {
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${lovableApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          {
-            role: 'system',
-            content: `You are a comic script parser. Extract pages, panels, and characters from the comic script.
-            Return JSON in this exact format:
-            {
-              "panels": [{"page": 1, "panel": 1, "description": "Panel description"}],
-              "characters": [{"name": "CHARACTER NAME", "dialogue_count": 5}]
-            }
-            Only return valid JSON, no markdown or explanations.`
-          },
-          {
-            role: 'user',
-            content: `Parse this comic script PDF (base64 encoded, truncated): ${base64.substring(0, 30000)}`
-          }
-        ],
-        max_tokens: 4000,
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`AI API error: ${response.status}`);
-    }
-
-    const aiResult = await response.json();
-    const content = aiResult.choices?.[0]?.message?.content || '';
+  for (let chunkIndex = 0; chunkIndex < numChunks; chunkIndex++) {
+    const startByte = chunkIndex * chunkSizeBytes;
+    const endByte = Math.min((chunkIndex + 1) * chunkSizeBytes, totalBytes);
+    const chunkData = uint8Array.slice(startByte, endByte);
     
-    const jsonMatch = content.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      const parsed = JSON.parse(jsonMatch[0]);
-      return {
-        scenes: (parsed.panels || []).map((p: any, i: number) => ({
-          scene_number: i + 1,
-          heading: `PAGE ${p.page || 1} - PANEL ${p.panel || i + 1}`,
-          int_ext: null,
-          location: null,
-          time_of_day: null,
-          description: p.description || null,
-          page_start: p.page || 1,
-          page_end: p.page || null,
-        })),
-        characters: (parsed.characters || []).map((c: any) => ({
-          name: c.name || 'UNKNOWN',
-          dialogue_count: c.dialogue_count || 1,
-          scene_count: Math.ceil((c.dialogue_count || 1) / 3),
-          first_appearance: 1,
-          description: c.description || null,
-        })),
-        rawText: content,
-      };
+    let base64 = '';
+    const b64ChunkSize = 8192;
+    for (let i = 0; i < chunkData.length; i += b64ChunkSize) {
+      const chunk = chunkData.slice(i, Math.min(i + b64ChunkSize, chunkData.length));
+      base64 += String.fromCharCode.apply(null, Array.from(chunk));
     }
-  } catch (aiError) {
-    console.error('[script-parser] AI comic parsing error:', aiError);
+    base64 = btoa(base64);
+
+    try {
+      const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${lovableApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'google/gemini-2.5-flash',
+          messages: [
+            {
+              role: 'system',
+              content: `You are a comic script parser. Extract ALL pages, panels, and characters. This is chunk ${chunkIndex + 1} of ${numChunks}.
+              
+              IMPORTANT: Extract every single page and panel you find. Do not skip any.
+              
+              Return JSON in this exact format:
+              {
+                "panels": [{"page": 1, "panel": 1, "description": "Panel description"}],
+                "characters": [{"name": "CHARACTER NAME", "dialogue_count": 5}],
+                "pages_processed": 10
+              }
+              Only return valid JSON, no markdown or explanations.`
+            },
+            {
+              role: 'user',
+              content: `Parse this comic script PDF chunk (base64 encoded): ${base64.substring(0, 50000)}`
+            }
+          ],
+          max_tokens: 8000,
+        }),
+      });
+
+      if (!response.ok) {
+        console.error(`[script-parser] AI API error for comic chunk ${chunkIndex + 1}: ${response.status}`);
+        continue;
+      }
+
+      const aiResult = await response.json();
+      const content = aiResult.choices?.[0]?.message?.content || '';
+      
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        
+        const panelOffset = allScenes.length;
+        (parsed.panels || []).forEach((p: any, i: number) => {
+          allScenes.push({
+            scene_number: panelOffset + i + 1,
+            heading: `PAGE ${p.page || 1} - PANEL ${p.panel || i + 1}`,
+            int_ext: null,
+            location: null,
+            time_of_day: null,
+            description: p.description || null,
+            page_start: p.page || 1,
+            page_end: p.page || null,
+          });
+        });
+        
+        (parsed.characters || []).forEach((c: any) => {
+          const name = c.name || 'UNKNOWN';
+          if (allCharacters.has(name)) {
+            const existing = allCharacters.get(name)!;
+            existing.dialogue_count += c.dialogue_count || 1;
+          } else {
+            allCharacters.set(name, {
+              name,
+              dialogue_count: c.dialogue_count || 1,
+              scene_count: Math.ceil((c.dialogue_count || 1) / 3),
+              first_appearance: 1,
+              description: c.description || null,
+            });
+          }
+        });
+        
+        fullRawText += content + '\n';
+      }
+    } catch (aiError) {
+      console.error(`[script-parser] AI comic parsing error for chunk ${chunkIndex + 1}:`, aiError);
+    }
   }
 
-  // Fallback
+  console.log(`[script-parser] Comic PDF extraction complete: ${allScenes.length} panels, ${allCharacters.size} characters`);
+
   return {
-    scenes: [{
-      scene_number: 1,
-      heading: 'PAGE 1 - PANEL 1',
-      int_ext: null,
-      location: null,
-      time_of_day: null,
-      description: 'Comic PDF parsing completed with limited extraction',
-      page_start: 1,
-      page_end: null,
-    }],
-    characters: [],
-    rawText: '',
+    scenes: allScenes,
+    characters: Array.from(allCharacters.values()),
+    rawText: fullRawText,
   };
 }

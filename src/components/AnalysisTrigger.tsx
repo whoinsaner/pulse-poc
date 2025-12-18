@@ -62,11 +62,49 @@ export function AnalysisTrigger({
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [elapsedTime, setElapsedTime] = useState(0);
+  const [isExtractionComplete, setIsExtractionComplete] = useState<boolean | null>(null);
+  const [extractionError, setExtractionError] = useState<string | null>(null);
 
   const isComic = scriptType === 'comic';
   const activeAgents = isComic 
     ? [...UASF_AGENTS, ...COMIC_AGENTS, ...SYNTHESIS_AGENTS]
     : [...UASF_AGENTS, ...SYNTHESIS_AGENTS];
+
+  // Check if script extraction is complete
+  useEffect(() => {
+    const checkExtractionStatus = async () => {
+      try {
+        const { data: graph, error: graphError } = await supabase
+          .from('narrative_graphs')
+          .select('metadata')
+          .eq('script_id', scriptId)
+          .single();
+
+        if (graphError) {
+          // No graph found - extraction may not be complete
+          setIsExtractionComplete(false);
+          setExtractionError('Script has not been parsed yet. Please re-upload the script.');
+          return;
+        }
+
+        const metadata = graph?.metadata as { extraction_complete?: boolean; extracted_pages?: number; expected_pages?: number } | null;
+        
+        if (metadata?.extraction_complete === false) {
+          setIsExtractionComplete(false);
+          setExtractionError(`Incomplete extraction: Only ${metadata.extracted_pages || 0} of ${metadata.expected_pages || 'unknown'} pages extracted. Please re-upload in a different format.`);
+        } else {
+          setIsExtractionComplete(true);
+          setExtractionError(null);
+        }
+      } catch (err) {
+        console.error('Error checking extraction status:', err);
+        setIsExtractionComplete(false);
+        setExtractionError('Unable to verify extraction status.');
+      }
+    };
+
+    checkExtractionStatus();
+  }, [scriptId]);
 
   // Timer for elapsed time
   useEffect(() => {
@@ -239,6 +277,39 @@ export function AnalysisTrigger({
   const stats = getProgressStats();
 
   if (!isAnalyzing && status === 'pending') {
+    // Still checking extraction status
+    if (isExtractionComplete === null) {
+      return (
+        <Button disabled className="w-full">
+          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          Checking extraction status...
+        </Button>
+      );
+    }
+
+    // Extraction incomplete - show error
+    if (!isExtractionComplete) {
+      return (
+        <div className="space-y-3">
+          <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/30">
+            <div className="flex items-start gap-3">
+              <XCircle className="h-5 w-5 text-destructive mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="font-medium text-destructive">Analysis Unavailable</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {extractionError || 'Script extraction is incomplete. AI analysis cannot proceed until all pages are extracted.'}
+                </p>
+              </div>
+            </div>
+          </div>
+          <Button disabled className="w-full" variant="secondary">
+            <Play className="h-4 w-4 mr-2" />
+            Run UASF Analysis
+          </Button>
+        </div>
+      );
+    }
+
     return (
       <Button onClick={startAnalysis} className="w-full">
         <Play className="h-4 w-4 mr-2" />
