@@ -4,41 +4,55 @@ import { useAuth } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Loader2, Play, CheckCircle, XCircle, Clock, Zap } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { 
+  Loader2, Play, CheckCircle, XCircle, Clock, Zap, 
+  Lightbulb, Layers, Users, Swords, Sparkles, MessageSquare,
+  Globe, Heart, TrendingUp, Wrench, Palette, LayoutGrid, 
+  BookOpen, PenTool
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { AnalysisStatus, AgentProgress } from '@/types/database';
+import type { AnalysisStatus, AgentProgress, ScriptType } from '@/types/database';
 
 interface AnalysisTriggerProps {
   scriptId: string;
   scriptTitle: string;
+  scriptType?: ScriptType;
   onAnalysisComplete?: (analysisRunId: string) => void;
 }
 
-const AGENT_NAMES = [
-  'StructureAgent',
-  'CharacterAgent',
-  'ConflictAgent',
-  'ThemeAgent',
-  'DialogueAgent',
-  'EmotionalArcAgent',
-  'WorldLogicAgent',
-  'MarketAgent',
-  'ExecutionAgent',
+// UASF Agent definitions with modules
+const UASF_AGENTS = [
+  { name: 'ConceptAgent', label: 'Concept & Hook', module: 'A', icon: Lightbulb },
+  { name: 'StructureAgent', label: 'Structure', module: 'B', icon: Layers },
+  { name: 'CharacterAgent', label: 'Character', module: 'C', icon: Users },
+  { name: 'ConflictAgent', label: 'Conflict', module: 'D', icon: Swords },
+  { name: 'ThemeAgent', label: 'Theme', module: 'E', icon: Sparkles },
+  { name: 'DialogueAgent', label: 'Dialogue', module: 'F', icon: MessageSquare },
+  { name: 'WorldLogicAgent', label: 'World & Logic', module: 'G', icon: Globe },
+  { name: 'EmotionalArcAgent', label: 'Emotional Arc', module: 'H', icon: Heart },
+  { name: 'MarketAgent', label: 'Market', module: 'I', icon: TrendingUp },
+  { name: 'ExecutionAgent', label: 'Execution', module: 'J', icon: Wrench },
 ];
 
-const AGENT_LABELS: Record<string, string> = {
-  StructureAgent: 'Structure',
-  CharacterAgent: 'Character',
-  ConflictAgent: 'Conflict',
-  ThemeAgent: 'Theme',
-  DialogueAgent: 'Dialogue',
-  EmotionalArcAgent: 'Emotion',
-  WorldLogicAgent: 'World Logic',
-  MarketAgent: 'Market',
-  ExecutionAgent: 'Execution',
-};
+const COMIC_AGENTS = [
+  { name: 'ComicVisualAgent', label: 'Visual Storytelling', module: 'V', icon: Palette },
+  { name: 'ComicDialogueAgent', label: 'Comic Dialogue', module: 'CD', icon: MessageSquare },
+  { name: 'ComicPacingAgent', label: 'Panel Pacing', module: 'P', icon: LayoutGrid },
+  { name: 'ComicArtDirectionAgent', label: 'Art Direction', module: 'AD', icon: PenTool },
+];
 
-export function AnalysisTrigger({ scriptId, scriptTitle, onAnalysisComplete }: AnalysisTriggerProps) {
+const SYNTHESIS_AGENTS = [
+  { name: 'StakeholderLensAgent', label: 'Stakeholder Analysis', module: 'S', icon: Users },
+  { name: 'InsightSynthesisAgent', label: 'Insight Synthesis', module: 'IS', icon: BookOpen },
+];
+
+export function AnalysisTrigger({ 
+  scriptId, 
+  scriptTitle, 
+  scriptType = 'feature',
+  onAnalysisComplete 
+}: AnalysisTriggerProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -47,11 +61,28 @@ export function AnalysisTrigger({ scriptId, scriptTitle, onAnalysisComplete }: A
   const [agentProgress, setAgentProgress] = useState<Record<string, AgentProgress>>({});
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [elapsedTime, setElapsedTime] = useState(0);
+
+  const isComic = scriptType === 'comic';
+  const activeAgents = isComic 
+    ? [...UASF_AGENTS, ...COMIC_AGENTS, ...SYNTHESIS_AGENTS]
+    : [...UASF_AGENTS, ...SYNTHESIS_AGENTS];
+
+  // Timer for elapsed time
+  useEffect(() => {
+    if (!isAnalyzing) return;
+    
+    const interval = setInterval(() => {
+      setElapsedTime(prev => prev + 1);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isAnalyzing]);
 
   // Handle realtime updates
   const handleRealtimeUpdate = useCallback((payload: any) => {
     const newRecord = payload.new;
-    console.log('[AnalysisTrigger] Realtime update received:', newRecord.status);
+    console.log('[AnalysisTrigger] Realtime update received:', newRecord.status, newRecord.agent_progress);
     
     setStatus(newRecord.status as AnalysisStatus);
     setAgentProgress((newRecord.agent_progress as unknown as Record<string, AgentProgress>) || {});
@@ -119,6 +150,7 @@ export function AnalysisTrigger({ scriptId, scriptTitle, onAnalysisComplete }: A
       setStatus('pending');
       setAgentProgress({});
       setLastUpdated(null);
+      setElapsedTime(0);
 
       // Create analysis run
       const { data: run, error: createError } = await supabase
@@ -162,93 +194,202 @@ export function AnalysisTrigger({ scriptId, scriptTitle, onAnalysisComplete }: A
     }
   };
 
-  const getProgressPercentage = () => {
-    const agents = Object.values(agentProgress);
-    if (agents.length === 0) return 0;
-    const completed = agents.filter(a => a.status === 'completed').length;
-    const running = agents.filter(a => a.status === 'running').length;
-    return Math.round(((completed + running * 0.5) / AGENT_NAMES.length) * 100);
+  const getProgressStats = () => {
+    const completed = Object.values(agentProgress).filter(a => a.status === 'completed').length;
+    const running = Object.values(agentProgress).filter(a => a.status === 'running').length;
+    const failed = Object.values(agentProgress).filter(a => a.status === 'failed').length;
+    const total = activeAgents.length;
+    const percentage = Math.round(((completed + running * 0.5) / total) * 100);
+    return { completed, running, failed, total, percentage };
   };
 
-  const getAgentIcon = (agentStatus?: string) => {
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const getAgentStatusClass = (agentStatus?: string) => {
     switch (agentStatus) {
       case 'completed':
-        return <CheckCircle className="h-4 w-4 text-success" />;
+        return 'bg-emerald-500/20 border-emerald-500/50 text-emerald-600 dark:text-emerald-400';
       case 'running':
-        return <Loader2 className="h-4 w-4 text-primary animate-spin" />;
+        return 'bg-primary/20 border-primary/50 text-primary ring-2 ring-primary/30 animate-pulse';
       case 'failed':
-        return <XCircle className="h-4 w-4 text-destructive" />;
+        return 'bg-destructive/20 border-destructive/50 text-destructive';
       default:
-        return <Clock className="h-4 w-4 text-muted-foreground" />;
+        return 'bg-muted/50 border-border text-muted-foreground';
     }
   };
+
+  const getAgentIcon = (agent: typeof UASF_AGENTS[0], agentStatus?: string) => {
+    const Icon = agent.icon;
+    if (agentStatus === 'running') {
+      return <Loader2 className="h-4 w-4 animate-spin" />;
+    }
+    if (agentStatus === 'completed') {
+      return <CheckCircle className="h-4 w-4" />;
+    }
+    if (agentStatus === 'failed') {
+      return <XCircle className="h-4 w-4" />;
+    }
+    return <Icon className="h-4 w-4" />;
+  };
+
+  const stats = getProgressStats();
 
   if (!isAnalyzing && status === 'pending') {
     return (
       <Button onClick={startAnalysis} className="w-full">
         <Play className="h-4 w-4 mr-2" />
-        Run AI Analysis
+        Run UASF Analysis
       </Button>
     );
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 p-4 rounded-xl bg-card border border-border">
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <h3 className="font-medium">
-            {status === 'processing' ? 'Analyzing Script...' : 
-             status === 'completed' ? 'Analysis Complete' : 
-             status === 'failed' ? 'Analysis Failed' : 'Starting Analysis...'}
-          </h3>
-          {isAnalyzing && (
-            <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-success/10 text-success text-xs font-medium animate-pulse">
-              <Zap className="h-3 w-3" />
-              LIVE
-            </span>
-          )}
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+              {isAnalyzing ? (
+                <Loader2 className="h-5 w-5 text-primary animate-spin" />
+              ) : status === 'completed' ? (
+                <CheckCircle className="h-5 w-5 text-emerald-500" />
+              ) : (
+                <XCircle className="h-5 w-5 text-destructive" />
+              )}
+            </div>
+            {isAnalyzing && (
+              <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-primary"></span>
+              </span>
+            )}
+          </div>
+          <div>
+            <h3 className="font-semibold">
+              {status === 'processing' ? 'UASF Analysis Running' : 
+               status === 'completed' ? 'Analysis Complete' : 
+               status === 'failed' ? 'Analysis Failed' : 'Initializing...'}
+            </h3>
+            <p className="text-xs text-muted-foreground">
+              {stats.completed}/{stats.total} agents complete • {formatTime(elapsedTime)}
+            </p>
+          </div>
         </div>
-        <span className="text-sm text-muted-foreground">{getProgressPercentage()}%</span>
+        
+        {isAnalyzing && (
+          <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/30 animate-pulse">
+            <Zap className="h-3 w-3 mr-1" />
+            LIVE
+          </Badge>
+        )}
       </div>
 
-      <Progress value={getProgressPercentage()} className="h-2" />
+      {/* Progress Bar */}
+      <div className="space-y-2">
+        <div className="flex justify-between text-xs text-muted-foreground">
+          <span>Progress</span>
+          <span>{stats.percentage}%</span>
+        </div>
+        <Progress value={stats.percentage} className="h-2" />
+      </div>
 
+      {/* Agent Grid - Core UASF Agents */}
+      <div className="space-y-3">
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+          Core Analysis Modules (A-J)
+        </p>
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+          {UASF_AGENTS.map((agent) => {
+            const progress = agentProgress[agent.name];
+            return (
+              <div
+                key={agent.name}
+                className={cn(
+                  'flex flex-col items-center gap-1 p-2 rounded-lg border transition-all duration-300',
+                  getAgentStatusClass(progress?.status)
+                )}
+              >
+                {getAgentIcon(agent, progress?.status)}
+                <span className="text-[10px] font-medium text-center leading-tight">{agent.label}</span>
+                <span className="text-[9px] opacity-60">Module {agent.module}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Comic-specific agents */}
+      {isComic && (
+        <div className="space-y-3">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+            Comic-Specific Agents
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {COMIC_AGENTS.map((agent) => {
+              const progress = agentProgress[agent.name];
+              return (
+                <div
+                  key={agent.name}
+                  className={cn(
+                    'flex flex-col items-center gap-1 p-2 rounded-lg border transition-all duration-300',
+                    getAgentStatusClass(progress?.status)
+                  )}
+                >
+                  {getAgentIcon(agent, progress?.status)}
+                  <span className="text-[10px] font-medium text-center leading-tight">{agent.label}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Synthesis Agents */}
+      <div className="space-y-3">
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+          Synthesis & Insights
+        </p>
+        <div className="grid grid-cols-2 gap-2">
+          {SYNTHESIS_AGENTS.map((agent) => {
+            const progress = agentProgress[agent.name];
+            return (
+              <div
+                key={agent.name}
+                className={cn(
+                  'flex items-center gap-2 p-3 rounded-lg border transition-all duration-300',
+                  getAgentStatusClass(progress?.status)
+                )}
+              >
+                {getAgentIcon(agent, progress?.status)}
+                <span className="text-sm font-medium">{agent.label}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Status Footer */}
       {lastUpdated && isAnalyzing && (
-        <p className="text-xs text-muted-foreground">
+        <p className="text-xs text-muted-foreground text-center">
           Last update: {lastUpdated.toLocaleTimeString()}
         </p>
       )}
 
-      <div className="grid grid-cols-3 gap-2">
-        {AGENT_NAMES.map((agent) => {
-          const progress = agentProgress[agent];
-          return (
-            <div
-              key={agent}
-              className={cn(
-                'flex items-center gap-2 p-2 rounded-lg text-sm transition-all duration-300',
-                progress?.status === 'completed' && 'bg-success/10 scale-[1.02]',
-                progress?.status === 'running' && 'bg-primary/10 ring-1 ring-primary/30',
-                progress?.status === 'failed' && 'bg-destructive/10',
-                !progress?.status && 'bg-muted/50'
-              )}
-            >
-              {getAgentIcon(progress?.status)}
-              <span className="truncate">{AGENT_LABELS[agent]}</span>
-            </div>
-          );
-        })}
-      </div>
-
       {error && (
-        <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
+        <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive text-sm">
           {error}
         </div>
       )}
 
       {status === 'completed' && analysisRunId && (
         <Button onClick={() => onAnalysisComplete?.(analysisRunId)} className="w-full">
-          View Report
+          <CheckCircle className="h-4 w-4 mr-2" />
+          View Full Report
         </Button>
       )}
     </div>
