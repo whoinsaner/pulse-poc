@@ -4,14 +4,14 @@ import { useAuth } from '@/lib/auth';
 import { supabase } from '@/integrations/supabase/client';
 import { Report, StakeholderLens, ReportData, LENS_CONFIG } from '@/types/database';
 import { LensSelector } from '@/components/LensToggle';
-import { ProjectSnapshot } from '@/components/report/ProjectSnapshot';
-import { StudioRecommendation } from '@/components/report/StudioRecommendation';
-import { StrengthsWeaknesses } from '@/components/report/StrengthsWeaknesses';
-import { ParameterScoring } from '@/components/report/ParameterScoring';
+import { ReportHero } from '@/components/report/ReportHero';
+import { AgentAnalysisGrid } from '@/components/report/AgentAnalysisGrid';
+import { FullParameterSection } from '@/components/report/FullParameterSection';
+import { FullInsightsSection } from '@/components/report/FullInsightsSection';
+import { FullLensComparison } from '@/components/report/FullLensComparison';
+import { FullCharactersSection } from '@/components/report/FullCharactersSection';
 import { RiskMap } from '@/components/report/RiskMap';
-import { CharactersSection } from '@/components/report/CharactersSection';
 import { PlatformComparison } from '@/components/report/PlatformComparison';
-import { LensComparison } from '@/components/report/LensComparison';
 import { PanelGallery } from '@/components/report/PanelGallery';
 import { ArtReferenceSheet } from '@/components/report/ArtReferenceSheet';
 import { ExportDialog } from '@/components/report/ExportDialog';
@@ -62,7 +62,6 @@ export default function ReportViewer() {
     fetchReport();
   }, [runId, profile?.current_organization_id]);
 
-  // Scroll spy for active section
   useEffect(() => {
     const handleScroll = () => {
       const scrollPosition = window.scrollY + 200;
@@ -111,31 +110,29 @@ export default function ReportViewer() {
   const reportData = report.full_report_data as ReportData;
   const isComic = reportData.scriptMetadata?.scriptType === 'comic';
 
-  // Define sections based on script type
   const sections = isComic ? [
     { id: 'overview', label: 'Overview' },
+    { id: 'agents', label: 'AI Agents' },
     { id: 'lenses', label: 'Stakeholders' },
-    { id: 'recommendation', label: 'Recommendation' },
-    { id: 'analysis', label: 'Analysis' },
-    { id: 'scores', label: 'Scoring' },
-    { id: 'panels', label: 'Panel Gallery' },
-    { id: 'artref', label: 'Art Reference' },
+    { id: 'insights', label: 'Insights' },
+    { id: 'parameters', label: 'Parameters' },
+    { id: 'panels', label: 'Panels' },
     { id: 'characters', label: 'Characters' },
   ] : [
     { id: 'overview', label: 'Overview' },
+    { id: 'agents', label: 'AI Agents' },
     { id: 'lenses', label: 'Stakeholders' },
-    { id: 'recommendation', label: 'Recommendation' },
-    { id: 'analysis', label: 'Analysis' },
-    { id: 'scores', label: 'Scoring' },
-    { id: 'platform', label: 'Platform Fit' },
-    { id: 'risk', label: 'Risk Map' },
+    { id: 'insights', label: 'Insights' },
+    { id: 'parameters', label: 'Parameters' },
+    { id: 'platform', label: 'Platform' },
+    { id: 'risk', label: 'Risk' },
     { id: 'characters', label: 'Characters' },
   ];
 
   return (
     <div className="min-h-screen bg-background">
       {/* Sticky Navigation */}
-      <nav className="sticky top-0 z-50 glass-strong border-b border-border">
+      <nav className="fixed top-0 left-0 right-0 z-50 glass-strong border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-4">
@@ -153,11 +150,7 @@ export default function ReportViewer() {
             </div>
             
             <div className="flex items-center gap-2">
-              <LensSelector
-                activeLens={activeLens}
-                onLensChange={setActiveLens}
-                compact
-              />
+              <LensSelector activeLens={activeLens} onLensChange={setActiveLens} compact />
               <Button variant="outline" size="sm" className="hidden sm:flex">
                 <Share2 className="h-4 w-4 mr-2" />
                 Share
@@ -166,7 +159,6 @@ export default function ReportViewer() {
             </div>
           </div>
           
-          {/* Section tabs */}
           <div className="flex items-center gap-1 pb-2 overflow-x-auto scrollbar-hide">
             {sections.map((section) => (
               <button
@@ -186,12 +178,12 @@ export default function ReportViewer() {
         </div>
       </nav>
 
-      {/* Project Snapshot / Overview */}
-      <section
-        ref={(el) => (sectionsRef.current['overview'] = el)}
-        className="scroll-section"
-      >
-        <ProjectSnapshot
+      {/* Add padding for fixed nav */}
+      <div className="pt-24" />
+
+      {/* Hero Section */}
+      <section ref={(el) => (sectionsRef.current['overview'] = el)} className="scroll-section">
+        <ReportHero
           reportData={reportData}
           reportTitle={report.title}
           currentScore={getCurrentScore()}
@@ -199,111 +191,83 @@ export default function ReportViewer() {
         />
       </section>
 
-      {/* Lens Comparison - All Stakeholder Views */}
-      {reportData.lensScores && (
-        <section
-          ref={(el) => (sectionsRef.current['lenses'] = el)}
-          className="scroll-section bg-card/30"
-        >
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
-            <LensComparison
-              lensScores={reportData.lensScores}
-              overallScore={reportData.overallScore || report.overall_score || 0}
-              activeLens={activeLens}
-              onLensSelect={setActiveLens}
-            />
-          </div>
-        </section>
-      )}
-
-      {/* Studio Recommendation */}
-      <section
-        ref={(el) => (sectionsRef.current['recommendation'] = el)}
-        className="scroll-section bg-card/30"
-      >
-        <StudioRecommendation
-          score={getCurrentScore()}
-          summary={report.executive_summary || ''}
+      {/* Agent Analysis Grid */}
+      <section ref={(el) => (sectionsRef.current['agents'] = el)} className="scroll-section">
+        <AgentAnalysisGrid
+          parameterScores={reportData.parameterScores || []}
+          categoryScores={reportData.categoryScores || {}}
+          scriptType={reportData.scriptMetadata?.scriptType}
         />
       </section>
 
-      {/* Strengths & Weaknesses */}
-      <section
-        ref={(el) => (sectionsRef.current['analysis'] = el)}
-        className="scroll-section"
-      >
-        <StrengthsWeaknesses insights={reportData.insights || []} />
+      {/* Lens Comparison */}
+      {reportData.lensScores && (
+        <section ref={(el) => (sectionsRef.current['lenses'] = el)} className="scroll-section">
+          <FullLensComparison
+            lensScores={reportData.lensScores}
+            overallScore={reportData.overallScore || report.overall_score || 0}
+            activeLens={activeLens}
+            onLensSelect={setActiveLens}
+          />
+        </section>
+      )}
+
+      {/* Insights */}
+      <section ref={(el) => (sectionsRef.current['insights'] = el)} className="scroll-section">
+        <FullInsightsSection insights={reportData.insights || []} />
       </section>
 
-      {/* Parameter Scoring */}
-      <section
-        ref={(el) => (sectionsRef.current['scores'] = el)}
-        className="scroll-section bg-card/30"
-      >
-        <ParameterScoring
+      {/* Parameters */}
+      <section ref={(el) => (sectionsRef.current['parameters'] = el)} className="scroll-section">
+        <FullParameterSection
           categoryScores={reportData.categoryScores || {}}
-          parameterScores={reportData.parameterScores}
+          parameterScores={reportData.parameterScores || []}
         />
       </section>
 
       {/* Comic-specific sections */}
       {isComic && (
-        <>
-          {/* Panel Gallery */}
-          <section
-            ref={(el) => (sectionsRef.current['panels'] = el)}
-            className="scroll-section"
-          >
-            <PanelGallery scenes={reportData.scenes || []} />
-          </section>
-
-          {/* Art Reference Sheet */}
-          <section
-            ref={(el) => (sectionsRef.current['artref'] = el)}
-            className="scroll-section bg-card/30"
-          >
-            <ArtReferenceSheet 
-              characters={reportData.characters || []} 
-              scenes={reportData.scenes || []}
-            />
-          </section>
-        </>
+        <section ref={(el) => (sectionsRef.current['panels'] = el)} className="scroll-section">
+          <PanelGallery scenes={reportData.scenes || []} />
+        </section>
       )}
 
       {/* Screenplay-specific sections */}
       {!isComic && (
         <>
-          {/* Platform Fit Analysis */}
           {reportData.lensScores && (
-            <section
-              ref={(el) => (sectionsRef.current['platform'] = el)}
-              className="scroll-section"
-            >
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
+            <section ref={(el) => (sectionsRef.current['platform'] = el)} className="scroll-section py-20">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="text-center mb-16">
+                  <span className="px-4 py-1.5 rounded-full bg-chart-6/10 text-chart-6 text-sm font-medium">
+                    Distribution
+                  </span>
+                  <h2 className="text-4xl sm:text-5xl font-bold mt-6 mb-4">Platform Fit</h2>
+                  <p className="text-xl text-muted-foreground">OTT vs Theatrical release analysis</p>
+                </div>
                 <PlatformComparison lensScores={reportData.lensScores} />
               </div>
             </section>
           )}
 
-          {/* Risk Map & Maturity */}
-          <section
-            ref={(el) => (sectionsRef.current['risk'] = el)}
-            className="scroll-section bg-card/30"
-          >
-            <RiskMap
-              score={getCurrentScore()}
-              categoryScores={reportData.categoryScores || {}}
-            />
+          <section ref={(el) => (sectionsRef.current['risk'] = el)} className="scroll-section bg-card/30">
+            <div className="py-20">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center mb-16">
+                <span className="px-4 py-1.5 rounded-full bg-warning/10 text-warning text-sm font-medium">
+                  Assessment
+                </span>
+                <h2 className="text-4xl sm:text-5xl font-bold mt-6 mb-4">Risk & Maturity</h2>
+                <p className="text-xl text-muted-foreground">Production readiness evaluation</p>
+              </div>
+              <RiskMap score={getCurrentScore() * 10} categoryScores={reportData.categoryScores || {}} />
+            </div>
           </section>
         </>
       )}
 
       {/* Characters */}
-      <section
-        ref={(el) => (sectionsRef.current['characters'] = el)}
-        className="scroll-section"
-      >
-        <CharactersSection characters={reportData.characters || []} />
+      <section ref={(el) => (sectionsRef.current['characters'] = el)} className="scroll-section">
+        <FullCharactersSection characters={reportData.characters || []} />
       </section>
     </div>
   );
@@ -312,21 +276,27 @@ export default function ReportViewer() {
 function ReportSkeleton() {
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="flex items-center gap-4 mb-8">
-          <Skeleton className="h-10 w-10 rounded-full" />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
+        <div className="flex items-center gap-4 mb-12">
+          <Skeleton className="h-12 w-12 rounded-full" />
           <div>
-            <Skeleton className="h-6 w-48 mb-2" />
-            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-8 w-64 mb-2" />
+            <Skeleton className="h-4 w-40" />
           </div>
         </div>
-        <div className="grid lg:grid-cols-2 gap-12">
-          <div className="flex flex-col items-center">
-            <Skeleton className="h-48 w-48 rounded-full" />
-            <Skeleton className="h-8 w-64 mt-6" />
-            <Skeleton className="h-4 w-96 mt-3" />
+        <div className="grid lg:grid-cols-2 gap-16">
+          <div className="space-y-6">
+            <Skeleton className="h-12 w-3/4" />
+            <Skeleton className="h-24 w-full" />
+            <div className="flex gap-4">
+              <Skeleton className="h-20 w-32" />
+              <Skeleton className="h-20 w-32" />
+              <Skeleton className="h-20 w-32" />
+            </div>
           </div>
-          <Skeleton className="h-80 rounded-xl" />
+          <div className="flex justify-center">
+            <Skeleton className="h-64 w-64 rounded-full" />
+          </div>
         </div>
       </div>
     </div>
