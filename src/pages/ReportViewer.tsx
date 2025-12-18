@@ -252,6 +252,22 @@ export default function ReportViewer() {
         <PacingAnalysis scenes={reportData.scenes || []} totalPages={reportData.scriptMetadata?.pageCount} />
       </section>
 
+      {/* Theme & Motif Tracker */}
+      <section ref={(el) => (sectionsRef.current['themes'] = el)} className="scroll-section">
+        <ThemeMotifTracker 
+          scenes={reportData.scenes || []} 
+          insights={reportData.insights || []} 
+        />
+      </section>
+
+      {/* Budget Estimator */}
+      <section ref={(el) => (sectionsRef.current['budget'] = el)} className="scroll-section">
+        <BudgetEstimator 
+          scenes={reportData.scenes || []} 
+          characters={reportData.characters || []} 
+        />
+      </section>
+
       {/* Insights */}
       <section ref={(el) => (sectionsRef.current['insights'] = el)} className="scroll-section">
         <FullInsightsSection insights={reportData.insights || []} />
