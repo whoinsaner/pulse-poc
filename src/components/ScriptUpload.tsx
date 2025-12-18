@@ -29,6 +29,8 @@ interface ParseResult {
   errorMessage?: string;
   formatIssues?: string[];
   formatSuggestions?: string[];
+  aiAssisted?: boolean;
+  formatQuality?: 'good' | 'poor' | 'unreadable' | 'unknown';
 }
 
 const FORMAT_MAP: Record<string, ScriptFormat> = {
@@ -364,9 +366,17 @@ export function ScriptUpload({ onUploadComplete, onClose }: ScriptUploadProps) {
                 <Check className="h-6 w-6 text-success" />
               </div>
               <div className="flex-1">
-                <h3 className="text-lg font-semibold text-success">Script Parsed Successfully!</h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-semibold text-success">Script Parsed Successfully!</h3>
+                  {parseResult.aiAssisted && (
+                    <span className="px-2 py-0.5 text-xs rounded-full bg-primary/10 text-primary">
+                      AI-Assisted
+                    </span>
+                  )}
+                </div>
                 <p className="text-sm text-muted-foreground mt-1">
                   Your script is ready for AI-powered analysis
+                  {parseResult.formatQuality === 'poor' && ' (format was normalized with AI)'}
                 </p>
                 
                 {/* Extraction stats */}
@@ -418,9 +428,18 @@ export function ScriptUpload({ onUploadComplete, onClose }: ScriptUploadProps) {
                 <AlertTriangle className="h-6 w-6 text-warning" />
               </div>
               <div className="flex-1">
-                <h3 className="text-lg font-semibold text-warning">Script Format Issues Detected</h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-semibold text-warning">Script Format Issues Detected</h3>
+                  {parseResult?.aiAssisted && (
+                    <span className="px-2 py-0.5 text-xs rounded-full bg-muted text-muted-foreground">
+                      AI-Assisted
+                    </span>
+                  )}
+                </div>
                 <p className="text-sm text-muted-foreground mt-1">
-                  The script was uploaded but some issues were found that may affect AI analysis quality.
+                  {parseResult?.aiAssisted 
+                    ? 'AI parsing was attempted but some issues remain that may affect analysis quality.'
+                    : 'The script was uploaded but some issues were found that may affect AI analysis quality.'}
                 </p>
                 
                 {error && (
