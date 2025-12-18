@@ -17,6 +17,8 @@ import { DialogueAnalysis } from '@/components/report/DialogueAnalysis';
 import { PacingAnalysis } from '@/components/report/PacingAnalysis';
 import { ThemeMotifTracker } from '@/components/report/ThemeMotifTracker';
 import { BudgetEstimator } from '@/components/report/BudgetEstimator';
+import { CharacterArcVisualization } from '@/components/report/CharacterArcVisualization';
+import { SceneComplexityAnalyzer } from '@/components/report/SceneComplexityAnalyzer';
 import { RiskMap } from '@/components/report/RiskMap';
 import { PlatformComparison } from '@/components/report/PlatformComparison';
 import { PanelGallery } from '@/components/report/PanelGallery';
@@ -124,11 +126,13 @@ export default function ReportViewer() {
     { id: 'narrative', label: 'Narrative' },
     { id: 'heatmap', label: 'Heatmap' },
     { id: 'pacing', label: 'Pacing' },
+    { id: 'complexity', label: 'Complexity' },
     { id: 'themes', label: 'Themes' },
     { id: 'budget', label: 'Budget' },
     { id: 'insights', label: 'Insights' },
     { id: 'parameters', label: 'Parameters' },
     { id: 'panels', label: 'Panels' },
+    { id: 'arcs', label: 'Arcs' },
     { id: 'dialogue', label: 'Dialogue' },
     { id: 'network', label: 'Network' },
     { id: 'characters', label: 'Characters' },
@@ -139,12 +143,14 @@ export default function ReportViewer() {
     { id: 'narrative', label: 'Narrative' },
     { id: 'heatmap', label: 'Heatmap' },
     { id: 'pacing', label: 'Pacing' },
+    { id: 'complexity', label: 'Complexity' },
     { id: 'themes', label: 'Themes' },
     { id: 'budget', label: 'Budget' },
     { id: 'insights', label: 'Insights' },
     { id: 'parameters', label: 'Parameters' },
     { id: 'platform', label: 'Platform' },
     { id: 'risk', label: 'Risk' },
+    { id: 'arcs', label: 'Arcs' },
     { id: 'dialogue', label: 'Dialogue' },
     { id: 'network', label: 'Network' },
     { id: 'characters', label: 'Characters' },
@@ -252,6 +258,14 @@ export default function ReportViewer() {
         <PacingAnalysis scenes={reportData.scenes || []} totalPages={reportData.scriptMetadata?.pageCount} />
       </section>
 
+      {/* Scene Complexity Analyzer */}
+      <section ref={(el) => (sectionsRef.current['complexity'] = el)} className="scroll-section">
+        <SceneComplexityAnalyzer 
+          scenes={reportData.scenes || []} 
+          characters={reportData.characters || []} 
+        />
+      </section>
+
       {/* Theme & Motif Tracker */}
       <section ref={(el) => (sectionsRef.current['themes'] = el)} className="scroll-section">
         <ThemeMotifTracker 
@@ -320,6 +334,14 @@ export default function ReportViewer() {
           </section>
         </>
       )}
+
+      {/* Character Arc Visualization */}
+      <section ref={(el) => (sectionsRef.current['arcs'] = el)} className="scroll-section">
+        <CharacterArcVisualization 
+          characters={reportData.characters || []} 
+          totalScenes={reportData.scenes?.length || 60} 
+        />
+      </section>
 
       {/* Dialogue Analysis */}
       <section ref={(el) => (sectionsRef.current['dialogue'] = el)} className="scroll-section">
