@@ -11,6 +11,7 @@ interface ParseRequest {
   scriptId: string;
   format: 'pdf' | 'fdx' | 'fountain' | 'highland' | 'txt';
   filePath: string;
+  scriptType?: string;
 }
 
 interface Scene {
@@ -39,9 +40,9 @@ serve(async (req) => {
   }
 
   try {
-    const { scriptId, format, filePath } = await req.json() as ParseRequest;
+    const { scriptId, format, filePath, scriptType } = await req.json() as ParseRequest;
     
-    console.log(`[script-parser] Starting parse for script ${scriptId}, format: ${format}`);
+    console.log(`[script-parser] Starting parse for script ${scriptId}, format: ${format}, type: ${scriptType}`);
 
     // Create Supabase client with service role for admin access
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -60,15 +61,16 @@ serve(async (req) => {
 
     console.log(`[script-parser] Downloaded file, size: ${fileData.size} bytes`);
 
-    // Parse based on format
+    // Parse based on format and script type
     let parsedContent: { scenes: Scene[]; characters: Character[]; rawText: string };
+    const isComic = scriptType === 'comic';
     
     switch (format) {
       case 'fountain':
       case 'highland':
       case 'txt':
         const textContent = await fileData.text();
-        parsedContent = parseTextFormat(textContent, format);
+        parsedContent = isComic ? parseComicFormat(textContent) : parseTextFormat(textContent, format);
         break;
       case 'fdx':
         const fdxContent = await fileData.text();
@@ -77,7 +79,9 @@ serve(async (req) => {
       case 'pdf':
         // For PDF, we'll use AI to extract structure
         const pdfBytes = await fileData.arrayBuffer();
-        parsedContent = await parsePDFWithAI(supabase, pdfBytes, scriptId);
+        parsedContent = isComic 
+          ? await parseComicPDFWithAI(supabase, pdfBytes, scriptId)
+          : await parsePDFWithAI(supabase, pdfBytes, scriptId);
         break;
       default:
         throw new Error(`Unsupported format: ${format}`);
@@ -479,4 +483,244 @@ function buildNarrativeGraph(scenes: Scene[], characters: Character[]) {
   });
   
   return { nodes, edges };
+}
+
+// Parse comic script format (panels, splash pages, captions)
+function parseComicFormat(content: string): { scenes: Scene[]; characters: Character[]; rawText: string } {
+  const scenes: Scene[] = [];
+  const characterMap = new Map<string, Character>();
+  const lines = content.split('\n');
+  
+  let currentPanelNumber = 0;
+  let currentPageNumber = 0;
+  
+  // Comic script patterns
+  const pagePattern = /^PAGE\s*(\d+)/i;
+  const panelPattern = /^PANEL\s*(\d+)/i;
+  const splashPattern = /^SPLASH\s*PAGE/i;
+  const spreadPattern = /^(DOUBLE[- ]?PAGE\s*)?SPREAD/i;
+  const characterDialoguePattern = /^([A-Z][A-Z\s\.']+)(?:\s*\(.*\))?:\s*(.+)/;
+  const captionPattern = /^(?:CAPTION|CAP|NARRATION|NARRATOR)\s*(?:\(.*\))?:\s*(.+)/i;
+  const sfxPattern = /^SFX:\s*(.+)/i;
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+    
+    // Check for page marker
+    const pageMatch = line.match(pagePattern);
+    if (pageMatch) {
+      currentPageNumber = parseInt(pageMatch[1]);
+      continue;
+    }
+    
+    // Check for splash page
+    if (splashPattern.test(line) || spreadPattern.test(line)) {
+      currentPanelNumber++;
+      currentPageNumber = currentPageNumber || 1;
+      
+      scenes.push({
+        scene_number: currentPanelNumber,
+        heading: line,
+        int_ext: null,
+        location: 'SPLASH',
+        time_of_day: null,
+        description: null,
+        page_start: currentPageNumber,
+        page_end: currentPageNumber,
+      });
+      continue;
+    }
+    
+    // Check for panel
+    const panelMatch = line.match(panelPattern);
+    if (panelMatch) {
+      currentPanelNumber++;
+      
+      // Look ahead for description
+      let description = '';
+      let j = i + 1;
+      while (j < lines.length && !pagePattern.test(lines[j].trim()) && !panelPattern.test(lines[j].trim())) {
+        const nextLine = lines[j].trim();
+        if (nextLine && !characterDialoguePattern.test(nextLine) && !captionPattern.test(nextLine) && !sfxPattern.test(nextLine)) {
+          description += (description ? ' ' : '') + nextLine;
+          if (description.length > 200) break;
+        }
+        j++;
+      }
+      
+      scenes.push({
+        scene_number: currentPanelNumber,
+        heading: `PAGE ${currentPageNumber} - PANEL ${panelMatch[1]}`,
+        int_ext: null,
+        location: null,
+        time_of_day: null,
+        description: description || null,
+        page_start: currentPageNumber,
+        page_end: currentPageNumber,
+      });
+      continue;
+    }
+    
+    // Check for character dialogue
+    const dialogueMatch = line.match(characterDialoguePattern);
+    if (dialogueMatch) {
+      const charName = dialogueMatch[1].trim();
+      
+      if (!['CAPTION', 'CAP', 'NARRATION', 'NARRATOR', 'SFX', 'SOUND'].includes(charName.toUpperCase())) {
+        if (!characterMap.has(charName)) {
+          characterMap.set(charName, {
+            name: charName,
+            dialogue_count: 0,
+            scene_count: 0,
+            first_appearance: currentPanelNumber || 1,
+            description: null,
+          });
+        }
+        
+        const char = characterMap.get(charName)!;
+        char.dialogue_count++;
+        char.scene_count = Math.ceil(char.dialogue_count / 3);
+      }
+    }
+  }
+  
+  // If no panels were found, create a basic structure
+  if (scenes.length === 0) {
+    scenes.push({
+      scene_number: 1,
+      heading: 'PAGE 1 - PANEL 1',
+      int_ext: null,
+      location: null,
+      time_of_day: null,
+      description: 'Comic script content extracted',
+      page_start: 1,
+      page_end: null,
+    });
+  }
+  
+  return {
+    scenes,
+    characters: Array.from(characterMap.values()),
+    rawText: content,
+  };
+}
+
+// Parse comic PDF using AI
+async function parseComicPDFWithAI(
+  supabase: any,
+  pdfBytes: ArrayBuffer,
+  scriptId: string
+): Promise<{ scenes: Scene[]; characters: Character[]; rawText: string }> {
+  const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
+  
+  if (!lovableApiKey) {
+    console.log('[script-parser] No Lovable API key, using placeholder parsing for comic PDF');
+    return {
+      scenes: [{
+        scene_number: 1,
+        heading: 'PAGE 1 - PANEL 1',
+        int_ext: null,
+        location: 'Comic Script',
+        time_of_day: null,
+        description: 'Comic PDF parsing requires AI assistance.',
+        page_start: 1,
+        page_end: null,
+      }],
+      characters: [],
+      rawText: 'Comic PDF content - full text extraction pending',
+    };
+  }
+
+  // Convert first 100KB of PDF to base64 safely
+  const maxBytes = Math.min(pdfBytes.byteLength, 100000);
+  const uint8Array = new Uint8Array(pdfBytes).slice(0, maxBytes);
+  let base64 = '';
+  
+  const chunkSize = 8192;
+  for (let i = 0; i < uint8Array.length; i += chunkSize) {
+    const chunk = uint8Array.slice(i, Math.min(i + chunkSize, uint8Array.length));
+    base64 += String.fromCharCode.apply(null, Array.from(chunk));
+  }
+  base64 = btoa(base64);
+
+  try {
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${lovableApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash',
+        messages: [
+          {
+            role: 'system',
+            content: `You are a comic script parser. Extract pages, panels, and characters from the comic script.
+            Return JSON in this exact format:
+            {
+              "panels": [{"page": 1, "panel": 1, "description": "Panel description"}],
+              "characters": [{"name": "CHARACTER NAME", "dialogue_count": 5}]
+            }
+            Only return valid JSON, no markdown or explanations.`
+          },
+          {
+            role: 'user',
+            content: `Parse this comic script PDF (base64 encoded, truncated): ${base64.substring(0, 30000)}`
+          }
+        ],
+        max_tokens: 4000,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`AI API error: ${response.status}`);
+    }
+
+    const aiResult = await response.json();
+    const content = aiResult.choices?.[0]?.message?.content || '';
+    
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      return {
+        scenes: (parsed.panels || []).map((p: any, i: number) => ({
+          scene_number: i + 1,
+          heading: `PAGE ${p.page || 1} - PANEL ${p.panel || i + 1}`,
+          int_ext: null,
+          location: null,
+          time_of_day: null,
+          description: p.description || null,
+          page_start: p.page || 1,
+          page_end: p.page || null,
+        })),
+        characters: (parsed.characters || []).map((c: any) => ({
+          name: c.name || 'UNKNOWN',
+          dialogue_count: c.dialogue_count || 1,
+          scene_count: Math.ceil((c.dialogue_count || 1) / 3),
+          first_appearance: 1,
+          description: c.description || null,
+        })),
+        rawText: content,
+      };
+    }
+  } catch (aiError) {
+    console.error('[script-parser] AI comic parsing error:', aiError);
+  }
+
+  // Fallback
+  return {
+    scenes: [{
+      scene_number: 1,
+      heading: 'PAGE 1 - PANEL 1',
+      int_ext: null,
+      location: null,
+      time_of_day: null,
+      description: 'Comic PDF parsing completed with limited extraction',
+      page_start: 1,
+      page_end: null,
+    }],
+    characters: [],
+    rawText: '',
+  };
 }

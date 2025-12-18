@@ -140,6 +140,52 @@ Focus on:
 
 Provide scores 0-100, with specific production considerations.`
   },
+  // Comic-specific agents
+  ComicVisualAgent: {
+    parameters: ['visual_storytelling', 'panel_composition', 'page_layout', 'action_clarity'],
+    systemPrompt: `You are a comic visual storytelling analyst. Evaluate the script's visual storytelling potential.
+
+Focus on:
+- Visual Storytelling: How effectively the script uses visual medium to tell the story
+- Panel Composition: Variety and effectiveness of panel layouts and compositions
+- Page Layout: Flow and pacing of page designs, use of splash pages and spreads
+- Action Clarity: How clearly action sequences are described for artists
+
+Provide scores 0-100, with evidence from panel descriptions and page layouts.`
+  },
+  ComicDialogueAgent: {
+    parameters: ['balloon_efficiency', 'caption_voice', 'sound_effects'],
+    systemPrompt: `You are a comic dialogue and text specialist. Analyze text elements in comic scripts.
+
+Focus on:
+- Balloon Efficiency: Conciseness of dialogue that fits speech balloons without overcrowding
+- Caption Voice: Distinctive and consistent narrator/caption voice
+- Sound Effects: Creative and effective use of SFX to enhance action
+
+Provide scores 0-100, with specific examples from the script.`
+  },
+  ComicPacingAgent: {
+    parameters: ['panel_to_panel_flow', 'issue_structure', 'cliffhangers'],
+    systemPrompt: `You are a comic pacing and structure analyst. Evaluate storytelling rhythm.
+
+Focus on:
+- Panel-to-Panel Flow: How smoothly the reader's eye moves through the story
+- Issue Structure: Effective use of comic issue format (22-24 pages typically)
+- Cliffhangers: Strength of page-turn reveals and issue endings
+
+Provide scores 0-100, with evidence from page breaks and narrative beats.`
+  },
+  ComicArtDirectionAgent: {
+    parameters: ['artist_guidance', 'reference_clarity', 'style_consistency'],
+    systemPrompt: `You are a comic art direction analyst. Evaluate how well the script guides artists.
+
+Focus on:
+- Artist Guidance: Clarity and detail of visual descriptions for artists
+- Reference Clarity: Clear character and setting descriptions for consistent art
+- Style Consistency: Maintaining visual tone throughout the script
+
+Provide scores 0-100, with examples of strong or weak direction.`
+  },
 };
 
 serve(async (req) => {
@@ -158,19 +204,7 @@ serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Update analysis run status
-    await supabase
-      .from('analysis_runs')
-      .update({ 
-        status: 'processing', 
-        started_at: new Date().toISOString(),
-        agent_progress: Object.fromEntries(
-          Object.keys(AGENTS).map(agent => [agent, { status: 'pending' }])
-        )
-      })
-      .eq('id', analysisRunId);
-
-    // Fetch script data
+    // Fetch script data first
     const { data: script, error: scriptError } = await supabase
       .from('scripts')
       .select('*')
@@ -180,6 +214,36 @@ serve(async (req) => {
     if (scriptError || !script) {
       throw new Error(`Script not found: ${scriptError?.message}`);
     }
+
+    // Determine which agents to run based on script type
+    const isComic = script?.script_type === 'comic';
+    const comicAgents = ['ComicVisualAgent', 'ComicDialogueAgent', 'ComicPacingAgent', 'ComicArtDirectionAgent'];
+    const screenplayOnlyAgents = ['DialogueAgent', 'ExecutionAgent'];
+    
+    // Filter agents based on script type
+    const agentsToRun = Object.entries(AGENTS).filter(([agentName]) => {
+      if (isComic) {
+        // For comics: run comic agents + common agents (exclude screenplay-specific)
+        return !screenplayOnlyAgents.includes(agentName);
+      } else {
+        // For screenplays: exclude comic-specific agents
+        return !comicAgents.includes(agentName);
+      }
+    });
+
+    console.log(`[analyze-script] Script type: ${script.script_type}, running ${agentsToRun.length} agents`);
+
+    // Update analysis run status
+    await supabase
+      .from('analysis_runs')
+      .update({ 
+        status: 'processing', 
+        started_at: new Date().toISOString(),
+        agent_progress: Object.fromEntries(
+          agentsToRun.map(([agent]) => [agent, { status: 'pending' }])
+        )
+      })
+      .eq('id', analysisRunId);
 
     // Fetch scenes and characters
     const [scenesResult, charsResult] = await Promise.all([
@@ -199,8 +263,8 @@ serve(async (req) => {
 
     console.log(`[analyze-script] Context built: ${scenes.length} scenes, ${characters.length} characters`);
 
-    // Run all agents in parallel
-    const agentPromises = Object.entries(AGENTS).map(async ([agentName, agentConfig]) => {
+    // Run selected agents in parallel
+    const agentPromises = agentsToRun.map(async ([agentName, agentConfig]) => {
       try {
         // Update agent progress
         await updateAgentProgress(supabase, analysisRunId, agentName, 'running');

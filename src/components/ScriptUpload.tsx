@@ -131,6 +131,7 @@ export function ScriptUpload({ onUploadComplete, onClose }: ScriptUploadProps) {
           scriptId: script.id,
           format: detectedFormat,
           filePath: filePath,
+          scriptType: scriptType,
         },
       });
 
@@ -255,7 +256,7 @@ export function ScriptUpload({ onUploadComplete, onClose }: ScriptUploadProps) {
           <div className="space-y-2">
             <label className="text-sm font-medium">Script Type</label>
             <div className="flex flex-wrap gap-2">
-              {(['feature', 'pilot', 'episode', 'short', 'documentary'] as ScriptType[]).map(
+              {(['feature', 'pilot', 'episode', 'short', 'documentary', 'comic'] as ScriptType[]).map(
                 (type) => (
                   <button
                     key={type}
