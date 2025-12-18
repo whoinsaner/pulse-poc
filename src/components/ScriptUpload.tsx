@@ -131,7 +131,7 @@ export function ScriptUpload({ onUploadComplete, onClose }: ScriptUploadProps) {
       // Trigger parsing
       setUploadState('parsing');
       
-      const { error: parseError } = await supabase.functions.invoke('script-parser', {
+      const { data: parseResult, error: parseError } = await supabase.functions.invoke('script-parser', {
         body: {
           scriptId: script.id,
           format: detectedFormat,
@@ -142,18 +142,37 @@ export function ScriptUpload({ onUploadComplete, onClose }: ScriptUploadProps) {
 
       if (parseError) {
         console.error('Parse error:', parseError);
-        // Don't fail the upload if parsing fails - it can be retried
+        setError('Script parsing failed. Please try re-uploading or use a different format.');
         toast({
-          title: 'Upload complete',
-          description: 'Script uploaded. Parsing will continue in the background.',
+          title: 'Parsing Failed',
+          description: 'Unable to parse the script. Please try a different format.',
+          variant: 'destructive',
         });
-      } else {
-        setProgress(100);
-        toast({
-          title: 'Success',
-          description: 'Script uploaded and parsed successfully!',
-        });
+        setUploadState('error');
+        return;
       }
+      
+      // Check if extraction was complete
+      if (parseResult && !parseResult.readyForAnalysis) {
+        const extractionError = parseResult.errorMessage || 
+          `Incomplete extraction: Only ${parseResult.extractedPages || 0} of ${parseResult.estimatedPages || 'unknown'} pages were extracted.`;
+        
+        console.warn('Incomplete extraction:', extractionError);
+        setError(extractionError + ' AI analysis will not be available until all pages are extracted. Please re-upload the script in a different format (Fountain or Final Draft recommended).');
+        toast({
+          title: 'Incomplete Extraction',
+          description: 'Not all pages could be extracted. AI analysis is disabled.',
+          variant: 'destructive',
+        });
+        setUploadState('error');
+        return;
+      }
+      
+      setProgress(100);
+      toast({
+        title: 'Success',
+        description: `Script uploaded and parsed successfully! ${parseResult?.scenesCount || 0} scenes and ${parseResult?.charactersCount || 0} characters extracted.`,
+      });
 
       setUploadState('complete');
       onUploadComplete?.(script.id);
