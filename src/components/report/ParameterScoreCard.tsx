@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { ParameterScoreData, CATEGORY_COLORS } from '@/types/database';
+import { ParameterScoreData, CATEGORY_COLORS, MaturityLevel, RiskLevel } from '@/types/database';
 import { ScoreRing } from '@/components/ScoreRing';
 import { cn } from '@/lib/utils';
-import { ChevronDown, ChevronUp, Quote } from 'lucide-react';
+import { ChevronDown, ChevronUp, Quote, TrendingUp, AlertTriangle, Wrench, Zap } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 interface ParameterScoreCardProps {
   parameter: ParameterScoreData;
@@ -10,10 +11,29 @@ interface ParameterScoreCardProps {
   compact?: boolean;
 }
 
+const maturityColors: Record<MaturityLevel, string> = {
+  Weak: 'bg-destructive/20 text-destructive border-destructive/30',
+  Developing: 'bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/30',
+  Strong: 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/30',
+};
+
+const riskColors: Record<RiskLevel, string> = {
+  Low: 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/30',
+  Medium: 'bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/30',
+  High: 'bg-destructive/20 text-destructive border-destructive/30',
+};
+
+const impactColors: Record<RiskLevel, string> = {
+  Low: 'bg-muted text-muted-foreground border-border',
+  Medium: 'bg-primary/20 text-primary border-primary/30',
+  High: 'bg-chart-1/20 text-chart-1 border-chart-1/30',
+};
+
 export function ParameterScoreCard({ parameter, index, compact = false }: ParameterScoreCardProps) {
   const [expanded, setExpanded] = useState(false);
 
   const hasEvidence = parameter.evidence && parameter.evidence.length > 0;
+  const hasUASFFields = parameter.maturity || parameter.riskLevel || parameter.fixCost || parameter.upsideImpact;
 
   if (compact) {
     return (
@@ -25,7 +45,14 @@ export function ParameterScoreCard({ parameter, index, compact = false }: Parame
           <ScoreRing score={parameter.score} size="sm" showLabel={false} />
           <div className="flex-1 min-w-0">
             <p className="font-medium text-sm truncate">{parameter.displayName}</p>
-            <p className="text-xs text-muted-foreground">{parameter.category}</p>
+            <div className="flex items-center gap-2">
+              <p className="text-xs text-muted-foreground">{parameter.category}</p>
+              {parameter.maturity && (
+                <Badge variant="outline" className={cn('text-[10px] px-1.5 py-0', maturityColors[parameter.maturity])}>
+                  {parameter.maturity}
+                </Badge>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -52,6 +79,11 @@ export function ParameterScoreCard({ parameter, index, compact = false }: Parame
                 style={{ backgroundColor: CATEGORY_COLORS[parameter.category] || 'hsl(var(--primary))' }}
               />
               <span className="text-xs text-muted-foreground">{parameter.category}</span>
+              {parameter.maturity && (
+                <Badge variant="outline" className={cn('text-[10px] px-1.5 py-0', maturityColors[parameter.maturity])}>
+                  {parameter.maturity}
+                </Badge>
+              )}
             </div>
             <h4 className="font-medium">{parameter.displayName}</h4>
             {parameter.confidence && (
@@ -62,7 +94,7 @@ export function ParameterScoreCard({ parameter, index, compact = false }: Parame
           </div>
           <div className="flex items-center gap-2">
             <ScoreRing score={parameter.score} size="sm" showLabel={false} />
-            {hasEvidence && (
+            {(hasEvidence || hasUASFFields) && (
               expanded ? (
                 <ChevronUp className="h-4 w-4 text-muted-foreground" />
               ) : (
@@ -75,6 +107,56 @@ export function ParameterScoreCard({ parameter, index, compact = false }: Parame
 
       {expanded && (
         <div className="px-4 pb-4 space-y-4 animate-fade-up">
+          {/* UASF Metrics */}
+          {hasUASFFields && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {parameter.riskLevel && (
+                <div className="flex items-center gap-1.5 p-2 rounded-lg bg-muted/50">
+                  <AlertTriangle className="h-3.5 w-3.5 text-muted-foreground" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Risk</p>
+                    <Badge variant="outline" className={cn('text-[10px] px-1.5 py-0 mt-0.5', riskColors[parameter.riskLevel])}>
+                      {parameter.riskLevel}
+                    </Badge>
+                  </div>
+                </div>
+              )}
+              {parameter.fixCost && (
+                <div className="flex items-center gap-1.5 p-2 rounded-lg bg-muted/50">
+                  <Wrench className="h-3.5 w-3.5 text-muted-foreground" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Fix Cost</p>
+                    <Badge variant="outline" className={cn('text-[10px] px-1.5 py-0 mt-0.5', riskColors[parameter.fixCost])}>
+                      {parameter.fixCost}
+                    </Badge>
+                  </div>
+                </div>
+              )}
+              {parameter.upsideImpact && (
+                <div className="flex items-center gap-1.5 p-2 rounded-lg bg-muted/50">
+                  <Zap className="h-3.5 w-3.5 text-muted-foreground" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Upside</p>
+                    <Badge variant="outline" className={cn('text-[10px] px-1.5 py-0 mt-0.5', impactColors[parameter.upsideImpact])}>
+                      {parameter.upsideImpact}
+                    </Badge>
+                  </div>
+                </div>
+              )}
+              {parameter.maturity && (
+                <div className="flex items-center gap-1.5 p-2 rounded-lg bg-muted/50">
+                  <TrendingUp className="h-3.5 w-3.5 text-muted-foreground" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Maturity</p>
+                    <Badge variant="outline" className={cn('text-[10px] px-1.5 py-0 mt-0.5', maturityColors[parameter.maturity])}>
+                      {parameter.maturity}
+                    </Badge>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Rationale */}
           {parameter.rationale && (
             <div className="p-3 rounded-lg bg-muted/50">

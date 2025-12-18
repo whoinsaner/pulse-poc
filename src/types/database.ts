@@ -195,6 +195,9 @@ export interface ReportData {
   narrativeGraph?: NarrativeGraphData;
 }
 
+export type MaturityLevel = 'Weak' | 'Developing' | 'Strong';
+export type RiskLevel = 'Low' | 'Medium' | 'High';
+
 export interface ParameterScoreData {
   parameterId: string;
   parameterName: string;
@@ -204,6 +207,11 @@ export interface ParameterScoreData {
   confidence: number;
   evidence: Evidence[];
   rationale: string;
+  // New UASF output contract fields
+  maturity?: MaturityLevel;
+  riskLevel?: RiskLevel;
+  fixCost?: RiskLevel;
+  upsideImpact?: RiskLevel;
 }
 
 export interface InsightData {
