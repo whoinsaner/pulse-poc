@@ -310,4 +310,9 @@ export const CATEGORY_COLORS: Record<string, string> = {
   Emotion: 'hsl(var(--chart-1))',
   Market: 'hsl(var(--chart-2))',
   Execution: 'hsl(var(--chart-3))',
+  // Comic-specific categories
+  'Comic Visuals': 'hsl(var(--chart-4))',
+  'Comic Dialogue': 'hsl(var(--chart-5))',
+  'Comic Pacing': 'hsl(var(--chart-6))',
+  'Comic Art Direction': 'hsl(var(--chart-1))',
 };
