@@ -164,6 +164,191 @@ function validateScriptFormat(content: string, format: string, isComic: boolean)
   };
 }
 
+// AI-powered format rescue: attempt to parse poorly formatted scripts using AI
+async function rescueParsingWithAI(
+  content: string,
+  format: string,
+  isComic: boolean,
+  validation: ScriptValidation
+): Promise<{ scenes: Scene[]; characters: Character[]; rawText: string; rescued: boolean }> {
+  const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
+  
+  if (!lovableApiKey) {
+    console.log('[script-parser] No API key for AI rescue');
+    return { scenes: [], characters: [], rawText: content, rescued: false };
+  }
+  
+  console.log('[script-parser] Attempting AI-powered parsing rescue...');
+  
+  try {
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${lovableApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash',
+        messages: [
+          {
+            role: 'system',
+            content: `You are an expert ${isComic ? 'comic script' : 'screenplay'} parser that can extract structure from poorly formatted scripts.
+
+The script has these issues: ${validation.issues.join('; ')}
+
+Your task is to:
+1. Identify all scenes ${isComic ? 'or panels' : ''} even without standard formatting
+2. Extract character names from dialogue
+3. Estimate page numbers based on content length
+
+Return JSON ONLY in this exact format (no markdown, no explanation):
+{
+  "scenes": [
+    {
+      "scene_number": 1,
+      "heading": "Scene heading or description",
+      "int_ext": "INT" | "EXT" | null,
+      "location": "Location name",
+      "time_of_day": "DAY" | "NIGHT" | null,
+      "description": "Brief scene description",
+      "page_start": 1,
+      "page_end": 2
+    }
+  ],
+  "characters": [
+    {
+      "name": "CHARACTER NAME",
+      "dialogue_count": 10,
+      "scene_count": 3,
+      "first_appearance": 1,
+      "description": "Brief character description"
+    }
+  ],
+  "parsing_notes": "Any notes about the extraction process"
+}`
+          },
+          {
+            role: 'user',
+            content: `Parse this ${isComic ? 'comic script' : 'screenplay'} and extract all scenes and characters. The script may be poorly formatted:\n\n${content.substring(0, 80000)}`
+          }
+        ],
+        max_tokens: 16000,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[script-parser] AI rescue API error:', response.status, errorText);
+      return { scenes: [], characters: [], rawText: content, rescued: false };
+    }
+
+    const aiResult = await response.json();
+    const aiContent = aiResult.choices?.[0]?.message?.content || '';
+    
+    // Extract JSON from response
+    const jsonMatch = aiContent.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      console.error('[script-parser] AI rescue: No valid JSON in response');
+      return { scenes: [], characters: [], rawText: content, rescued: false };
+    }
+    
+    const parsed = JSON.parse(jsonMatch[0]);
+    
+    const scenes: Scene[] = (parsed.scenes || []).map((s: any, i: number) => ({
+      scene_number: s.scene_number || i + 1,
+      heading: s.heading || `Scene ${i + 1}`,
+      int_ext: s.int_ext || null,
+      location: s.location || null,
+      time_of_day: s.time_of_day || null,
+      description: s.description || null,
+      page_start: s.page_start || null,
+      page_end: s.page_end || null,
+    }));
+    
+    const characters: Character[] = (parsed.characters || []).map((c: any) => ({
+      name: c.name || 'UNKNOWN',
+      dialogue_count: c.dialogue_count || 1,
+      scene_count: c.scene_count || 1,
+      first_appearance: c.first_appearance || 1,
+      description: c.description || null,
+    }));
+    
+    if (parsed.parsing_notes) {
+      console.log('[script-parser] AI rescue notes:', parsed.parsing_notes);
+    }
+    
+    console.log(`[script-parser] AI rescue successful: ${scenes.length} scenes, ${characters.length} characters`);
+    
+    return {
+      scenes,
+      characters,
+      rawText: content,
+      rescued: scenes.length > 0,
+    };
+  } catch (error) {
+    console.error('[script-parser] AI rescue error:', error);
+    return { scenes: [], characters: [], rawText: content, rescued: false };
+  }
+}
+
+// AI-powered content normalization for badly formatted text
+async function normalizeWithAI(content: string, isComic: boolean): Promise<string> {
+  const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
+  
+  if (!lovableApiKey || content.length < 500) {
+    return content;
+  }
+  
+  try {
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${lovableApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash-lite',
+        messages: [
+          {
+            role: 'system',
+            content: `You are a ${isComic ? 'comic script' : 'screenplay'} format fixer. 
+            
+Your task is to fix formatting issues while preserving all content:
+1. Add proper scene headings (INT./EXT.) if missing
+2. Format character names in ALL CAPS before dialogue
+3. Standardize panel/page markers for comics
+4. Fix encoding issues and normalize whitespace
+
+Return ONLY the corrected script text, no explanations.`
+          },
+          {
+            role: 'user',
+            content: `Fix the formatting of this ${isComic ? 'comic script' : 'screenplay'}:\n\n${content.substring(0, 30000)}`
+          }
+        ],
+        max_tokens: 32000,
+      }),
+    });
+
+    if (!response.ok) {
+      return content;
+    }
+
+    const aiResult = await response.json();
+    const normalized = aiResult.choices?.[0]?.message?.content || content;
+    
+    // Only use AI result if it's substantial
+    if (normalized.length > content.length * 0.5) {
+      console.log('[script-parser] AI normalization applied');
+      return normalized;
+    }
+    
+    return content;
+  } catch {
+    return content;
+  }
+}
+
 // Normalize script content for better parsing
 function normalizeScriptContent(content: string, format: string, isComic: boolean): string {
   let normalized = content;
@@ -284,37 +469,89 @@ serve(async (req) => {
     // Parse based on format and script type
     let rawResult: { scenes: Scene[]; characters: Character[]; rawText: string };
     const isComic = scriptType === 'comic';
+    let usedAIRescue = false;
+    let validation: ScriptValidation | undefined;
     
-    switch (format) {
-      case 'fountain':
-      case 'highland':
-      case 'txt':
-        const textContent = await fileData.text();
-        rawResult = isComic ? parseComicFormat(textContent) : parseTextFormat(textContent, format);
-        break;
-      case 'fdx':
-        const fdxContent = await fileData.text();
-        rawResult = parseFinalDraft(fdxContent);
-        break;
-      case 'docx':
-        const docxBytes = await fileData.arrayBuffer();
-        rawResult = await parseDocxWithAI(supabase, docxBytes, scriptId, isComic, expectedPages);
-        break;
-      case 'pdf':
-        const pdfBytes = await fileData.arrayBuffer();
-        rawResult = isComic 
-          ? await parseComicPDFWithAI(supabase, pdfBytes, scriptId, expectedPages)
-          : await parsePDFWithAI(supabase, pdfBytes, scriptId, expectedPages);
-        break;
-      default:
-        throw new Error(`Unsupported format: ${format}`);
+    // For text-based formats, pre-validate and potentially normalize
+    if (['fountain', 'highland', 'txt'].includes(format)) {
+      const textContent = await fileData.text();
+      
+      // Step 1: Validate format
+      validation = validateScriptFormat(textContent, format, isComic);
+      console.log(`[script-parser] Format validation: ${validation.formatQuality}, parsable: ${validation.isParsable}`);
+      
+      let contentToParse = textContent;
+      
+      // Step 2: If format is poor, try AI normalization first
+      if (validation.formatQuality === 'poor' && validation.isParsable) {
+        console.log('[script-parser] Attempting AI normalization for poor format...');
+        contentToParse = await normalizeWithAI(textContent, isComic);
+      }
+      
+      // Step 3: Normalize content
+      contentToParse = normalizeScriptContent(contentToParse, format, isComic);
+      
+      // Step 4: Try traditional parsing
+      rawResult = isComic ? parseComicFormat(contentToParse) : parseTextFormat(contentToParse, format);
+      
+      // Step 5: If traditional parsing failed or produced poor results, use AI rescue
+      if (rawResult.scenes.length === 0 || (validation.formatQuality !== 'good' && rawResult.scenes.length < 3)) {
+        console.log('[script-parser] Traditional parsing insufficient, attempting AI rescue...');
+        const rescueResult = await rescueParsingWithAI(textContent, format, isComic, validation);
+        
+        if (rescueResult.rescued && rescueResult.scenes.length > rawResult.scenes.length) {
+          rawResult = {
+            scenes: rescueResult.scenes,
+            characters: rescueResult.characters,
+            rawText: rescueResult.rawText,
+          };
+          usedAIRescue = true;
+          console.log('[script-parser] AI rescue improved results');
+        }
+      }
+    } else {
+      // For binary formats, use AI parsing directly
+      switch (format) {
+        case 'fdx':
+          const fdxContent = await fileData.text();
+          
+          // Validate FDX content
+          validation = validateScriptFormat(fdxContent.replace(/<[^>]+>/g, ' '), format, isComic);
+          
+          rawResult = parseFinalDraft(fdxContent);
+          
+          // If FDX parsing failed, try AI rescue on extracted text
+          if (rawResult.scenes.length === 0) {
+            const textContent = fdxContent.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+            const rescueResult = await rescueParsingWithAI(textContent, format, isComic, validation);
+            if (rescueResult.rescued) {
+              rawResult = rescueResult;
+              usedAIRescue = true;
+            }
+          }
+          break;
+        case 'docx':
+          const docxBytes = await fileData.arrayBuffer();
+          rawResult = await parseDocxWithAI(supabase, docxBytes, scriptId, isComic, expectedPages);
+          usedAIRescue = true;
+          break;
+        case 'pdf':
+          const pdfBytes = await fileData.arrayBuffer();
+          rawResult = isComic 
+            ? await parseComicPDFWithAI(supabase, pdfBytes, scriptId, expectedPages)
+            : await parsePDFWithAI(supabase, pdfBytes, scriptId, expectedPages);
+          usedAIRescue = true;
+          break;
+        default:
+          throw new Error(`Unsupported format: ${format}`);
+      }
     }
 
     // Validate extraction completeness
-    const parsedContent = validateExtraction(rawResult, expectedPages, format);
+    const parsedContent = validateExtraction(rawResult, expectedPages, format, validation);
 
     console.log(`[script-parser] Parsed ${parsedContent.scenes.length} scenes, ${parsedContent.characters.length} characters`);
-    console.log(`[script-parser] Extraction complete: ${parsedContent.isComplete}, pages: ${parsedContent.extractedPages}/${parsedContent.expectedPages}`);
+    console.log(`[script-parser] Extraction complete: ${parsedContent.isComplete}, pages: ${parsedContent.extractedPages}/${parsedContent.expectedPages}, AI rescued: ${usedAIRescue}`);
 
     if (!parsedContent.isComplete) {
       console.error(`[script-parser] Incomplete extraction: ${parsedContent.errorMessage}`);
@@ -367,6 +604,9 @@ serve(async (req) => {
           extraction_complete: parsedContent.isComplete,
           extracted_pages: parsedContent.extractedPages,
           expected_pages: parsedContent.expectedPages,
+          ai_assisted: usedAIRescue,
+          format_quality: validation?.formatQuality || 'unknown',
+          format_issues: validation?.issues || [],
         },
       });
 
@@ -392,6 +632,10 @@ serve(async (req) => {
         isComplete: parsedContent.isComplete,
         readyForAnalysis: parsedContent.isComplete,
         errorMessage: parsedContent.errorMessage,
+        aiAssisted: usedAIRescue,
+        formatQuality: validation?.formatQuality || 'unknown',
+        formatIssues: validation?.issues || [],
+        formatSuggestions: validation?.suggestions || [],
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
