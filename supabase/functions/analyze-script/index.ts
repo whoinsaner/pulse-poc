@@ -11,12 +11,33 @@ interface AnalyzeRequest {
   analysisRunId: string;
 }
 
+// UASF Output Contract
+interface ParameterOutput {
+  score: number; // 0-10
+  maturity: 'Weak' | 'Developing' | 'Strong';
+  riskLevel: 'Low' | 'Medium' | 'High';
+  fixCost: 'Low' | 'Medium' | 'High';
+  upsideImpact: 'Low' | 'Medium' | 'High';
+  explanation: string;
+  evidence: Array<{
+    type: string;
+    reference: string;
+    quote?: string;
+    explanation: string;
+  }>;
+}
+
 interface AgentResult {
   agent: string;
   scores: Array<{
     parameterId: string;
+    parameterName: string;
     score: number;
     confidence: number;
+    maturity: string;
+    riskLevel: string;
+    fixCost: string;
+    upsideImpact: string;
     evidence: Array<{
       type: string;
       reference: string;
@@ -31,6 +52,9 @@ interface AgentResult {
     description: string;
     priority: number;
     actionable: boolean;
+    affectedStakeholders: string[];
+    minimalFix: string;
+    maximalFix: string;
     supportingEvidence: Array<{
       type: string;
       reference: string;
@@ -40,151 +64,350 @@ interface AgentResult {
   }>;
 }
 
-// Agent definitions with their parameters and prompts
+// GLOBAL AGENT OPERATING RULES
+const GLOBAL_INSTRUCTIONS = `
+GLOBAL AGENT OPERATING RULES (MANDATORY):
+
+1. CORE PHILOSOPHY
+- You are an analytical agent, not a creative writer.
+- You evaluate what exists, not what you wish existed.
+- You must be script-type agnostic.
+- You must produce evidence-based outputs.
+
+2. UNIVERSAL SCRIPT TYPES
+Support analysis for: Feature Film, Series/Episodic, Short Film, Theatre/Stage, Game/Interactive, Ad/Brand Film, Podcast/Audio Drama, Comic/Graphic Narrative, Documentary, Transmedia/Franchise IP.
+Do NOT assume: 3-act structure, visual medium, passive audience, or linear narrative.
+
+3. OUTPUT CONTRACT (STRICT)
+Every parameter must output:
+- score: 0-10
+- maturity: Weak | Developing | Strong
+- riskLevel: Low | Medium | High
+- fixCost: Low | Medium | High
+- upsideImpact: Low | Medium | High
+- explanation: Clear, evidence-based reasoning
+- evidence: Scene references, dialogue patterns, structural observations
+
+4. EVIDENCE RULES
+Evidence may include: scene placement, frequency patterns, structural position, character behavior, dialogue usage, absence of expected elements.
+You may infer, but you must explain inference.
+
+5. AGENT BOUNDARIES
+- Do NOT compute final readiness decisions
+- Do NOT apply stakeholder weights
+- Do NOT summarize for marketing
+- ONLY output parameter evaluations + observations
+`;
+
+// Agent definitions with UASF-compliant prompts
 const AGENTS = {
+  // STRUCTURE AGENT - Module B
   StructureAgent: {
-    parameters: ['structural_integrity', 'inciting_incident', 'midpoint_turn', 'climax_resolution'],
-    systemPrompt: `You are a screenplay structure analyst. Analyze the script's three-act structure, plot points, and narrative architecture.
-    
-Focus on:
-- Structural Integrity: How well the script follows classic screenplay structure (setup, confrontation, resolution)
-- Inciting Incident: Clarity and timing of the event that sets the story in motion
-- Midpoint Turn: Effectiveness of the midpoint reversal or revelation
-- Climax & Resolution: Strength of the climactic sequence and satisfaction of resolution
+    parameters: [
+      'inciting_force_clarity', 'escalation_logic', 'midpoint_transformation',
+      'structural_symmetry', 'repetition_vs_progression', 'resolution_satisfaction', 'drop_off_risk'
+    ],
+    systemPrompt: `You are StructureAgent.
 
-Provide scores 0-100, with evidence from specific scenes.`
+${GLOBAL_INSTRUCTIONS}
+
+YOUR RESPONSIBILITY: MODULE B - STRUCTURAL INTELLIGENCE
+
+Analyze narrative structure without assuming any fixed format.
+Evaluate:
+- Inciting Force Clarity & Timing: When and how clearly the story-launching event occurs
+- Escalation Logic: Cause → Effect chain quality
+- Midpoint Transformation: Whether there's a meaningful shift at the narrative center
+- Structural Symmetry: Balance and proportion of story segments
+- Repetition vs Progression: Whether patterns serve meaning or indicate stagnation
+- Resolution Satisfaction: How completely the narrative questions are addressed
+- Drop-off Risk Points: Where audience attention/engagement may falter
+
+Support linear, non-linear, episodic, looping, and branching narratives.
+Score each parameter 0-10 with full evidence.`
   },
+
+  // CHARACTER AGENT - Module C
   CharacterAgent: {
-    parameters: ['protagonist_arc', 'character_motivation', 'character_distinctiveness', 'supporting_characters'],
-    systemPrompt: `You are a character development specialist. Analyze the depth, growth, and distinctiveness of characters.
+    parameters: [
+      'want_vs_need', 'psychological_flaw_depth', 'agency_level',
+      'decision_density', 'transformation_credibility', 'character_balance', 'performative_range'
+    ],
+    systemPrompt: `You are CharacterAgent.
 
-Focus on:
-- Protagonist Arc: Completeness and believability of the main character's transformation
-- Character Motivation: Clarity and strength of character goals and desires
-- Character Distinctiveness: How unique and memorable each character's voice and personality is
-- Supporting Characters: Depth and purpose of secondary characters
+${GLOBAL_INSTRUCTIONS}
 
-Provide scores 0-100, with evidence from dialogue and actions.`
+YOUR RESPONSIBILITY: MODULE C - CHARACTER & AGENCY
+
+Analyze all major characters for:
+- Want vs Need: Clarity of external goals vs internal needs
+- Psychological Flaw Depth: Complexity of character flaws
+- Agency Level: Proactive vs reactive behavior
+- Decision Density: Frequency and impact of character choices
+- Transformation Credibility: Whether arcs feel earned
+- Character Balance: Whether any character overshadows others inappropriately
+- Performative Range: (If actors implied) Range of emotion/action required
+
+Flag overshadowing, passivity, or unearned arcs.
+Score each parameter 0-10 with full evidence from character behavior and dialogue.`
   },
+
+  // CONFLICT AGENT - Module D
   ConflictAgent: {
-    parameters: ['central_conflict', 'escalation', 'obstacles'],
-    systemPrompt: `You are a dramatic conflict analyst. Evaluate the story's conflicts and tensions.
+    parameters: [
+      'conflict_type_diversity', 'conflict_density', 'stakes_personalization',
+      'escalation_irreversibility', 'cost_of_failure', 'internal_external_balance'
+    ],
+    systemPrompt: `You are ConflictAgent.
 
-Focus on:
-- Central Conflict: Clarity and stakes of the main dramatic question
-- Escalation: How well conflicts build and intensify throughout the story
-- Obstacles: Variety and challenge level of barriers facing protagonists
+${GLOBAL_INSTRUCTIONS}
 
-Provide scores 0-100, with evidence from key confrontations.`
+YOUR RESPONSIBILITY: MODULE D - CONFLICT & STAKES
+
+Identify all forms of conflict present and evaluate:
+- Conflict Type Diversity: Variety of conflict forms (interpersonal, internal, societal, etc.)
+- Conflict Density: Appropriate frequency of conflict beats
+- Stakes Personalization: How personally meaningful the stakes are to characters
+- Escalation Irreversibility: Whether stakes genuinely increase (can't go back)
+- Cost of Failure: What characters stand to lose
+- Internal vs External Balance: Mix of psychological and situational conflict
+
+Assess whether conflict meaningfully evolves or plateaus.
+Score each parameter 0-10 with evidence from key confrontations.`
   },
+
+  // THEME AGENT - Module E
   ThemeAgent: {
-    parameters: ['thematic_coherence', 'thematic_depth'],
-    systemPrompt: `You are a thematic analyst. Evaluate the script's underlying themes and messages.
+    parameters: [
+      'thematic_spine_clarity', 'show_vs_tell_ratio', 'symbol_motif_consistency',
+      'moral_complexity', 'cultural_resonance', 'longevity_of_meaning'
+    ],
+    systemPrompt: `You are ThemeAgent.
 
-Focus on:
-- Thematic Coherence: How consistently themes are woven throughout the story
-- Thematic Depth: Sophistication and resonance of the themes explored
+${GLOBAL_INSTRUCTIONS}
 
-Provide scores 0-100, with evidence from symbolic elements and character journeys.`
+YOUR RESPONSIBILITY: MODULE E - THEME & MEANING
+
+Extract the thematic spine and evaluate:
+- Thematic Spine Clarity: How clearly the central theme can be identified
+- Show vs Tell Ratio: Whether theme emerges from action vs explicit statement
+- Symbol/Motif Consistency: Coherent use of recurring imagery
+- Moral Complexity: Avoidance of simplistic moralizing
+- Cultural Resonance: Connection to broader cultural conversations
+- Longevity of Meaning: Whether themes will remain relevant
+
+Do NOT judge ideology. Judge coherence and depth.
+Score each parameter 0-10 with evidence from symbolic elements and character journeys.`
   },
+
+  // DIALOGUE AGENT - Module F
   DialogueAgent: {
-    parameters: ['dialogue_authenticity', 'dialogue_efficiency', 'subtext'],
-    systemPrompt: `You are a dialogue specialist. Analyze the quality and effectiveness of spoken lines.
+    parameters: [
+      'exposition_load', 'subtext_density', 'voice_differentiation',
+      'rhythm_and_silence', 'quotability', 'medium_appropriateness'
+    ],
+    systemPrompt: `You are DialogueAgent.
 
-Focus on:
-- Dialogue Authenticity: How natural and character-specific the dialogue sounds
-- Dialogue Efficiency: Whether dialogue advances plot or reveals character (not just exposition)
-- Subtext: Depth of meaning beneath the surface of conversations
+${GLOBAL_INSTRUCTIONS}
 
-Provide scores 0-100, with specific dialogue examples.`
+YOUR RESPONSIBILITY: MODULE F - DIALOGUE & LANGUAGE
+
+Analyze dialogue for:
+- Exposition Load: How much dialogue serves only to inform the audience
+- Subtext Density: Meaning beneath the surface of conversations
+- Voice Differentiation: How unique each character's speech patterns are
+- Rhythm & Silence: Pacing of verbal exchanges, use of pauses
+- Quotability: Memorable lines that could be repeated
+- Medium Appropriateness: Fit for stage, audio, screen, or text
+
+Adapt analysis to the script's medium.
+Score each parameter 0-10 with specific dialogue examples.`
   },
-  EmotionalArcAgent: {
-    parameters: ['emotional_engagement', 'emotional_variety'],
-    systemPrompt: `You are an emotional journey analyst. Evaluate the script's ability to evoke feelings.
 
-Focus on:
-- Emotional Engagement: How deeply the script connects with audience emotions
-- Emotional Variety: Range of emotional beats and tones throughout
-
-Provide scores 0-100, with evidence from emotionally charged scenes.`
-  },
+  // WORLD LOGIC AGENT - Module G
   WorldLogicAgent: {
-    parameters: ['world_building', 'world_consistency'],
-    systemPrompt: `You are a world and logic analyst. Evaluate the story's setting and internal consistency.
+    parameters: [
+      'world_rule_consistency', 'setting_agency', 'spatial_system_logic',
+      'plausibility', 'continuity_integrity', 'suspension_of_disbelief'
+    ],
+    systemPrompt: `You are WorldLogicAgent.
 
-Focus on:
-- World Building: Richness and immersion of the story's world
-- World Consistency: Internal logic and rule adherence
+${GLOBAL_INSTRUCTIONS}
 
-Provide scores 0-100, with evidence of world details and any logical issues.`
+YOUR RESPONSIBILITY: MODULE G - WORLD & LOGIC
+
+Evaluate the internal logic of the world or system:
+- World Rule Consistency: Whether established rules are followed
+- Setting Agency: Whether the world actively shapes the story
+- Spatial/System Logic: Physical and systemic coherence
+- Plausibility: Believability within the story's own terms
+- Continuity Integrity: Consistency of details across the narrative
+- Suspension of Disbelief: How easily the audience can accept the premise
+
+Identify logic gaps or rule violations.
+Score each parameter 0-10 with evidence of world details and any logical issues.`
   },
+
+  // EMOTIONAL ARC AGENT - Module H
+  EmotionalArcAgent: {
+    parameters: [
+      'emotional_range', 'emotional_timing', 'emotional_progression',
+      'catharsis_strength', 'fatigue_vs_variety', 'payoff_delay'
+    ],
+    systemPrompt: `You are EmotionalArcAgent.
+
+${GLOBAL_INSTRUCTIONS}
+
+YOUR RESPONSIBILITY: MODULE H - EMOTIONAL ARC
+
+Map emotional intensity across time and evaluate:
+- Emotional Range: Variety of emotions evoked
+- Emotional Timing: Placement of emotional beats
+- Emotional Progression: How emotions build and evolve
+- Catharsis Strength: Power of emotional release moments
+- Fatigue vs Variety: Balance to prevent emotional exhaustion
+- Payoff Delay: Effectiveness of delayed emotional gratification
+
+Consider audience emotional experience, not character intent.
+Score each parameter 0-10 with evidence from emotionally charged scenes.`
+  },
+
+  // MARKET AGENT - Module I
   MarketAgent: {
-    parameters: ['commercial_viability', 'genre_fit', 'originality'],
-    systemPrompt: `You are a market analyst. Evaluate commercial and creative positioning.
+    parameters: [
+      'audience_fit', 'platform_fit', 'consumption_pattern_alignment',
+      'marketing_hook_density', 'ip_expansion_potential', 'localization_ease'
+    ],
+    systemPrompt: `You are MarketAgent.
 
-Focus on:
-- Commercial Viability: Box office/streaming potential based on concept and execution
-- Genre Fit: How well the script delivers on genre expectations
-- Originality: Fresh perspective or unique elements that differentiate it
+${GLOBAL_INSTRUCTIONS}
 
-Provide scores 0-100, with market comparisons and positioning insights.`
+YOUR RESPONSIBILITY: MODULE I - MARKET & PLATFORM
+
+Evaluate commercial and positioning factors:
+- Audience Fit: Match between content and target audience
+- Platform Fit: Suitability for distribution channel (theatrical, streaming, stage, etc.)
+- Consumption Pattern Alignment: Match to how audiences consume this type of content
+- Marketing Hook Density: Number of easily marketable elements
+- IP Expansion Potential: Franchise/sequel/spinoff possibilities
+- Localization Ease: Ease of adaptation for international markets
+
+Do NOT consider budget feasibility (that's ExecutionAgent).
+Score each parameter 0-10 with market comparisons and positioning insights.`
   },
+
+  // EXECUTION AGENT - Module J
   ExecutionAgent: {
-    parameters: ['budget_feasibility', 'casting_appeal', 'technical_demands'],
-    systemPrompt: `You are a production feasibility analyst. Evaluate practical production considerations.
+    parameters: [
+      'production_complexity', 'talent_dependency', 'technical_dependency',
+      'schedule_risk', 'compliance_sensitivity_risk', 'failure_modes'
+    ],
+    systemPrompt: `You are ExecutionAgent.
 
-Focus on:
-- Budget Feasibility: Realistic assessment of production costs based on locations, VFX, period settings
-- Casting Appeal: Roles attractive to A-list talent
-- Technical Demands: Complexity of visual effects, stunts, and technical requirements
+${GLOBAL_INSTRUCTIONS}
 
-Provide scores 0-100, with specific production considerations.`
+YOUR RESPONSIBILITY: MODULE J - EXECUTION & FEASIBILITY
+
+Evaluate execution risks:
+- Production Complexity: Overall difficulty of production
+- Talent Dependency: Reliance on specific star power
+- Technical Dependency: VFX, stunts, special requirements
+- Schedule Risk: Timeline feasibility
+- Compliance/Sensitivity Risk: Content that may face regulatory or cultural issues
+- Failure Modes: How the project could fail in execution
+
+Assess likelihood of successful delivery.
+Score each parameter 0-10 with specific production considerations.`
   },
-  // Comic-specific agents
+
+  // CONCEPT AGENT - Module A (NEW)
+  ConceptAgent: {
+    parameters: [
+      'concept_originality', 'familiarity_anchor', 'hook_clarity',
+      'concept_compressibility', 'concept_scalability', 'franchise_expandability'
+    ],
+    systemPrompt: `You are ConceptAgent.
+
+${GLOBAL_INSTRUCTIONS}
+
+YOUR RESPONSIBILITY: MODULE A - CONCEPT & HOOK
+
+Evaluate the foundational concept:
+- Concept Originality: Freshness of the core idea
+- Familiarity Anchor: Connection to known genres/tropes that aid comprehension
+- Hook Clarity: Can it be pitched in 10 seconds? 1 minute? Logline quality?
+- Concept Compressibility: How easily the concept communicates
+- Concept Scalability: Can it support a full narrative?
+- Franchise/Universe Expandability: Potential for sequels, spinoffs, extended universe
+
+Focus on immediate engagement, mental clarity, and long-term extensibility.
+Score each parameter 0-10 with evidence.`
+  },
+
+  // COMIC-SPECIFIC AGENTS
   ComicVisualAgent: {
     parameters: ['visual_storytelling', 'panel_composition', 'page_layout', 'action_clarity'],
-    systemPrompt: `You are a comic visual storytelling analyst. Evaluate the script's visual storytelling potential.
+    systemPrompt: `You are ComicVisualAgent.
 
-Focus on:
-- Visual Storytelling: How effectively the script uses visual medium to tell the story
-- Panel Composition: Variety and effectiveness of panel layouts and compositions
-- Page Layout: Flow and pacing of page designs, use of splash pages and spreads
+${GLOBAL_INSTRUCTIONS}
+
+YOUR RESPONSIBILITY: COMIC VISUAL STORYTELLING
+
+Analyze how effectively the script uses the visual comic medium:
+- Visual Storytelling: How well the script uses visuals to advance narrative
+- Panel Composition: Variety and effectiveness of panel layouts
+- Page Layout: Flow, splash pages, spreads, pacing
 - Action Clarity: How clearly action sequences are described for artists
 
-Provide scores 0-100, with evidence from panel descriptions and page layouts.`
+Score each parameter 0-10 with evidence from panel descriptions.`
   },
+
   ComicDialogueAgent: {
     parameters: ['balloon_efficiency', 'caption_voice', 'sound_effects'],
-    systemPrompt: `You are a comic dialogue and text specialist. Analyze text elements in comic scripts.
+    systemPrompt: `You are ComicDialogueAgent.
 
-Focus on:
-- Balloon Efficiency: Conciseness of dialogue that fits speech balloons without overcrowding
-- Caption Voice: Distinctive and consistent narrator/caption voice
-- Sound Effects: Creative and effective use of SFX to enhance action
+${GLOBAL_INSTRUCTIONS}
 
-Provide scores 0-100, with specific examples from the script.`
+YOUR RESPONSIBILITY: COMIC TEXT ELEMENTS
+
+Analyze text elements specific to comics:
+- Balloon Efficiency: Dialogue conciseness for speech balloon fit
+- Caption Voice: Distinctive narrator/caption voice consistency
+- Sound Effects: Creative and effective SFX usage
+
+Score each parameter 0-10 with specific examples.`
   },
+
   ComicPacingAgent: {
     parameters: ['panel_to_panel_flow', 'issue_structure', 'cliffhangers'],
-    systemPrompt: `You are a comic pacing and structure analyst. Evaluate storytelling rhythm.
+    systemPrompt: `You are ComicPacingAgent.
 
-Focus on:
-- Panel-to-Panel Flow: How smoothly the reader's eye moves through the story
-- Issue Structure: Effective use of comic issue format (22-24 pages typically)
-- Cliffhangers: Strength of page-turn reveals and issue endings
+${GLOBAL_INSTRUCTIONS}
 
-Provide scores 0-100, with evidence from page breaks and narrative beats.`
+YOUR RESPONSIBILITY: COMIC PACING & STRUCTURE
+
+Evaluate comic-specific pacing:
+- Panel-to-Panel Flow: Reader eye movement smoothness
+- Issue Structure: Use of standard comic issue format (22-24 pages)
+- Cliffhangers: Page-turn reveals and issue ending strength
+
+Score each parameter 0-10 with evidence from page breaks.`
   },
+
   ComicArtDirectionAgent: {
     parameters: ['artist_guidance', 'reference_clarity', 'style_consistency'],
-    systemPrompt: `You are a comic art direction analyst. Evaluate how well the script guides artists.
+    systemPrompt: `You are ComicArtDirectionAgent.
 
-Focus on:
-- Artist Guidance: Clarity and detail of visual descriptions for artists
-- Reference Clarity: Clear character and setting descriptions for consistent art
-- Style Consistency: Maintaining visual tone throughout the script
+${GLOBAL_INSTRUCTIONS}
 
-Provide scores 0-100, with examples of strong or weak direction.`
+YOUR RESPONSIBILITY: COMIC ART DIRECTION
+
+Evaluate artist-facing elements:
+- Artist Guidance: Clarity of visual descriptions
+- Reference Clarity: Character and setting consistency guidance
+- Style Consistency: Visual tone maintenance
+
+Score each parameter 0-10 with examples of direction quality.`
   },
 };
 
@@ -196,7 +419,7 @@ serve(async (req) => {
   try {
     const { scriptId, analysisRunId } = await req.json() as AnalyzeRequest;
     
-    console.log(`[analyze-script] Starting analysis for script ${scriptId}, run ${analysisRunId}`);
+    console.log(`[analyze-script] Starting UASF analysis for script ${scriptId}, run ${analysisRunId}`);
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -218,15 +441,21 @@ serve(async (req) => {
     // Determine which agents to run based on script type
     const isComic = script?.script_type === 'comic';
     const comicAgents = ['ComicVisualAgent', 'ComicDialogueAgent', 'ComicPacingAgent', 'ComicArtDirectionAgent'];
-    const screenplayOnlyAgents = ['DialogueAgent', 'ExecutionAgent'];
+    
+    // Core agents for all script types (UASF Modules A-J)
+    const coreAgents = [
+      'ConceptAgent', 'StructureAgent', 'CharacterAgent', 'ConflictAgent',
+      'ThemeAgent', 'DialogueAgent', 'WorldLogicAgent', 'EmotionalArcAgent',
+      'MarketAgent', 'ExecutionAgent'
+    ];
     
     // Filter agents based on script type
     const agentsToRun = Object.entries(AGENTS).filter(([agentName]) => {
       if (isComic) {
-        // For comics: run comic agents + common agents (exclude screenplay-specific)
-        return !screenplayOnlyAgents.includes(agentName);
+        // For comics: run comic agents + core agents
+        return coreAgents.includes(agentName) || comicAgents.includes(agentName);
       } else {
-        // For screenplays: exclude comic-specific agents
+        // For non-comics: exclude comic-specific agents
         return !comicAgents.includes(agentName);
       }
     });
@@ -277,14 +506,22 @@ serve(async (req) => {
           parameterMap
         );
 
-        // Save scores
+        // Save scores with UASF output contract
         for (const score of result.scores) {
+          if (!score.parameterId) continue;
+          
           await supabase.from('parameter_scores').insert({
             analysis_run_id: analysisRunId,
             parameter_id: score.parameterId,
             score: score.score,
             confidence: score.confidence,
-            evidence: score.evidence,
+            evidence: {
+              items: score.evidence,
+              maturity: score.maturity,
+              riskLevel: score.riskLevel,
+              fixCost: score.fixCost,
+              upsideImpact: score.upsideImpact,
+            },
             rationale: score.rationale,
             agent_name: agentName,
           });
@@ -300,7 +537,12 @@ serve(async (req) => {
               description: insight.description,
               priority: insight.priority,
               actionable: insight.actionable,
-              supporting_evidence: insight.supportingEvidence,
+              supporting_evidence: {
+                evidence: insight.supportingEvidence,
+                affectedStakeholders: insight.affectedStakeholders,
+                minimalFix: insight.minimalFix,
+                maximalFix: insight.maximalFix,
+              },
             });
           }
         }
@@ -322,6 +564,9 @@ serve(async (req) => {
     // Run InsightSynthesisAgent after all others complete
     await runInsightSynthesis(supabase, lovableApiKey, analysisRunId, scriptContext);
 
+    // Run StakeholderLensAgent to apply weighted scoring
+    await runStakeholderLensAgent(supabase, lovableApiKey, analysisRunId);
+
     // Calculate overall scores and create report
     await generateReport(supabase, analysisRunId, scriptId, script);
 
@@ -340,7 +585,7 @@ serve(async (req) => {
       })
       .eq('id', analysisRunId);
 
-    console.log(`[analyze-script] Analysis complete: ${finalStatus}`);
+    console.log(`[analyze-script] UASF Analysis complete: ${finalStatus}`);
 
     return new Response(
       JSON.stringify({ 
@@ -366,7 +611,7 @@ function buildScriptContext(script: any, scenes: any[], characters: any[]): stri
     `Scene ${s.scene_number}: ${s.heading}${s.description ? '\n' + s.description : ''}`
   ).join('\n\n');
 
-  const charList = characters.slice(0, 10).map(c => 
+  const charList = characters.slice(0, 15).map(c => 
     `${c.name}: ${c.dialogue_count} lines, appears in ${c.scene_count} scenes${c.description ? '. ' + c.description : ''}`
   ).join('\n');
 
@@ -396,20 +641,24 @@ async function runAgent(
     .map(name => parameterMap.get(name))
     .filter(Boolean);
 
-  const userPrompt = `Analyze this screenplay and score the following parameters:
+  const userPrompt = `Analyze this script and score the following parameters using the UASF Output Contract:
 
-${parametersToScore.map(p => `- ${p.display_name} (${p.name}): ${p.description || 'Score quality'}`).join('\n')}
+PARAMETERS TO EVALUATE:
+${parametersToScore.map(p => `- ${p.display_name} (${p.name}): ${p.description || 'Evaluate quality'}`).join('\n')}
 
 SCRIPT CONTEXT:
 ${context}
 
-Return a JSON object with this exact structure:
+Return a JSON object with this EXACT structure (UASF Output Contract):
 {
   "scores": [
     {
       "parameter": "parameter_name",
-      "score": 75,
-      "confidence": 0.85,
+      "score": 7,
+      "maturity": "Developing",
+      "riskLevel": "Medium",
+      "fixCost": "Low",
+      "upsideImpact": "High",
       "evidence": [
         {
           "type": "scene",
@@ -418,7 +667,7 @@ Return a JSON object with this exact structure:
           "explanation": "Why this supports the score"
         }
       ],
-      "rationale": "Brief explanation of the score"
+      "explanation": "Clear, evidence-based reasoning for this score"
     }
   ],
   "insights": [
@@ -428,12 +677,24 @@ Return a JSON object with this exact structure:
       "description": "Detailed explanation",
       "priority": 1,
       "actionable": true,
+      "affectedStakeholders": ["Writer", "Director"],
+      "minimalFix": "Quick fix suggestion",
+      "maximalFix": "Comprehensive fix approach",
       "supportingEvidence": []
     }
   ]
 }
 
-Score from 0-100 where: 0-40=Weak, 41-60=Needs Work, 61-75=Competent, 76-90=Strong, 91-100=Exceptional.
+SCORING GUIDE (0-10):
+- 0-3: Weak (fundamental issues)
+- 4-6: Developing (needs work but has foundation)
+- 7-10: Strong (competent to exceptional)
+
+MATURITY MAPPING:
+- Score 0-3 → "Weak"
+- Score 4-6 → "Developing"
+- Score 7-10 → "Strong"
+
 Only return valid JSON, no markdown.`;
 
   const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -448,7 +709,7 @@ Only return valid JSON, no markdown.`;
         { role: 'system', content: config.systemPrompt },
         { role: 'user', content: userPrompt }
       ],
-      max_tokens: 4000,
+      max_tokens: 6000,
     }),
   });
 
@@ -468,22 +729,32 @@ Only return valid JSON, no markdown.`;
 
   const parsed = JSON.parse(jsonMatch[0]);
 
-  // Map scores to parameter IDs
+  // Map scores to parameter IDs and convert to 0-100 scale for storage
   const scores = (parsed.scores || []).map((s: any) => {
     const param = parameterMap.get(s.parameter);
     return {
       parameterId: param?.id,
-      score: Math.min(100, Math.max(0, s.score)),
-      confidence: Math.min(1, Math.max(0, s.confidence || 0.8)),
+      parameterName: s.parameter,
+      score: Math.min(100, Math.max(0, (s.score || 0) * 10)), // Convert 0-10 to 0-100
+      confidence: 0.85,
+      maturity: s.maturity || 'Developing',
+      riskLevel: s.riskLevel || 'Medium',
+      fixCost: s.fixCost || 'Medium',
+      upsideImpact: s.upsideImpact || 'Medium',
       evidence: s.evidence || [],
-      rationale: s.rationale || '',
+      rationale: s.explanation || '',
     };
   }).filter((s: any) => s.parameterId);
 
   return {
     agent: agentName,
     scores,
-    insights: parsed.insights || [],
+    insights: (parsed.insights || []).map((i: any) => ({
+      ...i,
+      affectedStakeholders: i.affectedStakeholders || [],
+      minimalFix: i.minimalFix || '',
+      maximalFix: i.maximalFix || '',
+    })),
   };
 }
 
@@ -526,11 +797,18 @@ async function runInsightSynthesis(
     .select('*, parameters(*)')
     .eq('analysis_run_id', analysisRunId);
 
-  const scoresSummary = scores?.map((s: any) => 
-    `${s.parameters?.display_name}: ${s.score}/100 - ${s.rationale}`
-  ).join('\n') || '';
+  const scoresSummary = scores?.map((s: any) => {
+    const evidence = s.evidence || {};
+    return `${s.parameters?.display_name}: ${s.score}/100 (${evidence.maturity || 'N/A'}) - ${s.rationale}`;
+  }).join('\n') || '';
 
-  const prompt = `Based on the screenplay analysis scores below, synthesize 3-5 high-priority insights that would be most valuable for decision-makers.
+  const prompt = `You are InsightSynthesisAgent.
+
+${GLOBAL_INSTRUCTIONS}
+
+YOUR RESPONSIBILITY: Convert weaknesses into prescriptive insights.
+
+Based on the script analysis scores below, synthesize 3-5 high-priority insights.
 
 SCRIPT CONTEXT:
 ${context.slice(0, 2000)}
@@ -538,10 +816,13 @@ ${context.slice(0, 2000)}
 ANALYSIS SCORES:
 ${scoresSummary}
 
-Generate strategic insights that:
-1. Identify the script's key strengths (opportunities)
-2. Highlight critical weaknesses (risks)
-3. Provide actionable recommendations
+For each low or risky parameter:
+- Identify systemic issues
+- Explain why they matter
+- Identify affected stakeholders (Writer, Actor, Director, Studio, Investor, Audience)
+- Propose minimal fix (quick improvement) and maximal fix (comprehensive solution)
+
+Insights must be actionable and evidence-based.
 
 Return JSON array:
 [
@@ -551,6 +832,9 @@ Return JSON array:
     "description": "Detailed actionable insight",
     "priority": 1,
     "actionable": true,
+    "affectedStakeholders": ["Writer", "Director"],
+    "minimalFix": "Quick fix",
+    "maximalFix": "Comprehensive fix",
     "supportingEvidence": []
   }
 ]`;
@@ -565,10 +849,10 @@ Return JSON array:
       body: JSON.stringify({
         model: 'google/gemini-2.5-flash',
         messages: [
-          { role: 'system', content: 'You are a senior script analyst synthesizing findings into executive-level insights.' },
+          { role: 'system', content: 'You are InsightSynthesisAgent, a senior script analyst synthesizing findings into executive-level actionable insights.' },
           { role: 'user', content: prompt }
         ],
-        max_tokens: 2000,
+        max_tokens: 3000,
       }),
     });
 
@@ -588,13 +872,78 @@ Return JSON array:
           description: insight.description,
           priority: insight.priority || 1,
           actionable: insight.actionable !== false,
-          supporting_evidence: insight.supportingEvidence || [],
+          supporting_evidence: {
+            evidence: insight.supportingEvidence || [],
+            affectedStakeholders: insight.affectedStakeholders || [],
+            minimalFix: insight.minimalFix || '',
+            maximalFix: insight.maximalFix || '',
+          },
         });
       }
     }
   } catch (error) {
     console.error('[analyze-script] InsightSynthesis error:', error);
   }
+}
+
+async function runStakeholderLensAgent(
+  supabase: any,
+  apiKey: string,
+  analysisRunId: string
+) {
+  console.log('[analyze-script] Running StakeholderLensAgent...');
+
+  // Fetch all parameter scores
+  const { data: scores } = await supabase
+    .from('parameter_scores')
+    .select('*, parameters(*)')
+    .eq('analysis_run_id', analysisRunId);
+
+  if (!scores?.length) return;
+
+  // Fetch lens weights
+  const { data: lensWeights } = await supabase
+    .from('lens_weights')
+    .select('*');
+
+  const stakeholders = ['studio_executive', 'producer', 'actor', 'director', 'writer', 'financier', 'ott_platform', 'theatrical'];
+  
+  // Calculate lens-specific scores based on weights
+  const lensScores: Record<string, number> = {};
+  
+  for (const lens of stakeholders) {
+    const weightsForLens = lensWeights?.filter((lw: any) => lw.lens === lens) || [];
+    
+    if (weightsForLens.length === 0) {
+      // No specific weights, use average
+      lensScores[lens] = Math.round(
+        scores.reduce((sum: number, s: any) => sum + s.score, 0) / scores.length
+      );
+    } else {
+      let weightedSum = 0;
+      let totalWeight = 0;
+      
+      for (const lw of weightsForLens) {
+        const paramScore = scores.find((s: any) => s.parameter_id === lw.parameter_id);
+        if (paramScore) {
+          weightedSum += paramScore.score * lw.weight;
+          totalWeight += lw.weight;
+        }
+      }
+      
+      lensScores[lens] = totalWeight > 0 ? Math.round(weightedSum / totalWeight) : 0;
+    }
+  }
+
+  console.log('[analyze-script] StakeholderLensAgent computed lens scores:', lensScores);
+  
+  // Store lens scores in the analysis run for later report generation
+  await supabase
+    .from('analysis_runs')
+    .update({ 
+      agent_progress: supabase.sql`agent_progress || '{"StakeholderLensAgent": {"status": "completed", "lensScores": ${JSON.stringify(lensScores)}}}'::jsonb`
+    })
+    .eq('id', analysisRunId);
 }
 
 async function generateReport(
@@ -621,15 +970,21 @@ async function generateReport(
     ? Math.round(scores.reduce((sum: number, s: any) => sum + s.score, 0) / scores.length)
     : 0;
 
-  // Calculate category scores
-  const categoryScores: Record<string, { total: number; count: number }> = {};
+  // Calculate category scores with UASF metadata
+  const categoryScores: Record<string, { total: number; count: number; risks: string[] }> = {};
   for (const score of scores) {
     const category = score.parameters?.category || 'Other';
     if (!categoryScores[category]) {
-      categoryScores[category] = { total: 0, count: 0 };
+      categoryScores[category] = { total: 0, count: 0, risks: [] };
     }
     categoryScores[category].total += score.score;
     categoryScores[category].count += 1;
+    
+    // Track high-risk parameters
+    const evidence = score.evidence || {};
+    if (evidence.riskLevel === 'High') {
+      categoryScores[category].risks.push(score.parameters?.display_name || score.parameters?.name);
+    }
   }
 
   // Calculate lens scores
@@ -657,8 +1012,9 @@ async function generateReport(
     lensScores[lens] = totalWeight > 0 ? Math.round(weightedSum / totalWeight) : overallScore;
   }
 
-  // Build report data
+  // Build UASF-compliant report data
   const reportData = {
+    uasfVersion: '3.0',
     scriptMetadata: {
       title: script.title,
       logline: script.logline,
@@ -669,26 +1025,42 @@ async function generateReport(
     overallScore,
     lensScores,
     categoryScores: Object.fromEntries(
-      Object.entries(categoryScores).map(([cat, data]) => [cat, Math.round(data.total / data.count)])
+      Object.entries(categoryScores).map(([cat, data]) => [cat, {
+        score: Math.round(data.total / data.count),
+        highRiskParameters: data.risks,
+      }])
     ),
-    parameterScores: scores.map((s: any) => ({
-      parameterId: s.parameter_id,
-      parameterName: s.parameters?.name,
-      displayName: s.parameters?.display_name,
-      category: s.parameters?.category,
-      score: s.score,
-      confidence: s.confidence,
-      evidence: s.evidence,
-      rationale: s.rationale,
-    })),
-    insights: insights.map((i: any) => ({
-      category: i.category,
-      title: i.title,
-      description: i.description,
-      priority: i.priority,
-      actionable: i.actionable,
-      supportingEvidence: i.supporting_evidence,
-    })),
+    parameterScores: scores.map((s: any) => {
+      const evidence = s.evidence || {};
+      return {
+        parameterId: s.parameter_id,
+        parameterName: s.parameters?.name,
+        displayName: s.parameters?.display_name,
+        category: s.parameters?.category,
+        score: s.score,
+        confidence: s.confidence,
+        maturity: evidence.maturity || 'Developing',
+        riskLevel: evidence.riskLevel || 'Medium',
+        fixCost: evidence.fixCost || 'Medium',
+        upsideImpact: evidence.upsideImpact || 'Medium',
+        evidence: evidence.items || [],
+        rationale: s.rationale,
+      };
+    }),
+    insights: insights.map((i: any) => {
+      const supportingEvidence = i.supporting_evidence || {};
+      return {
+        category: i.category,
+        title: i.title,
+        description: i.description,
+        priority: i.priority,
+        actionable: i.actionable,
+        affectedStakeholders: supportingEvidence.affectedStakeholders || [],
+        minimalFix: supportingEvidence.minimalFix || '',
+        maximalFix: supportingEvidence.maximalFix || '',
+        supportingEvidence: supportingEvidence.evidence || [],
+      };
+    }),
     characters: (charsResult.data || []).map((c: any) => ({
       name: c.name,
       dialogueCount: c.dialogue_count,
@@ -711,9 +1083,13 @@ async function generateReport(
     })),
   };
 
-  // Generate executive summary
+  // Generate executive summary with UASF insights
   const topInsights = insights.sort((a: any, b: any) => a.priority - b.priority).slice(0, 3);
+  const highRiskCount = scores.filter((s: any) => s.evidence?.riskLevel === 'High').length;
+  
   const executiveSummary = `"${script.title}" scores ${overallScore}/100 overall. ${
+    highRiskCount > 0 ? `${highRiskCount} high-risk parameters identified. ` : ''
+  }${
     topInsights.length > 0 
       ? `Key findings: ${topInsights.map((i: any) => i.title).join('; ')}.`
       : ''
@@ -730,12 +1106,12 @@ async function generateReport(
     analysis_run_id: analysisRunId,
     script_id: scriptId,
     organization_id: scriptData?.organization_id,
-    title: `Analysis: ${script.title}`,
+    title: `UASF Analysis: ${script.title}`,
     overall_score: overallScore,
     lens_scores: lensScores,
     executive_summary: executiveSummary,
     full_report_data: reportData,
   });
 
-  console.log(`[analyze-script] Report generated with overall score: ${overallScore}`);
+  console.log(`[analyze-script] UASF Report generated with overall score: ${overallScore}`);
 }
