@@ -15,6 +15,8 @@ import { SceneHeatmap } from '@/components/report/SceneHeatmap';
 import { CharacterNetwork } from '@/components/report/CharacterNetwork';
 import { DialogueAnalysis } from '@/components/report/DialogueAnalysis';
 import { PacingAnalysis } from '@/components/report/PacingAnalysis';
+import { ThemeMotifTracker } from '@/components/report/ThemeMotifTracker';
+import { BudgetEstimator } from '@/components/report/BudgetEstimator';
 import { RiskMap } from '@/components/report/RiskMap';
 import { PlatformComparison } from '@/components/report/PlatformComparison';
 import { PanelGallery } from '@/components/report/PanelGallery';
@@ -122,6 +124,8 @@ export default function ReportViewer() {
     { id: 'narrative', label: 'Narrative' },
     { id: 'heatmap', label: 'Heatmap' },
     { id: 'pacing', label: 'Pacing' },
+    { id: 'themes', label: 'Themes' },
+    { id: 'budget', label: 'Budget' },
     { id: 'insights', label: 'Insights' },
     { id: 'parameters', label: 'Parameters' },
     { id: 'panels', label: 'Panels' },
@@ -135,6 +139,8 @@ export default function ReportViewer() {
     { id: 'narrative', label: 'Narrative' },
     { id: 'heatmap', label: 'Heatmap' },
     { id: 'pacing', label: 'Pacing' },
+    { id: 'themes', label: 'Themes' },
+    { id: 'budget', label: 'Budget' },
     { id: 'insights', label: 'Insights' },
     { id: 'parameters', label: 'Parameters' },
     { id: 'platform', label: 'Platform' },

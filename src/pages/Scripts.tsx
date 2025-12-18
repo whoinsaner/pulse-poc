@@ -41,6 +41,7 @@ const FORMAT_LABELS: Record<ScriptFormat, string> = {
   fountain: 'Fountain',
   highland: 'Highland',
   txt: 'Plain Text',
+  docx: 'Word',
 };
 
 const TYPE_LABELS: Record<ScriptType, string> = {
