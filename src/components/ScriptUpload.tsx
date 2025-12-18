@@ -22,6 +22,8 @@ const FORMAT_MAP: Record<string, ScriptFormat> = {
   '.fountain': 'fountain',
   '.highland': 'highland',
   '.txt': 'txt',
+  '.docx': 'docx',
+  '.doc': 'docx',
 };
 
 const FORMAT_LABELS: Record<ScriptFormat, string> = {
@@ -30,6 +32,7 @@ const FORMAT_LABELS: Record<ScriptFormat, string> = {
   fountain: 'Fountain',
   highland: 'Highland',
   txt: 'Plain Text',
+  docx: 'Word Document',
 };
 
 export function ScriptUpload({ onUploadComplete, onClose }: ScriptUploadProps) {
@@ -54,7 +57,7 @@ export function ScriptUpload({ onUploadComplete, onClose }: ScriptUploadProps) {
 
     const format = detectFormat(file.name);
     if (!format) {
-      setError('Unsupported file format. Please upload PDF, FDX, Fountain, Highland, or TXT files.');
+      setError('Unsupported file format. Please upload PDF, DOCX, FDX, Fountain, Highland, or TXT files.');
       return;
     }
 
@@ -70,6 +73,8 @@ export function ScriptUpload({ onUploadComplete, onClose }: ScriptUploadProps) {
       'application/pdf': ['.pdf'],
       'application/xml': ['.fdx'],
       'text/plain': ['.fountain', '.highland', '.txt'],
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+      'application/msword': ['.doc'],
     },
     maxFiles: 1,
     maxSize: 20 * 1024 * 1024, // 20MB

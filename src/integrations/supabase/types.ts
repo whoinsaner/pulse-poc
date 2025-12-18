@@ -680,7 +680,7 @@ export type Database = {
     Enums: {
       analysis_status: "pending" | "processing" | "completed" | "failed"
       app_role: "admin" | "analyst" | "viewer"
-      script_format: "pdf" | "fdx" | "fountain" | "highland" | "txt"
+      script_format: "pdf" | "fdx" | "fountain" | "highland" | "txt" | "docx"
       script_type:
         | "feature"
         | "pilot"
@@ -826,7 +826,7 @@ export const Constants = {
     Enums: {
       analysis_status: ["pending", "processing", "completed", "failed"],
       app_role: ["admin", "analyst", "viewer"],
-      script_format: ["pdf", "fdx", "fountain", "highland", "txt"],
+      script_format: ["pdf", "fdx", "fountain", "highland", "txt", "docx"],
       script_type: [
         "feature",
         "pilot",

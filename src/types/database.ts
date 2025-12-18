@@ -2,7 +2,7 @@
 // These provide better type safety for our application
 
 export type AppRole = 'admin' | 'analyst' | 'viewer';
-export type ScriptFormat = 'pdf' | 'fdx' | 'fountain' | 'highland' | 'txt';
+export type ScriptFormat = 'pdf' | 'fdx' | 'fountain' | 'highland' | 'txt' | 'docx';
 export type ScriptType = 'feature' | 'pilot' | 'episode' | 'short' | 'documentary' | 'comic';
 export type AnalysisStatus = 'pending' | 'processing' | 'completed' | 'failed';
 export type StakeholderLens = 
