@@ -13,6 +13,8 @@ import { FullCharactersSection } from '@/components/report/FullCharactersSection
 import { NarrativeTimeline } from '@/components/report/NarrativeTimeline';
 import { SceneHeatmap } from '@/components/report/SceneHeatmap';
 import { CharacterNetwork } from '@/components/report/CharacterNetwork';
+import { DialogueAnalysis } from '@/components/report/DialogueAnalysis';
+import { PacingAnalysis } from '@/components/report/PacingAnalysis';
 import { RiskMap } from '@/components/report/RiskMap';
 import { PlatformComparison } from '@/components/report/PlatformComparison';
 import { PanelGallery } from '@/components/report/PanelGallery';
@@ -119,9 +121,11 @@ export default function ReportViewer() {
     { id: 'lenses', label: 'Stakeholders' },
     { id: 'narrative', label: 'Narrative' },
     { id: 'heatmap', label: 'Heatmap' },
+    { id: 'pacing', label: 'Pacing' },
     { id: 'insights', label: 'Insights' },
     { id: 'parameters', label: 'Parameters' },
     { id: 'panels', label: 'Panels' },
+    { id: 'dialogue', label: 'Dialogue' },
     { id: 'network', label: 'Network' },
     { id: 'characters', label: 'Characters' },
   ] : [
@@ -130,10 +134,12 @@ export default function ReportViewer() {
     { id: 'lenses', label: 'Stakeholders' },
     { id: 'narrative', label: 'Narrative' },
     { id: 'heatmap', label: 'Heatmap' },
+    { id: 'pacing', label: 'Pacing' },
     { id: 'insights', label: 'Insights' },
     { id: 'parameters', label: 'Parameters' },
     { id: 'platform', label: 'Platform' },
     { id: 'risk', label: 'Risk' },
+    { id: 'dialogue', label: 'Dialogue' },
     { id: 'network', label: 'Network' },
     { id: 'characters', label: 'Characters' },
   ];
@@ -235,6 +241,11 @@ export default function ReportViewer() {
         <SceneHeatmap scenes={reportData.scenes || []} />
       </section>
 
+      {/* Pacing Analysis */}
+      <section ref={(el) => (sectionsRef.current['pacing'] = el)} className="scroll-section">
+        <PacingAnalysis scenes={reportData.scenes || []} totalPages={reportData.scriptMetadata?.pageCount} />
+      </section>
+
       {/* Insights */}
       <section ref={(el) => (sectionsRef.current['insights'] = el)} className="scroll-section">
         <FullInsightsSection insights={reportData.insights || []} />
@@ -287,6 +298,11 @@ export default function ReportViewer() {
           </section>
         </>
       )}
+
+      {/* Dialogue Analysis */}
+      <section ref={(el) => (sectionsRef.current['dialogue'] = el)} className="scroll-section">
+        <DialogueAnalysis characters={reportData.characters || []} />
+      </section>
 
       {/* Character Network */}
       <section ref={(el) => (sectionsRef.current['network'] = el)} className="scroll-section">
