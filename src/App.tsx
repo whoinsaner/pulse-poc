@@ -10,7 +10,14 @@ import Onboarding from "./pages/Onboarding";
 import Dashboard from "./pages/Dashboard";
 import Upload from "./pages/Upload";
 import Scripts from "./pages/Scripts";
-import ReportViewer from "./pages/ReportViewer";
+import ReportLayout from "./components/report/ReportLayout";
+import ReportOverview from "./pages/report/ReportOverview";
+import ReportAnalysis from "./pages/report/ReportAnalysis";
+import ReportInsights from "./pages/report/ReportInsights";
+import ReportNarrative from "./pages/report/ReportNarrative";
+import ReportCharacters from "./pages/report/ReportCharacters";
+import ReportPlatform from "./pages/report/ReportPlatform";
+import ReportComic from "./pages/report/ReportComic";
 import Reports from "./pages/Reports";
 import Team from "./pages/Team";
 import NotFound from "./pages/NotFound";
@@ -32,7 +39,15 @@ const App = () => (
             <Route path="/upload" element={<Upload />} />
             <Route path="/scripts" element={<Scripts />} />
             <Route path="/reports" element={<Reports />} />
-            <Route path="/reports/:runId" element={<ReportViewer />} />
+            <Route path="/report/:runId" element={<ReportLayout />}>
+              <Route index element={<ReportOverview />} />
+              <Route path="analysis" element={<ReportAnalysis />} />
+              <Route path="insights" element={<ReportInsights />} />
+              <Route path="narrative" element={<ReportNarrative />} />
+              <Route path="characters" element={<ReportCharacters />} />
+              <Route path="platform" element={<ReportPlatform />} />
+              <Route path="comic" element={<ReportComic />} />
+            </Route>
             <Route path="/team" element={<Team />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
