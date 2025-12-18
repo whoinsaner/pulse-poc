@@ -299,20 +299,34 @@ export const LENS_CONFIG: Record<StakeholderLens, { label: string; description: 
   },
 };
 
-// Category colors for charts
+// UASF Module category colors for charts
 export const CATEGORY_COLORS: Record<string, string> = {
-  Structure: 'hsl(var(--chart-1))',
-  Character: 'hsl(var(--chart-2))',
-  Conflict: 'hsl(var(--chart-3))',
-  Theme: 'hsl(var(--chart-4))',
-  Dialogue: 'hsl(var(--chart-5))',
-  World: 'hsl(var(--chart-6))',
-  Emotion: 'hsl(var(--chart-1))',
-  Market: 'hsl(var(--chart-2))',
-  Execution: 'hsl(var(--chart-3))',
+  // Module A: Concept & Hook
+  'Concept & Hook': 'hsl(var(--chart-1))',
+  // Module B: Structure
+  Structure: 'hsl(var(--chart-2))',
+  // Module C: Character
+  Character: 'hsl(var(--chart-3))',
+  // Module D: Conflict
+  Conflict: 'hsl(var(--chart-4))',
+  // Module E: Theme
+  Theme: 'hsl(var(--chart-5))',
+  // Module F: Dialogue
+  Dialogue: 'hsl(var(--chart-6))',
+  // Module G: World & Logic
+  'World & Logic': 'hsl(var(--chart-1))',
+  // Module H: Emotional Arc
+  'Emotional Arc': 'hsl(var(--chart-2))',
+  // Module I: Market
+  Market: 'hsl(var(--chart-3))',
+  // Module J: Execution
+  Execution: 'hsl(var(--chart-4))',
+  // Legacy mappings
+  World: 'hsl(var(--chart-1))',
+  Emotion: 'hsl(var(--chart-2))',
   // Comic-specific categories
-  'Comic Visuals': 'hsl(var(--chart-4))',
-  'Comic Dialogue': 'hsl(var(--chart-5))',
-  'Comic Pacing': 'hsl(var(--chart-6))',
-  'Comic Art Direction': 'hsl(var(--chart-1))',
+  'Comic Visuals': 'hsl(var(--chart-5))',
+  'Comic Dialogue': 'hsl(var(--chart-6))',
+  'Comic Pacing': 'hsl(var(--chart-1))',
+  'Comic Art Direction': 'hsl(var(--chart-2))',
 };
