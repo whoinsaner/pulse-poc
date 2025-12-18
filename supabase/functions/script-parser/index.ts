@@ -43,6 +43,14 @@ interface ParseResult {
   errorMessage: string | null;
 }
 
+interface ScriptValidation {
+  isParsable: boolean;
+  formatQuality: 'good' | 'poor' | 'unreadable';
+  issues: string[];
+  suggestions: string[];
+  normalizedContent?: string;
+}
+
 // Estimate page count from file size and format
 function estimatePageCount(fileSize: number, format: string): number {
   // Average bytes per page varies by format
@@ -59,11 +67,153 @@ function estimatePageCount(fileSize: number, format: string): number {
   return Math.max(1, Math.ceil(fileSize / avgBytes));
 }
 
+// Pre-validation: Check if script is in parsable state
+function validateScriptFormat(content: string, format: string, isComic: boolean): ScriptValidation {
+  const issues: string[] = [];
+  const suggestions: string[] = [];
+  let formatQuality: ScriptValidation['formatQuality'] = 'good';
+  
+  // Check basic content validity
+  if (!content || content.trim().length < 100) {
+    return {
+      isParsable: false,
+      formatQuality: 'unreadable',
+      issues: ['The script appears to be empty or too short to parse.'],
+      suggestions: ['Please upload a complete script file with at least one scene.'],
+    };
+  }
+  
+  const lines = content.split('\n').filter(l => l.trim().length > 0);
+  const totalLines = lines.length;
+  
+  // Check for minimum content
+  if (totalLines < 10) {
+    issues.push('Very few lines of content detected.');
+    suggestions.push('The script may be incomplete or corrupted.');
+    formatQuality = 'poor';
+  }
+  
+  // Check for screenplay formatting indicators
+  const sceneHeadingPattern = /^(INT\.|EXT\.|INT\/EXT\.|I\/E\.)\s*.+/im;
+  const characterPattern = /^[A-Z][A-Z\s\.']{2,}$/m;
+  const dialoguePattern = /^\s{10,}.+/m;
+  const parentheticalPattern = /^\s*\([^)]+\)\s*$/m;
+  
+  // Comic-specific patterns
+  const panelPattern = /^(PANEL|PAGE)\s*\d+/im;
+  const comicDialoguePattern = /^[A-Z]+\s*:\s*.+/im;
+  
+  if (isComic) {
+    const hasPanelMarkers = panelPattern.test(content);
+    const hasComicDialogue = comicDialoguePattern.test(content);
+    
+    if (!hasPanelMarkers && !hasComicDialogue) {
+      issues.push('No comic panel or page markers detected.');
+      suggestions.push('Consider formatting with PANEL 1, PAGE 1, etc. for better extraction.');
+      formatQuality = 'poor';
+    }
+  } else {
+    const hasSceneHeadings = sceneHeadingPattern.test(content);
+    const hasCharacterCues = characterPattern.test(content);
+    
+    if (!hasSceneHeadings) {
+      issues.push('No standard scene headings (INT./EXT.) detected.');
+      suggestions.push('Ensure scene headings start with INT. or EXT. followed by location.');
+      formatQuality = 'poor';
+    }
+    
+    if (!hasCharacterCues) {
+      issues.push('No character dialogue cues detected.');
+      suggestions.push('Character names should be in ALL CAPS before their dialogue.');
+      formatQuality = 'poor';
+    }
+  }
+  
+  // Check for common formatting issues
+  const excessiveWhitespace = content.match(/\n{5,}/g);
+  if (excessiveWhitespace && excessiveWhitespace.length > 5) {
+    issues.push('Excessive blank lines detected which may affect parsing.');
+  }
+  
+  // Check for encoding issues
+  const hasEncodingIssues = /[\uFFFD\x00-\x08\x0B\x0C\x0E-\x1F]/.test(content);
+  if (hasEncodingIssues) {
+    issues.push('Encoding issues detected (special characters or corruption).');
+    suggestions.push('Try saving the file as UTF-8 encoded text.');
+    formatQuality = 'poor';
+  }
+  
+  // Determine if parsable
+  const isParsable = issues.length < 3 && (
+    isComic 
+      ? (panelPattern.test(content) || comicDialoguePattern.test(content) || totalLines > 20)
+      : (sceneHeadingPattern.test(content) || totalLines > 50)
+  );
+
+  if (!isParsable && issues.length === 0) {
+    issues.push('Script structure could not be identified.');
+    suggestions.push('Please ensure the script follows standard formatting conventions.');
+    formatQuality = 'unreadable';
+  }
+  
+  return {
+    isParsable,
+    formatQuality,
+    issues,
+    suggestions,
+  };
+}
+
+// Normalize script content for better parsing
+function normalizeScriptContent(content: string, format: string, isComic: boolean): string {
+  let normalized = content;
+  
+  // Remove BOM and control characters
+  normalized = normalized.replace(/^\uFEFF/, '');
+  normalized = normalized.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '');
+  
+  // Normalize line endings
+  normalized = normalized.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  
+  // Reduce excessive blank lines (more than 3 to 2)
+  normalized = normalized.replace(/\n{4,}/g, '\n\n\n');
+  
+  // Trim trailing whitespace from lines
+  normalized = normalized.split('\n').map(line => line.trimEnd()).join('\n');
+  
+  // Fix common OCR/scan issues
+  normalized = normalized.replace(/['']/g, "'");
+  normalized = normalized.replace(/[""]/g, '"');
+  normalized = normalized.replace(/—/g, '--');
+  normalized = normalized.replace(/…/g, '...');
+  
+  // Standardize scene heading formats
+  if (!isComic) {
+    // Fix variations of INT/EXT
+    normalized = normalized.replace(/^(INT|INTERIOR)[\s.:]+/gim, 'INT. ');
+    normalized = normalized.replace(/^(EXT|EXTERIOR)[\s.:]+/gim, 'EXT. ');
+    normalized = normalized.replace(/^(INT\/EXT|INT\.\/EXT\.|INTERIOR\/EXTERIOR)[\s.:]+/gim, 'INT/EXT. ');
+    
+    // Standardize time of day markers
+    normalized = normalized.replace(/\s*-\s*(DAY|NIGHT|MORNING|EVENING|DUSK|DAWN|LATER|CONTINUOUS|SAME)\s*$/gim, ' - $1');
+  }
+  
+  // Comic-specific normalization
+  if (isComic) {
+    // Standardize panel markers
+    normalized = normalized.replace(/^(PANEL|PNL)[\s#.:]*(\d+)/gim, 'PANEL $2');
+    normalized = normalized.replace(/^(PAGE|PG)[\s#.:]*(\d+)/gim, 'PAGE $2');
+  }
+  
+  return normalized.trim();
+}
+
 // Validate extraction completeness
 function validateExtraction(
   result: Omit<ParseResult, 'isComplete' | 'extractedPages' | 'expectedPages' | 'errorMessage'>,
   expectedPages: number,
-  format: string
+  format: string,
+  validation?: ScriptValidation
 ): ParseResult {
   const extractedPages = Math.max(
     ...result.scenes.map(s => s.page_end || s.page_start || 0),
@@ -81,7 +231,11 @@ function validateExtraction(
   
   if (!isComplete) {
     if (result.scenes.length === 0) {
-      errorMessage = `Failed to extract any scenes from the ${format.toUpperCase()} file. The file may be corrupted, password-protected, or in an unsupported format.`;
+      if (validation && validation.issues.length > 0) {
+        errorMessage = `Script format issues: ${validation.issues.join(' ')} ${validation.suggestions.join(' ')}`;
+      } else {
+        errorMessage = `Failed to extract any scenes from the ${format.toUpperCase()} file. The file may be corrupted, password-protected, or in an unsupported format.`;
+      }
     } else if (coveragePercent < minCoverage) {
       errorMessage = `Incomplete extraction: Only ${Math.round(coveragePercent)}% of the script was extracted (${extractedPages} of ~${expectedPages} pages). Some pages may be unreadable or in an unsupported format.`;
     }
