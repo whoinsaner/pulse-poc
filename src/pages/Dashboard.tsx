@@ -137,6 +137,24 @@ export default function Dashboard() {
           )}
         </div>
 
+        {/* Sample Reports */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle>Explore Sample Reports</CardTitle>
+            <CardDescription>See how Pulse analyzes different script types</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-wrap gap-4">
+            <Button variant="outline" onClick={() => navigate('/sample-report')}>
+              <FileText className="h-4 w-4 mr-2" />
+              View Film Sample
+            </Button>
+            <Button variant="outline" onClick={() => navigate('/sample-comic-report')}>
+              <FileText className="h-4 w-4 mr-2" />
+              View Comic Sample
+            </Button>
+          </CardContent>
+        </Card>
+
         {/* Empty State */}
         <Card className="border-dashed">
           <CardContent className="p-12 text-center">
