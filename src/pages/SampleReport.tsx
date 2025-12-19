@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
+import { useAuth } from '@/lib/auth';
 import { SAMPLE_REPORT, SAMPLE_REPORT_DATA } from '@/data/sampleReport';
 import { StakeholderLens, LENS_CONFIG, Report, ReportData } from '@/types/database';
 import { LensSelector } from '@/components/LensToggle';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { 
   ArrowLeft, 
   LayoutDashboard, 
@@ -44,8 +46,15 @@ export function useSampleReport() {
 export default function SampleReportLayout() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user, isLoading } = useAuth();
   const [activeLens, setActiveLens] = useState<StakeholderLens>('studio_executive');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  useEffect(() => {
+    if (!isLoading && !user) {
+      navigate('/auth');
+    }
+  }, [user, isLoading, navigate]);
 
   const reportData = SAMPLE_REPORT_DATA;
   const report = SAMPLE_REPORT;
@@ -53,6 +62,21 @@ export default function SampleReportLayout() {
   const getCurrentScore = () => {
     return reportData.lensScores?.[activeLens] ?? reportData.overallScore ?? 0;
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background p-8">
+        <div className="max-w-7xl mx-auto space-y-8">
+          <Skeleton className="h-12 w-48" />
+          <Skeleton className="h-64 w-full" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
 
   const navItems = [
     { id: 'overview', label: 'Overview', icon: LayoutDashboard, path: '' },
