@@ -9,8 +9,9 @@ import {
   Loader2, Play, CheckCircle, XCircle, Clock, Zap, 
   Lightbulb, Layers, Users, Swords, Sparkles, MessageSquare,
   Globe, Heart, TrendingUp, Wrench, Palette, LayoutGrid, 
-  BookOpen, PenTool
+  BookOpen, PenTool, AlertTriangle
 } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
 import type { AnalysisStatus, AgentProgress, ScriptType } from '@/types/database';
 
@@ -172,7 +173,7 @@ export function AnalysisTrigger({
     };
   }, [analysisRunId, isAnalyzing, handleRealtimeUpdate]);
 
-  const startAnalysis = async () => {
+  const startAnalysis = async (forceAnalysis = false) => {
     if (!user) {
       toast({
         title: 'Authentication required',
@@ -204,13 +205,14 @@ export function AnalysisTrigger({
       if (createError) throw createError;
 
       setAnalysisRunId(run.id);
-      console.log('[AnalysisTrigger] Created analysis run:', run.id);
+      console.log('[AnalysisTrigger] Created analysis run:', run.id, 'forceAnalysis:', forceAnalysis);
 
       // Trigger analysis edge function (non-blocking)
       supabase.functions.invoke('analyze-script', {
         body: {
           scriptId,
           analysisRunId: run.id,
+          forceAnalysis, // Pass the force flag to enable fallback mode
         },
       }).then(({ error: invokeError }) => {
         if (invokeError) {
@@ -287,31 +289,39 @@ export function AnalysisTrigger({
       );
     }
 
-    // Extraction incomplete - show error
+    // Extraction incomplete - show warning with override option
     if (!isExtractionComplete) {
       return (
         <div className="space-y-3">
-          <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/30">
-            <div className="flex items-start gap-3">
-              <XCircle className="h-5 w-5 text-destructive mt-0.5 flex-shrink-0" />
-              <div>
-                <p className="font-medium text-destructive">Analysis Unavailable</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {extractionError || 'Script extraction is incomplete. AI analysis cannot proceed until all pages are extracted.'}
-                </p>
-              </div>
-            </div>
+          <Alert variant="destructive" className="border-amber-500/50 bg-amber-500/10">
+            <AlertTriangle className="h-4 w-4 text-amber-600" />
+            <AlertDescription className="text-sm">
+              <p className="font-medium text-amber-700 dark:text-amber-400">Incomplete Script Parsing</p>
+              <p className="text-muted-foreground mt-1">
+                {extractionError || 'Script extraction is incomplete. Analysis accuracy may be reduced.'}
+              </p>
+            </AlertDescription>
+          </Alert>
+          
+          <div className="flex flex-col gap-2">
+            <Button 
+              onClick={() => startAnalysis(true)} 
+              className="w-full" 
+              variant="outline"
+            >
+              <AlertTriangle className="h-4 w-4 mr-2 text-amber-500" />
+              Analyze Anyway (Reduced Accuracy)
+            </Button>
+            <p className="text-xs text-muted-foreground text-center">
+              Analysis will use raw script text as fallback. Results may be less precise.
+            </p>
           </div>
-          <Button disabled className="w-full" variant="secondary">
-            <Play className="h-4 w-4 mr-2" />
-            Run UASF Analysis
-          </Button>
         </div>
       );
     }
 
     return (
-      <Button onClick={startAnalysis} className="w-full">
+      <Button onClick={() => startAnalysis(false)} className="w-full">
         <Play className="h-4 w-4 mr-2" />
         Run UASF Analysis
       </Button>

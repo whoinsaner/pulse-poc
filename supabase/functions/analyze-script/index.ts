@@ -9,6 +9,7 @@ const corsHeaders = {
 interface AnalyzeRequest {
   scriptId: string;
   analysisRunId: string;
+  forceAnalysis?: boolean; // Allow analysis even with incomplete parsing
 }
 
 // UASF Output Contract
@@ -417,9 +418,9 @@ serve(async (req) => {
   }
 
   try {
-    const { scriptId, analysisRunId } = await req.json() as AnalyzeRequest;
+    const { scriptId, analysisRunId, forceAnalysis = false } = await req.json() as AnalyzeRequest;
     
-    console.log(`[analyze-script] Starting UASF analysis for script ${scriptId}, run ${analysisRunId}`);
+    console.log(`[analyze-script] Starting UASF analysis for script ${scriptId}, run ${analysisRunId}, forceAnalysis: ${forceAnalysis}`);
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -487,10 +488,42 @@ serve(async (req) => {
     const { data: parameters } = await supabase.from('parameters').select('*');
     const parameterMap = new Map(parameters?.map(p => [p.name, p]) || []);
 
-    // Build context for AI
-    const scriptContext = buildScriptContext(script, scenes, characters);
+    // Check if we have enough parsed data or need to use fallback mode
+    const hasStructuredData = scenes.length > 0 && characters.length > 0;
+    let rawScriptText: string | null = null;
+    let usingFallbackMode = false;
 
-    console.log(`[analyze-script] Context built: ${scenes.length} scenes, ${characters.length} characters`);
+    if (!hasStructuredData) {
+      if (!forceAnalysis) {
+        throw new Error('Script parsing incomplete. Use forceAnalysis=true to analyze with raw text fallback.');
+      }
+      
+      // Fallback mode: fetch raw script text from storage
+      console.log('[analyze-script] No structured data available, using raw text fallback mode');
+      usingFallbackMode = true;
+      
+      try {
+        const { data: fileData, error: downloadError } = await supabase.storage
+          .from('scripts')
+          .download(script.file_url);
+        
+        if (!downloadError && fileData) {
+          rawScriptText = await fileData.text();
+          // Truncate to reasonable size for AI context
+          if (rawScriptText.length > 100000) {
+            rawScriptText = rawScriptText.substring(0, 100000) + '\n\n[TEXT TRUNCATED...]';
+          }
+          console.log(`[analyze-script] Loaded raw script text: ${rawScriptText.length} characters`);
+        }
+      } catch (err) {
+        console.error('[analyze-script] Failed to load raw script text:', err);
+      }
+    }
+
+    // Build context for AI - use fallback context if needed
+    const scriptContext = buildScriptContext(script, scenes, characters, rawScriptText, usingFallbackMode);
+
+    console.log(`[analyze-script] Context built: ${scenes.length} scenes, ${characters.length} characters, fallback: ${usingFallbackMode}`);
 
     // Run selected agents in parallel
     const agentPromises = agentsToRun.map(async ([agentName, agentConfig]) => {
@@ -606,7 +639,31 @@ serve(async (req) => {
   }
 });
 
-function buildScriptContext(script: any, scenes: any[], characters: any[]): string {
+function buildScriptContext(
+  script: any, 
+  scenes: any[], 
+  characters: any[], 
+  rawScriptText?: string | null, 
+  isFallbackMode?: boolean
+): string {
+  // If in fallback mode with raw text, use that primarily
+  if (isFallbackMode && rawScriptText) {
+    return `
+SCRIPT: "${script.title}"
+Type: ${script.script_type}
+Genre: ${script.genre || 'Not specified'}
+Page Count: ${script.page_count || 'Unknown'}
+${script.logline ? `Logline: ${script.logline}` : ''}
+
+⚠️ ANALYSIS MODE: Fallback (structured parsing incomplete)
+The script structure could not be fully extracted. Analysis is based on raw script text.
+Results may be less precise than normal analysis.
+
+RAW SCRIPT CONTENT:
+${rawScriptText}
+`.trim();
+  }
+
   const sceneList = scenes.map(s => 
     `Scene ${s.scene_number}: ${s.heading}${s.description ? '\n' + s.description : ''}`
   ).join('\n\n');
