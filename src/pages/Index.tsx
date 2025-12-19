@@ -54,7 +54,10 @@ export default function Index() {
               <ArrowRight className="h-5 w-5 ml-2" />
             </Button>
             <Button size="lg" variant="outline" className="h-14 px-8 text-lg" onClick={() => navigate('/sample-report')}>
-              Explore Sample Report
+              Explore Film Sample
+            </Button>
+            <Button size="lg" variant="ghost" className="h-14 px-8 text-lg" onClick={() => navigate('/sample-comic-report')}>
+              Explore Comic Sample
             </Button>
           </div>
         </div>
