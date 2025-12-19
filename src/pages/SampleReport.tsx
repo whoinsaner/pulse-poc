@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { SAMPLE_REPORT, SAMPLE_REPORT_DATA } from '@/data/sampleReport';
-import { StakeholderLens, LENS_CONFIG } from '@/types/database';
+import { StakeholderLens, LENS_CONFIG, Report, ReportData } from '@/types/database';
 import { LensSelector } from '@/components/LensToggle';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -21,17 +21,17 @@ import {
 import { cn } from '@/lib/utils';
 import { createContext, useContext } from 'react';
 
-interface SampleReportContextValue {
-  report: typeof SAMPLE_REPORT;
-  reportData: typeof SAMPLE_REPORT_DATA;
+// Use the same interface as ReportLayout for compatibility
+interface ReportContextValue {
+  report: Report;
+  reportData: ReportData;
   activeLens: StakeholderLens;
   setActiveLens: (lens: StakeholderLens) => void;
   currentScore: number;
   isComic: boolean;
-  isSample: true;
 }
 
-export const SampleReportContext = createContext<SampleReportContextValue | null>(null);
+export const SampleReportContext = createContext<ReportContextValue | null>(null);
 
 export function useSampleReport() {
   const context = useContext(SampleReportContext);
@@ -66,14 +66,13 @@ export default function SampleReportLayout() {
   const currentPath = location.pathname.replace('/sample-report', '') || '';
   const currentNav = navItems.find(item => item.path === currentPath) || navItems[0];
 
-  const contextValue: SampleReportContextValue = {
-    report,
-    reportData,
+  const contextValue: ReportContextValue = {
+    report: report as Report,
+    reportData: reportData as ReportData,
     activeLens,
     setActiveLens,
     currentScore: getCurrentScore(),
     isComic: false,
-    isSample: true,
   };
 
   return (
