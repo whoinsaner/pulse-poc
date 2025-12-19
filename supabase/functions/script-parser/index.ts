@@ -654,7 +654,7 @@ serve(async (req) => {
   }
 });
 
-// Parse Fountain/Highland/TXT format
+// Parse Fountain/Highland/TXT format with enhanced edge case handling
 function parseTextFormat(content: string, format: string): { scenes: Scene[]; characters: Character[]; rawText: string } {
   const scenes: Scene[] = [];
   const characterMap = new Map<string, Character>();
@@ -666,12 +666,41 @@ function parseTextFormat(content: string, format: string): { scenes: Scene[]; ch
   let currentCharacter: string | null = null;
   let currentPage = 1;
   
-  // Fountain scene heading pattern
-  const sceneHeadingPattern = /^(INT\.|EXT\.|INT\/EXT\.|I\/E\.)\s*(.+?)(?:\s*-\s*(.+))?$/i;
-  // Character name pattern (ALL CAPS at start of line, followed by dialogue)
-  const characterPattern = /^([A-Z][A-Z\s\.']+)(\s*\(.*\))?$/;
-  // Page break pattern
-  const pageBreakPattern = /^={3,}$|^\*{3,}$|^-{3,}$|^PAGE\s*BREAK/i;
+  // Enhanced scene heading patterns - handle more variations
+  const sceneHeadingPatterns = [
+    /^(INT\.|EXT\.|INT\/EXT\.|I\/E\.)\s*(.+?)(?:\s*-\s*(.+))?$/i,  // Standard Fountain
+    /^(INTERIOR|EXTERIOR|INT|EXT)\s*[.:/-]\s*(.+?)(?:\s*-\s*(.+))?$/i,  // Spelled out variations
+    /^(IN\.|EX\.)\s*(.+?)(?:\s*-\s*(.+))?$/i,  // Abbreviated
+    /^SCENE\s*(?:#?\d+)?[.:/-]?\s*(.+?)(?:\s*-\s*(.+))?$/i,  // "SCENE:" prefix
+    /^(\d+)\.\s*(INT\.|EXT\.|INT\/EXT\.|I\/E\.)\s*(.+?)(?:\s*-\s*(.+))?$/i,  // Numbered scenes
+    /^(?:FADE\s*IN:|OPEN\s*ON:)\s*(.+)/i,  // Opening scenes
+  ];
+  
+  // Enhanced character name patterns - handle more edge cases
+  const characterPatterns = [
+    /^([A-Z][A-Z\s\.']+)(\s*\(.*\))?$/,  // Standard ALL CAPS
+    /^([A-Z][A-Z\s\.']+)\s*\(V\.?O\.?\)$/i,  // Voice over
+    /^([A-Z][A-Z\s\.']+)\s*\(O\.?S\.?\)$/i,  // Off screen
+    /^([A-Z][A-Z\s\.']+)\s*\(CONT'?D?\)$/i,  // Continued
+    /^([A-Z][A-Z\s\.']+)\s*\(CONT\.?\)$/i,  // Continued variation
+    /^([A-Z][A-Z\s\'\.]+)'S\s*VOICE$/i,  // Name's VOICE
+    /^([A-Z]+\s*[A-Z]*)(?:\s*#\d+)?$/,  // Name with optional number
+  ];
+  
+  // Words that are NOT character names
+  const nonCharacterWords = new Set([
+    'INT', 'EXT', 'INTERIOR', 'EXTERIOR', 'FADE', 'CUT', 'DISSOLVE', 'SMASH',
+    'THE', 'AND', 'WITH', 'CLOSE', 'WIDE', 'ANGLE', 'POV', 'SHOT', 'SCENE',
+    'CONTINUED', 'CONTINUOUS', 'LATER', 'SAME', 'TIME', 'DAY', 'NIGHT',
+    'MORNING', 'EVENING', 'DAWN', 'DUSK', 'FLASHBACK', 'TITLE', 'SUPER',
+    'MATCH', 'JUMP', 'INTERCUT', 'MONTAGE', 'SERIES', 'END', 'BEGIN',
+    'BACK', 'RESUME', 'OMITTED', 'DELETED', 'THE END', 'FADE OUT',
+    'MORE', 'CONT', 'PRE', 'POST', 'SFX', 'VFX', 'INSERT', 'CLOSE ON',
+    'ESTABLISHING', 'STOCK', 'FOOTAGE', 'AERIAL', 'UNDERWATER',
+  ]);
+  
+  // Page break patterns - more variations
+  const pageBreakPattern = /^={3,}$|^\*{3,}$|^-{3,}$|^PAGE\s*BREAK|^={2}\s*\d+\s*={2}$/i;
   
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
@@ -689,8 +718,18 @@ function parseTextFormat(content: string, format: string): { scenes: Scene[]; ch
     const estimatedPage = Math.ceil((i + 1) / 55);
     currentPage = Math.max(currentPage, estimatedPage);
     
-    // Check for scene heading
-    const sceneMatch = line.match(sceneHeadingPattern);
+    // Check for scene heading using multiple patterns
+    let sceneMatch: RegExpMatchArray | null = null;
+    let matchedPattern = -1;
+    
+    for (let p = 0; p < sceneHeadingPatterns.length; p++) {
+      sceneMatch = line.match(sceneHeadingPatterns[p]);
+      if (sceneMatch) {
+        matchedPattern = p;
+        break;
+      }
+    }
+    
     if (sceneMatch) {
       // Close previous scene
       if (currentScene) {
@@ -717,13 +756,24 @@ function parseTextFormat(content: string, format: string): { scenes: Scene[]; ch
       continue;
     }
     
-    // Check for character name (dialogue cue)
+    // Check for character name (dialogue cue) using multiple patterns
     if (line.length > 0 && line.length < 50) {
-      const charMatch = line.match(characterPattern);
+      let charMatch: RegExpMatchArray | null = null;
+      
+      for (const pattern of characterPatterns) {
+        charMatch = line.match(pattern);
+        if (charMatch) break;
+      }
+      
       if (charMatch && !line.includes(':') && lines[i + 1]?.trim()) {
-        const charName = charMatch[1].trim();
-        // Skip common non-character words
-        if (!['FADE', 'CUT', 'DISSOLVE', 'CONTINUED', 'THE', 'END'].some(w => charName.startsWith(w))) {
+        const charName = charMatch[1].trim().replace(/\s+/g, ' ');
+        
+        // Skip non-character words using the comprehensive set
+        const upperName = charName.toUpperCase();
+        const isValidCharacter = !nonCharacterWords.has(upperName) &&
+          !Array.from(nonCharacterWords).some(w => upperName.startsWith(w + ' ') || upperName.endsWith(' ' + w));
+        
+        if (isValidCharacter && charName.length > 1 && charName.length < 40) {
           currentCharacter = charName;
           inDialogue = true;
           
