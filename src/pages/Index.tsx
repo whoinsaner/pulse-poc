@@ -53,8 +53,8 @@ export default function Index() {
               Start Analyzing
               <ArrowRight className="h-5 w-5 ml-2" />
             </Button>
-            <Button size="lg" variant="outline" className="h-14 px-8 text-lg">
-              Watch Demo
+            <Button size="lg" variant="outline" className="h-14 px-8 text-lg" onClick={() => navigate('/sample-report')}>
+              Explore Sample Report
             </Button>
           </div>
         </div>

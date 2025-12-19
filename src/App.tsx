@@ -18,6 +18,8 @@ import ReportNarrative from "./pages/report/ReportNarrative";
 import ReportCharacters from "./pages/report/ReportCharacters";
 import ReportPlatform from "./pages/report/ReportPlatform";
 import ReportComic from "./pages/report/ReportComic";
+import SampleReportLayout from "./pages/SampleReport";
+import SampleScript from "./pages/SampleScript";
 import Reports from "./pages/Reports";
 import Team from "./pages/Team";
 import NotFound from "./pages/NotFound";
@@ -48,6 +50,15 @@ const App = () => (
               <Route path="platform" element={<ReportPlatform />} />
               <Route path="comic" element={<ReportComic />} />
             </Route>
+            <Route path="/sample-report" element={<SampleReportLayout />}>
+              <Route index element={<ReportOverview />} />
+              <Route path="analysis" element={<ReportAnalysis />} />
+              <Route path="insights" element={<ReportInsights />} />
+              <Route path="narrative" element={<ReportNarrative />} />
+              <Route path="characters" element={<ReportCharacters />} />
+              <Route path="platform" element={<ReportPlatform />} />
+            </Route>
+            <Route path="/sample-script" element={<SampleScript />} />
             <Route path="/team" element={<Team />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
