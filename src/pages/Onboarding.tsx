@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/lib/auth';
 import { Logo } from '@/components/Logo';
@@ -15,8 +15,19 @@ export default function Onboarding() {
   const [isLoading, setIsLoading] = useState(false);
   
   const navigate = useNavigate();
-  const { createOrganization, profile } = useAuth();
+  const { createOrganization, profile, currentOrganization, user, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
+
+  // Skip onboarding if user already has an organization
+  useEffect(() => {
+    if (!authLoading) {
+      if (!user) {
+        navigate('/auth');
+      } else if (currentOrganization) {
+        navigate('/dashboard');
+      }
+    }
+  }, [user, currentOrganization, authLoading, navigate]);
 
   const handleCreateOrg = async () => {
     if (!orgName.trim()) {

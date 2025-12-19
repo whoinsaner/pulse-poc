@@ -1,15 +1,17 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDropzone } from 'react-dropzone';
-import { Upload, FileText, X, Loader2, Check, AlertTriangle, PlayCircle, RefreshCw } from 'lucide-react';
+import { Upload, FileText, X, Loader2, Check, AlertTriangle, PlayCircle, RefreshCw, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Card } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
 import { ScriptFormat, ScriptType } from '@/types/database';
+import { ScriptPreview } from '@/components/ScriptPreview';
 
 interface ScriptUploadProps {
   onUploadComplete?: (scriptId: string) => void;
@@ -65,6 +67,8 @@ export function ScriptUpload({ onUploadComplete, onClose }: ScriptUploadProps) {
   const [error, setError] = useState<string | null>(null);
   const [parseResult, setParseResult] = useState<ParseResult | null>(null);
   const [currentScriptId, setCurrentScriptId] = useState<string | null>(null);
+  const [currentFilePath, setCurrentFilePath] = useState<string | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
 
   const detectFormat = (filename: string): ScriptFormat | null => {
     const ext = filename.toLowerCase().match(/\.[^.]+$/)?.[0];
@@ -125,6 +129,7 @@ export function ScriptUpload({ onUploadComplete, onClose }: ScriptUploadProps) {
         .upload(filePath, selectedFile);
 
       if (uploadError) throw uploadError;
+      setCurrentFilePath(filePath);
       setProgress(40);
 
       // Create script record
@@ -223,6 +228,8 @@ export function ScriptUpload({ onUploadComplete, onClose }: ScriptUploadProps) {
     setError(null);
     setParseResult(null);
     setCurrentScriptId(null);
+    setCurrentFilePath(null);
+    setShowPreview(false);
   };
 
   return (
@@ -409,9 +416,28 @@ export function ScriptUpload({ onUploadComplete, onClose }: ScriptUploadProps) {
           </Button>
 
           <div className="flex gap-3">
-            <Button onClick={handleViewScript} variant="outline" className="flex-1">
-              View in Scripts
-            </Button>
+            <Dialog open={showPreview} onOpenChange={setShowPreview}>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="flex-1">
+                  <Eye className="h-4 w-4 mr-2" />
+                  Preview Extracted
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Script Preview - Verify Extraction</DialogTitle>
+                </DialogHeader>
+                {currentScriptId && currentFilePath && detectedFormat && (
+                  <ScriptPreview
+                    scriptId={currentScriptId}
+                    title={title}
+                    fileUrl={currentFilePath}
+                    format={detectedFormat}
+                    pageCount={parseResult?.extractedPages}
+                  />
+                )}
+              </DialogContent>
+            </Dialog>
             <Button onClick={resetUpload} variant="outline" className="flex-1">
               Upload Another
             </Button>
@@ -485,9 +511,28 @@ export function ScriptUpload({ onUploadComplete, onClose }: ScriptUploadProps) {
               <RefreshCw className="h-4 w-4 mr-2" />
               Re-upload Script
             </Button>
-            <Button onClick={handleViewScript} variant="secondary" className="flex-1">
-              View Anyway
-            </Button>
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="secondary" className="flex-1">
+                  <Eye className="h-4 w-4 mr-2" />
+                  Preview Extracted
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Script Preview - Verify Extraction</DialogTitle>
+                </DialogHeader>
+                {currentScriptId && currentFilePath && detectedFormat && (
+                  <ScriptPreview
+                    scriptId={currentScriptId}
+                    title={title}
+                    fileUrl={currentFilePath}
+                    format={detectedFormat}
+                    pageCount={parseResult?.extractedPages}
+                  />
+                )}
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
       )}
