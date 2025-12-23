@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { z } from 'zod';
 import { useAuth } from '@/lib/auth';
 import { supabase } from '@/integrations/supabase/client';
 import { AppRole } from '@/types/database';
@@ -13,6 +14,8 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, UserPlus, Mail, Shield, Trash2, Clock, Check, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+const emailSchema = z.string().trim().email({ message: 'Please enter a valid email address' }).max(255, { message: 'Email is too long' });
 
 interface TeamMember {
   id: string;
@@ -44,6 +47,7 @@ export default function Team() {
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [loading, setLoading] = useState(true);
   const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteEmailError, setInviteEmailError] = useState<string | null>(null);
   const [inviteRole, setInviteRole] = useState<AppRole>('viewer');
   const [sending, setSending] = useState(false);
 
@@ -108,16 +112,41 @@ export default function Team() {
     fetchTeam();
   }, [currentOrganization?.id]);
 
+  const validateEmail = (email: string): boolean => {
+    const result = emailSchema.safeParse(email);
+    if (!result.success) {
+      setInviteEmailError(result.error.errors[0]?.message || 'Invalid email');
+      return false;
+    }
+    setInviteEmailError(null);
+    return true;
+  };
+
+  const handleEmailChange = (value: string) => {
+    setInviteEmail(value);
+    if (inviteEmailError) {
+      // Clear error on change, will re-validate on submit
+      setInviteEmailError(null);
+    }
+  };
+
   const sendInvitation = async () => {
-    if (!inviteEmail || !currentOrganization?.id || !user?.id) return;
+    if (!currentOrganization?.id || !user?.id) return;
+    
+    // Validate email before sending
+    if (!validateEmail(inviteEmail)) {
+      return;
+    }
 
     setSending(true);
     try {
+      const normalizedEmail = inviteEmail.toLowerCase().trim();
+      
       const { error } = await supabase
         .from('invitations')
         .insert({
           organization_id: currentOrganization.id,
-          email: inviteEmail.toLowerCase().trim(),
+          email: normalizedEmail,
           role: inviteRole,
           invited_by: user.id,
         });
@@ -126,10 +155,11 @@ export default function Team() {
 
       toast({
         title: 'Invitation Sent',
-        description: `Invitation sent to ${inviteEmail}`,
+        description: `Invitation sent to ${normalizedEmail}`,
       });
 
       setInviteEmail('');
+      setInviteEmailError(null);
       setInviteRole('viewer');
 
       // Refresh invitations
@@ -269,15 +299,19 @@ export default function Team() {
           </CardHeader>
           <CardContent>
             <div className="flex flex-col sm:flex-row gap-4">
-              <div className="flex-1">
+              <div className="flex-1 space-y-1">
                 <Label htmlFor="email" className="sr-only">Email</Label>
                 <Input
                   id="email"
                   type="email"
                   placeholder="colleague@company.com"
                   value={inviteEmail}
-                  onChange={(e) => setInviteEmail(e.target.value)}
+                  onChange={(e) => handleEmailChange(e.target.value)}
+                  className={inviteEmailError ? 'border-destructive' : ''}
                 />
+                {inviteEmailError && (
+                  <p className="text-xs text-destructive">{inviteEmailError}</p>
+                )}
               </div>
               <div className="w-full sm:w-40">
                 <Label htmlFor="role" className="sr-only">Role</Label>
