@@ -30,6 +30,7 @@ import {
   TrendingDown,
   Minus,
   Info,
+  FileJson,
 } from "lucide-react";
 import {
   Tooltip,
@@ -38,6 +39,10 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { AgentOutputSchema } from "@/components/parameters/AgentOutputSchema";
+import { InsightsSchema } from "@/components/parameters/InsightsSchema";
+import { DataFlowDiagram } from "@/components/parameters/DataFlowDiagram";
+import { SampleAgentOutput } from "@/components/parameters/SampleAgentOutput";
 
 interface Parameter {
   id: string;
@@ -303,12 +308,23 @@ export default function ParametersAgents() {
 
         <div className="container mx-auto px-6 py-6">
           <Tabs defaultValue="overview" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-grid">
+            <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-grid">
               <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="schema">Output Schema</TabsTrigger>
               <TabsTrigger value="agents">By Agent</TabsTrigger>
               <TabsTrigger value="lenses">By Lens</TabsTrigger>
               <TabsTrigger value="matrix">Lens Matrix</TabsTrigger>
             </TabsList>
+
+            {/* Output Schema Tab */}
+            <TabsContent value="schema" className="space-y-6">
+              <DataFlowDiagram />
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <AgentOutputSchema />
+                <InsightsSchema />
+              </div>
+              <SampleAgentOutput />
+            </TabsContent>
 
             {/* Overview Tab */}
             <TabsContent value="overview" className="space-y-6">
