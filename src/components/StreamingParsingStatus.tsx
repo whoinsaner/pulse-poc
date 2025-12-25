@@ -1,7 +1,7 @@
-import { Check, Loader2, FileText, ScanSearch, Users, BookOpen, Sparkles, AlertTriangle, X } from 'lucide-react';
+import { Check, Loader2, FileText, ScanSearch, Users, BookOpen, Sparkles, AlertTriangle, X, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
-import type { ParsingProgress, ChunkStatus, ParsingWarnings } from '@/hooks/useStreamingParser';
+import type { ParsingProgress, ChunkStatus, ParsingWarnings, ETAInfo } from '@/hooks/useStreamingParser';
 
 interface ParsingStageInfo {
   id: string;
@@ -24,6 +24,7 @@ interface StreamingParsingStatusProps {
   progress: ParsingProgress | null;
   chunks: ChunkStatus[];
   warnings: ParsingWarnings | null;
+  eta: ETAInfo | null;
   format?: string;
 }
 
@@ -33,6 +34,7 @@ export function StreamingParsingStatus({
   progress,
   chunks,
   warnings,
+  eta,
   format,
 }: StreamingParsingStatusProps) {
   if (!isActive && !progress) return null;
@@ -48,6 +50,23 @@ export function StreamingParsingStatus({
 
   return (
     <div className="space-y-4">
+      {/* ETA Display */}
+      {eta && (
+        <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border border-border/50">
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm text-muted-foreground">Elapsed:</span>
+            <span className="text-sm font-medium">{eta.formattedElapsed}</span>
+          </div>
+          {eta.formattedRemaining && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">ETA:</span>
+              <span className="text-sm font-medium text-primary">{eta.formattedRemaining}</span>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Current stage highlight */}
       {currentStageInfo && (
         <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
