@@ -9,9 +9,15 @@ import { cn } from '@/lib/utils';
 import { BarChart3, ChevronDown, ChevronUp, Radar } from 'lucide-react';
 
 interface CategoryScoreSectionProps {
-  categoryScores: Record<string, number>;
+  categoryScores: Record<string, number | { score?: number; highRiskParameters?: string[] }>;
   parameterScores: ParameterScoreData[];
   activeLens: StakeholderLens;
+}
+
+// Helper to extract score from category score
+function extractScore(value: number | { score?: number; highRiskParameters?: string[] }): number {
+  if (typeof value === 'number') return value;
+  return value?.score || 0;
 }
 
 export function CategoryScoreSection({
@@ -22,7 +28,15 @@ export function CategoryScoreSection({
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
   const [chartView, setChartView] = useState<'radar' | 'bar'>('radar');
 
-  const categories = Object.entries(categoryScores).sort(([, a], [, b]) => b - a);
+  // Convert to entries with extracted scores
+  const categories = Object.entries(categoryScores)
+    .map(([name, value]) => [name, extractScore(value)] as [string, number])
+    .sort(([, a], [, b]) => b - a);
+
+  // Convert to numeric format for charts
+  const numericCategoryScores = Object.fromEntries(
+    Object.entries(categoryScores).map(([k, v]) => [k, extractScore(v)])
+  );
 
   const getParametersForCategory = (category: string) => {
     return parameterScores.filter((p) => p.category === category);
@@ -56,9 +70,9 @@ export function CategoryScoreSection({
       {/* Charts Section */}
       <div className="mb-10 p-6 rounded-xl bg-card border border-border animate-fade-up">
         {chartView === 'radar' ? (
-          <CategoryRadarChart categoryScores={categoryScores} />
+          <CategoryRadarChart categoryScores={numericCategoryScores} />
         ) : (
-          <CategoryBarChart categoryScores={categoryScores} horizontal />
+          <CategoryBarChart categoryScores={numericCategoryScores} horizontal />
         )}
       </div>
 

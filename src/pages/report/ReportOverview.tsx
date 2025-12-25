@@ -41,7 +41,10 @@ export default function ReportOverview() {
     .map(([name, value]) => {
       // Handle both formats: direct number or object with score property
       const score = typeof value === 'number' ? value : (value as { score?: number })?.score || 0;
-      return { name, score };
+      const highRiskParams = typeof value === 'object' && value !== null 
+        ? (value as { highRiskParameters?: string[] })?.highRiskParameters || []
+        : [];
+      return { name, score, highRiskParams };
     })
     .sort((a, b) => b.score - a.score);
 
