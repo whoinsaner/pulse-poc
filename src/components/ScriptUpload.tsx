@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDropzone } from 'react-dropzone';
-import { Upload, FileText, X, Loader2, Check, AlertTriangle, PlayCircle, Eye } from 'lucide-react';
+import { Upload, FileText, X, Loader2, Check, AlertTriangle, PlayCircle, Eye, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Card } from '@/components/ui/card';
@@ -185,47 +185,14 @@ export function ScriptUpload({ onUploadComplete, onClose }: ScriptUploadProps) {
       setCurrentScriptId(script.id);
       setProgress(60);
 
-      // Trigger parsing
+      // Trigger streaming parsing
       setUploadState('parsing');
       
-      const { data: result, error: parseError } = await supabase.functions.invoke('script-parser', {
-        body: {
-          scriptId: script.id,
-          format: detectedFormat,
-          filePath: filePath,
-          scriptType: scriptType,
-        },
-      });
-
-      if (parseError) {
-        console.error('Parse error:', parseError);
-        setError('Script parsing failed. Please try re-uploading or use a different format.');
-        setUploadState('error');
-        return;
-      }
+      // Start the streaming parser - it will handle progress and completion via the hook callbacks
+      streamingParser.startStreaming(script.id, detectedFormat, filePath, scriptType);
       
-      setParseResult(result);
-      setProgress(100);
-
-      // Check parsing result
-      if (result && result.readyForAnalysis) {
-        setUploadState('parsed');
-        toast({
-          title: 'Script Parsed Successfully',
-          description: `${result.scenesCount || 0} scenes and ${result.charactersCount || 0} characters extracted. Ready for AI analysis!`,
-        });
-      } else if (result && result.formatIssues && result.formatIssues.length > 0) {
-        setUploadState('format_issues');
-        setError(result.formatIssues.join(' '));
-      } else if (result && !result.readyForAnalysis) {
-        const extractionError = result.errorMessage || 
-          `Incomplete extraction: Only ${result.extractedPages || 0} of ${result.estimatedPages || 'unknown'} pages were extracted.`;
-        
-        setError(extractionError);
-        setUploadState('format_issues');
-      } else {
-        setUploadState('parsed');
-      }
+      // The streaming parser handles progress and completion via hook callbacks
+      // (defined in the useStreamingParser hook above)
 
     } catch (err) {
       console.error('Upload error:', err);
@@ -403,8 +370,12 @@ export function ScriptUpload({ onUploadComplete, onClose }: ScriptUploadProps) {
             </p>
           </div>
           
-          <ParsingStatus 
-            isActive={uploadState === 'parsing'} 
+          <StreamingParsingStatus 
+            isActive={streamingParser.isActive}
+            currentStage={streamingParser.currentStage}
+            progress={streamingParser.progress}
+            chunks={streamingParser.chunks}
+            warnings={streamingParser.warnings}
             format={detectedFormat || undefined}
           />
         </div>
