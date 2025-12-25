@@ -249,25 +249,33 @@ function normalizeToFountain(rawText: string, isComic: boolean): {
   let charactersDetected = 0;
   const characterNames = new Set<string>();
   
-  // Scene heading patterns
+  // Scene heading patterns - includes Hindi transliterated terms
   const sceneHeadingPattern = /^(INT\.|EXT\.|INT\/EXT\.|I\/E\.)\s*.+/i;
-  const looseScenePattern = /^(INTERIOR|EXTERIOR|INT|EXT)[\s\.\/:-]+(.+)/i;
+  const looseScenePattern = /^(INTERIOR|EXTERIOR|INT|EXT|ANDAR|BAHAR|अंदर|बाहर)[\s\.\/:-]+(.+)/i;
   
-  // Character patterns (ALL CAPS followed by dialogue)
-  const characterCuePattern = /^([A-Z][A-Z\s\.']{2,})$/;
-  const dialogueFollowsPattern = /^[a-z]/; // Dialogue typically starts lowercase or mixed
+  // Character patterns - Unicode-aware for multilingual names (Hinglish, Hindi, etc.)
+  // Matches: ALL CAPS Latin, Mixed case names (Raj, Simran), Devanagari names
+  const characterCuePattern = /^([\p{Lu}][\p{L}\s\.']{1,}|[\u0900-\u097F][\u0900-\u097F\s]+)(\s*\(.*\))?$/u;
+  const dialogueFollowsPattern = /^[\p{Ll}\p{Lo}]/u; // Dialogue starts lowercase or other letters (Hindi)
   
   // Comic patterns
   const pagePattern = /^(PAGE|PG)[\s#.:]*(\d+)/i;
   const panelPattern = /^(PANEL|PNL)[\s#.:]*(\d+)/i;
   
-  // Non-character words to filter
+  // Non-character words to filter - includes Hindi/Hinglish terms
   const nonCharacterWords = new Set([
+    // English screenplay terms
     'INT', 'EXT', 'INTERIOR', 'EXTERIOR', 'FADE', 'CUT', 'DISSOLVE',
     'THE', 'CONTINUED', 'CONTINUOUS', 'LATER', 'DAY', 'NIGHT', 'MORNING',
     'EVENING', 'DUSK', 'DAWN', 'SAME', 'TRANSITION', 'TITLE', 'SUPER',
     'INSERT', 'ANGLE', 'CLOSE', 'WIDE', 'MEDIUM', 'POV', 'BACK', 'SMASH',
     'MATCH', 'JUMP', 'TIME', 'CUT TO', 'FADE TO', 'FADE IN', 'FADE OUT',
+    // Hindi transliterated screenplay terms
+    'ANDAR', 'BAHAR', 'DIN', 'RAAT', 'SUBAH', 'SHAAM', 'DOPAHAR',
+    // Hindi screenplay terms (Devanagari)
+    'अंदर', 'बाहर', 'दिन', 'रात', 'सुबह', 'शाम', 'दोपहर',
+    // Common Bollywood script terms
+    'SCENE', 'SHOT', 'FLASHBACK', 'MONTAGE', 'INTERCUT',
   ]);
   
   let lastWasCharacter = false;
@@ -950,12 +958,23 @@ function parseTextFormat(content: string): { scenes: Scene[]; characters: Charac
   let currentScene: Scene | null = null;
   let currentPage = 1;
   
+  // Scene heading patterns - includes Hindi transliterated terms
   const sceneHeadingPattern = /^(INT\.|EXT\.|INT\/EXT\.|I\/E\.)\s*(.+?)(?:\s*-\s*(.+))?$/i;
-  const characterPattern = /^([A-Z][A-Z\s\.']+)(\s*\(.*\))?$/;
+  const hindiScenePattern = /^(ANDAR|BAHAR|अंदर|बाहर)[\s\.\/:-]+(.+?)(?:\s*-\s*(.+))?$/i;
   
+  // Character pattern - Unicode-aware for multilingual names (Hinglish, Hindi, etc.)
+  const characterPattern = /^([\p{Lu}][\p{L}\s\.']+|[\u0900-\u097F][\u0900-\u097F\s]+)(\s*\(.*\))?$/u;
+  
+  // Non-character words - includes Hindi/Hinglish terms
   const nonCharacterWords = new Set([
+    // English screenplay terms
     'INT', 'EXT', 'INTERIOR', 'EXTERIOR', 'FADE', 'CUT', 'DISSOLVE',
     'THE', 'CONTINUED', 'CONTINUOUS', 'LATER', 'DAY', 'NIGHT',
+    'MORNING', 'EVENING', 'DUSK', 'DAWN', 'SCENE', 'SHOT',
+    // Hindi transliterated terms
+    'ANDAR', 'BAHAR', 'DIN', 'RAAT', 'SUBAH', 'SHAAM', 'DOPAHAR',
+    // Hindi screenplay terms (Devanagari)
+    'अंदर', 'बाहर', 'दिन', 'रात', 'सुबह', 'शाम', 'दोपहर',
   ]);
 
   for (let i = 0; i < lines.length; i++) {

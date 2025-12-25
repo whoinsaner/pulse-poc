@@ -93,9 +93,10 @@ function validateScriptFormat(content: string, format: string, isComic: boolean)
     formatQuality = 'poor';
   }
   
-  // Check for screenplay formatting indicators
-  const sceneHeadingPattern = /^(INT\.|EXT\.|INT\/EXT\.|I\/E\.)\s*.+/im;
-  const characterPattern = /^[A-Z][A-Z\s\.']{2,}$/m;
+  // Check for screenplay formatting indicators - multilingual support
+  const sceneHeadingPattern = /^(INT\.|EXT\.|INT\/EXT\.|I\/E\.|ANDAR|BAHAR|अंदर|बाहर)\s*.+/im;
+  // Unicode-aware character pattern for Latin, Hindi, and other scripts
+  const characterPattern = /^([\p{Lu}][\p{L}\s\.']{2,}|[\u0900-\u097F][\u0900-\u097F\s]{2,})$/mu;
   const dialoguePattern = /^\s{10,}.+/m;
   const parentheticalPattern = /^\s*\([^)]+\)\s*$/m;
   
@@ -194,12 +195,23 @@ async function rescueParsingWithAI(
             role: 'system',
             content: `You are an expert ${isComic ? 'comic script' : 'screenplay'} parser that can extract structure from poorly formatted scripts.
 
+IMPORTANT: This parser supports multilingual scripts including:
+- English screenplays
+- Hindi/Hinglish scripts (Bollywood format)
+- Scripts with Devanagari text
+- Mixed language (code-switching) scripts
+
 The script has these issues: ${validation.issues.join('; ')}
 
 Your task is to:
 1. Identify all scenes ${isComic ? 'or panels' : ''} even without standard formatting
-2. Extract character names from dialogue
-3. Estimate page numbers based on content length
+2. Extract character names from dialogue - names may be in:
+   - ALL CAPS English (e.g., RAHUL, PRIYA)
+   - Title Case (e.g., Raj, Simran)
+   - Devanagari script (e.g., राहुल, प्रिया)
+3. Recognize Hindi scene indicators: ANDAR/अंदर (INT), BAHAR/बाहर (EXT)
+4. Handle Hinglish dialogue naturally
+5. Estimate page numbers based on content length
 
 Return JSON ONLY in this exact format (no markdown, no explanation):
 {
@@ -229,7 +241,7 @@ Return JSON ONLY in this exact format (no markdown, no explanation):
           },
           {
             role: 'user',
-            content: `Parse this ${isComic ? 'comic script' : 'screenplay'} and extract all scenes and characters. The script may be poorly formatted:\n\n${content.substring(0, 80000)}`
+            content: `Parse this ${isComic ? 'comic script' : 'screenplay'} and extract all scenes and characters. The script may be in English, Hindi, Hinglish, or mixed format:\n\n${content.substring(0, 80000)}`
           }
         ],
         max_completion_tokens: 16000,
@@ -676,9 +688,10 @@ function parseTextFormat(content: string, format: string): { scenes: Scene[]; ch
     /^(?:FADE\s*IN:|OPEN\s*ON:)\s*(.+)/i,  // Opening scenes
   ];
   
-  // Enhanced character name patterns - handle more edge cases
+  // Enhanced character name patterns - Unicode-aware for multilingual (Hinglish, Hindi, etc.)
   const characterPatterns = [
-    /^([A-Z][A-Z\s\.']+)(\s*\(.*\))?$/,  // Standard ALL CAPS
+    /^([\p{Lu}][\p{L}\s\.']+)(\s*\(.*\))?$/u,  // Unicode uppercase start (Latin, Cyrillic, etc.)
+    /^([\u0900-\u097F][\u0900-\u097F\s]+)(\s*\(.*\))?$/u,  // Devanagari script (Hindi)
     /^([A-Z][A-Z\s\.']+)\s*\(V\.?O\.?\)$/i,  // Voice over
     /^([A-Z][A-Z\s\.']+)\s*\(O\.?S\.?\)$/i,  // Off screen
     /^([A-Z][A-Z\s\.']+)\s*\(CONT'?D?\)$/i,  // Continued
@@ -687,8 +700,9 @@ function parseTextFormat(content: string, format: string): { scenes: Scene[]; ch
     /^([A-Z]+\s*[A-Z]*)(?:\s*#\d+)?$/,  // Name with optional number
   ];
   
-  // Words that are NOT character names
+  // Words that are NOT character names - includes Hindi/Hinglish terms
   const nonCharacterWords = new Set([
+    // English screenplay terms
     'INT', 'EXT', 'INTERIOR', 'EXTERIOR', 'FADE', 'CUT', 'DISSOLVE', 'SMASH',
     'THE', 'AND', 'WITH', 'CLOSE', 'WIDE', 'ANGLE', 'POV', 'SHOT', 'SCENE',
     'CONTINUED', 'CONTINUOUS', 'LATER', 'SAME', 'TIME', 'DAY', 'NIGHT',
@@ -697,6 +711,14 @@ function parseTextFormat(content: string, format: string): { scenes: Scene[]; ch
     'BACK', 'RESUME', 'OMITTED', 'DELETED', 'THE END', 'FADE OUT',
     'MORE', 'CONT', 'PRE', 'POST', 'SFX', 'VFX', 'INSERT', 'CLOSE ON',
     'ESTABLISHING', 'STOCK', 'FOOTAGE', 'AERIAL', 'UNDERWATER',
+    // Hindi transliterated screenplay terms
+    'ANDAR', 'BAHAR', 'DIN', 'RAAT', 'SUBAH', 'SHAAM', 'DOPAHAR',
+    'GHAR', 'KAMRA', 'SADAK', 'BAZAAR', 'MANDIR', 'MASJID', 'GAON',
+    // Hindi screenplay terms (Devanagari)
+    'अंदर', 'बाहर', 'दिन', 'रात', 'सुबह', 'शाम', 'दोपहर',
+    'घर', 'कमरा', 'सड़क', 'बाज़ार', 'मंदिर', 'मस्जिद', 'गांव',
+    // Common Bollywood script terms
+    'FLASHBACK', 'ITEM SONG', 'SONG SEQUENCE', 'DREAM SEQUENCE',
   ]);
   
   // Page break patterns - more variations
