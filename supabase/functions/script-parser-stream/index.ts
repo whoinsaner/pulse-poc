@@ -775,139 +775,32 @@ serve(async (req) => {
             sendSSE(controller, 'progress', { stage: 'extract', percent: 90, message: `Extracted ${allScenes.length} scenes` });
             
           } else {
-            // Fallback to AI vision-based parsing (original approach)
-            sendSSE(controller, 'progress', { stage: 'extract', percent: 20, message: 'Text extraction failed, using AI vision...' });
+            // Text extraction failed - likely scanned/image-based PDF requiring OCR
+            // Instead of using expensive AI vision, halt and ask user to upload text format
+            console.log('[script-parser-stream] Text extraction failed, halting - OCR not supported');
             
-            const uint8Array = new Uint8Array(bytes);
+            sendSSE(controller, 'error', { 
+              code: 'OCR_REQUIRED',
+              message: 'This PDF appears to be scanned or image-based. Text extraction failed.',
+              recommendations: [
+                'Please upload a text-based PDF (created digitally, not scanned)',
+                'Or export your script as DOCX, Fountain (.fountain), or plain text (.txt)',
+                'Final Draft (.fdx) format is also supported'
+              ]
+            });
             
-            // Convert to base64
-            let base64 = '';
-            const b64ChunkSize = 32768;
-            for (let i = 0; i < uint8Array.length; i += b64ChunkSize) {
-              const chunk = uint8Array.slice(i, Math.min(i + b64ChunkSize, uint8Array.length));
-              base64 += String.fromCharCode.apply(null, Array.from(chunk));
-            }
-            base64 = btoa(base64);
+            // Close the stream with an error result
+            sendSSE(controller, 'result', {
+              success: false,
+              scenes: 0,
+              characters: 0,
+              error: 'OCR_REQUIRED',
+              message: 'Cannot parse scanned/image PDFs. Please upload a text-based format.',
+              extractionMethod: 'failed'
+            });
             
-            sendSSE(controller, 'progress', { stage: 'extract', percent: 25, message: 'File encoded, starting AI analysis...' });
-            
-            // Try single-pass first for smaller files
-            if (base64.length <= 3000000 && lovableApiKey) {
-              try {
-                sendSSE(controller, 'progress', { stage: 'extract', percent: 30, message: 'Analyzing full document with AI...' });
-                
-                const result = await parseSinglePass(lovableApiKey, base64, format, isComic, expectedPages);
-                allScenes = result.scenes;
-                result.characters.forEach(c => allCharacters.set(c.name, c));
-                rawText = result.rawText;
-                usedAIRescue = true;
-                extractionMethod = 'ai-vision';
-                
-                sendSSE(controller, 'progress', { stage: 'extract', percent: 90, message: `Extracted ${allScenes.length} scenes` });
-              } catch (error) {
-                console.error('[script-parser-stream] Single-pass failed:', error);
-                sendSSE(controller, 'warning', { warnings: ['Single-pass parsing failed, switching to chunked mode...'] });
-              }
-            }
-            
-            // Chunked processing for large files or if single-pass failed
-            if (allScenes.length === 0 && lovableApiKey) {
-              const chunkSize = 60000;
-              const numChunks = Math.ceil(base64.length / chunkSize);
-              let successfulChunks = 0;
-              let failedChunks: number[] = [];
-              
-              sendSSE(controller, 'progress', { 
-                stage: 'extract', 
-                percent: 25, 
-                message: `Processing ${numChunks} chunks...`,
-                totalChunks: numChunks
-              });
-              
-              for (let i = 0; i < numChunks; i++) {
-                const chunkStart = i * chunkSize;
-                const chunkEnd = Math.min((i + 1) * chunkSize, base64.length);
-                const chunkBase64 = base64.substring(chunkStart, chunkEnd);
-                const startPage = Math.floor((i / numChunks) * expectedPages) + 1;
-                const endPage = Math.floor(((i + 1) / numChunks) * expectedPages);
-                
-                try {
-                  sendSSE(controller, 'chunk', { 
-                    current: i + 1, 
-                    total: numChunks, 
-                    status: 'processing',
-                    pageRange: `${startPage}-${endPage}`
-                  });
-                  
-                  const chunkResult = await parseChunk(
-                    lovableApiKey, 
-                    chunkBase64, 
-                    format, 
-                    isComic, 
-                    i, 
-                    numChunks, 
-                    startPage, 
-                    allScenes.length
-                  );
-                  
-                  chunkResult.scenes.forEach(s => allScenes.push(s));
-                  chunkResult.characters.forEach(c => {
-                    if (allCharacters.has(c.name)) {
-                      const existing = allCharacters.get(c.name)!;
-                      existing.dialogue_count += c.dialogue_count;
-                    } else {
-                      allCharacters.set(c.name, c);
-                    }
-                  });
-                  rawText += chunkResult.rawText;
-                  successfulChunks++;
-                  
-                  sendSSE(controller, 'chunk', { 
-                    current: i + 1, 
-                    total: numChunks, 
-                    status: 'complete',
-                    scenesFound: chunkResult.scenes.length
-                  });
-                  
-                } catch (error) {
-                  console.error(`[script-parser-stream] Chunk ${i + 1} failed:`, error);
-                  failedChunks.push(i + 1);
-                  
-                  sendSSE(controller, 'chunk', { 
-                    current: i + 1, 
-                    total: numChunks, 
-                    status: 'failed',
-                    error: error instanceof Error ? error.message : 'Unknown error'
-                  });
-                  
-                  if (failedChunks.length <= 3) {
-                    sendSSE(controller, 'warning', { warnings: [`Chunk ${i + 1} failed, attempting recovery...`] });
-                  }
-                }
-                
-                const overallProgress = 25 + ((i + 1) / numChunks) * 65;
-                sendSSE(controller, 'progress', { 
-                  stage: 'extract', 
-                  percent: overallProgress, 
-                  message: `Processed ${i + 1}/${numChunks} chunks (${allScenes.length} scenes found)` 
-                });
-                
-                // Rate limiting delay
-                if (i < numChunks - 1) {
-                  await new Promise(r => setTimeout(r, 300));
-                }
-              }
-              
-              usedAIRescue = true;
-              extractionMethod = 'ai-vision-chunked';
-              
-              if (failedChunks.length > 0) {
-                sendSSE(controller, 'warning', { 
-                  warnings: [`${failedChunks.length} chunk(s) failed to parse. Extraction may be incomplete.`],
-                  failedChunks
-                });
-              }
-            }
+            controller.close();
+            return;
           }
         }
         
@@ -1271,7 +1164,7 @@ async function parseWithAI(
             content: content.substring(0, 80000)
           }
         ],
-        max_tokens: 16000,
+        max_completion_tokens: 16000,
       }),
     });
     
@@ -1352,7 +1245,7 @@ Only return valid JSON.`
             ]
           }
         ],
-        max_tokens: 16000,
+        max_completion_tokens: 16000,
       }),
     });
 
