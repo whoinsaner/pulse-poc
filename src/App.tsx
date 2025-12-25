@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useParams } from "react-router-dom";
 import { AuthProvider } from "@/lib/auth";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
@@ -29,6 +29,12 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+// Redirect /reports/:runId to /report/:runId
+function ReportsRedirect() {
+  const { runId } = useParams<{ runId: string }>();
+  return <Navigate to={`/report/${runId}`} replace />;
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -44,6 +50,7 @@ const App = () => (
             <Route path="/upload" element={<Upload />} />
             <Route path="/scripts" element={<Scripts />} />
             <Route path="/reports" element={<Reports />} />
+            <Route path="/reports/:runId" element={<ReportsRedirect />} />
             <Route path="/report/:runId" element={<ReportLayout />}>
               <Route index element={<ReportOverview />} />
               <Route path="analysis" element={<ReportAnalysis />} />
