@@ -575,6 +575,100 @@ async function extractTextFromFile(
   }
 }
 
+// ============= ROBUST JSON EXTRACTION =============
+
+/**
+ * Extract JSON from AI response with multiple fallback strategies
+ * Handles: markdown blocks, explanatory text, malformed JSON
+ */
+function extractJsonFromResponse(content: string, agentName: string): any {
+  // Strategy 1: Check for markdown code blocks (```json ... ``` or ``` ... ```)
+  const codeBlockMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (codeBlockMatch) {
+    try {
+      return JSON.parse(codeBlockMatch[1].trim());
+    } catch (e) {
+      console.log(`[${agentName}] Code block JSON parse failed, trying other strategies`);
+    }
+  }
+
+  // Strategy 2: Find JSON object that starts with {"scores" (expected format)
+  const scoresMatch = content.match(/\{"scores"\s*:\s*\[[\s\S]*?\](?:\s*,\s*"insights"\s*:\s*\[[\s\S]*?\])?\s*\}/);
+  if (scoresMatch) {
+    try {
+      return JSON.parse(scoresMatch[0]);
+    } catch (e) {
+      console.log(`[${agentName}] Scores-pattern JSON parse failed`);
+    }
+  }
+
+  // Strategy 3: Find outermost balanced JSON object
+  const jsonStart = content.indexOf('{');
+  if (jsonStart !== -1) {
+    let depth = 0;
+    let jsonEnd = -1;
+    let inString = false;
+    let escaped = false;
+    
+    for (let i = jsonStart; i < content.length; i++) {
+      const char = content[i];
+      
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+      
+      if (char === '\\') {
+        escaped = true;
+        continue;
+      }
+      
+      if (char === '"' && !escaped) {
+        inString = !inString;
+        continue;
+      }
+      
+      if (!inString) {
+        if (char === '{') depth++;
+        else if (char === '}') {
+          depth--;
+          if (depth === 0) {
+            jsonEnd = i + 1;
+            break;
+          }
+        }
+      }
+    }
+    
+    if (jsonEnd > jsonStart) {
+      try {
+        return JSON.parse(content.slice(jsonStart, jsonEnd));
+      } catch (e) {
+        console.log(`[${agentName}] Balanced JSON parse failed`);
+      }
+    }
+  }
+
+  // Strategy 4: Try to fix common issues and parse
+  const cleanedContent = content
+    .replace(/,\s*}/g, '}')  // Remove trailing commas
+    .replace(/,\s*]/g, ']')  // Remove trailing commas in arrays
+    .replace(/'/g, '"')      // Replace single quotes
+    .replace(/\n/g, ' ');    // Remove newlines
+  
+  const lastResortMatch = cleanedContent.match(/\{[\s\S]*\}/);
+  if (lastResortMatch) {
+    try {
+      return JSON.parse(lastResortMatch[0]);
+    } catch (e) {
+      // Log first 500 chars for debugging
+      console.error(`[${agentName}] All JSON parse strategies failed. Content preview:`, content.slice(0, 500));
+    }
+  }
+
+  throw new Error(`Failed to parse AI response as JSON: ${agentName} returned malformed response`);
+}
+
 // ============= CHUNKING UTILITIES =============
 
 const MAX_CHUNK_SIZE = 40000; // ~10k tokens, leaves room for prompts
@@ -1354,12 +1448,8 @@ Only return valid JSON, no markdown.`;
   const aiResult = await response.json();
   const content = aiResult.choices?.[0]?.message?.content || '';
 
-  const jsonMatch = content.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) {
-    throw new Error('Failed to parse AI response as JSON');
-  }
-
-  const parsed = JSON.parse(jsonMatch[0]);
+  // Robust JSON extraction with multiple strategies
+  const parsed = extractJsonFromResponse(content, agentName);
 
   const scores = (parsed.scores || []).map((s: any) => {
     const param = parameterMap.get(s.parameter);
