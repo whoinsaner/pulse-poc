@@ -1,6 +1,8 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import * as pdfLib from "https://esm.sh/pdf-parse@1.1.1";
+import JSZip from "https://esm.sh/jszip@3.10.1";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -39,6 +41,298 @@ function sendSSE(controller: ReadableStreamDefaultController, event: string, dat
   const message = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
   controller.enqueue(new TextEncoder().encode(message));
 }
+
+// ============= TEXT EXTRACTION =============
+
+// Extract text from PDF using pdf-parse
+async function extractPDFText(arrayBuffer: ArrayBuffer): Promise<{ text: string; pageCount: number; success: boolean; error?: string }> {
+  try {
+    const buffer = new Uint8Array(arrayBuffer);
+    
+    // Use pdf-parse to extract text
+    const data = await pdfLib.default(buffer);
+    
+    console.log(`[script-parser-stream] PDF extracted: ${data.numpages} pages, ${data.text.length} chars`);
+    
+    return {
+      text: data.text,
+      pageCount: data.numpages,
+      success: true,
+    };
+  } catch (error) {
+    console.error('[script-parser-stream] PDF extraction error:', error);
+    
+    // Fallback: try to extract what we can
+    try {
+      // Simple PDF text extraction fallback
+      const decoder = new TextDecoder('utf-8', { fatal: false });
+      const rawText = decoder.decode(arrayBuffer);
+      
+      // Extract text between stream markers (common in PDFs)
+      const textParts: string[] = [];
+      const streamRegex = /stream\s*([\s\S]*?)\s*endstream/g;
+      let match;
+      
+      while ((match = streamRegex.exec(rawText)) !== null) {
+        const content = match[1];
+        // Filter out binary content, keep readable text
+        const readable = content.replace(/[^\x20-\x7E\n\r\t]/g, ' ').replace(/\s+/g, ' ').trim();
+        if (readable.length > 20 && readable.match(/[a-zA-Z]{3,}/)) {
+          textParts.push(readable);
+        }
+      }
+      
+      if (textParts.length > 0) {
+        return {
+          text: textParts.join('\n\n'),
+          pageCount: Math.max(1, Math.ceil(textParts.length / 2)),
+          success: true,
+        };
+      }
+      
+      return {
+        text: '',
+        pageCount: 0,
+        success: false,
+        error: 'Could not extract text from PDF. It may be scanned or image-based.',
+      };
+    } catch (fallbackError) {
+      return {
+        text: '',
+        pageCount: 0,
+        success: false,
+        error: error instanceof Error ? error.message : 'PDF extraction failed',
+      };
+    }
+  }
+}
+
+// Extract text from DOCX by parsing XML
+async function extractDOCXText(arrayBuffer: ArrayBuffer): Promise<{ text: string; success: boolean; error?: string }> {
+  try {
+    const zip = new JSZip();
+    await zip.loadAsync(arrayBuffer);
+    
+    // DOCX stores content in word/document.xml
+    const documentXml = await zip.file('word/document.xml')?.async('string');
+    
+    if (!documentXml) {
+      throw new Error('No document.xml found in DOCX');
+    }
+    
+    // Extract text from XML
+    const textParts: string[] = [];
+    
+    // Match paragraph content
+    const paragraphRegex = /<w:p[^>]*>([\s\S]*?)<\/w:p>/g;
+    const textRegex = /<w:t[^>]*>([^<]*)<\/w:t>/g;
+    
+    let pMatch;
+    while ((pMatch = paragraphRegex.exec(documentXml)) !== null) {
+      const paragraph = pMatch[1];
+      const texts: string[] = [];
+      
+      let tMatch;
+      while ((tMatch = textRegex.exec(paragraph)) !== null) {
+        texts.push(tMatch[1]);
+      }
+      
+      if (texts.length > 0) {
+        textParts.push(texts.join(''));
+      } else {
+        // Empty paragraph = line break
+        textParts.push('');
+      }
+    }
+    
+    console.log(`[script-parser-stream] DOCX extracted: ${textParts.length} paragraphs`);
+    
+    return {
+      text: textParts.join('\n'),
+      success: true,
+    };
+  } catch (error) {
+    console.error('[script-parser-stream] DOCX extraction error:', error);
+    return {
+      text: '',
+      success: false,
+      error: error instanceof Error ? error.message : 'DOCX extraction failed',
+    };
+  }
+}
+
+// ============= FOUNTAIN NORMALIZATION =============
+
+// Normalize extracted text to Fountain format for better parsing
+function normalizeToFountain(rawText: string, isComic: boolean): { 
+  fountainText: string; 
+  quality: 'good' | 'fair' | 'poor';
+  scenesDetected: number;
+  charactersDetected: number;
+} {
+  const lines = rawText.split('\n');
+  const normalizedLines: string[] = [];
+  let quality: 'good' | 'fair' | 'poor' = 'fair';
+  let scenesDetected = 0;
+  let charactersDetected = 0;
+  const characterNames = new Set<string>();
+  
+  // Scene heading patterns
+  const sceneHeadingPattern = /^(INT\.|EXT\.|INT\/EXT\.|I\/E\.)\s*.+/i;
+  const looseScenePattern = /^(INTERIOR|EXTERIOR|INT|EXT)[\s\.\/:-]+(.+)/i;
+  
+  // Character patterns (ALL CAPS followed by dialogue)
+  const characterCuePattern = /^([A-Z][A-Z\s\.']{2,})$/;
+  const dialogueFollowsPattern = /^[a-z]/; // Dialogue typically starts lowercase or mixed
+  
+  // Comic patterns
+  const pagePattern = /^(PAGE|PG)[\s#.:]*(\d+)/i;
+  const panelPattern = /^(PANEL|PNL)[\s#.:]*(\d+)/i;
+  
+  // Non-character words to filter
+  const nonCharacterWords = new Set([
+    'INT', 'EXT', 'INTERIOR', 'EXTERIOR', 'FADE', 'CUT', 'DISSOLVE',
+    'THE', 'CONTINUED', 'CONTINUOUS', 'LATER', 'DAY', 'NIGHT', 'MORNING',
+    'EVENING', 'DUSK', 'DAWN', 'SAME', 'TRANSITION', 'TITLE', 'SUPER',
+    'INSERT', 'ANGLE', 'CLOSE', 'WIDE', 'MEDIUM', 'POV', 'BACK', 'SMASH',
+    'MATCH', 'JUMP', 'TIME', 'CUT TO', 'FADE TO', 'FADE IN', 'FADE OUT',
+  ]);
+  
+  let lastWasCharacter = false;
+  let lastCharacterName = '';
+  let inDialogue = false;
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmed = line.trim();
+    const nextLine = lines[i + 1]?.trim() || '';
+    
+    // Skip empty lines but preserve them
+    if (!trimmed) {
+      normalizedLines.push('');
+      lastWasCharacter = false;
+      inDialogue = false;
+      continue;
+    }
+    
+    // Handle comic format
+    if (isComic) {
+      const pageMatch = trimmed.match(pagePattern);
+      if (pageMatch) {
+        normalizedLines.push(`\nPAGE ${pageMatch[2]}\n`);
+        scenesDetected++;
+        continue;
+      }
+      
+      const panelMatch = trimmed.match(panelPattern);
+      if (panelMatch) {
+        normalizedLines.push(`\nPANEL ${panelMatch[2]}`);
+        continue;
+      }
+      
+      // Comic dialogue format: CHARACTER: dialogue
+      const comicDialogueMatch = trimmed.match(/^([A-Z][A-Z\s\.']+):\s*(.+)/);
+      if (comicDialogueMatch) {
+        const name = comicDialogueMatch[1].trim();
+        if (!nonCharacterWords.has(name)) {
+          characterNames.add(name);
+          normalizedLines.push(`\n${name}`);
+          normalizedLines.push(comicDialogueMatch[2]);
+        }
+        continue;
+      }
+    }
+    
+    // Check for scene heading
+    if (sceneHeadingPattern.test(trimmed)) {
+      // Already properly formatted
+      normalizedLines.push('');
+      normalizedLines.push(trimmed.toUpperCase());
+      normalizedLines.push('');
+      scenesDetected++;
+      lastWasCharacter = false;
+      inDialogue = false;
+      continue;
+    }
+    
+    // Check for loose scene pattern and normalize
+    const looseMatch = trimmed.match(looseScenePattern);
+    if (looseMatch) {
+      const intExt = looseMatch[1].toUpperCase().startsWith('INT') ? 'INT.' : 'EXT.';
+      const location = looseMatch[2].trim().toUpperCase();
+      normalizedLines.push('');
+      normalizedLines.push(`${intExt} ${location}`);
+      normalizedLines.push('');
+      scenesDetected++;
+      lastWasCharacter = false;
+      inDialogue = false;
+      continue;
+    }
+    
+    // Check for character cue (ALL CAPS, followed by text on next line)
+    if (characterCuePattern.test(trimmed) && trimmed.length < 40) {
+      const potentialName = trimmed.replace(/\s*\(.*\)$/, '').trim();
+      
+      if (!nonCharacterWords.has(potentialName) && potentialName.length > 1) {
+        // Check if next line looks like dialogue
+        if (nextLine && !sceneHeadingPattern.test(nextLine) && !characterCuePattern.test(nextLine)) {
+          characterNames.add(potentialName);
+          normalizedLines.push('');
+          normalizedLines.push(trimmed); // Character name as-is
+          lastWasCharacter = true;
+          lastCharacterName = potentialName;
+          inDialogue = false;
+          continue;
+        }
+      }
+    }
+    
+    // Check for parenthetical
+    if (trimmed.startsWith('(') && trimmed.endsWith(')') && lastWasCharacter) {
+      normalizedLines.push(trimmed);
+      continue;
+    }
+    
+    // Regular line - could be action or dialogue
+    if (lastWasCharacter) {
+      // This is dialogue
+      normalizedLines.push(trimmed);
+      inDialogue = true;
+      lastWasCharacter = false;
+    } else if (inDialogue && trimmed.length < 60 && !trimmed.includes('  ')) {
+      // Continuation of dialogue (no double space, reasonable length)
+      normalizedLines.push(trimmed);
+    } else {
+      // Action line
+      normalizedLines.push(trimmed);
+      inDialogue = false;
+    }
+    
+    lastWasCharacter = false;
+  }
+  
+  charactersDetected = characterNames.size;
+  
+  // Determine quality
+  if (scenesDetected >= 10 && charactersDetected >= 3) {
+    quality = 'good';
+  } else if (scenesDetected >= 3 || charactersDetected >= 2) {
+    quality = 'fair';
+  } else {
+    quality = 'poor';
+  }
+  
+  console.log(`[script-parser-stream] Fountain normalization: ${scenesDetected} scenes, ${charactersDetected} characters, quality: ${quality}`);
+  
+  return {
+    fountainText: normalizedLines.join('\n'),
+    quality,
+    scenesDetected,
+    charactersDetected,
+  };
+}
+
+// ============= JSON UTILITIES =============
 
 // JSON repair utility - fixes common AI response issues
 function repairJSON(jsonString: string): string {
@@ -158,6 +452,8 @@ function safeParseJSON(jsonString: string): any {
   }
 }
 
+// ============= VALIDATION & UTILITIES =============
+
 // Estimate page count from file size and format
 function estimatePageCount(fileSize: number, format: string): number {
   const bytesPerPage: Record<string, number> = {
@@ -190,11 +486,11 @@ function validateFile(fileSize: number, format: string): { valid: boolean; warni
   }
   
   if (format === 'docx') {
-    recommendations.push('For best results, consider exporting as PDF or Fountain format.');
+    recommendations.push('Text extraction enabled for DOCX - faster and more reliable than AI vision.');
   }
   
-  if (format === 'pdf' && fileSize > 5 * 1024 * 1024) {
-    warnings.push('Large PDF files may timeout. Consider using Fountain or Final Draft format.');
+  if (format === 'pdf') {
+    recommendations.push('Text extraction enabled for PDF - works best with digital PDFs (not scanned).');
   }
   
   return { valid: true, warnings, recommendations };
@@ -222,6 +518,8 @@ async function retryWithBackoff<T>(
   throw lastError;
 }
 
+// ============= MAIN SERVER =============
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -230,7 +528,7 @@ serve(async (req) => {
 
   const { scriptId, format, filePath, scriptType } = await req.json() as ParseRequest;
   
-  console.log(`[script-parser-stream] Starting SSE parse for script ${scriptId}`);
+  console.log(`[script-parser-stream] Starting SSE parse for script ${scriptId}, format: ${format}`);
 
   // Create SSE response stream
   const stream = new ReadableStream({
@@ -282,6 +580,7 @@ serve(async (req) => {
         let allCharacters: Map<string, Character> = new Map();
         let rawText = '';
         let usedAIRescue = false;
+        let extractionMethod = 'regex';
         
         if (['fountain', 'highland', 'txt'].includes(format)) {
           // Text-based formats - parse directly
@@ -293,6 +592,7 @@ serve(async (req) => {
           const parsed = isComic ? parseComicFormat(textContent) : parseTextFormat(textContent);
           allScenes = parsed.scenes;
           parsed.characters.forEach(c => allCharacters.set(c.name, c));
+          extractionMethod = 'regex';
           
           // If parsing produced poor results, try AI rescue
           if (allScenes.length < 3 && lovableApiKey) {
@@ -306,8 +606,10 @@ serve(async (req) => {
               allScenes = aiResult.scenes;
               allCharacters = new Map(aiResult.characters.map(c => [c.name, c]));
               usedAIRescue = true;
+              extractionMethod = 'ai';
             }
           }
+          
         } else if (format === 'fdx') {
           // Final Draft XML
           const fdxContent = await fileData.text();
@@ -315,136 +617,224 @@ serve(async (req) => {
           allScenes = parsed.scenes;
           parsed.characters.forEach(c => allCharacters.set(c.name, c));
           rawText = parsed.rawText;
+          extractionMethod = 'fdx-xml';
+          
         } else if (format === 'pdf' || format === 'docx') {
-          // Binary formats - use chunked AI processing with progress
+          // Binary formats - NEW: Use text extraction first!
           const bytes = await fileData.arrayBuffer();
-          const uint8Array = new Uint8Array(bytes);
           
-          // Convert to base64
-          let base64 = '';
-          const b64ChunkSize = 32768;
-          for (let i = 0; i < uint8Array.length; i += b64ChunkSize) {
-            const chunk = uint8Array.slice(i, Math.min(i + b64ChunkSize, uint8Array.length));
-            base64 += String.fromCharCode.apply(null, Array.from(chunk));
-          }
-          base64 = btoa(base64);
+          sendSSE(controller, 'progress', { stage: 'extract', percent: 15, message: 'Extracting text from document...' });
           
-          sendSSE(controller, 'progress', { stage: 'extract', percent: 20, message: 'File encoded, starting AI analysis...' });
+          let extractedText = '';
+          let extractionSuccess = false;
           
-          // Try single-pass first for smaller files
-          if (base64.length <= 3000000 && lovableApiKey) {
-            try {
-              sendSSE(controller, 'progress', { stage: 'extract', percent: 30, message: 'Analyzing full document...' });
-              
-              const result = await parseSinglePass(lovableApiKey, base64, format, isComic, expectedPages);
-              allScenes = result.scenes;
-              result.characters.forEach(c => allCharacters.set(c.name, c));
-              rawText = result.rawText;
-              usedAIRescue = true;
-              
-              sendSSE(controller, 'progress', { stage: 'extract', percent: 90, message: `Extracted ${allScenes.length} scenes` });
-            } catch (error) {
-              console.error('[script-parser-stream] Single-pass failed:', error);
-              sendSSE(controller, 'warning', { warnings: ['Single-pass parsing failed, switching to chunked mode...'] });
+          if (format === 'pdf') {
+            const pdfResult = await extractPDFText(bytes);
+            if (pdfResult.success && pdfResult.text.length > 500) {
+              extractedText = pdfResult.text;
+              extractionSuccess = true;
+              sendSSE(controller, 'progress', { 
+                stage: 'extract', 
+                percent: 30, 
+                message: `Extracted text from ${pdfResult.pageCount} PDF pages` 
+              });
+            } else if (pdfResult.error) {
+              sendSSE(controller, 'warning', { 
+                warnings: [pdfResult.error],
+                recommendations: ['Will attempt AI-based extraction as fallback.']
+              });
+            }
+          } else if (format === 'docx') {
+            const docxResult = await extractDOCXText(bytes);
+            if (docxResult.success && docxResult.text.length > 500) {
+              extractedText = docxResult.text;
+              extractionSuccess = true;
+              sendSSE(controller, 'progress', { 
+                stage: 'extract', 
+                percent: 30, 
+                message: 'Extracted text from DOCX document' 
+              });
+            } else if (docxResult.error) {
+              sendSSE(controller, 'warning', { 
+                warnings: [docxResult.error],
+                recommendations: ['Will attempt AI-based extraction as fallback.']
+              });
             }
           }
           
-          // Chunked processing for large files or if single-pass failed
-          if (allScenes.length === 0 && lovableApiKey) {
-            const chunkSize = 60000;
-            const numChunks = Math.ceil(base64.length / chunkSize);
-            let successfulChunks = 0;
-            let failedChunks: number[] = [];
+          // If text extraction succeeded, normalize to Fountain and parse
+          if (extractionSuccess && extractedText.length > 0) {
+            sendSSE(controller, 'progress', { stage: 'extract', percent: 40, message: 'Normalizing to Fountain format...' });
+            
+            const normalized = normalizeToFountain(extractedText, isComic);
+            rawText = normalized.fountainText;
             
             sendSSE(controller, 'progress', { 
               stage: 'extract', 
-              percent: 25, 
-              message: `Processing ${numChunks} chunks...`,
-              totalChunks: numChunks
+              percent: 50, 
+              message: `Normalized: detected ${normalized.scenesDetected} scenes, ${normalized.charactersDetected} characters` 
             });
             
-            for (let i = 0; i < numChunks; i++) {
-              const chunkStart = i * chunkSize;
-              const chunkEnd = Math.min((i + 1) * chunkSize, base64.length);
-              const chunkBase64 = base64.substring(chunkStart, chunkEnd);
-              const startPage = Math.floor((i / numChunks) * expectedPages) + 1;
-              const endPage = Math.floor(((i + 1) / numChunks) * expectedPages);
+            // Parse the normalized Fountain text
+            sendSSE(controller, 'progress', { stage: 'extract', percent: 60, message: 'Parsing screenplay elements...' });
+            
+            const parsed = isComic ? parseComicFormat(normalized.fountainText) : parseTextFormat(normalized.fountainText);
+            allScenes = parsed.scenes;
+            parsed.characters.forEach(c => allCharacters.set(c.name, c));
+            extractionMethod = 'text-extraction';
+            
+            // If parsing quality is poor, use AI to enhance
+            if (normalized.quality === 'poor' && lovableApiKey) {
+              sendSSE(controller, 'progress', { stage: 'extract', percent: 70, message: 'Using AI to improve extraction...' });
               
-              try {
-                sendSSE(controller, 'chunk', { 
-                  current: i + 1, 
-                  total: numChunks, 
-                  status: 'processing',
-                  pageRange: `${startPage}-${endPage}`
-                });
-                
-                const chunkResult = await parseChunk(
-                  lovableApiKey, 
-                  chunkBase64, 
-                  format, 
-                  isComic, 
-                  i, 
-                  numChunks, 
-                  startPage, 
-                  allScenes.length
-                );
-                
-                chunkResult.scenes.forEach(s => allScenes.push(s));
-                chunkResult.characters.forEach(c => {
-                  if (allCharacters.has(c.name)) {
-                    const existing = allCharacters.get(c.name)!;
-                    existing.dialogue_count += c.dialogue_count;
-                  } else {
-                    allCharacters.set(c.name, c);
-                  }
-                });
-                rawText += chunkResult.rawText;
-                successfulChunks++;
-                
-                sendSSE(controller, 'chunk', { 
-                  current: i + 1, 
-                  total: numChunks, 
-                  status: 'complete',
-                  scenesFound: chunkResult.scenes.length
-                });
-                
-              } catch (error) {
-                console.error(`[script-parser-stream] Chunk ${i + 1} failed:`, error);
-                failedChunks.push(i + 1);
-                
-                sendSSE(controller, 'chunk', { 
-                  current: i + 1, 
-                  total: numChunks, 
-                  status: 'failed',
-                  error: error instanceof Error ? error.message : 'Unknown error'
-                });
-                
-                // Try with smaller chunk on retry
-                if (failedChunks.length <= 3) {
-                  sendSSE(controller, 'warning', { warnings: [`Chunk ${i + 1} failed, attempting recovery...`] });
-                }
-              }
-              
-              const overallProgress = 25 + ((i + 1) / numChunks) * 65;
-              sendSSE(controller, 'progress', { 
-                stage: 'extract', 
-                percent: overallProgress, 
-                message: `Processed ${i + 1}/${numChunks} chunks (${allScenes.length} scenes found)` 
+              // Use extracted text (not base64!) for AI enhancement
+              const aiResult = await parseWithAI(lovableApiKey, extractedText, isComic, expectedPages, (progress, message) => {
+                sendSSE(controller, 'progress', { stage: 'extract', percent: 70 + (progress * 0.2), message });
               });
               
-              // Rate limiting delay
-              if (i < numChunks - 1) {
-                await new Promise(r => setTimeout(r, 300));
+              if (aiResult.scenes.length > allScenes.length) {
+                allScenes = aiResult.scenes;
+                allCharacters = new Map(aiResult.characters.map(c => [c.name, c]));
+                usedAIRescue = true;
+                extractionMethod = 'text-extraction+ai';
               }
             }
             
-            usedAIRescue = true;
+            sendSSE(controller, 'progress', { stage: 'extract', percent: 90, message: `Extracted ${allScenes.length} scenes` });
             
-            if (failedChunks.length > 0) {
-              sendSSE(controller, 'warning', { 
-                warnings: [`${failedChunks.length} chunk(s) failed to parse. Extraction may be incomplete.`],
-                failedChunks
+          } else {
+            // Fallback to AI vision-based parsing (original approach)
+            sendSSE(controller, 'progress', { stage: 'extract', percent: 20, message: 'Text extraction failed, using AI vision...' });
+            
+            const uint8Array = new Uint8Array(bytes);
+            
+            // Convert to base64
+            let base64 = '';
+            const b64ChunkSize = 32768;
+            for (let i = 0; i < uint8Array.length; i += b64ChunkSize) {
+              const chunk = uint8Array.slice(i, Math.min(i + b64ChunkSize, uint8Array.length));
+              base64 += String.fromCharCode.apply(null, Array.from(chunk));
+            }
+            base64 = btoa(base64);
+            
+            sendSSE(controller, 'progress', { stage: 'extract', percent: 25, message: 'File encoded, starting AI analysis...' });
+            
+            // Try single-pass first for smaller files
+            if (base64.length <= 3000000 && lovableApiKey) {
+              try {
+                sendSSE(controller, 'progress', { stage: 'extract', percent: 30, message: 'Analyzing full document with AI...' });
+                
+                const result = await parseSinglePass(lovableApiKey, base64, format, isComic, expectedPages);
+                allScenes = result.scenes;
+                result.characters.forEach(c => allCharacters.set(c.name, c));
+                rawText = result.rawText;
+                usedAIRescue = true;
+                extractionMethod = 'ai-vision';
+                
+                sendSSE(controller, 'progress', { stage: 'extract', percent: 90, message: `Extracted ${allScenes.length} scenes` });
+              } catch (error) {
+                console.error('[script-parser-stream] Single-pass failed:', error);
+                sendSSE(controller, 'warning', { warnings: ['Single-pass parsing failed, switching to chunked mode...'] });
+              }
+            }
+            
+            // Chunked processing for large files or if single-pass failed
+            if (allScenes.length === 0 && lovableApiKey) {
+              const chunkSize = 60000;
+              const numChunks = Math.ceil(base64.length / chunkSize);
+              let successfulChunks = 0;
+              let failedChunks: number[] = [];
+              
+              sendSSE(controller, 'progress', { 
+                stage: 'extract', 
+                percent: 25, 
+                message: `Processing ${numChunks} chunks...`,
+                totalChunks: numChunks
               });
+              
+              for (let i = 0; i < numChunks; i++) {
+                const chunkStart = i * chunkSize;
+                const chunkEnd = Math.min((i + 1) * chunkSize, base64.length);
+                const chunkBase64 = base64.substring(chunkStart, chunkEnd);
+                const startPage = Math.floor((i / numChunks) * expectedPages) + 1;
+                const endPage = Math.floor(((i + 1) / numChunks) * expectedPages);
+                
+                try {
+                  sendSSE(controller, 'chunk', { 
+                    current: i + 1, 
+                    total: numChunks, 
+                    status: 'processing',
+                    pageRange: `${startPage}-${endPage}`
+                  });
+                  
+                  const chunkResult = await parseChunk(
+                    lovableApiKey, 
+                    chunkBase64, 
+                    format, 
+                    isComic, 
+                    i, 
+                    numChunks, 
+                    startPage, 
+                    allScenes.length
+                  );
+                  
+                  chunkResult.scenes.forEach(s => allScenes.push(s));
+                  chunkResult.characters.forEach(c => {
+                    if (allCharacters.has(c.name)) {
+                      const existing = allCharacters.get(c.name)!;
+                      existing.dialogue_count += c.dialogue_count;
+                    } else {
+                      allCharacters.set(c.name, c);
+                    }
+                  });
+                  rawText += chunkResult.rawText;
+                  successfulChunks++;
+                  
+                  sendSSE(controller, 'chunk', { 
+                    current: i + 1, 
+                    total: numChunks, 
+                    status: 'complete',
+                    scenesFound: chunkResult.scenes.length
+                  });
+                  
+                } catch (error) {
+                  console.error(`[script-parser-stream] Chunk ${i + 1} failed:`, error);
+                  failedChunks.push(i + 1);
+                  
+                  sendSSE(controller, 'chunk', { 
+                    current: i + 1, 
+                    total: numChunks, 
+                    status: 'failed',
+                    error: error instanceof Error ? error.message : 'Unknown error'
+                  });
+                  
+                  if (failedChunks.length <= 3) {
+                    sendSSE(controller, 'warning', { warnings: [`Chunk ${i + 1} failed, attempting recovery...`] });
+                  }
+                }
+                
+                const overallProgress = 25 + ((i + 1) / numChunks) * 65;
+                sendSSE(controller, 'progress', { 
+                  stage: 'extract', 
+                  percent: overallProgress, 
+                  message: `Processed ${i + 1}/${numChunks} chunks (${allScenes.length} scenes found)` 
+                });
+                
+                // Rate limiting delay
+                if (i < numChunks - 1) {
+                  await new Promise(r => setTimeout(r, 300));
+                }
+              }
+              
+              usedAIRescue = true;
+              extractionMethod = 'ai-vision-chunked';
+              
+              if (failedChunks.length > 0) {
+                sendSSE(controller, 'warning', { 
+                  warnings: [`${failedChunks.length} chunk(s) failed to parse. Extraction may be incomplete.`],
+                  failedChunks
+                });
+              }
             }
           }
         }
@@ -522,6 +912,7 @@ serve(async (req) => {
           metadata: { 
             parsed_at: new Date().toISOString(),
             ai_assisted: usedAIRescue,
+            extraction_method: extractionMethod,
             streaming: true,
           },
         });
@@ -553,10 +944,11 @@ serve(async (req) => {
           isComplete,
           readyForAnalysis: isComplete,
           aiAssisted: usedAIRescue,
+          extractionMethod,
           coveragePercent: Math.round(coveragePercent),
         });
 
-        console.log(`[script-parser-stream] Complete: ${allScenes.length} scenes, ${characters.length} characters`);
+        console.log(`[script-parser-stream] Complete: ${allScenes.length} scenes, ${characters.length} characters, method: ${extractionMethod}`);
         
       } catch (error) {
         console.error('[script-parser-stream] Error:', error);
@@ -580,6 +972,8 @@ serve(async (req) => {
     },
   });
 });
+
+// ============= PARSING FUNCTIONS =============
 
 // Parse text formats
 function parseTextFormat(content: string): { scenes: Scene[]; characters: Character[]; rawText: string } {
@@ -774,6 +1168,8 @@ function parseFinalDraft(content: string): { scenes: Scene[]; characters: Charac
   return { scenes, characters: Array.from(characterMap.values()), rawText };
 }
 
+// ============= AI PARSING FUNCTIONS =============
+
 // AI parsing for text
 async function parseWithAI(
   apiKey: string, 
@@ -841,7 +1237,7 @@ async function parseWithAI(
   };
 }
 
-// Single-pass AI parsing for binary files
+// Single-pass AI parsing for binary files (fallback)
 async function parseSinglePass(
   apiKey: string,
   base64: string,
@@ -921,7 +1317,7 @@ Only return valid JSON.`
   };
 }
 
-// Chunked parsing for large files
+// Chunked parsing for large files (fallback)
 async function parseChunk(
   apiKey: string,
   chunkBase64: string,
@@ -988,6 +1384,8 @@ Return JSON: {"scenes": [...], "characters": [...], "extracted_text": "..."}`
     rawText: parsed.extracted_text || '',
   };
 }
+
+// ============= GRAPH BUILDING =============
 
 // Build narrative graph
 function buildNarrativeGraph(scenes: Scene[], characters: Character[]) {
