@@ -3,6 +3,9 @@ project_id = "mrdgivlozwhujmyifbaj"
 [functions.script-parser]
 verify_jwt = false
 
+[functions.script-parser-stream]
+verify_jwt = false
+
 [functions.analyze-script]
 verify_jwt = false
 
