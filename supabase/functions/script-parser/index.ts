@@ -188,7 +188,7 @@ async function rescueParsingWithAI(
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
+        model: 'openai/gpt-5',
         messages: [
           {
             role: 'system',
@@ -307,7 +307,7 @@ async function normalizeWithAI(content: string, isComic: boolean): Promise<strin
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash-lite',
+        model: 'openai/gpt-5',
         messages: [
           {
             role: 'system',
@@ -959,7 +959,7 @@ async function parsePDFWithAI(
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            model: 'google/gemini-2.5-flash',
+            model: 'openai/gpt-5',
             messages: [
               {
                 role: 'user',
@@ -1070,7 +1070,7 @@ Only return valid JSON, no markdown or explanations.`
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              model: 'google/gemini-2.5-flash',
+              model: 'openai/gpt-5',
               messages: [
                 {
                   role: 'system',
@@ -1214,7 +1214,7 @@ async function parseDocxWithAI(
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            model: 'google/gemini-2.5-flash',
+            model: 'openai/gpt-5',
             messages: [
               {
                 role: 'user',
@@ -1308,7 +1308,7 @@ Only return valid JSON.`
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              model: 'google/gemini-2.5-flash',
+              model: 'openai/gpt-5',
               messages: [
                 {
                   role: 'system',
@@ -1578,7 +1578,7 @@ async function parseComicPDFWithAI(
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            model: 'google/gemini-2.5-flash',
+            model: 'openai/gpt-5',
             messages: [
               {
                 role: 'user',
@@ -1672,7 +1672,7 @@ Only return valid JSON.`
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              model: 'google/gemini-2.5-flash',
+              model: 'openai/gpt-5',
               messages: [
                 {
                   role: 'system',
