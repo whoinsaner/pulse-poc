@@ -1420,7 +1420,7 @@ Return JSON: {"scenes": [...], "characters": [...], "extracted_text": "..."}`
             content: `Parse this ${format.toUpperCase()} section (base64): ${chunkBase64}`
           }
         ],
-        max_tokens: 10000,
+        max_completion_tokens: 10000,
       }),
     });
 

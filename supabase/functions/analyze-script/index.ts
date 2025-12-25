@@ -766,7 +766,7 @@ Only return valid JSON, no markdown.`;
         { role: 'system', content: config.systemPrompt },
         { role: 'user', content: userPrompt }
       ],
-      max_tokens: 6000,
+      max_completion_tokens: 6000,
     }),
   });
 
@@ -909,7 +909,7 @@ Return JSON array:
           { role: 'system', content: 'You are InsightSynthesisAgent, a senior script analyst synthesizing findings into executive-level actionable insights.' },
           { role: 'user', content: prompt }
         ],
-        max_tokens: 3000,
+        max_completion_tokens: 3000,
       }),
     });
 
