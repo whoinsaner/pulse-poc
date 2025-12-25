@@ -11,13 +11,22 @@ import Dashboard from "./pages/Dashboard";
 import Upload from "./pages/Upload";
 import Scripts from "./pages/Scripts";
 import ReportLayout from "./components/report/ReportLayout";
-import ReportOverview from "./pages/report/ReportOverview";
+import ProjectSnapshot from "./pages/report/ProjectSnapshot";
+import ConceptHook from "./pages/report/ConceptHook";
+import PlotAnalysis from "./pages/report/PlotAnalysis";
+import StructuralEngineering from "./pages/report/StructuralEngineering";
+import ProtagonistAnalysis from "./pages/report/ProtagonistAnalysis";
+import AntagonistAnalysis from "./pages/report/AntagonistAnalysis";
+import SupportingCast from "./pages/report/SupportingCast";
+import CharacterPsychology from "./pages/report/CharacterPsychology";
 import ReportAnalysis from "./pages/report/ReportAnalysis";
 import ReportInsights from "./pages/report/ReportInsights";
 import ReportNarrative from "./pages/report/ReportNarrative";
 import ReportCharacters from "./pages/report/ReportCharacters";
 import ReportPlatform from "./pages/report/ReportPlatform";
 import ReportComic from "./pages/report/ReportComic";
+import CompleteScorecard from "./pages/report/CompleteScorecard";
+import RewritePriorities from "./pages/report/RewritePriorities";
 import SampleReportLayout from "./pages/SampleReport";
 import SampleScript from "./pages/SampleScript";
 import SampleComicReportLayout from "./pages/SampleComicReport";
@@ -29,7 +38,6 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-// Redirect /reports/:runId to /report/:runId
 function ReportsRedirect() {
   const { runId } = useParams<{ runId: string }>();
   return <Navigate to={`/report/${runId}`} replace />;
@@ -52,16 +60,25 @@ const App = () => (
             <Route path="/reports" element={<Reports />} />
             <Route path="/reports/:runId" element={<ReportsRedirect />} />
             <Route path="/report/:runId" element={<ReportLayout />}>
-              <Route index element={<ReportOverview />} />
+              <Route index element={<ProjectSnapshot />} />
+              <Route path="concept" element={<ConceptHook />} />
+              <Route path="plot" element={<PlotAnalysis />} />
+              <Route path="structure" element={<StructuralEngineering />} />
+              <Route path="protagonist" element={<ProtagonistAnalysis />} />
+              <Route path="antagonist" element={<AntagonistAnalysis />} />
+              <Route path="supporting" element={<SupportingCast />} />
+              <Route path="psychology" element={<CharacterPsychology />} />
               <Route path="analysis" element={<ReportAnalysis />} />
               <Route path="insights" element={<ReportInsights />} />
               <Route path="narrative" element={<ReportNarrative />} />
               <Route path="characters" element={<ReportCharacters />} />
               <Route path="platform" element={<ReportPlatform />} />
               <Route path="comic" element={<ReportComic />} />
+              <Route path="scorecard" element={<CompleteScorecard />} />
+              <Route path="rewrite" element={<RewritePriorities />} />
             </Route>
             <Route path="/sample-report" element={<SampleReportLayout />}>
-              <Route index element={<ReportOverview />} />
+              <Route index element={<ProjectSnapshot />} />
               <Route path="analysis" element={<ReportAnalysis />} />
               <Route path="insights" element={<ReportInsights />} />
               <Route path="narrative" element={<ReportNarrative />} />
@@ -70,7 +87,7 @@ const App = () => (
             </Route>
             <Route path="/sample-script" element={<SampleScript />} />
             <Route path="/sample-comic-report" element={<SampleComicReportLayout />}>
-              <Route index element={<ReportOverview />} />
+              <Route index element={<ProjectSnapshot />} />
               <Route path="comic" element={<ReportComic />} />
               <Route path="analysis" element={<ReportAnalysis />} />
               <Route path="insights" element={<ReportInsights />} />
