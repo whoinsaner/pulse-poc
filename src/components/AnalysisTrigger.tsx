@@ -173,7 +173,7 @@ export function AnalysisTrigger({
     };
   }, [analysisRunId, isAnalyzing, handleRealtimeUpdate]);
 
-  const startAnalysis = async (forceAnalysis = false) => {
+  const startAnalysis = async (forceAnalysis = false, mode: 'quick' | 'deep' = 'deep') => {
     if (!user) {
       toast({
         title: 'Authentication required',
@@ -205,14 +205,15 @@ export function AnalysisTrigger({
       if (createError) throw createError;
 
       setAnalysisRunId(run.id);
-      console.log('[AnalysisTrigger] Created analysis run:', run.id, 'forceAnalysis:', forceAnalysis);
+      console.log('[AnalysisTrigger] Created analysis run:', run.id, 'mode:', mode, 'forceAnalysis:', forceAnalysis);
 
       // Trigger analysis edge function (non-blocking)
       supabase.functions.invoke('analyze-script', {
         body: {
           scriptId,
           analysisRunId: run.id,
-          forceAnalysis, // Pass the force flag to enable fallback mode
+          mode, // Pass the analysis mode
+          forceAnalysis,
         },
       }).then(({ error: invokeError }) => {
         if (invokeError) {
@@ -321,10 +322,21 @@ export function AnalysisTrigger({
     }
 
     return (
-      <Button onClick={() => startAnalysis(false)} className="w-full">
-        <Play className="h-4 w-4 mr-2" />
-        Run UASF Analysis
-      </Button>
+      <div className="space-y-2">
+        <div className="grid grid-cols-2 gap-2">
+          <Button onClick={() => startAnalysis(false, 'quick')} variant="outline" className="w-full">
+            <Zap className="h-4 w-4 mr-2 text-amber-500" />
+            Quick Analysis
+          </Button>
+          <Button onClick={() => startAnalysis(false, 'deep')} className="w-full">
+            <Play className="h-4 w-4 mr-2" />
+            Deep Analysis
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground text-center">
+          Quick: Direct text analysis (faster) • Deep: Uses parsed structure (more accurate)
+        </p>
+      </div>
     );
   }
 
