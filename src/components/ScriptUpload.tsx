@@ -376,6 +376,7 @@ export function ScriptUpload({ onUploadComplete, onClose }: ScriptUploadProps) {
             progress={streamingParser.progress}
             chunks={streamingParser.chunks}
             warnings={streamingParser.warnings}
+            eta={streamingParser.eta}
             format={detectedFormat || undefined}
           />
         </div>

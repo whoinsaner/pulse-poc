@@ -40,6 +40,14 @@ export interface ParsingWarnings {
   failedChunks?: number[];
 }
 
+export interface ETAInfo {
+  elapsedSeconds: number;
+  estimatedTotalSeconds: number | null;
+  estimatedRemainingSeconds: number | null;
+  formattedElapsed: string;
+  formattedRemaining: string | null;
+}
+
 interface UseStreamingParserOptions {
   onStageChange?: (stage: string) => void;
   onProgress?: (progress: ParsingProgress) => void;
@@ -47,6 +55,16 @@ interface UseStreamingParserOptions {
   onWarning?: (warnings: ParsingWarnings) => void;
   onComplete?: (result: ParsingResult) => void;
   onError?: (error: string) => void;
+}
+
+// Format seconds into human-readable string
+function formatTime(seconds: number): string {
+  if (seconds < 60) {
+    return `${Math.round(seconds)}s`;
+  }
+  const minutes = Math.floor(seconds / 60);
+  const secs = Math.round(seconds % 60);
+  return `${minutes}m ${secs}s`;
 }
 
 export function useStreamingParser(options: UseStreamingParserOptions = {}) {
@@ -57,7 +75,38 @@ export function useStreamingParser(options: UseStreamingParserOptions = {}) {
   const [warnings, setWarnings] = useState<ParsingWarnings | null>(null);
   const [result, setResult] = useState<ParsingResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [eta, setEta] = useState<ETAInfo | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const startTimeRef = useRef<number | null>(null);
+  const etaIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const lastProgressRef = useRef<number>(0);
+
+  // Update ETA calculations
+  const updateEta = useCallback((currentPercent: number) => {
+    if (!startTimeRef.current) return;
+    
+    const elapsedMs = Date.now() - startTimeRef.current;
+    const elapsedSeconds = elapsedMs / 1000;
+    
+    let estimatedTotalSeconds: number | null = null;
+    let estimatedRemainingSeconds: number | null = null;
+    
+    // Only calculate ETA if we have meaningful progress (> 5%)
+    if (currentPercent > 5) {
+      estimatedTotalSeconds = (elapsedSeconds / currentPercent) * 100;
+      estimatedRemainingSeconds = Math.max(0, estimatedTotalSeconds - elapsedSeconds);
+    }
+    
+    setEta({
+      elapsedSeconds,
+      estimatedTotalSeconds,
+      estimatedRemainingSeconds,
+      formattedElapsed: formatTime(elapsedSeconds),
+      formattedRemaining: estimatedRemainingSeconds !== null ? formatTime(estimatedRemainingSeconds) : null,
+    });
+    
+    lastProgressRef.current = currentPercent;
+  }, []);
 
   const startStreaming = useCallback(async (
     scriptId: string,
@@ -72,6 +121,16 @@ export function useStreamingParser(options: UseStreamingParserOptions = {}) {
     setWarnings(null);
     setResult(null);
     setError(null);
+    setEta(null);
+    
+    // Start timing
+    startTimeRef.current = Date.now();
+    lastProgressRef.current = 0;
+    
+    // Update elapsed time every second
+    etaIntervalRef.current = setInterval(() => {
+      updateEta(lastProgressRef.current);
+    }, 1000);
 
     abortControllerRef.current = new AbortController();
 
@@ -144,8 +203,12 @@ export function useStreamingParser(options: UseStreamingParserOptions = {}) {
       }
     } finally {
       setIsActive(false);
+      if (etaIntervalRef.current) {
+        clearInterval(etaIntervalRef.current);
+        etaIntervalRef.current = null;
+      }
     }
-  }, [options]);
+  }, [options, updateEta]);
 
   const handleEvent = useCallback((type: string, data: any) => {
     switch (type) {
@@ -163,6 +226,8 @@ export function useStreamingParser(options: UseStreamingParserOptions = {}) {
         };
         setProgress(progressData);
         options.onProgress?.(progressData);
+        // Update ETA with new progress
+        updateEta(data.percent);
         break;
       
       case 'chunk':
@@ -217,11 +282,15 @@ export function useStreamingParser(options: UseStreamingParserOptions = {}) {
         options.onError?.(data.message);
         break;
     }
-  }, [options]);
+  }, [options, updateEta]);
 
   const abort = useCallback(() => {
     abortControllerRef.current?.abort();
     setIsActive(false);
+    if (etaIntervalRef.current) {
+      clearInterval(etaIntervalRef.current);
+      etaIntervalRef.current = null;
+    }
   }, []);
 
   const reset = useCallback(() => {
@@ -229,6 +298,12 @@ export function useStreamingParser(options: UseStreamingParserOptions = {}) {
     setCurrentStage('');
     setProgress(null);
     setChunks([]);
+    setEta(null);
+    startTimeRef.current = null;
+    if (etaIntervalRef.current) {
+      clearInterval(etaIntervalRef.current);
+      etaIntervalRef.current = null;
+    }
     setWarnings(null);
     setResult(null);
     setError(null);
@@ -241,6 +316,7 @@ export function useStreamingParser(options: UseStreamingParserOptions = {}) {
     chunks,
     warnings,
     result,
+    eta,
     error,
     startStreaming,
     abort,
