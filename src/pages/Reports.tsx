@@ -194,7 +194,7 @@ export default function Reports() {
                     'group'
                   )}
                   style={{ animationDelay: `${index * 75}ms` }}
-                  onClick={() => navigate(`/reports/${report.analysis_run_id}`)}
+                  onClick={() => navigate(`/report/${report.analysis_run_id}`)}
                 >
                   <div className="grid lg:grid-cols-3 gap-6">
                     {/* Left: Score and metadata */}
@@ -207,7 +207,7 @@ export default function Reports() {
                       />
                       <div className="flex-1 min-w-0">
                         <CardTitle className="text-lg mb-1 truncate group-hover:text-primary transition-colors">
-                          {report.title}
+                          {report.scripts?.title || report.title}
                         </CardTitle>
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <Calendar className="h-3.5 w-3.5" />
