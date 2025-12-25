@@ -45,15 +45,26 @@ function sendSSE(controller: ReadableStreamDefaultController, event: string, dat
 
 // ============= TEXT EXTRACTION =============
 
-// Extract text from PDF using regex-based extraction (Deno compatible)
-// This doesn't rely on Node.js built-ins like fs.readFileSync
+// CPU yield helper - prevents CPU time exceeded errors by yielding control
+async function cpuYield(): Promise<void> {
+  await new Promise(resolve => setTimeout(resolve, 0));
+}
+
+// Extract text from PDF using chunked regex-based extraction (Deno compatible)
+// This processes the PDF in chunks to avoid CPU time exceeded errors
 async function extractPDFText(arrayBuffer: ArrayBuffer): Promise<{ text: string; pageCount: number; success: boolean; error?: string }> {
   try {
     const uint8Array = new Uint8Array(arrayBuffer);
+    const fileSize = uint8Array.length;
+    const isLargeFile = fileSize > 500 * 1024; // 500KB threshold
+    
+    console.log(`[script-parser-stream] PDF extraction starting: ${(fileSize / 1024).toFixed(0)}KB, large file mode: ${isLargeFile}`);
     
     // Decode PDF content as text (lossy for binary, but we extract readable parts)
     const decoder = new TextDecoder('latin1', { fatal: false });
     const rawContent = decoder.decode(uint8Array);
+    
+    await cpuYield(); // Yield after decode
     
     // Count pages from PDF structure
     const pageMatches = rawContent.match(/\/Type\s*\/Page[^s]/g);
@@ -62,81 +73,138 @@ async function extractPDFText(arrayBuffer: ArrayBuffer): Promise<{ text: string;
     // Extract text from PDF streams
     const textParts: string[] = [];
     
+    // For large files, use simplified extraction with iteration limits
+    const maxIterations = isLargeFile ? 500 : 2000;
+    let iterations = 0;
+    
     // Method 1: Extract from BT...ET text blocks (PDF text operators)
-    const btEtRegex = /BT\s*([\s\S]*?)\s*ET/g;
-    let btMatch;
-    while ((btMatch = btEtRegex.exec(rawContent)) !== null) {
-      const block = btMatch[1];
-      // Extract text from Tj, TJ, ', " operators
-      const textMatches = block.match(/\(([^)]*)\)\s*(?:Tj|'|")/g);
-      if (textMatches) {
-        for (const tm of textMatches) {
-          const inner = tm.match(/\(([^)]*)\)/);
-          if (inner && inner[1]) {
-            // Decode PDF escape sequences
-            let decoded = inner[1]
-              .replace(/\\n/g, '\n')
-              .replace(/\\r/g, '\r')
-              .replace(/\\t/g, '\t')
-              .replace(/\\\(/g, '(')
-              .replace(/\\\)/g, ')')
-              .replace(/\\\\/g, '\\');
-            if (decoded.length > 0) {
-              textParts.push(decoded);
-            }
+    // Use simpler regex for large files to reduce CPU usage
+    if (isLargeFile) {
+      // Fast path: simplified extraction for large PDFs
+      // Split content into chunks to process incrementally
+      const chunkSize = 100000; // 100KB chunks
+      const chunks = Math.ceil(rawContent.length / chunkSize);
+      
+      for (let i = 0; i < chunks && iterations < maxIterations; i++) {
+        const start = i * chunkSize;
+        const end = Math.min(start + chunkSize + 1000, rawContent.length); // overlap for continuity
+        const chunk = rawContent.slice(start, end);
+        
+        // Simple text extraction - look for parenthesized strings followed by Tj
+        const simpleTextRegex = /\(([^()]{1,200})\)\s*Tj/g;
+        let match;
+        while ((match = simpleTextRegex.exec(chunk)) !== null && iterations < maxIterations) {
+          iterations++;
+          const text = match[1]
+            .replace(/\\n/g, '\n')
+            .replace(/\\r/g, '')
+            .replace(/\\\(/g, '(')
+            .replace(/\\\)/g, ')')
+            .replace(/\\\\/g, '\\');
+          if (text.length > 0 && text.match(/[a-zA-Z]/)) {
+            textParts.push(text);
           }
         }
+        
+        // Yield every chunk to prevent CPU timeout
+        if (i % 2 === 0) await cpuYield();
       }
       
-      // Also extract from TJ arrays: [(text) num (text) ...]
-      const tjArrayRegex = /\[((?:\([^)]*\)|[^\]]+)*)\]\s*TJ/gi;
-      let tjMatch;
-      while ((tjMatch = tjArrayRegex.exec(block)) !== null) {
-        const tjContent = tjMatch[1];
-        const stringMatches = tjContent.match(/\(([^)]*)\)/g);
-        if (stringMatches) {
-          for (const sm of stringMatches) {
-            const inner = sm.match(/\(([^)]*)\)/);
+      console.log(`[script-parser-stream] Fast-path extraction: ${iterations} iterations, ${textParts.length} text parts`);
+      
+    } else {
+      // Standard path for smaller files - more thorough extraction
+      const btEtRegex = /BT\s*([\s\S]*?)\s*ET/g;
+      let btMatch;
+      
+      while ((btMatch = btEtRegex.exec(rawContent)) !== null && iterations < maxIterations) {
+        iterations++;
+        const block = btMatch[1];
+        
+        // Extract text from Tj operator
+        const textMatches = block.match(/\(([^)]*)\)\s*(?:Tj|'|")/g);
+        if (textMatches) {
+          for (const tm of textMatches.slice(0, 50)) { // Limit per block
+            const inner = tm.match(/\(([^)]*)\)/);
             if (inner && inner[1]) {
-              textParts.push(inner[1].replace(/\\\(/g, '(').replace(/\\\)/g, ')'));
+              let decoded = inner[1]
+                .replace(/\\n/g, '\n')
+                .replace(/\\r/g, '\r')
+                .replace(/\\t/g, '\t')
+                .replace(/\\\(/g, '(')
+                .replace(/\\\)/g, ')')
+                .replace(/\\\\/g, '\\');
+              if (decoded.length > 0) {
+                textParts.push(decoded);
+              }
             }
           }
         }
+        
+        // TJ arrays - simplified for performance
+        const tjArrayMatches = block.match(/\[((?:\([^)]*\)|[^\]]+)*)\]\s*TJ/gi);
+        if (tjArrayMatches) {
+          for (const tjMatch of tjArrayMatches.slice(0, 20)) { // Limit per block
+            const stringMatches = tjMatch.match(/\(([^)]*)\)/g);
+            if (stringMatches) {
+              for (const sm of stringMatches.slice(0, 30)) {
+                const inner = sm.match(/\(([^)]*)\)/);
+                if (inner && inner[1]) {
+                  textParts.push(inner[1].replace(/\\\(/g, '(').replace(/\\\)/g, ')'));
+                }
+              }
+            }
+          }
+        }
+        
+        // Yield periodically
+        if (iterations % 50 === 0) await cpuYield();
       }
     }
     
-    // Method 2: Extract from stream content (decompressed streams have plain text)
-    const streamRegex = /stream\s*\n?([\s\S]*?)\n?\s*endstream/g;
-    let streamMatch;
-    while ((streamMatch = streamRegex.exec(rawContent)) !== null) {
-      const streamContent = streamMatch[1];
-      // Check if stream looks like text content (has readable chars)
-      const readableText = streamContent
-        .replace(/[^\x20-\x7E\n\r\t]/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim();
+    await cpuYield();
+    
+    // Method 2: Extract from stream content (skip for large files - too CPU intensive)
+    if (!isLargeFile) {
+      const streamRegex = /stream\s*\n?([\s\S]{50,5000}?)\n?\s*endstream/g;
+      let streamMatch;
+      let streamIterations = 0;
       
-      // Only include if it has substantial readable content with words
-      if (readableText.length > 50 && readableText.match(/[a-zA-Z]{3,}/)) {
-        // Filter out PDF operators and keep likely content
-        const filtered = readableText
-          .replace(/\b(BT|ET|Tj|TJ|Tm|Td|Tf|Tc|Tw|Tz|TL|Tr|Ts)\b/g, '')
-          .replace(/\b\d+(\.\d+)?\s+\d+(\.\d+)?\s+(Td|TD|Tm|cm|re|m|l|c|v|y|h|W|n|q|Q|BDC|EMC)\b/g, '')
-          .replace(/\s+/g, ' ')
-          .trim();
+      while ((streamMatch = streamRegex.exec(rawContent)) !== null && streamIterations < 100) {
+        streamIterations++;
+        const streamContent = streamMatch[1];
         
-        if (filtered.length > 30) {
-          textParts.push(filtered);
+        // Quick check for readable content
+        if (streamContent.match(/[a-zA-Z]{3,}/)) {
+          const readableText = streamContent
+            .replace(/[^\x20-\x7E\n\r\t]/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+          
+          if (readableText.length > 50 && readableText.length < 5000) {
+            // Simplified filter
+            const filtered = readableText
+              .replace(/\b(BT|ET|Tj|TJ|Tm|Td|Tf)\b/g, '')
+              .replace(/\s+/g, ' ')
+              .trim();
+            
+            if (filtered.length > 30 && filtered.match(/[a-zA-Z]{3,}/)) {
+              textParts.push(filtered);
+            }
+          }
         }
+        
+        if (streamIterations % 20 === 0) await cpuYield();
       }
     }
+    
+    await cpuYield();
     
     // Combine and clean
     let combinedText = textParts.join(' ');
     
-    // If BT/ET extraction worked, try to reconstruct lines
+    // Reconstruct lines - simplified for performance
     if (textParts.length > 10) {
-      // Try to reconstruct lines by looking for capitals following lowercase (sentence breaks)
       combinedText = combinedText
         .replace(/([a-z])([A-Z])/g, '$1\n$2')
         .replace(/(\.)([A-Z])/g, '$1\n$2');
@@ -150,7 +218,7 @@ async function extractPDFText(arrayBuffer: ArrayBuffer): Promise<{ text: string;
       .replace(/\n{3,}/g, '\n\n')
       .trim();
     
-    console.log(`[script-parser-stream] PDF text extraction: ${pageCount} pages, ${combinedText.length} chars extracted`);
+    console.log(`[script-parser-stream] PDF text extraction complete: ${pageCount} pages, ${combinedText.length} chars, ${iterations} iterations`);
     
     if (combinedText.length > 500) {
       return {
