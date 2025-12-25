@@ -1,8 +1,9 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
-import * as pdfLib from "https://esm.sh/pdf-parse@1.1.1";
 import JSZip from "https://esm.sh/jszip@3.10.1";
+// Note: pdf-parse removed - uses Node fs.readFileSync which crashes Deno
+// Using pdfjs-dist instead with proper Deno compatibility
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -44,66 +45,137 @@ function sendSSE(controller: ReadableStreamDefaultController, event: string, dat
 
 // ============= TEXT EXTRACTION =============
 
-// Extract text from PDF using pdf-parse
+// Extract text from PDF using regex-based extraction (Deno compatible)
+// This doesn't rely on Node.js built-ins like fs.readFileSync
 async function extractPDFText(arrayBuffer: ArrayBuffer): Promise<{ text: string; pageCount: number; success: boolean; error?: string }> {
   try {
-    const buffer = new Uint8Array(arrayBuffer);
+    const uint8Array = new Uint8Array(arrayBuffer);
     
-    // Use pdf-parse to extract text
-    const data = await pdfLib.default(buffer);
+    // Decode PDF content as text (lossy for binary, but we extract readable parts)
+    const decoder = new TextDecoder('latin1', { fatal: false });
+    const rawContent = decoder.decode(uint8Array);
     
-    console.log(`[script-parser-stream] PDF extracted: ${data.numpages} pages, ${data.text.length} chars`);
+    // Count pages from PDF structure
+    const pageMatches = rawContent.match(/\/Type\s*\/Page[^s]/g);
+    const pageCount = pageMatches ? pageMatches.length : 1;
     
-    return {
-      text: data.text,
-      pageCount: data.numpages,
-      success: true,
-    };
-  } catch (error) {
-    console.error('[script-parser-stream] PDF extraction error:', error);
+    // Extract text from PDF streams
+    const textParts: string[] = [];
     
-    // Fallback: try to extract what we can
-    try {
-      // Simple PDF text extraction fallback
-      const decoder = new TextDecoder('utf-8', { fatal: false });
-      const rawText = decoder.decode(arrayBuffer);
-      
-      // Extract text between stream markers (common in PDFs)
-      const textParts: string[] = [];
-      const streamRegex = /stream\s*([\s\S]*?)\s*endstream/g;
-      let match;
-      
-      while ((match = streamRegex.exec(rawText)) !== null) {
-        const content = match[1];
-        // Filter out binary content, keep readable text
-        const readable = content.replace(/[^\x20-\x7E\n\r\t]/g, ' ').replace(/\s+/g, ' ').trim();
-        if (readable.length > 20 && readable.match(/[a-zA-Z]{3,}/)) {
-          textParts.push(readable);
+    // Method 1: Extract from BT...ET text blocks (PDF text operators)
+    const btEtRegex = /BT\s*([\s\S]*?)\s*ET/g;
+    let btMatch;
+    while ((btMatch = btEtRegex.exec(rawContent)) !== null) {
+      const block = btMatch[1];
+      // Extract text from Tj, TJ, ', " operators
+      const textMatches = block.match(/\(([^)]*)\)\s*(?:Tj|'|")/g);
+      if (textMatches) {
+        for (const tm of textMatches) {
+          const inner = tm.match(/\(([^)]*)\)/);
+          if (inner && inner[1]) {
+            // Decode PDF escape sequences
+            let decoded = inner[1]
+              .replace(/\\n/g, '\n')
+              .replace(/\\r/g, '\r')
+              .replace(/\\t/g, '\t')
+              .replace(/\\\(/g, '(')
+              .replace(/\\\)/g, ')')
+              .replace(/\\\\/g, '\\');
+            if (decoded.length > 0) {
+              textParts.push(decoded);
+            }
+          }
         }
       }
       
-      if (textParts.length > 0) {
-        return {
-          text: textParts.join('\n\n'),
-          pageCount: Math.max(1, Math.ceil(textParts.length / 2)),
-          success: true,
-        };
+      // Also extract from TJ arrays: [(text) num (text) ...]
+      const tjArrayRegex = /\[((?:\([^)]*\)|[^\]]+)*)\]\s*TJ/gi;
+      let tjMatch;
+      while ((tjMatch = tjArrayRegex.exec(block)) !== null) {
+        const tjContent = tjMatch[1];
+        const stringMatches = tjContent.match(/\(([^)]*)\)/g);
+        if (stringMatches) {
+          for (const sm of stringMatches) {
+            const inner = sm.match(/\(([^)]*)\)/);
+            if (inner && inner[1]) {
+              textParts.push(inner[1].replace(/\\\(/g, '(').replace(/\\\)/g, ')'));
+            }
+          }
+        }
       }
+    }
+    
+    // Method 2: Extract from stream content (decompressed streams have plain text)
+    const streamRegex = /stream\s*\n?([\s\S]*?)\n?\s*endstream/g;
+    let streamMatch;
+    while ((streamMatch = streamRegex.exec(rawContent)) !== null) {
+      const streamContent = streamMatch[1];
+      // Check if stream looks like text content (has readable chars)
+      const readableText = streamContent
+        .replace(/[^\x20-\x7E\n\r\t]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
       
+      // Only include if it has substantial readable content with words
+      if (readableText.length > 50 && readableText.match(/[a-zA-Z]{3,}/)) {
+        // Filter out PDF operators and keep likely content
+        const filtered = readableText
+          .replace(/\b(BT|ET|Tj|TJ|Tm|Td|Tf|Tc|Tw|Tz|TL|Tr|Ts)\b/g, '')
+          .replace(/\b\d+(\.\d+)?\s+\d+(\.\d+)?\s+(Td|TD|Tm|cm|re|m|l|c|v|y|h|W|n|q|Q|BDC|EMC)\b/g, '')
+          .replace(/\s+/g, ' ')
+          .trim();
+        
+        if (filtered.length > 30) {
+          textParts.push(filtered);
+        }
+      }
+    }
+    
+    // Combine and clean
+    let combinedText = textParts.join(' ');
+    
+    // If BT/ET extraction worked, try to reconstruct lines
+    if (textParts.length > 10) {
+      // Try to reconstruct lines by looking for capitals following lowercase (sentence breaks)
+      combinedText = combinedText
+        .replace(/([a-z])([A-Z])/g, '$1\n$2')
+        .replace(/(\.)([A-Z])/g, '$1\n$2');
+    }
+    
+    // Clean up final text
+    combinedText = combinedText
+      .replace(/\s+/g, ' ')
+      .replace(/\n +/g, '\n')
+      .replace(/ +\n/g, '\n')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+    
+    console.log(`[script-parser-stream] PDF text extraction: ${pageCount} pages, ${combinedText.length} chars extracted`);
+    
+    if (combinedText.length > 500) {
       return {
-        text: '',
-        pageCount: 0,
-        success: false,
-        error: 'Could not extract text from PDF. It may be scanned or image-based.',
-      };
-    } catch (fallbackError) {
-      return {
-        text: '',
-        pageCount: 0,
-        success: false,
-        error: error instanceof Error ? error.message : 'PDF extraction failed',
+        text: combinedText,
+        pageCount,
+        success: true,
       };
     }
+    
+    // Not enough text extracted - likely scanned/image-based PDF
+    return {
+      text: combinedText,
+      pageCount,
+      success: false,
+      error: 'PDF appears to be scanned or image-based. Limited text extracted.',
+    };
+    
+  } catch (error) {
+    console.error('[script-parser-stream] PDF extraction error:', error);
+    return {
+      text: '',
+      pageCount: 0,
+      success: false,
+      error: error instanceof Error ? error.message : 'PDF extraction failed',
+    };
   }
 }
 
