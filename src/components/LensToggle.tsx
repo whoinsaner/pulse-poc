@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { LENS_CONFIG, StakeholderLens } from '@/types/database';
 import {
@@ -10,12 +9,20 @@ import {
   DollarSign,
   Tv,
   Film,
+  ChevronDown,
+  Check,
 } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface LensToggleProps {
   activeLens: StakeholderLens;
@@ -108,136 +115,111 @@ export function LensSelector({
   className,
   compact = false,
 }: LensSelectorProps) {
-  const [isOpen, setIsOpen] = useState(false);
   const activeConfig = LENS_CONFIG[activeLens];
   const ActiveIcon = LENS_ICONS[activeLens];
 
   if (compact) {
     return (
-      <div className={cn('relative', className)}>
-        <button
-          onClick={() => setIsOpen(!isOpen)}
-          className={cn(
-            'flex items-center gap-2 px-3 py-2 rounded-lg',
-            'bg-muted/50 border border-border hover:border-primary/50',
-            'transition-all duration-200'
-          )}
-        >
-          <ActiveIcon className="h-4 w-4 text-primary" />
-          <span className="text-sm font-medium hidden sm:inline">{activeConfig.label}</span>
-          <svg
-            className={cn('h-4 w-4 text-muted-foreground transition-transform', isOpen && 'rotate-180')}
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            className={cn(
+              'flex items-center gap-2 px-3 py-2 rounded-lg',
+              'bg-muted/50 border border-border hover:border-primary/50',
+              'transition-all duration-200',
+              className
+            )}
           >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
-        </button>
-        {isOpen && (
-          <div className="absolute top-full right-0 mt-2 z-50 bg-card border border-border rounded-lg shadow-xl overflow-hidden animate-scale-in min-w-[200px]">
-            {LENS_ORDER.map((lens) => {
-              const config = LENS_CONFIG[lens];
-              const Icon = LENS_ICONS[lens];
-              const isActiveLens = lens === activeLens;
-              return (
-                <button
-                  key={lens}
-                  onClick={() => { onLensChange(lens); setIsOpen(false); }}
-                  className={cn(
-                    'flex items-center gap-2 px-3 py-2 w-full text-left text-sm',
-                    'hover:bg-accent/50 transition-colors',
-                    isActiveLens && 'bg-primary/10 text-primary'
-                  )}
-                >
-                  <Icon className="h-4 w-4" />
-                  {config.label}
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </div>
+            <ActiveIcon className="h-4 w-4 text-primary" />
+            <span className="text-sm font-medium hidden sm:inline">{activeConfig.label}</span>
+            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="min-w-[200px] z-[100]">
+          {LENS_ORDER.map((lens) => {
+            const config = LENS_CONFIG[lens];
+            const Icon = LENS_ICONS[lens];
+            const isActiveLens = lens === activeLens;
+            return (
+              <DropdownMenuItem
+                key={lens}
+                onClick={() => onLensChange(lens)}
+                className={cn(
+                  'flex items-center gap-2',
+                  isActiveLens && 'bg-primary/10 text-primary'
+                )}
+              >
+                <Icon className="h-4 w-4" />
+                <span className="flex-1">{config.label}</span>
+                {isActiveLens && <Check className="h-4 w-4" />}
+              </DropdownMenuItem>
+            );
+          })}
+        </DropdownMenuContent>
+      </DropdownMenu>
     );
   }
 
   return (
-    <div className={cn('relative', className)}>
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className={cn(
-          'flex items-center gap-3 px-4 py-3 rounded-lg w-full',
-          'bg-card border border-border hover:border-primary/50',
-          'transition-all duration-200'
-        )}
-      >
-        <div className="p-2 rounded-md bg-primary/10">
-          <ActiveIcon className="h-5 w-5 text-primary" />
-        </div>
-        <div className="flex-1 text-left">
-          <p className="font-medium">{activeConfig.label}</p>
-          <p className="text-xs text-muted-foreground">{activeConfig.description}</p>
-        </div>
-        <svg
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
           className={cn(
-            'h-5 w-5 text-muted-foreground transition-transform',
-            isOpen && 'rotate-180'
+            'flex items-center gap-3 px-4 py-3 rounded-lg w-full',
+            'bg-card border border-border hover:border-primary/50',
+            'transition-all duration-200',
+            className
           )}
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
         >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
+          <div className="p-2 rounded-md bg-primary/10">
+            <ActiveIcon className="h-5 w-5 text-primary" />
+          </div>
+          <div className="flex-1 text-left">
+            <p className="font-medium">{activeConfig.label}</p>
+            <p className="text-xs text-muted-foreground">{activeConfig.description}</p>
+          </div>
+          <ChevronDown className="h-5 w-5 text-muted-foreground" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" sideOffset={8} className="w-[var(--radix-dropdown-menu-trigger-width)] z-[100]">
+        {LENS_ORDER.map((lens) => {
+          const config = LENS_CONFIG[lens];
+          const Icon = LENS_ICONS[lens];
+          const isActive = lens === activeLens;
 
-      {isOpen && (
-        <div className="absolute top-full left-0 right-0 mt-2 z-50 bg-card border border-border rounded-lg shadow-xl overflow-hidden animate-scale-in">
-          {LENS_ORDER.map((lens) => {
-            const config = LENS_CONFIG[lens];
-            const Icon = LENS_ICONS[lens];
-            const isActive = lens === activeLens;
-
-            return (
-              <button
-                key={lens}
-                onClick={() => {
-                  onLensChange(lens);
-                  setIsOpen(false);
-                }}
+          return (
+            <DropdownMenuItem
+              key={lens}
+              onClick={() => onLensChange(lens)}
+              className={cn(
+                'flex items-center gap-3 py-3',
+                isActive && 'bg-primary/10'
+              )}
+            >
+              <div
                 className={cn(
-                  'flex items-center gap-3 px-4 py-3 w-full text-left',
-                  'hover:bg-accent/50 transition-colors',
-                  isActive && 'bg-primary/10'
+                  'p-2 rounded-md',
+                  isActive ? 'bg-primary/20' : 'bg-muted'
                 )}
               >
-                <div
+                <Icon
                   className={cn(
-                    'p-2 rounded-md',
-                    isActive ? 'bg-primary/20' : 'bg-muted'
+                    'h-4 w-4',
+                    isActive ? 'text-primary' : 'text-muted-foreground'
                   )}
-                >
-                  <Icon
-                    className={cn(
-                      'h-4 w-4',
-                      isActive ? 'text-primary' : 'text-muted-foreground'
-                    )}
-                  />
-                </div>
-                <div className="flex-1">
-                  <p className={cn('font-medium', isActive && 'text-primary')}>
-                    {config.label}
-                  </p>
-                  <p className="text-xs text-muted-foreground">{config.description}</p>
-                </div>
-                {isActive && (
-                  <div className="w-2 h-2 rounded-full bg-primary" />
-                )}
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </div>
+                />
+              </div>
+              <div className="flex-1">
+                <p className={cn('font-medium', isActive && 'text-primary')}>
+                  {config.label}
+                </p>
+                <p className="text-xs text-muted-foreground">{config.description}</p>
+              </div>
+              {isActive && <Check className="h-4 w-4 text-primary" />}
+            </DropdownMenuItem>
+          );
+        })}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
