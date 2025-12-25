@@ -1145,8 +1145,10 @@ async function runStandardAnalysis(
   agentsToRun: [string, any][],
   parameterMap: Map<string, any>
 ): Promise<Array<{ agent: string; success: boolean; error?: string }>> {
-  const MAX_AGENT_RETRIES = 2;
-  const RETRY_DELAY_MS = 2000;
+  const MAX_AGENT_RETRIES = 3;
+  const BASE_RETRY_DELAY_MS = 2000;
+  const BATCH_SIZE = 3; // Run 3 agents at a time to avoid rate limits
+  const BATCH_DELAY_MS = 3000; // Wait 3s between batches
   
   // Helper to check if an error is transient and worth retrying
   const isTransientError = (error: Error): boolean => {
@@ -1156,20 +1158,24 @@ async function runStandardAnalysis(
       msg.includes('rate limit') ||
       msg.includes('429') ||
       msg.includes('503') ||
+      msg.includes('502') ||
       msg.includes('empty') ||
       msg.includes('network') ||
-      msg.includes('connection')
+      msg.includes('connection') ||
+      msg.includes('fetch failed')
     );
   };
-  
-  const agentPromises = agentsToRun.map(async ([agentName, agentConfig]) => {
+
+  const runSingleAgent = async ([agentName, agentConfig]: [string, any]): Promise<{ agent: string; success: boolean; error?: string }> => {
     let lastError: Error | null = null;
     
     for (let attempt = 0; attempt <= MAX_AGENT_RETRIES; attempt++) {
       try {
         if (attempt > 0) {
-          console.log(`[${agentName}] Retry attempt ${attempt}/${MAX_AGENT_RETRIES}`);
-          await new Promise(r => setTimeout(r, RETRY_DELAY_MS * attempt)); // Exponential backoff
+          // Exponential backoff: 2s, 4s, 8s
+          const delay = BASE_RETRY_DELAY_MS * Math.pow(2, attempt - 1);
+          console.log(`[${agentName}] Retry attempt ${attempt}/${MAX_AGENT_RETRIES}, waiting ${delay}ms`);
+          await new Promise(r => setTimeout(r, delay));
         }
         
         await updateAgentProgress(supabase, analysisRunId, agentName, 'running');
@@ -1234,9 +1240,30 @@ async function runStandardAnalysis(
     const errorMessage = lastError?.message || 'Unknown error';
     await updateAgentProgress(supabase, analysisRunId, agentName, 'failed', errorMessage);
     return { agent: agentName, success: false, error: errorMessage };
-  });
+  };
 
-  return Promise.all(agentPromises);
+  // Run agents in batches to avoid rate limiting
+  const results: Array<{ agent: string; success: boolean; error?: string }> = [];
+  
+  for (let i = 0; i < agentsToRun.length; i += BATCH_SIZE) {
+    const batch = agentsToRun.slice(i, i + BATCH_SIZE);
+    const batchNum = Math.floor(i / BATCH_SIZE) + 1;
+    const totalBatches = Math.ceil(agentsToRun.length / BATCH_SIZE);
+    
+    console.log(`[analyze-script] Running batch ${batchNum}/${totalBatches}: ${batch.map(([name]) => name).join(', ')}`);
+    
+    // Run batch in parallel
+    const batchResults = await Promise.all(batch.map(runSingleAgent));
+    results.push(...batchResults);
+    
+    // Wait between batches (except for last batch)
+    if (i + BATCH_SIZE < agentsToRun.length) {
+      console.log(`[analyze-script] Batch ${batchNum} complete, waiting ${BATCH_DELAY_MS}ms before next batch`);
+      await new Promise(r => setTimeout(r, BATCH_DELAY_MS));
+    }
+  }
+
+  return results;
 }
 
 async function runChunkedAnalysis(
@@ -1518,46 +1545,69 @@ MATURITY MAPPING:
 CRITICAL: You MUST respond with ONLY the JSON object. No text before or after. No markdown code blocks. Start your response with { and end with }.`;
 
 
-  // Retry logic for empty responses
-  const MAX_RETRIES = 2;
+  // Retry logic for empty responses with exponential backoff
+  const MAX_RETRIES = 3;
   let content = '';
+  let lastStatusCode = 0;
   
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     if (attempt > 0) {
-      console.log(`[${agentName}] Retry attempt ${attempt} after empty response`);
-      await new Promise(r => setTimeout(r, 1000 * attempt)); // Backoff
+      // Exponential backoff: 2s, 4s, 8s
+      const delay = 2000 * Math.pow(2, attempt - 1);
+      console.log(`[${agentName}] Retry attempt ${attempt} after ${lastStatusCode === 429 ? 'rate limit' : 'empty response'}, waiting ${delay}ms`);
+      await new Promise(r => setTimeout(r, delay));
     }
     
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'openai/gpt-5',
-        messages: [
-          { role: 'system', content: config.systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        max_completion_tokens: 6000,
-      }),
-    });
+    try {
+      const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'google/gemini-2.5-flash', // Switch to Gemini for better rate limits
+          messages: [
+            { role: 'system', content: config.systemPrompt },
+            { role: 'user', content: userPrompt }
+          ],
+        }),
+      });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`AI API error: ${response.status} - ${errorText}`);
-    }
+      lastStatusCode = response.status;
+      
+      if (response.status === 429) {
+        console.log(`[${agentName}] Rate limited (429), will retry`);
+        if (attempt === MAX_RETRIES) {
+          throw new Error(`AI API rate limited after ${MAX_RETRIES + 1} attempts`);
+        }
+        continue;
+      }
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`AI API error: ${response.status} - ${errorText}`);
+      }
 
-    const aiResult = await response.json();
-    content = aiResult.choices?.[0]?.message?.content || '';
-    
-    // Log content length and first chars for debugging
-    console.log(`[${agentName}] AI response length: ${content.length}, starts with: "${content.slice(0, 50).replace(/\n/g, '\\n')}"`);
-    
-    // If we got content, break out of retry loop
-    if (content && content.trim().length > 0) {
-      break;
+      const aiResult = await response.json();
+      content = aiResult.choices?.[0]?.message?.content || '';
+      
+      // Log content length and first chars for debugging
+      console.log(`[${agentName}] AI response length: ${content.length}, starts with: "${content.slice(0, 50).replace(/\n/g, '\\n')}"`);
+      
+      // If we got content, break out of retry loop
+      if (content && content.trim().length > 0) {
+        break;
+      }
+      
+      if (attempt === MAX_RETRIES) {
+        throw new Error(`Empty response from AI after ${MAX_RETRIES + 1} attempts`);
+      }
+    } catch (fetchErr) {
+      console.error(`[${agentName}] Fetch error on attempt ${attempt + 1}:`, fetchErr);
+      if (attempt === MAX_RETRIES) {
+        throw fetchErr;
+      }
     }
   }
   // Robust JSON extraction with multiple strategies

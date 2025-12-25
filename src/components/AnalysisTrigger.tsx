@@ -248,11 +248,19 @@ export function AnalysisTrigger({
   const retryFailedAgents = () => {
     if (!analysisRunId) return;
     toast({
-      title: 'Retrying failed agents',
-      description: 'Attempting to re-run failed analysis agents...',
+      title: 'Resuming analysis',
+      description: 'Re-running failed and pending agents in batches...',
     });
     startAnalysis(false, 'deep', true, analysisRunId);
   };
+
+  // Check for stuck analysis (processing for > 5 minutes without updates)
+  const isStuck = status === 'processing' && lastUpdated && 
+    (new Date().getTime() - lastUpdated.getTime() > 5 * 60 * 1000);
+  
+  const hasFailedAgents = Object.values(agentProgress).some(a => a.status === 'failed');
+  const hasPendingAgents = Object.values(agentProgress).some(a => a.status === 'pending');
+  const hasRunningAgents = Object.values(agentProgress).some(a => a.status === 'running');
 
   const getProgressStats = () => {
     const completed = Object.values(agentProgress).filter(a => a.status === 'completed').length;
@@ -393,13 +401,45 @@ export function AnalysisTrigger({
           </div>
         </div>
         
-        {isAnalyzing && (
+        {isAnalyzing && !isStuck && (
           <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/30 animate-pulse">
             <Zap className="h-3 w-3 mr-1" />
             LIVE
           </Badge>
         )}
+        {isStuck && (
+          <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/30">
+            <AlertTriangle className="h-3 w-3 mr-1" />
+            STALLED
+          </Badge>
+        )}
       </div>
+
+      {/* Stuck/Failed Analysis Actions */}
+      {(isStuck || (status === 'failed' && (hasFailedAgents || hasPendingAgents))) && (
+        <Alert className="border-amber-500/30 bg-amber-500/5">
+          <AlertTriangle className="h-4 w-4 text-amber-500" />
+          <AlertDescription className="text-sm">
+            <p className="font-medium text-amber-600 dark:text-amber-400">
+              {isStuck ? 'Analysis appears stalled' : 'Some agents failed'}
+            </p>
+            <p className="text-muted-foreground mt-1">
+              {stats.failed > 0 && `${stats.failed} agent(s) failed. `}
+              {stats.completed > 0 && `${stats.completed} completed successfully. `}
+              You can resume to retry failed/pending agents.
+            </p>
+            <Button 
+              onClick={retryFailedAgents} 
+              size="sm" 
+              className="mt-2"
+              variant="outline"
+            >
+              <Play className="h-3 w-3 mr-1" />
+              Resume Analysis
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Progress Bar */}
       <div className="space-y-2">
