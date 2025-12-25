@@ -8,8 +8,19 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScoreRing } from '@/components/ScoreRing';
 import { CategoryRadarChart } from '@/components/charts/CategoryRadarChart';
-import { ArrowLeft, FileText, Calendar, Eye } from 'lucide-react';
+import { ArrowLeft, FileText, Calendar, Eye, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface ReportWithScript extends Report {
   scripts?: {
@@ -25,6 +36,9 @@ export default function Reports() {
   const [reports, setReports] = useState<ReportWithScript[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedLens, setSelectedLens] = useState<StakeholderLens>('studio_executive');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [reportToDelete, setReportToDelete] = useState<ReportWithScript | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -62,6 +76,34 @@ export default function Reports() {
 
     fetchReports();
   }, [profile?.current_organization_id]);
+
+  const handleDeleteClick = (e: React.MouseEvent, report: ReportWithScript) => {
+    e.stopPropagation();
+    setReportToDelete(report);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!reportToDelete) return;
+    
+    setIsDeleting(true);
+    const { error } = await supabase
+      .from('reports')
+      .delete()
+      .eq('id', reportToDelete.id);
+
+    if (error) {
+      console.error('Error deleting report:', error);
+      toast.error('Failed to delete report');
+    } else {
+      setReports(reports.filter(r => r.id !== reportToDelete.id));
+      toast.success('Report deleted successfully');
+    }
+
+    setIsDeleting(false);
+    setDeleteDialogOpen(false);
+    setReportToDelete(null);
+  };
 
   if (authLoading) {
     return <ReportsListSkeleton />;
@@ -214,13 +256,23 @@ export default function Reports() {
                           </div>
                         ))}
                       </div>
-                      <Button 
-                        variant="outline" 
-                        className="mt-4 w-full group-hover:bg-primary group-hover:text-primary-foreground transition-colors"
-                      >
-                        <Eye className="h-4 w-4 mr-2" />
-                        View Full Report
-                      </Button>
+                      <div className="flex gap-2 mt-4">
+                        <Button 
+                          variant="outline" 
+                          className="flex-1 group-hover:bg-primary group-hover:text-primary-foreground transition-colors"
+                        >
+                          <Eye className="h-4 w-4 mr-2" />
+                          View Report
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                          onClick={(e) => handleDeleteClick(e, report)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </CardContent>
                   </div>
                 </Card>
@@ -229,6 +281,28 @@ export default function Reports() {
           </div>
         )}
       </main>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Report</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{reportToDelete?.title}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
