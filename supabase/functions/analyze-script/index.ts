@@ -582,11 +582,18 @@ async function extractTextFromFile(
  * Handles: markdown blocks, explanatory text, malformed JSON
  */
 function extractJsonFromResponse(content: string, agentName: string): any {
+  if (!content || content.trim().length === 0) {
+    console.error(`[${agentName}] Empty AI response`);
+    throw new Error(`Failed to parse AI response as JSON: ${agentName} returned empty response`);
+  }
+
   // Strategy 1: Check for markdown code blocks (```json ... ``` or ``` ... ```)
   const codeBlockMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
   if (codeBlockMatch) {
     try {
-      return JSON.parse(codeBlockMatch[1].trim());
+      const result = JSON.parse(codeBlockMatch[1].trim());
+      console.log(`[${agentName}] Parsed via code block strategy`);
+      return result;
     } catch (e) {
       console.log(`[${agentName}] Code block JSON parse failed, trying other strategies`);
     }
@@ -596,7 +603,9 @@ function extractJsonFromResponse(content: string, agentName: string): any {
   const scoresMatch = content.match(/\{"scores"\s*:\s*\[[\s\S]*?\](?:\s*,\s*"insights"\s*:\s*\[[\s\S]*?\])?\s*\}/);
   if (scoresMatch) {
     try {
-      return JSON.parse(scoresMatch[0]);
+      const result = JSON.parse(scoresMatch[0]);
+      console.log(`[${agentName}] Parsed via scores-pattern strategy`);
+      return result;
     } catch (e) {
       console.log(`[${agentName}] Scores-pattern JSON parse failed`);
     }
@@ -642,9 +651,11 @@ function extractJsonFromResponse(content: string, agentName: string): any {
     
     if (jsonEnd > jsonStart) {
       try {
-        return JSON.parse(content.slice(jsonStart, jsonEnd));
+        const result = JSON.parse(content.slice(jsonStart, jsonEnd));
+        console.log(`[${agentName}] Parsed via balanced-brace strategy`);
+        return result;
       } catch (e) {
-        console.log(`[${agentName}] Balanced JSON parse failed`);
+        console.log(`[${agentName}] Balanced JSON parse failed at char ${jsonStart}-${jsonEnd}`);
       }
     }
   }
@@ -654,15 +665,20 @@ function extractJsonFromResponse(content: string, agentName: string): any {
     .replace(/,\s*}/g, '}')  // Remove trailing commas
     .replace(/,\s*]/g, ']')  // Remove trailing commas in arrays
     .replace(/'/g, '"')      // Replace single quotes
-    .replace(/\n/g, ' ');    // Remove newlines
+    .replace(/\n/g, ' ')     // Remove newlines
+    .replace(/\t/g, ' ');    // Remove tabs
   
   const lastResortMatch = cleanedContent.match(/\{[\s\S]*\}/);
   if (lastResortMatch) {
     try {
-      return JSON.parse(lastResortMatch[0]);
+      const result = JSON.parse(lastResortMatch[0]);
+      console.log(`[${agentName}] Parsed via cleanup strategy`);
+      return result;
     } catch (e) {
-      // Log first 500 chars for debugging
-      console.error(`[${agentName}] All JSON parse strategies failed. Content preview:`, content.slice(0, 500));
+      // Log detailed info for debugging
+      console.error(`[${agentName}] All JSON parse strategies failed.`);
+      console.error(`[${agentName}] Content starts: "${content.slice(0, 200).replace(/\n/g, '\\n')}"`);
+      console.error(`[${agentName}] Content ends: "${content.slice(-200).replace(/\n/g, '\\n')}"`);
     }
   }
 
@@ -1422,7 +1438,8 @@ MATURITY MAPPING:
 - Score 4-6 → "Developing"
 - Score 7-10 → "Strong"
 
-Only return valid JSON, no markdown.`;
+CRITICAL: You MUST respond with ONLY the JSON object. No text before or after. No markdown code blocks. Start your response with { and end with }.`;
+
 
   const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
     method: 'POST',
@@ -1447,6 +1464,9 @@ Only return valid JSON, no markdown.`;
 
   const aiResult = await response.json();
   const content = aiResult.choices?.[0]?.message?.content || '';
+  
+  // Log content length and first/last chars for debugging
+  console.log(`[${agentName}] AI response length: ${content.length}, starts with: "${content.slice(0, 50).replace(/\n/g, '\\n')}"`);
 
   // Robust JSON extraction with multiple strategies
   const parsed = extractJsonFromResponse(content, agentName);
