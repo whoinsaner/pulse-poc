@@ -9,12 +9,13 @@ const corsHeaders = {
 interface AnalyzeRequest {
   scriptId: string;
   analysisRunId: string;
-  forceAnalysis?: boolean; // Allow analysis even with incomplete parsing
+  mode?: 'quick' | 'deep'; // NEW: analysis mode
+  forceAnalysis?: boolean;
 }
 
 // UASF Output Contract
 interface ParameterOutput {
-  score: number; // 0-10
+  score: number;
   maturity: 'Weak' | 'Developing' | 'Strong';
   riskLevel: 'Low' | 'Medium' | 'High';
   fixCost: 'Low' | 'Medium' | 'High';
@@ -63,6 +64,13 @@ interface AgentResult {
       explanation: string;
     }>;
   }>;
+}
+
+interface ChunkResult {
+  chunkIndex: number;
+  chunkRange: string;
+  scores: AgentResult['scores'];
+  insights: AgentResult['insights'];
 }
 
 // GLOBAL AGENT OPERATING RULES
@@ -412,15 +420,261 @@ Score each parameter 0-10 with examples of direction quality.`
   },
 };
 
+// ============= TEXT EXTRACTION UTILITIES =============
+
+const MAX_EXTRACTION_SIZE = 500000; // 500KB max for text extraction
+const MAX_EXTRACTION_TIME_MS = 15000; // 15 second timeout
+const MIN_USEFUL_TEXT = 500; // Minimum chars to consider extraction successful
+
+/**
+ * Lightweight text extraction from various formats
+ * Returns extracted text or throws with specific error codes
+ */
+async function extractTextFromFile(
+  fileData: Blob,
+  format: string,
+  fileName: string
+): Promise<{ text: string; method: string }> {
+  const startTime = Date.now();
+  
+  const checkTimeout = () => {
+    if (Date.now() - startTime > MAX_EXTRACTION_TIME_MS) {
+      throw new Error('EXTRACTION_TIMEOUT');
+    }
+  };
+
+  try {
+    // TXT, Fountain - direct read
+    if (format === 'txt' || format === 'fountain') {
+      const text = await fileData.text();
+      if (text.length < MIN_USEFUL_TEXT) {
+        throw new Error('INSUFFICIENT_TEXT');
+      }
+      return { text: text.slice(0, MAX_EXTRACTION_SIZE), method: 'direct' };
+    }
+
+    // FDX (Final Draft XML)
+    if (format === 'fdx') {
+      const xmlText = await fileData.text();
+      checkTimeout();
+      
+      // Extract text from Content tags
+      const contentMatches = xmlText.matchAll(/<Content[^>]*>([^<]*)<\/Content>/gi);
+      const texts: string[] = [];
+      for (const match of contentMatches) {
+        texts.push(match[1]);
+        checkTimeout();
+        if (texts.length > 10000) break; // Safety limit
+      }
+      
+      const text = texts.join('\n').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+      if (text.length < MIN_USEFUL_TEXT) {
+        throw new Error('INSUFFICIENT_TEXT');
+      }
+      return { text: text.slice(0, MAX_EXTRACTION_SIZE), method: 'fdx_xml' };
+    }
+
+    // DOCX - extract from document.xml in ZIP
+    if (format === 'docx') {
+      const arrayBuffer = await fileData.arrayBuffer();
+      checkTimeout();
+      
+      // Simple ZIP parsing to find word/document.xml
+      const bytes = new Uint8Array(arrayBuffer);
+      const decoder = new TextDecoder('utf-8', { fatal: false });
+      const content = decoder.decode(bytes);
+      
+      // Look for text content within w:t tags
+      const textMatches = content.matchAll(/<w:t[^>]*>([^<]*)<\/w:t>/gi);
+      const texts: string[] = [];
+      for (const match of textMatches) {
+        texts.push(match[1]);
+        checkTimeout();
+        if (texts.length > 10000) break;
+      }
+      
+      const text = texts.join(' ');
+      if (text.length < MIN_USEFUL_TEXT) {
+        throw new Error('INSUFFICIENT_TEXT');
+      }
+      return { text: text.slice(0, MAX_EXTRACTION_SIZE), method: 'docx_xml' };
+    }
+
+    // PDF - bounded regex extraction
+    if (format === 'pdf') {
+      const arrayBuffer = await fileData.arrayBuffer();
+      checkTimeout();
+      
+      // Size check
+      if (arrayBuffer.byteLength > 10 * 1024 * 1024) { // 10MB limit for PDFs
+        throw new Error('PDF_TOO_LARGE');
+      }
+      
+      const bytes = new Uint8Array(arrayBuffer);
+      const decoder = new TextDecoder('utf-8', { fatal: false });
+      const content = decoder.decode(bytes);
+      checkTimeout();
+
+      const textChunks: string[] = [];
+      let matchCount = 0;
+      const maxMatches = 5000;
+
+      // Method 1: BT/ET text blocks (most common)
+      const btEtPattern = /BT\s*([\s\S]*?)\s*ET/g;
+      let match;
+      while ((match = btEtPattern.exec(content)) !== null && matchCount < maxMatches) {
+        checkTimeout();
+        const block = match[1];
+        // Extract text from Tj, TJ, ' operators
+        const tjMatches = block.matchAll(/\(([^)]*)\)\s*(?:Tj|')|<([^>]*)>\s*(?:Tj|')/g);
+        for (const tjMatch of tjMatches) {
+          const text = tjMatch[1] || tjMatch[2] || '';
+          if (text.trim()) textChunks.push(text);
+          matchCount++;
+          if (matchCount >= maxMatches) break;
+        }
+      }
+      checkTimeout();
+
+      // Method 2: Simple parenthetical text (fallback)
+      if (textChunks.length < 100) {
+        const simplePattern = /\(([A-Za-z0-9\s.,!?'";\-:]+)\)/g;
+        while ((match = simplePattern.exec(content)) !== null && matchCount < maxMatches) {
+          const text = match[1];
+          if (text.length > 2 && text.length < 500) {
+            textChunks.push(text);
+          }
+          matchCount++;
+        }
+      }
+      checkTimeout();
+
+      // Clean and join
+      const text = textChunks
+        .map(t => t.replace(/\\([0-9]{3})/g, (_, oct) => String.fromCharCode(parseInt(oct, 8))))
+        .join(' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      if (text.length < MIN_USEFUL_TEXT) {
+        throw new Error('OCR_REQUIRED');
+      }
+
+      return { text: text.slice(0, MAX_EXTRACTION_SIZE), method: 'pdf_regex' };
+    }
+
+    throw new Error('UNSUPPORTED_FORMAT');
+  } catch (err) {
+    if (err instanceof Error) {
+      if (['EXTRACTION_TIMEOUT', 'INSUFFICIENT_TEXT', 'OCR_REQUIRED', 'PDF_TOO_LARGE', 'UNSUPPORTED_FORMAT'].includes(err.message)) {
+        throw err;
+      }
+    }
+    console.error('[extractText] Unexpected error:', err);
+    throw new Error('EXTRACTION_FAILED');
+  }
+}
+
+// ============= CHUNKING UTILITIES =============
+
+const MAX_CHUNK_SIZE = 40000; // ~10k tokens, leaves room for prompts
+const CHUNK_OVERLAP = 500; // Overlap between chunks
+
+/**
+ * Split script text into logical chunks based on scene headings
+ */
+function chunkScript(text: string, maxChunkSize: number = MAX_CHUNK_SIZE): string[] {
+  // Scene heading patterns (INT./EXT., Hindi equivalents)
+  const scenePattern = /(?=(?:INT|EXT|INTERIOR|EXTERIOR|अंदर|बाहर|ANDAR|BAHAR|I\/E|E\/I)[.\s\-\/])/gi;
+  
+  const scenes = text.split(scenePattern).filter(s => s.trim().length > 0);
+  
+  // If no scene splits found, chunk by paragraphs
+  if (scenes.length <= 1) {
+    return chunkBySize(text, maxChunkSize);
+  }
+
+  const chunks: string[] = [];
+  let currentChunk = '';
+  
+  for (const scene of scenes) {
+    if ((currentChunk.length + scene.length) > maxChunkSize) {
+      if (currentChunk.trim()) {
+        chunks.push(currentChunk.trim());
+      }
+      // If single scene is too large, split it
+      if (scene.length > maxChunkSize) {
+        const subChunks = chunkBySize(scene, maxChunkSize);
+        chunks.push(...subChunks);
+        currentChunk = '';
+      } else {
+        currentChunk = scene;
+      }
+    } else {
+      currentChunk += scene;
+    }
+  }
+  
+  if (currentChunk.trim()) {
+    chunks.push(currentChunk.trim());
+  }
+
+  return chunks;
+}
+
+/**
+ * Fallback chunking by size with paragraph awareness
+ */
+function chunkBySize(text: string, maxSize: number): string[] {
+  const chunks: string[] = [];
+  const paragraphs = text.split(/\n\n+/);
+  let currentChunk = '';
+
+  for (const para of paragraphs) {
+    if ((currentChunk.length + para.length + 2) > maxSize) {
+      if (currentChunk.trim()) {
+        chunks.push(currentChunk.trim());
+      }
+      // Handle oversized paragraphs
+      if (para.length > maxSize) {
+        const words = para.split(/\s+/);
+        let wordChunk = '';
+        for (const word of words) {
+          if ((wordChunk.length + word.length + 1) > maxSize) {
+            if (wordChunk.trim()) chunks.push(wordChunk.trim());
+            wordChunk = word;
+          } else {
+            wordChunk += (wordChunk ? ' ' : '') + word;
+          }
+        }
+        if (wordChunk.trim()) chunks.push(wordChunk.trim());
+        currentChunk = '';
+      } else {
+        currentChunk = para;
+      }
+    } else {
+      currentChunk += (currentChunk ? '\n\n' : '') + para;
+    }
+  }
+
+  if (currentChunk.trim()) {
+    chunks.push(currentChunk.trim());
+  }
+
+  return chunks;
+}
+
+// ============= MAIN SERVER =============
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { scriptId, analysisRunId, forceAnalysis = false } = await req.json() as AnalyzeRequest;
+    const { scriptId, analysisRunId, mode = 'deep', forceAnalysis = false } = await req.json() as AnalyzeRequest;
     
-    console.log(`[analyze-script] Starting UASF analysis for script ${scriptId}, run ${analysisRunId}, forceAnalysis: ${forceAnalysis}`);
+    console.log(`[analyze-script] Starting ${mode.toUpperCase()} analysis for script ${scriptId}, run ${analysisRunId}`);
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -453,15 +707,13 @@ serve(async (req) => {
     // Filter agents based on script type
     const agentsToRun = Object.entries(AGENTS).filter(([agentName]) => {
       if (isComic) {
-        // For comics: run comic agents + core agents
         return coreAgents.includes(agentName) || comicAgents.includes(agentName);
       } else {
-        // For non-comics: exclude comic-specific agents
         return !comicAgents.includes(agentName);
       }
     });
 
-    console.log(`[analyze-script] Script type: ${script.script_type}, running ${agentsToRun.length} agents`);
+    console.log(`[analyze-script] Script type: ${script.script_type}, mode: ${mode}, running ${agentsToRun.length} agents`);
 
     // Update analysis run status
     await supabase
@@ -469,141 +721,150 @@ serve(async (req) => {
       .update({ 
         status: 'processing', 
         started_at: new Date().toISOString(),
-        agent_progress: Object.fromEntries(
-          agentsToRun.map(([agent]) => [agent, { status: 'pending' }])
-        )
+        agent_progress: {
+          ...Object.fromEntries(agentsToRun.map(([agent]) => [agent, { status: 'pending' }])),
+          _meta: { mode, chunked: mode === 'quick' }
+        }
       })
       .eq('id', analysisRunId);
-
-    // Fetch scenes and characters
-    const [scenesResult, charsResult] = await Promise.all([
-      supabase.from('scenes').select('*').eq('script_id', scriptId).order('scene_number'),
-      supabase.from('characters').select('*').eq('script_id', scriptId).order('dialogue_count', { ascending: false }),
-    ]);
-
-    const scenes = scenesResult.data || [];
-    const characters = charsResult.data || [];
 
     // Fetch parameters
     const { data: parameters } = await supabase.from('parameters').select('*');
     const parameterMap = new Map(parameters?.map(p => [p.name, p]) || []);
 
-    // Check if we have enough parsed data or need to use fallback mode
-    const hasStructuredData = scenes.length > 0 && characters.length > 0;
-    let rawScriptText: string | null = null;
-    let usingFallbackMode = false;
-
-    if (!hasStructuredData) {
-      if (!forceAnalysis) {
-        throw new Error('Script parsing incomplete. Use forceAnalysis=true to analyze with raw text fallback.');
-      }
-      
-      // Fallback mode: fetch raw script text from storage
-      console.log('[analyze-script] No structured data available, using raw text fallback mode');
-      usingFallbackMode = true;
+    let scriptContext: string;
+    let chunks: string[] = [];
+    
+    // ============= MODE-SPECIFIC LOGIC =============
+    
+    if (mode === 'quick') {
+      // QUICK MODE: Extract text directly, chunk, and analyze
+      console.log('[analyze-script] QUICK MODE: Extracting text directly from file');
       
       try {
         const { data: fileData, error: downloadError } = await supabase.storage
           .from('scripts')
           .download(script.file_url);
         
-        if (!downloadError && fileData) {
-          rawScriptText = await fileData.text();
-          // Truncate to reasonable size for AI context
-          if (rawScriptText.length > 100000) {
-            rawScriptText = rawScriptText.substring(0, 100000) + '\n\n[TEXT TRUNCATED...]';
-          }
-          console.log(`[analyze-script] Loaded raw script text: ${rawScriptText.length} characters`);
-        }
-      } catch (err) {
-        console.error('[analyze-script] Failed to load raw script text:', err);
-      }
-    }
-
-    // Build context for AI - use fallback context if needed
-    const scriptContext = buildScriptContext(script, scenes, characters, rawScriptText, usingFallbackMode);
-
-    console.log(`[analyze-script] Context built: ${scenes.length} scenes, ${characters.length} characters, fallback: ${usingFallbackMode}`);
-
-    // Run selected agents in parallel
-    const agentPromises = agentsToRun.map(async ([agentName, agentConfig]) => {
-      try {
-        // Update agent progress
-        await updateAgentProgress(supabase, analysisRunId, agentName, 'running');
-
-        const result = await runAgent(
-          lovableApiKey,
-          agentName,
-          agentConfig,
-          scriptContext,
-          parameterMap
-        );
-
-        // Save scores with UASF output contract
-        for (const score of result.scores) {
-          if (!score.parameterId) continue;
-          
-          await supabase.from('parameter_scores').insert({
-            analysis_run_id: analysisRunId,
-            parameter_id: score.parameterId,
-            score: score.score,
-            confidence: score.confidence,
-            evidence: {
-              items: score.evidence,
-              maturity: score.maturity,
-              riskLevel: score.riskLevel,
-              fixCost: score.fixCost,
-              upsideImpact: score.upsideImpact,
-            },
-            rationale: score.rationale,
-            agent_name: agentName,
-          });
+        if (downloadError || !fileData) {
+          throw new Error(`Failed to download script: ${downloadError?.message}`);
         }
 
-        // Save insights if any
-        if (result.insights?.length) {
-          for (const insight of result.insights) {
-            await supabase.from('insights').insert({
-              analysis_run_id: analysisRunId,
-              category: insight.category,
-              title: insight.title,
-              description: insight.description,
-              priority: insight.priority,
-              actionable: insight.actionable,
-              supporting_evidence: {
-                evidence: insight.supportingEvidence,
-                affectedStakeholders: insight.affectedStakeholders,
-                minimalFix: insight.minimalFix,
-                maximalFix: insight.maximalFix,
-              },
-            });
-          }
-        }
+        const { text, method } = await extractTextFromFile(fileData, script.format, script.file_url);
+        console.log(`[analyze-script] Extracted ${text.length} chars using ${method}`);
 
-        await updateAgentProgress(supabase, analysisRunId, agentName, 'completed');
-        console.log(`[analyze-script] ${agentName} completed`);
-        
-        return { agent: agentName, success: true };
+        // Chunk the text
+        chunks = chunkScript(text);
+        console.log(`[analyze-script] Split into ${chunks.length} chunks`);
+
+        // Build context from chunks (use summary for large scripts)
+        if (chunks.length <= 3) {
+          scriptContext = buildQuickContext(script, chunks.join('\n\n---SCENE BREAK---\n\n'));
+        } else {
+          // For large scripts, create chunk summaries and analyze in parallel
+          scriptContext = buildQuickContext(script, chunks.slice(0, 2).join('\n\n') + '\n\n[... additional content in chunks ...]');
+        }
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-        console.error(`[analyze-script] ${agentName} failed:`, errorMessage);
-        await updateAgentProgress(supabase, analysisRunId, agentName, 'failed', errorMessage);
-        return { agent: agentName, success: false, error: errorMessage };
+        console.error('[analyze-script] Quick mode extraction failed:', errorMessage);
+        
+        // Update with specific error
+        await supabase
+          .from('analysis_runs')
+          .update({ 
+            status: 'failed',
+            completed_at: new Date().toISOString(),
+            error_message: getExtractionErrorMessage(errorMessage)
+          })
+          .eq('id', analysisRunId);
+
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: getExtractionErrorMessage(errorMessage),
+            errorCode: errorMessage 
+          }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
-    });
+    } else {
+      // DEEP MODE: Use parsed structured data (original behavior)
+      const [scenesResult, charsResult] = await Promise.all([
+        supabase.from('scenes').select('*').eq('script_id', scriptId).order('scene_number'),
+        supabase.from('characters').select('*').eq('script_id', scriptId).order('dialogue_count', { ascending: false }),
+      ]);
 
-    const agentResults = await Promise.all(agentPromises);
+      const scenes = scenesResult.data || [];
+      const characters = charsResult.data || [];
+
+      // Check if we have enough parsed data
+      const hasStructuredData = scenes.length > 0 && characters.length > 0;
+      let rawScriptText: string | null = null;
+      let usingFallbackMode = false;
+
+      if (!hasStructuredData) {
+        if (!forceAnalysis) {
+          throw new Error('Script parsing incomplete. Use forceAnalysis=true or mode="quick" to analyze with raw text.');
+        }
+        
+        console.log('[analyze-script] Deep mode fallback: using raw text');
+        usingFallbackMode = true;
+        
+        try {
+          const { data: fileData, error: downloadError } = await supabase.storage
+            .from('scripts')
+            .download(script.file_url);
+          
+          if (!downloadError && fileData) {
+            rawScriptText = await fileData.text();
+            if (rawScriptText.length > 100000) {
+              rawScriptText = rawScriptText.substring(0, 100000) + '\n\n[TEXT TRUNCATED...]';
+            }
+          }
+        } catch (err) {
+          console.error('[analyze-script] Failed to load raw script text:', err);
+        }
+      }
+
+      scriptContext = buildScriptContext(script, scenes, characters, rawScriptText, usingFallbackMode);
+      console.log(`[analyze-script] Deep mode context: ${scenes.length} scenes, ${characters.length} characters, fallback: ${usingFallbackMode}`);
+    }
+
+    // ============= RUN AGENTS =============
     
-    // Run InsightSynthesisAgent after all others complete
-    await runInsightSynthesis(supabase, lovableApiKey, analysisRunId, scriptContext);
+    let agentResults: Array<{ agent: string; success: boolean; error?: string }>;
+    
+    if (mode === 'quick' && chunks.length > 3) {
+      // Chunked analysis for large scripts
+      agentResults = await runChunkedAnalysis(
+        supabase,
+        lovableApiKey,
+        analysisRunId,
+        script,
+        chunks,
+        agentsToRun,
+        parameterMap
+      );
+    } else {
+      // Standard analysis (deep mode or small quick scripts)
+      agentResults = await runStandardAnalysis(
+        supabase,
+        lovableApiKey,
+        analysisRunId,
+        scriptContext,
+        agentsToRun,
+        parameterMap
+      );
+    }
 
-    // Run StakeholderLensAgent to apply weighted scoring
+    // Run synthesis agents
+    await runInsightSynthesis(supabase, lovableApiKey, analysisRunId, scriptContext);
     await runStakeholderLensAgent(supabase, lovableApiKey, analysisRunId);
 
-    // Calculate overall scores and create report
-    await generateReport(supabase, analysisRunId, scriptId, script);
+    // Generate report
+    await generateReport(supabase, analysisRunId, scriptId, script, mode);
 
-    // Update analysis run status
+    // Update final status
     const failedAgents = agentResults.filter(r => !r.success);
     const finalStatus = failedAgents.length === agentResults.length ? 'failed' : 'completed';
     
@@ -618,12 +879,14 @@ serve(async (req) => {
       })
       .eq('id', analysisRunId);
 
-    console.log(`[analyze-script] UASF Analysis complete: ${finalStatus}`);
+    console.log(`[analyze-script] ${mode.toUpperCase()} Analysis complete: ${finalStatus}`);
 
     return new Response(
       JSON.stringify({ 
         success: true, 
         status: finalStatus,
+        mode,
+        chunks: chunks.length,
         results: agentResults 
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -639,6 +902,41 @@ serve(async (req) => {
   }
 });
 
+// ============= HELPER FUNCTIONS =============
+
+function getExtractionErrorMessage(code: string): string {
+  switch (code) {
+    case 'EXTRACTION_TIMEOUT':
+      return 'PDF extraction timed out. The file may be too complex. Please upload in TXT, Fountain, or DOCX format.';
+    case 'OCR_REQUIRED':
+      return 'This appears to be a scanned PDF. Please upload a text-based PDF, or convert to TXT/Fountain/DOCX format.';
+    case 'PDF_TOO_LARGE':
+      return 'PDF file is too large for quick analysis. Please upload a smaller file or use a text format.';
+    case 'INSUFFICIENT_TEXT':
+      return 'Could not extract enough text from the file. Please upload in a different format (TXT, Fountain, DOCX recommended).';
+    case 'UNSUPPORTED_FORMAT':
+      return 'File format not supported for quick analysis. Please upload TXT, Fountain, FDX, DOCX, or text-based PDF.';
+    default:
+      return `Text extraction failed: ${code}. Please try a different file format.`;
+  }
+}
+
+function buildQuickContext(script: any, text: string): string {
+  return `
+SCRIPT: "${script.title}"
+Type: ${script.script_type}
+Genre: ${script.genre || 'Not specified'}
+Page Count: ${script.page_count || 'Unknown'}
+${script.logline ? `Logline: ${script.logline}` : ''}
+
+⚡ ANALYSIS MODE: Quick (direct text extraction)
+Analyzing from raw script text. Scene/character structure inferred from content.
+
+SCRIPT CONTENT:
+${text}
+`.trim();
+}
+
 function buildScriptContext(
   script: any, 
   scenes: any[], 
@@ -646,7 +944,6 @@ function buildScriptContext(
   rawScriptText?: string | null, 
   isFallbackMode?: boolean
 ): string {
-  // If in fallback mode with raw text, use that primarily
   if (isFallbackMode && rawScriptText) {
     return `
 SCRIPT: "${script.title}"
@@ -685,6 +982,285 @@ ${charList || 'No character data extracted'}
 SCENES (${scenes.length} total):
 ${sceneList || 'No scene data extracted'}
 `.trim();
+}
+
+async function runStandardAnalysis(
+  supabase: any,
+  apiKey: string,
+  analysisRunId: string,
+  scriptContext: string,
+  agentsToRun: [string, any][],
+  parameterMap: Map<string, any>
+): Promise<Array<{ agent: string; success: boolean; error?: string }>> {
+  const agentPromises = agentsToRun.map(async ([agentName, agentConfig]) => {
+    try {
+      await updateAgentProgress(supabase, analysisRunId, agentName, 'running');
+
+      const result = await runAgent(apiKey, agentName, agentConfig, scriptContext, parameterMap);
+
+      for (const score of result.scores) {
+        if (!score.parameterId) continue;
+        
+        await supabase.from('parameter_scores').insert({
+          analysis_run_id: analysisRunId,
+          parameter_id: score.parameterId,
+          score: score.score,
+          confidence: score.confidence,
+          evidence: {
+            items: score.evidence,
+            maturity: score.maturity,
+            riskLevel: score.riskLevel,
+            fixCost: score.fixCost,
+            upsideImpact: score.upsideImpact,
+          },
+          rationale: score.rationale,
+          agent_name: agentName,
+        });
+      }
+
+      if (result.insights?.length) {
+        for (const insight of result.insights) {
+          await supabase.from('insights').insert({
+            analysis_run_id: analysisRunId,
+            category: insight.category,
+            title: insight.title,
+            description: insight.description,
+            priority: insight.priority,
+            actionable: insight.actionable,
+            supporting_evidence: {
+              evidence: insight.supportingEvidence,
+              affectedStakeholders: insight.affectedStakeholders,
+              minimalFix: insight.minimalFix,
+              maximalFix: insight.maximalFix,
+            },
+          });
+        }
+      }
+
+      await updateAgentProgress(supabase, analysisRunId, agentName, 'completed');
+      console.log(`[analyze-script] ${agentName} completed`);
+      
+      return { agent: agentName, success: true };
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      console.error(`[analyze-script] ${agentName} failed:`, errorMessage);
+      await updateAgentProgress(supabase, analysisRunId, agentName, 'failed', errorMessage);
+      return { agent: agentName, success: false, error: errorMessage };
+    }
+  });
+
+  return Promise.all(agentPromises);
+}
+
+async function runChunkedAnalysis(
+  supabase: any,
+  apiKey: string,
+  analysisRunId: string,
+  script: any,
+  chunks: string[],
+  agentsToRun: [string, any][],
+  parameterMap: Map<string, any>
+): Promise<Array<{ agent: string; success: boolean; error?: string }>> {
+  console.log(`[analyze-script] Running chunked analysis with ${chunks.length} chunks`);
+
+  // Update progress with chunk info
+  await supabase
+    .from('analysis_runs')
+    .update({
+      agent_progress: {
+        ...Object.fromEntries(agentsToRun.map(([agent]) => [agent, { status: 'pending' }])),
+        _meta: { mode: 'quick', chunked: true, totalChunks: chunks.length }
+      }
+    })
+    .eq('id', analysisRunId);
+
+  // For each agent, analyze chunks and aggregate
+  const agentPromises = agentsToRun.map(async ([agentName, agentConfig]) => {
+    try {
+      await updateAgentProgress(supabase, analysisRunId, agentName, 'running');
+
+      // Analyze each chunk
+      const chunkResults: ChunkResult[] = [];
+      
+      for (let i = 0; i < chunks.length; i++) {
+        const chunkContext = buildQuickContext(script, chunks[i]);
+        const chunkLabel = `Chunk ${i + 1}/${chunks.length}`;
+        
+        console.log(`[analyze-script] ${agentName} analyzing ${chunkLabel}`);
+        
+        const result = await runAgent(apiKey, agentName, agentConfig, chunkContext, parameterMap);
+        
+        chunkResults.push({
+          chunkIndex: i,
+          chunkRange: chunkLabel,
+          scores: result.scores,
+          insights: result.insights,
+        });
+      }
+
+      // Aggregate chunk results
+      const aggregatedScores = aggregateChunkScores(chunkResults, parameterMap);
+      const aggregatedInsights = aggregateChunkInsights(chunkResults);
+
+      // Save aggregated scores
+      for (const score of aggregatedScores) {
+        if (!score.parameterId) continue;
+        
+        await supabase.from('parameter_scores').insert({
+          analysis_run_id: analysisRunId,
+          parameter_id: score.parameterId,
+          score: score.score,
+          confidence: score.confidence,
+          evidence: {
+            items: score.evidence,
+            maturity: score.maturity,
+            riskLevel: score.riskLevel,
+            fixCost: score.fixCost,
+            upsideImpact: score.upsideImpact,
+            chunkedAnalysis: true,
+            chunkCount: chunks.length,
+          },
+          rationale: score.rationale,
+          agent_name: agentName,
+        });
+      }
+
+      // Save aggregated insights
+      for (const insight of aggregatedInsights) {
+        await supabase.from('insights').insert({
+          analysis_run_id: analysisRunId,
+          category: insight.category,
+          title: insight.title,
+          description: insight.description,
+          priority: insight.priority,
+          actionable: insight.actionable,
+          supporting_evidence: {
+            evidence: insight.supportingEvidence,
+            affectedStakeholders: insight.affectedStakeholders,
+            minimalFix: insight.minimalFix,
+            maximalFix: insight.maximalFix,
+          },
+        });
+      }
+
+      await updateAgentProgress(supabase, analysisRunId, agentName, 'completed');
+      console.log(`[analyze-script] ${agentName} completed (${chunks.length} chunks aggregated)`);
+      
+      return { agent: agentName, success: true };
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      console.error(`[analyze-script] ${agentName} failed:`, errorMessage);
+      await updateAgentProgress(supabase, analysisRunId, agentName, 'failed', errorMessage);
+      return { agent: agentName, success: false, error: errorMessage };
+    }
+  });
+
+  return Promise.all(agentPromises);
+}
+
+function aggregateChunkScores(
+  chunkResults: ChunkResult[],
+  parameterMap: Map<string, any>
+): AgentResult['scores'] {
+  const scoresByParam: Map<string, { scores: number[]; rationales: string[]; evidences: any[]; maturity: string[]; risk: string[]; fix: string[]; upside: string[] }> = new Map();
+
+  for (const chunk of chunkResults) {
+    for (const score of chunk.scores) {
+      if (!score.parameterId) continue;
+      
+      if (!scoresByParam.has(score.parameterId)) {
+        scoresByParam.set(score.parameterId, {
+          scores: [],
+          rationales: [],
+          evidences: [],
+          maturity: [],
+          risk: [],
+          fix: [],
+          upside: []
+        });
+      }
+      
+      const param = scoresByParam.get(score.parameterId)!;
+      param.scores.push(score.score);
+      if (score.rationale) param.rationales.push(`[Chunk ${chunk.chunkIndex + 1}] ${score.rationale}`);
+      param.evidences.push(...(score.evidence || []));
+      param.maturity.push(score.maturity);
+      param.risk.push(score.riskLevel);
+      param.fix.push(score.fixCost);
+      param.upside.push(score.upsideImpact);
+    }
+  }
+
+  const aggregated: AgentResult['scores'] = [];
+  
+  for (const [paramId, data] of scoresByParam) {
+    // Weighted average: beginning and end chunks slightly more important
+    const weights = data.scores.map((_, i) => {
+      const position = i / (data.scores.length - 1 || 1);
+      // Higher weight for first and last chunks
+      return 1 + 0.2 * (1 - Math.abs(position - 0.5) * 2);
+    });
+    
+    const weightedSum = data.scores.reduce((sum, score, i) => sum + score * weights[i], 0);
+    const totalWeight = weights.reduce((sum, w) => sum + w, 0);
+    const avgScore = Math.round(weightedSum / totalWeight);
+
+    // Mode for categorical values
+    const getMode = (arr: string[]) => {
+      const counts: Record<string, number> = {};
+      arr.forEach(v => { counts[v] = (counts[v] || 0) + 1; });
+      return Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] || 'Medium';
+    };
+
+    aggregated.push({
+      parameterId: paramId,
+      parameterName: Array.from(parameterMap.values()).find(p => p.id === paramId)?.name || '',
+      score: avgScore,
+      confidence: 0.8, // Slightly lower confidence for aggregated
+      maturity: getMode(data.maturity),
+      riskLevel: getMode(data.risk),
+      fixCost: getMode(data.fix),
+      upsideImpact: getMode(data.upside),
+      evidence: data.evidences.slice(0, 5), // Limit evidence items
+      rationale: data.rationales.join(' | ').slice(0, 1000),
+    });
+  }
+
+  return aggregated;
+}
+
+function aggregateChunkInsights(chunkResults: ChunkResult[]): NonNullable<AgentResult['insights']> {
+  const allInsights: NonNullable<AgentResult['insights']> = [];
+  
+  for (const chunk of chunkResults) {
+    if (chunk.insights) {
+      for (const insight of chunk.insights) {
+        // Add chunk context to title
+        allInsights.push({
+          ...insight,
+          title: `${insight.title}`,
+          description: `[From chunk ${chunk.chunkIndex + 1}] ${insight.description}`,
+        });
+      }
+    }
+  }
+
+  // Deduplicate similar insights (basic title similarity)
+  const uniqueInsights: typeof allInsights = [];
+  const seenTitles = new Set<string>();
+  
+  for (const insight of allInsights) {
+    const normalizedTitle = insight.title.toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (!seenTitles.has(normalizedTitle)) {
+      seenTitles.add(normalizedTitle);
+      uniqueInsights.push(insight);
+    }
+  }
+
+  // Sort by priority and limit
+  return uniqueInsights
+    .sort((a, b) => a.priority - b.priority)
+    .slice(0, 10);
 }
 
 async function runAgent(
@@ -778,7 +1354,6 @@ Only return valid JSON, no markdown.`;
   const aiResult = await response.json();
   const content = aiResult.choices?.[0]?.message?.content || '';
 
-  // Parse JSON response
   const jsonMatch = content.match(/\{[\s\S]*\}/);
   if (!jsonMatch) {
     throw new Error('Failed to parse AI response as JSON');
@@ -786,13 +1361,12 @@ Only return valid JSON, no markdown.`;
 
   const parsed = JSON.parse(jsonMatch[0]);
 
-  // Map scores to parameter IDs and convert to 0-100 scale for storage
   const scores = (parsed.scores || []).map((s: any) => {
     const param = parameterMap.get(s.parameter);
     return {
       parameterId: param?.id,
       parameterName: s.parameter,
-      score: Math.min(100, Math.max(0, (s.score || 0) * 10)), // Convert 0-10 to 0-100
+      score: Math.min(100, Math.max(0, (s.score || 0) * 10)),
       confidence: 0.85,
       maturity: s.maturity || 'Developing',
       riskLevel: s.riskLevel || 'Medium',
@@ -848,7 +1422,6 @@ async function runInsightSynthesis(
   analysisRunId: string,
   context: string
 ) {
-  // Fetch all scores
   const { data: scores } = await supabase
     .from('parameter_scores')
     .select('*, parameters(*)')
@@ -938,8 +1511,12 @@ Return JSON array:
         });
       }
     }
+    
+    // Update agent progress
+    await updateAgentProgress(supabase, analysisRunId, 'InsightSynthesisAgent', 'completed');
   } catch (error) {
     console.error('[analyze-script] InsightSynthesis error:', error);
+    await updateAgentProgress(supabase, analysisRunId, 'InsightSynthesisAgent', 'failed', String(error));
   }
 }
 
@@ -950,7 +1527,6 @@ async function runStakeholderLensAgent(
 ) {
   console.log('[analyze-script] Running StakeholderLensAgent...');
 
-  // Fetch all parameter scores
   const { data: scores } = await supabase
     .from('parameter_scores')
     .select('*, parameters(*)')
@@ -958,21 +1534,18 @@ async function runStakeholderLensAgent(
 
   if (!scores?.length) return;
 
-  // Fetch lens weights
   const { data: lensWeights } = await supabase
     .from('lens_weights')
     .select('*');
 
   const stakeholders = ['studio_executive', 'producer', 'actor', 'director', 'writer', 'financier', 'ott_platform', 'theatrical'];
   
-  // Calculate lens-specific scores based on weights
   const lensScores: Record<string, number> = {};
   
   for (const lens of stakeholders) {
     const weightsForLens = lensWeights?.filter((lw: any) => lw.lens === lens) || [];
     
     if (weightsForLens.length === 0) {
-      // No specific weights, use average
       lensScores[lens] = Math.round(
         scores.reduce((sum: number, s: any) => sum + s.score, 0) / scores.length
       );
@@ -994,7 +1567,6 @@ async function runStakeholderLensAgent(
 
   console.log('[analyze-script] StakeholderLensAgent computed lens scores:', lensScores);
   
-  // Fetch current agent_progress, merge with new data, then update
   const { data: currentRun } = await supabase
     .from('analysis_runs')
     .select('agent_progress')
@@ -1020,9 +1592,9 @@ async function generateReport(
   supabase: any,
   analysisRunId: string,
   scriptId: string,
-  script: any
+  script: any,
+  mode: string = 'deep'
 ) {
-  // Fetch all data for report
   const [scoresResult, insightsResult, scenesResult, charsResult, lensWeightsResult] = await Promise.all([
     supabase.from('parameter_scores').select('*, parameters(*)').eq('analysis_run_id', analysisRunId),
     supabase.from('insights').select('*').eq('analysis_run_id', analysisRunId),
@@ -1035,12 +1607,10 @@ async function generateReport(
   const insights = insightsResult.data || [];
   const lensWeights = lensWeightsResult.data || [];
 
-  // Calculate overall score (average of all parameter scores)
   const overallScore = scores.length > 0
     ? Math.round(scores.reduce((sum: number, s: any) => sum + s.score, 0) / scores.length)
     : 0;
 
-  // Calculate category scores with UASF metadata
   const categoryScores: Record<string, { total: number; count: number; risks: string[] }> = {};
   for (const score of scores) {
     const category = score.parameters?.category || 'Other';
@@ -1050,14 +1620,12 @@ async function generateReport(
     categoryScores[category].total += score.score;
     categoryScores[category].count += 1;
     
-    // Track high-risk parameters
     const evidence = score.evidence || {};
     if (evidence.riskLevel === 'High') {
       categoryScores[category].risks.push(score.parameters?.display_name || score.parameters?.name);
     }
   }
 
-  // Calculate lens scores
   const lensScores: Record<string, number> = {};
   const lenses = ['studio_executive', 'producer', 'actor', 'director', 'writer', 'financier', 'ott_platform', 'theatrical'];
   
@@ -1082,9 +1650,9 @@ async function generateReport(
     lensScores[lens] = totalWeight > 0 ? Math.round(weightedSum / totalWeight) : overallScore;
   }
 
-  // Build UASF-compliant report data
   const reportData = {
     uasfVersion: '3.0',
+    analysisMode: mode,
     scriptMetadata: {
       title: script.title,
       logline: script.logline,
@@ -1115,6 +1683,7 @@ async function generateReport(
         upsideImpact: evidence.upsideImpact || 'Medium',
         evidence: evidence.items || [],
         rationale: s.rationale,
+        chunkedAnalysis: evidence.chunkedAnalysis || false,
       };
     }),
     insights: insights.map((i: any) => {
@@ -1153,11 +1722,11 @@ async function generateReport(
     })),
   };
 
-  // Generate executive summary with UASF insights
   const topInsights = insights.sort((a: any, b: any) => a.priority - b.priority).slice(0, 3);
   const highRiskCount = scores.filter((s: any) => s.evidence?.riskLevel === 'High').length;
   
-  const executiveSummary = `"${script.title}" scores ${overallScore}/100 overall. ${
+  const modeLabel = mode === 'quick' ? '⚡ Quick' : '🔬 Deep';
+  const executiveSummary = `${modeLabel} Analysis: "${script.title}" scores ${overallScore}/100 overall. ${
     highRiskCount > 0 ? `${highRiskCount} high-risk parameters identified. ` : ''
   }${
     topInsights.length > 0 
@@ -1165,7 +1734,6 @@ async function generateReport(
       : ''
   }`;
 
-  // Insert report
   const { data: scriptData } = await supabase
     .from('scripts')
     .select('organization_id')
@@ -1176,12 +1744,12 @@ async function generateReport(
     analysis_run_id: analysisRunId,
     script_id: scriptId,
     organization_id: scriptData?.organization_id,
-    title: `UASF Analysis: ${script.title}`,
+    title: `UASF ${mode === 'quick' ? 'Quick' : 'Deep'} Analysis: ${script.title}`,
     overall_score: overallScore,
     lens_scores: lensScores,
     executive_summary: executiveSummary,
     full_report_data: reportData,
   });
 
-  console.log(`[analyze-script] UASF Report generated with overall score: ${overallScore}`);
+  console.log(`[analyze-script] UASF ${mode} Report generated with overall score: ${overallScore}`);
 }
