@@ -1,6 +1,6 @@
 import { useOutletContext } from 'react-router-dom';
 import { ReportData, StakeholderLens } from '@/types/database';
-import { FullInsightsSection } from '@/components/report/FullInsightsSection';
+import { EnhancedInsightsSection } from '@/components/report/EnhancedInsightsSection';
 import { ThemeMotifTracker } from '@/components/report/ThemeMotifTracker';
 import { BudgetEstimator } from '@/components/report/BudgetEstimator';
 import { RiskMap } from '@/components/report/RiskMap';
@@ -28,12 +28,12 @@ export default function ReportInsights() {
           Insights & Recommendations
         </h2>
         <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-          Actionable insights to guide your creative decisions
+          {reportData.insights?.length || 0} actionable insights categorized by analysis domain
         </p>
       </div>
 
-      {/* Insights Section */}
-      <FullInsightsSection insights={reportData.insights || []} />
+      {/* Enhanced Insights Section */}
+      <EnhancedInsightsSection insights={reportData.insights || []} />
 
       {/* Theme & Motif Tracker */}
       <section>

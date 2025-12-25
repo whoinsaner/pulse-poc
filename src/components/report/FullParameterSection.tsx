@@ -7,8 +7,28 @@ import { CategoryBarChart } from '@/components/charts/CategoryBarChart';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface FullParameterSectionProps {
-  categoryScores: Record<string, number>;
+  categoryScores: Record<string, number | { score?: number; highRiskParameters?: string[] }>;
   parameterScores: ParameterScoreData[];
+}
+
+// Helper to extract score from category score (handles both number and object formats)
+function extractCategoryScore(value: number | { score?: number; highRiskParameters?: string[] }): number {
+  if (typeof value === 'number') return value;
+  return value?.score || 0;
+}
+
+// Helper to extract high risk parameters
+function extractHighRiskParams(value: number | { score?: number; highRiskParameters?: string[] }): string[] {
+  if (typeof value === 'number') return [];
+  return value?.highRiskParameters || [];
+}
+
+// Helper to extract evidence items (handles nested structure)
+function extractEvidence(evidence: any): Array<{ type?: string; reference?: string; quote?: string; explanation?: string }> {
+  if (!evidence) return [];
+  if (Array.isArray(evidence)) return evidence;
+  if (evidence.items && Array.isArray(evidence.items)) return evidence.items;
+  return [];
 }
 
 export function FullParameterSection({ categoryScores, parameterScores }: FullParameterSectionProps) {
@@ -16,7 +36,11 @@ export function FullParameterSection({ categoryScores, parameterScores }: FullPa
   const [chartView, setChartView] = useState<'radar' | 'bar'>('radar');
 
   const categories = Object.entries(categoryScores)
-    .map(([name, score]) => ({ name, score }))
+    .map(([name, value]) => ({ 
+      name, 
+      score: extractCategoryScore(value),
+      highRiskParams: extractHighRiskParams(value)
+    }))
     .sort((a, b) => b.score - a.score);
 
   const getParametersForCategory = (category: string) => 
@@ -45,6 +69,11 @@ export function FullParameterSection({ categoryScores, parameterScores }: FullPa
       default: return 'bg-destructive/10 text-destructive';
     }
   };
+
+  // Convert categoryScores to number format for charts
+  const numericCategoryScores = Object.fromEntries(
+    Object.entries(categoryScores).map(([k, v]) => [k, extractCategoryScore(v)])
+  );
 
   return (
     <section className="min-h-screen py-20">
@@ -75,9 +104,9 @@ export function FullParameterSection({ categoryScores, parameterScores }: FullPa
           
           <div className="p-8 rounded-2xl bg-card border border-border">
             {chartView === 'radar' ? (
-              <CategoryRadarChart categoryScores={categoryScores} />
+              <CategoryRadarChart categoryScores={numericCategoryScores} />
             ) : (
-              <CategoryBarChart categoryScores={categoryScores} />
+              <CategoryBarChart categoryScores={numericCategoryScores} />
             )}
           </div>
         </div>
@@ -240,24 +269,41 @@ export function FullParameterSection({ categoryScores, parameterScores }: FullPa
                           </div>
 
                           {/* Evidence section */}
-                          {param.evidence && param.evidence.length > 0 && (
-                            <div className="mt-4 pt-4 border-t border-border/50">
-                              <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
-                                <FileText className="h-3 w-3" />
-                                Supporting Evidence
-                              </p>
-                              <div className="space-y-2">
-                                {param.evidence.slice(0, 2).map((ev, i) => (
-                                  <div key={i} className="text-sm p-2 rounded bg-background/50">
-                                    {ev.quote && (
-                                      <p className="italic text-muted-foreground mb-1">"{ev.quote}"</p>
-                                    )}
-                                    <p className="text-xs">{ev.explanation}</p>
-                                  </div>
-                                ))}
+                          {(() => {
+                            const evidenceItems = extractEvidence(param.evidence);
+                            if (evidenceItems.length === 0) return null;
+                            return (
+                              <div className="mt-4 pt-4 border-t border-border/50">
+                                <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
+                                  <FileText className="h-3 w-3" />
+                                  Supporting Evidence ({evidenceItems.length} items)
+                                </p>
+                                <div className="space-y-2">
+                                  {evidenceItems.slice(0, 3).map((ev: any, i: number) => (
+                                    <div key={i} className="text-sm p-3 rounded bg-background/50 border border-border/30">
+                                      <div className="flex items-center gap-2 mb-1">
+                                        {ev.type && (
+                                          <span className="text-xs px-2 py-0.5 rounded bg-muted text-muted-foreground capitalize">
+                                            {ev.type.replace(/_/g, ' ')}
+                                          </span>
+                                        )}
+                                        {ev.reference && (
+                                          <span className="text-xs text-muted-foreground">{ev.reference}</span>
+                                        )}
+                                      </div>
+                                      {ev.quote && (
+                                        <p className="italic text-muted-foreground mb-1 border-l-2 border-primary/50 pl-2">"{ev.quote}"</p>
+                                      )}
+                                      <p className="text-xs text-foreground">{ev.explanation}</p>
+                                    </div>
+                                  ))}
+                                  {evidenceItems.length > 3 && (
+                                    <p className="text-xs text-muted-foreground">+ {evidenceItems.length - 3} more evidence items</p>
+                                  )}
+                                </div>
                               </div>
-                            </div>
-                          )}
+                            );
+                          })()}
                         </div>
                       );
                     })}
