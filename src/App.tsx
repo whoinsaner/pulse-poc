@@ -24,6 +24,7 @@ import SampleComicReportLayout from "./pages/SampleComicReport";
 import SampleComicScript from "./pages/SampleComicScript";
 import Reports from "./pages/Reports";
 import Team from "./pages/Team";
+import ParametersAgents from "./pages/ParametersAgents";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -72,6 +73,7 @@ const App = () => (
             </Route>
             <Route path="/sample-comic-script" element={<SampleComicScript />} />
             <Route path="/team" element={<Team />} />
+            <Route path="/parameters" element={<ParametersAgents />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
