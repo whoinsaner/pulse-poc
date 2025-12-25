@@ -36,9 +36,13 @@ export default function ReportOverview() {
   const totalCharacters = reportData.characters?.length || 0;
   const totalScenes = reportData.scenes?.length || 0;
 
-  // Calculate category averages
+  // Calculate category averages - handle both number and object formats
   const categoryAverages = Object.entries(reportData.categoryScores || {})
-    .map(([name, score]) => ({ name, score: score as number }))
+    .map(([name, value]) => {
+      // Handle both formats: direct number or object with score property
+      const score = typeof value === 'number' ? value : (value as { score?: number })?.score || 0;
+      return { name, score };
+    })
     .sort((a, b) => b.score - a.score);
 
   return (
