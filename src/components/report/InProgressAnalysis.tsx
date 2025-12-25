@@ -9,10 +9,12 @@ import { Progress } from '@/components/ui/progress';
 import { 
   Loader2, Play, CheckCircle, XCircle, Clock, RefreshCw,
   Lightbulb, Layers, Users, Swords, Sparkles, MessageSquare,
-  Globe, Heart, TrendingUp, Wrench, AlertTriangle, FileText
+  Globe, Heart, TrendingUp, Wrench, AlertTriangle, FileText, Timer
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { AnalysisStatus, AgentProgress } from '@/types/database';
+
+const AGENT_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes timeout for individual agents
 
 interface AnalysisRun {
   id: string;
@@ -56,14 +58,31 @@ export function InProgressAnalysis({ analysis, onRetry, onViewPartial }: InProgr
   
   const agentProgress = analysis.agent_progress || {};
   
+  // Check if an agent has timed out (running for too long)
+  const isAgentTimedOut = (progress: AgentProgress | undefined): boolean => {
+    if (!progress || progress.status !== 'running') return false;
+    if (!progress.startedAt) return false;
+    const startedAt = new Date(progress.startedAt).getTime();
+    return Date.now() - startedAt > AGENT_TIMEOUT_MS;
+  };
+  
   const getAgentStats = () => {
-    const completed = Object.values(agentProgress).filter(a => a?.status === 'completed').length;
-    const running = Object.values(agentProgress).filter(a => a?.status === 'running').length;
-    const failed = Object.values(agentProgress).filter(a => a?.status === 'failed').length;
-    const pending = Object.values(agentProgress).filter(a => a?.status === 'pending').length;
+    let completed = 0, running = 0, failed = 0, pending = 0, timedOut = 0;
+    
+    for (const agent of AGENT_CONFIG) {
+      const progress = agentProgress[agent.name];
+      if (progress?.status === 'completed') completed++;
+      else if (progress?.status === 'running') {
+        if (isAgentTimedOut(progress)) timedOut++;
+        else running++;
+      }
+      else if (progress?.status === 'failed') failed++;
+      else pending++;
+    }
+    
     const total = AGENT_CONFIG.length;
     const percentage = Math.round(((completed + running * 0.5) / total) * 100);
-    return { completed, running, failed, pending, total, percentage };
+    return { completed, running, failed, pending, timedOut, total, percentage };
   };
   
   const stats = getAgentStats();
@@ -167,7 +186,10 @@ export function InProgressAnalysis({ analysis, onRetry, onViewPartial }: InProgr
     return null;
   };
   
-  const getAgentStatusClass = (status?: string) => {
+  const getAgentStatusClass = (status?: string, timedOut?: boolean) => {
+    if (timedOut) {
+      return 'bg-amber-500/20 border-amber-500/50 text-amber-600 dark:text-amber-400';
+    }
     switch (status) {
       case 'completed':
         return 'bg-emerald-500/20 border-emerald-500/50 text-emerald-600 dark:text-emerald-400';
@@ -180,8 +202,9 @@ export function InProgressAnalysis({ analysis, onRetry, onViewPartial }: InProgr
     }
   };
   
-  const getAgentIcon = (agent: typeof AGENT_CONFIG[0], status?: string) => {
+  const getAgentIcon = (agent: typeof AGENT_CONFIG[0], status?: string, timedOut?: boolean) => {
     const Icon = agent.icon;
+    if (timedOut) return <Timer className="h-3 w-3" />;
     if (status === 'running') return <Loader2 className="h-3 w-3 animate-spin" />;
     if (status === 'completed') return <CheckCircle className="h-3 w-3" />;
     if (status === 'failed') return <XCircle className="h-3 w-3" />;
@@ -257,7 +280,8 @@ export function InProgressAnalysis({ analysis, onRetry, onViewPartial }: InProgr
           {AGENT_CONFIG.map((agent) => {
             const progress = agentProgress[agent.name];
             const status = progress?.status;
-            const isFailed = status === 'failed';
+            const timedOut = isAgentTimedOut(progress);
+            const canRetry = status === 'failed' || timedOut || status === 'pending';
             const isRetryingThis = retryingAgent === agent.name;
             
             return (
@@ -265,22 +289,25 @@ export function InProgressAnalysis({ analysis, onRetry, onViewPartial }: InProgr
                 key={agent.name}
                 className={cn(
                   'relative flex flex-col items-center gap-0.5 p-1.5 rounded-lg border transition-all',
-                  getAgentStatusClass(status),
-                  isFailed && 'cursor-pointer hover:ring-2 hover:ring-destructive/50'
+                  getAgentStatusClass(status, timedOut),
+                  canRetry && 'cursor-pointer hover:ring-2 hover:ring-primary/50'
                 )}
-                onClick={() => isFailed && handleRetryAgent(agent.name)}
-                title={`${agent.label}: ${status || 'pending'}${isFailed ? ' (click to retry)' : ''}`}
+                onClick={() => canRetry && handleRetryAgent(agent.name)}
+                title={`${agent.label}: ${timedOut ? 'timed out' : status || 'pending'}${canRetry ? ' (click to retry)' : ''}`}
               >
                 {isRetryingThis ? (
                   <Loader2 className="h-3 w-3 animate-spin" />
                 ) : (
-                  getAgentIcon(agent, status)
+                  getAgentIcon(agent, status, timedOut)
                 )}
                 <span className="text-[9px] font-medium truncate w-full text-center">
                   {agent.label}
                 </span>
-                {isFailed && !isRetryingThis && (
-                  <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-destructive flex items-center justify-center">
+                {(status === 'failed' || timedOut) && !isRetryingThis && (
+                  <div className={cn(
+                    "absolute -top-1 -right-1 w-3 h-3 rounded-full flex items-center justify-center",
+                    timedOut ? "bg-amber-500" : "bg-destructive"
+                  )}>
                     <RefreshCw className="h-2 w-2 text-destructive-foreground" />
                   </div>
                 )}
@@ -290,12 +317,15 @@ export function InProgressAnalysis({ analysis, onRetry, onViewPartial }: InProgr
         </div>
         
         {/* Stats summary */}
-        <div className="flex gap-4 text-xs">
+        <div className="flex flex-wrap gap-4 text-xs">
           {stats.completed > 0 && (
             <span className="text-emerald-500">✓ {stats.completed} completed</span>
           )}
           {stats.running > 0 && (
             <span className="text-blue-500">● {stats.running} running</span>
+          )}
+          {stats.timedOut > 0 && (
+            <span className="text-amber-500">⏱ {stats.timedOut} timed out</span>
           )}
           {stats.failed > 0 && (
             <span className="text-destructive">✕ {stats.failed} failed</span>
