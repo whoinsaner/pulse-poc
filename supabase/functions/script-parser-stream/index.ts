@@ -50,6 +50,105 @@ async function cpuYield(): Promise<void> {
   await new Promise(resolve => setTimeout(resolve, 0));
 }
 
+// AI-powered PDF text extraction fallback using Lovable AI
+async function extractTextWithAI(
+  apiKey: string, 
+  pdfBase64: string, 
+  isComic: boolean,
+  onProgress?: (message: string) => void
+): Promise<{ text: string; success: boolean; error?: string }> {
+  try {
+    onProgress?.('Sending PDF to AI for text extraction...');
+    
+    const systemPrompt = isComic
+      ? `You are a comic script text extractor. Extract ALL text from this PDF comic script.
+Output the complete script text preserving:
+- Page numbers (PAGE 1, PAGE 2, etc.)
+- Panel descriptions (PANEL 1, PANEL 2, etc.)
+- Character names in UPPERCASE before their dialogue
+- All dialogue and captions
+- Sound effects and action descriptions
+Output ONLY the extracted text, no commentary.`
+      : `You are a screenplay text extractor. Extract ALL text from this PDF screenplay.
+Output the complete script text preserving:
+- Scene headings (INT./EXT. LOCATION - TIME)
+- Character names in UPPERCASE before dialogue
+- All dialogue including parentheticals
+- Action/description paragraphs
+- Transitions (CUT TO, FADE OUT, etc.)
+Output ONLY the extracted text, no commentary.`;
+
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { 
+            role: 'user', 
+            content: [
+              { 
+                type: 'text', 
+                text: 'Extract all text from this PDF script. Output ONLY the script text, preserving formatting.'
+              },
+              {
+                type: 'image_url',
+                image_url: {
+                  url: `data:application/pdf;base64,${pdfBase64}`
+                }
+              }
+            ]
+          }
+        ],
+        max_tokens: 16000,
+        temperature: 0.1,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[script-parser-stream] AI extraction failed:', response.status, errorText);
+      
+      if (response.status === 429) {
+        return { text: '', success: false, error: 'Rate limit exceeded. Please try again in a moment.' };
+      }
+      if (response.status === 402) {
+        return { text: '', success: false, error: 'AI credits exhausted. Please add credits to continue.' };
+      }
+      
+      return { text: '', success: false, error: `AI extraction failed: ${response.status}` };
+    }
+
+    const data = await response.json();
+    const extractedText = data.choices?.[0]?.message?.content || '';
+    
+    console.log(`[script-parser-stream] AI extraction complete: ${extractedText.length} chars`);
+    
+    if (extractedText.length > 200) {
+      onProgress?.(`AI extracted ${extractedText.length} characters of text`);
+      return { text: extractedText, success: true };
+    }
+    
+    return { 
+      text: extractedText, 
+      success: false, 
+      error: 'AI extraction returned insufficient text. PDF may be unsupported.' 
+    };
+    
+  } catch (error) {
+    console.error('[script-parser-stream] AI extraction error:', error);
+    return { 
+      text: '', 
+      success: false, 
+      error: error instanceof Error ? error.message : 'AI extraction failed' 
+    };
+  }
+}
+
 // Extract text from PDF using chunked regex-based extraction (Deno compatible)
 // This processes the PDF in chunks to avoid CPU time exceeded errors
 async function extractPDFText(arrayBuffer: ArrayBuffer): Promise<{ text: string; pageCount: number; success: boolean; error?: string }> {
@@ -91,7 +190,7 @@ async function extractPDFText(arrayBuffer: ArrayBuffer): Promise<{ text: string;
         const chunk = rawContent.slice(start, end);
         
         // Simple text extraction - look for parenthesized strings followed by Tj
-        const simpleTextRegex = /\(([^()]{1,200})\)\s*Tj/g;
+        const simpleTextRegex = /\(([^()]{1,200})\)\s*Tj/gi;
         let match;
         while ((match = simpleTextRegex.exec(chunk)) !== null && iterations < maxIterations) {
           iterations++;
@@ -103,6 +202,31 @@ async function extractPDFText(arrayBuffer: ArrayBuffer): Promise<{ text: string;
             .replace(/\\\\/g, '\\');
           if (text.length > 0 && text.match(/[a-zA-Z]/)) {
             textParts.push(text);
+          }
+        }
+        
+        // Also extract from TJ arrays (common in many PDFs)
+        const tjArrayRegex = /\[((?:\([^)]*\)|[-\d.]+\s*)+)\]\s*TJ/gi;
+        let tjMatch;
+        while ((tjMatch = tjArrayRegex.exec(chunk)) !== null && iterations < maxIterations) {
+          const stringMatches = tjMatch[1].match(/\(([^)]*)\)/g);
+          if (stringMatches) {
+            for (const sm of stringMatches.slice(0, 50)) { // Limit per array
+              const inner = sm.match(/\(([^)]*)\)/);
+              if (inner?.[1]) {
+                const text = inner[1]
+                  .replace(/\\n/g, '\n')
+                  .replace(/\\r/g, '')
+                  .replace(/\\\(/g, '(')
+                  .replace(/\\\)/g, ')')
+                  .replace(/\\\\/g, '\\');
+                if (text.length > 0 && text.match(/[a-zA-Z]/)) {
+                  textParts.push(text);
+                  iterations++;
+                }
+              }
+              if (iterations >= maxIterations) break;
+            }
           }
         }
         
@@ -851,32 +975,105 @@ serve(async (req) => {
             sendSSE(controller, 'progress', { stage: 'extract', percent: 90, message: `Extracted ${allScenes.length} scenes` });
             
           } else {
-            // Text extraction failed - likely scanned/image-based PDF requiring OCR
-            // Instead of using expensive AI vision, halt and ask user to upload text format
-            console.log('[script-parser-stream] Text extraction failed, halting - OCR not supported');
+            // Text extraction failed - try AI-powered extraction as fallback
+            console.log('[script-parser-stream] Regex extraction failed, trying AI fallback...');
             
-            sendSSE(controller, 'error', { 
-              code: 'OCR_REQUIRED',
-              message: 'This PDF appears to be scanned or image-based. Text extraction failed.',
-              recommendations: [
-                'Please upload a text-based PDF (created digitally, not scanned)',
-                'Or export your script as DOCX, Fountain (.fountain), or plain text (.txt)',
-                'Final Draft (.fdx) format is also supported'
-              ]
-            });
-            
-            // Close the stream with an error result
-            sendSSE(controller, 'result', {
-              success: false,
-              scenes: 0,
-              characters: 0,
-              error: 'OCR_REQUIRED',
-              message: 'Cannot parse scanned/image PDFs. Please upload a text-based format.',
-              extractionMethod: 'failed'
-            });
-            
-            controller.close();
-            return;
+            if (lovableApiKey && format === 'pdf') {
+              sendSSE(controller, 'progress', { 
+                stage: 'extract', 
+                percent: 40, 
+                message: 'Using AI vision to extract text from PDF...' 
+              });
+              
+              // Convert PDF to base64 for AI vision
+              const base64 = btoa(String.fromCharCode(...new Uint8Array(bytes)));
+              
+              const aiExtractResult = await extractTextWithAI(
+                lovableApiKey, 
+                base64, 
+                isComic,
+                (message) => {
+                  sendSSE(controller, 'progress', { stage: 'extract', percent: 60, message });
+                }
+              );
+              
+              if (aiExtractResult.success && aiExtractResult.text.length > 200) {
+                extractedText = aiExtractResult.text;
+                extractionSuccess = true;
+                extractionMethod = 'ai-vision';
+                usedAIRescue = true;
+                
+                sendSSE(controller, 'progress', { 
+                  stage: 'extract', 
+                  percent: 70, 
+                  message: `AI extracted ${aiExtractResult.text.length} characters` 
+                });
+                
+                // Now normalize and parse the AI-extracted text
+                const normalized = normalizeToFountain(extractedText, isComic);
+                rawText = normalized.fountainText;
+                
+                const parsed = isComic ? parseComicFormat(normalized.fountainText) : parseTextFormat(normalized.fountainText);
+                allScenes = parsed.scenes;
+                parsed.characters.forEach(c => allCharacters.set(c.name, c));
+                
+                sendSSE(controller, 'progress', { 
+                  stage: 'extract', 
+                  percent: 85, 
+                  message: `AI extraction found ${allScenes.length} scenes, ${allCharacters.size} characters` 
+                });
+                
+              } else {
+                // AI extraction also failed
+                console.log('[script-parser-stream] AI extraction failed:', aiExtractResult.error);
+                
+                sendSSE(controller, 'error', { 
+                  code: 'EXTRACTION_FAILED',
+                  message: aiExtractResult.error || 'Could not extract text from this PDF.',
+                  recommendations: [
+                    'This PDF may be scanned, image-based, or have an unsupported format.',
+                    'Try exporting your script as plain text (.txt) or Fountain (.fountain)',
+                    'Final Draft (.fdx) and DOCX formats are also well-supported.'
+                  ]
+                });
+                
+                sendSSE(controller, 'result', {
+                  success: false,
+                  scenes: 0,
+                  characters: 0,
+                  error: 'EXTRACTION_FAILED',
+                  message: 'Could not extract text from PDF. Please try a different format.',
+                  extractionMethod: 'failed'
+                });
+                
+                try { controller.close(); } catch (e) { /* already closed */ }
+                return;
+              }
+              
+            } else {
+              // No AI key available or not a PDF
+              sendSSE(controller, 'error', { 
+                code: 'EXTRACTION_FAILED',
+                message: 'Text extraction failed and AI fallback is not available.',
+                recommendations: [
+                  'Please upload a text-based PDF (created digitally, not scanned)',
+                  'Or export your script as DOCX, Fountain (.fountain), or plain text (.txt)',
+                  'Final Draft (.fdx) format is also supported'
+                ]
+              });
+              
+              sendSSE(controller, 'result', {
+                success: false,
+                scenes: 0,
+                characters: 0,
+                error: 'EXTRACTION_FAILED',
+                message: 'Cannot parse this file. Please upload a text-based format.',
+                extractionMethod: 'failed'
+              });
+              
+              try { controller.close(); } catch (e) { /* already closed */ }
+              return;
+            }
           }
         }
         
