@@ -1441,33 +1441,48 @@ MATURITY MAPPING:
 CRITICAL: You MUST respond with ONLY the JSON object. No text before or after. No markdown code blocks. Start your response with { and end with }.`;
 
 
-  const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'openai/gpt-5',
-      messages: [
-        { role: 'system', content: config.systemPrompt },
-        { role: 'user', content: userPrompt }
-      ],
-      max_completion_tokens: 6000,
-    }),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`AI API error: ${response.status} - ${errorText}`);
-  }
-
-  const aiResult = await response.json();
-  const content = aiResult.choices?.[0]?.message?.content || '';
+  // Retry logic for empty responses
+  const MAX_RETRIES = 2;
+  let content = '';
   
-  // Log content length and first/last chars for debugging
-  console.log(`[${agentName}] AI response length: ${content.length}, starts with: "${content.slice(0, 50).replace(/\n/g, '\\n')}"`);
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    if (attempt > 0) {
+      console.log(`[${agentName}] Retry attempt ${attempt} after empty response`);
+      await new Promise(r => setTimeout(r, 1000 * attempt)); // Backoff
+    }
+    
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'openai/gpt-5',
+        messages: [
+          { role: 'system', content: config.systemPrompt },
+          { role: 'user', content: userPrompt }
+        ],
+        max_completion_tokens: 6000,
+      }),
+    });
 
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`AI API error: ${response.status} - ${errorText}`);
+    }
+
+    const aiResult = await response.json();
+    content = aiResult.choices?.[0]?.message?.content || '';
+    
+    // Log content length and first chars for debugging
+    console.log(`[${agentName}] AI response length: ${content.length}, starts with: "${content.slice(0, 50).replace(/\n/g, '\\n')}"`);
+    
+    // If we got content, break out of retry loop
+    if (content && content.trim().length > 0) {
+      break;
+    }
+  }
   // Robust JSON extraction with multiple strategies
   const parsed = extractJsonFromResponse(content, agentName);
 
