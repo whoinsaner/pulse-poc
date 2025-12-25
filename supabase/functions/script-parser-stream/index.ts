@@ -800,18 +800,25 @@ serve(async (req) => {
 
   const { scriptId, format, filePath, scriptType } = await req.json() as ParseRequest;
   
-  console.log(`[script-parser-stream] Starting SSE parse for script ${scriptId}, format: ${format}`);
+  console.log(`[script-parser-stream] === STARTING SSE PARSE ===`);
+  console.log(`[script-parser-stream] scriptId: ${scriptId}`);
+  console.log(`[script-parser-stream] format: ${format}`);
+  console.log(`[script-parser-stream] filePath: ${filePath}`);
+  console.log(`[script-parser-stream] scriptType: ${scriptType}`);
 
   // Create SSE response stream
   const stream = new ReadableStream({
     async start(controller) {
       try {
+        console.log(`[script-parser-stream] Step 1: Initializing Supabase client`);
         const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
         const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
         const supabase = createClient(supabaseUrl, supabaseServiceKey);
         const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
+        console.log(`[script-parser-stream] Supabase initialized, AI key available: ${!!lovableApiKey}`);
         
         // Stage 1: Download
+        console.log(`[script-parser-stream] Step 2: Downloading file from storage`);
         sendSSE(controller, 'stage', { stage: 'download', message: 'Downloading script from storage...' });
         
         const { data: fileData, error: downloadError } = await supabase.storage
@@ -819,11 +826,13 @@ serve(async (req) => {
           .download(filePath);
 
         if (downloadError) {
+          console.error(`[script-parser-stream] Download error:`, downloadError);
           throw new Error(`Failed to download: ${downloadError.message}`);
         }
         
         const fileSize = fileData.size;
         const expectedPages = estimatePageCount(fileSize, format);
+        console.log(`[script-parser-stream] Downloaded: ${fileSize} bytes, ~${expectedPages} pages`);
         
         sendSSE(controller, 'progress', { 
           stage: 'download', 
@@ -832,10 +841,13 @@ serve(async (req) => {
         });
 
         // Stage 2: Validate
+        console.log(`[script-parser-stream] Step 3: Validating file`);
         sendSSE(controller, 'stage', { stage: 'validate', message: 'Validating file format...' });
         
         const validation = validateFile(fileSize, format);
+        console.log(`[script-parser-stream] Validation: valid=${validation.valid}, warnings=${validation.warnings.length}`);
         if (validation.warnings.length > 0) {
+          console.log(`[script-parser-stream] Validation warnings:`, validation.warnings);
           sendSSE(controller, 'warning', { 
             warnings: validation.warnings, 
             recommendations: validation.recommendations 
@@ -845,9 +857,11 @@ serve(async (req) => {
         sendSSE(controller, 'progress', { stage: 'validate', percent: 100, message: 'Format validated' });
 
         // Stage 3: Extract content
+        console.log(`[script-parser-stream] Step 4: Extracting content for format: ${format}`);
         sendSSE(controller, 'stage', { stage: 'extract', message: 'Extracting script content...' });
         
         const isComic = scriptType === 'comic';
+        console.log(`[script-parser-stream] Script type: ${isComic ? 'comic' : 'screenplay'}`);
         let allScenes: Scene[] = [];
         let allCharacters: Map<string, Character> = new Map();
         let rawText = '';
@@ -856,8 +870,10 @@ serve(async (req) => {
         
         if (['fountain', 'highland', 'txt'].includes(format)) {
           // Text-based formats - parse directly
+          console.log(`[script-parser-stream] Processing text-based format: ${format}`);
           const textContent = await fileData.text();
           rawText = textContent;
+          console.log(`[script-parser-stream] Text content length: ${textContent.length} chars`);
           
           sendSSE(controller, 'progress', { stage: 'extract', percent: 50, message: 'Parsing text content...' });
           
@@ -865,20 +881,26 @@ serve(async (req) => {
           allScenes = parsed.scenes;
           parsed.characters.forEach(c => allCharacters.set(c.name, c));
           extractionMethod = 'regex';
+          console.log(`[script-parser-stream] Regex parse result: ${allScenes.length} scenes, ${allCharacters.size} characters`);
           
           // If parsing produced poor results, try AI rescue
           if (allScenes.length < 3 && lovableApiKey) {
+            console.log(`[script-parser-stream] AI rescue triggered: only ${allScenes.length} scenes found`);
             sendSSE(controller, 'progress', { stage: 'extract', percent: 70, message: 'Using AI to improve extraction...' });
             
             const aiResult = await parseWithAI(lovableApiKey, textContent, isComic, expectedPages, (progress, message) => {
               sendSSE(controller, 'progress', { stage: 'extract', percent: 70 + (progress * 0.3), message });
             });
+            console.log(`[script-parser-stream] AI result: ${aiResult.scenes.length} scenes, ${aiResult.characters.length} characters`);
             
             if (aiResult.scenes.length > allScenes.length) {
+              console.log(`[script-parser-stream] Using AI results (${aiResult.scenes.length} > ${allScenes.length})`);
               allScenes = aiResult.scenes;
               allCharacters = new Map(aiResult.characters.map(c => [c.name, c]));
               usedAIRescue = true;
               extractionMethod = 'ai';
+            } else {
+              console.log(`[script-parser-stream] Keeping regex results`);
             }
           }
           
@@ -1096,6 +1118,8 @@ serve(async (req) => {
         });
 
         // Stage 5: Save to database
+        console.log(`[script-parser-stream] Step 6: Saving to database`);
+        console.log(`[script-parser-stream] Final counts: ${allScenes.length} scenes, ${characters.length} characters`);
         sendSSE(controller, 'stage', { stage: 'finalize', message: 'Saving extracted data...' });
         
         // Re-number scenes
@@ -1104,6 +1128,7 @@ serve(async (req) => {
         });
         
         // Insert scenes
+        console.log(`[script-parser-stream] Inserting ${allScenes.length} scenes`);
         if (allScenes.length > 0) {
           const scenesWithScriptId = allScenes.map(scene => ({
             ...scene,
@@ -1116,12 +1141,16 @@ serve(async (req) => {
 
           if (scenesError) {
             console.error('[script-parser-stream] Scenes insert error:', scenesError);
+            sendSSE(controller, 'warning', { message: 'Some scenes could not be saved' });
+          } else {
+            console.log(`[script-parser-stream] Scenes inserted successfully`);
           }
         }
         
         sendSSE(controller, 'progress', { stage: 'finalize', percent: 40, message: 'Scenes saved...' });
 
         // Insert characters
+        console.log(`[script-parser-stream] Inserting ${characters.length} characters`);
         if (characters.length > 0) {
           const charactersWithScriptId = characters.map(char => ({
             ...char,
@@ -1134,15 +1163,20 @@ serve(async (req) => {
 
           if (charsError) {
             console.error('[script-parser-stream] Characters insert error:', charsError);
+            sendSSE(controller, 'warning', { message: 'Some characters could not be saved' });
+          } else {
+            console.log(`[script-parser-stream] Characters inserted successfully`);
           }
         }
         
         sendSSE(controller, 'progress', { stage: 'finalize', percent: 70, message: 'Characters saved...' });
 
         // Build and save narrative graph
+        console.log(`[script-parser-stream] Building narrative graph`);
         const narrativeGraph = buildNarrativeGraph(allScenes, characters);
+        console.log(`[script-parser-stream] Graph: ${narrativeGraph.nodes.length} nodes, ${narrativeGraph.edges.length} edges`);
         
-        await supabase.from('narrative_graphs').insert({
+        const { error: graphError } = await supabase.from('narrative_graphs').insert({
           script_id: scriptId,
           graph_type: 'scene_flow',
           nodes: narrativeGraph.nodes,
@@ -1155,16 +1189,28 @@ serve(async (req) => {
           },
         });
 
+        if (graphError) {
+          console.error('[script-parser-stream] Graph insert error:', graphError);
+          sendSSE(controller, 'warning', { message: 'Narrative graph could not be saved' });
+        } else {
+          console.log(`[script-parser-stream] Narrative graph inserted successfully`);
+        }
+
         // Update script with page count
+        console.log(`[script-parser-stream] Updating script page count`);
         const extractedPages = Math.max(
           ...allScenes.map(s => s.page_end || s.page_start || 0),
           Math.ceil(rawText.length / 3000)
         );
         
-        await supabase
+        const { error: updateError } = await supabase
           .from('scripts')
           .update({ page_count: extractedPages })
           .eq('id', scriptId);
+
+        if (updateError) {
+          console.error('[script-parser-stream] Script update error:', updateError);
+        }
 
         sendSSE(controller, 'progress', { stage: 'finalize', percent: 100, message: 'All data saved!' });
 
@@ -1186,17 +1232,26 @@ serve(async (req) => {
           coveragePercent: Math.round(coveragePercent),
         });
 
-        console.log(`[script-parser-stream] Complete: ${allScenes.length} scenes, ${characters.length} characters, method: ${extractionMethod}`);
+        console.log(`[script-parser-stream] === COMPLETE ===`);
+        console.log(`[script-parser-stream] Scenes: ${allScenes.length}, Characters: ${characters.length}, Method: ${extractionMethod}`);
         
       } catch (error) {
-        console.error('[script-parser-stream] Error:', error);
+        console.error('[script-parser-stream] === ERROR ===');
+        console.error('[script-parser-stream] Error type:', error?.constructor?.name);
+        console.error('[script-parser-stream] Error message:', error instanceof Error ? error.message : String(error));
+        console.error('[script-parser-stream] Error stack:', error instanceof Error ? error.stack : 'no stack');
         sendSSE(controller, 'error', {
           success: false,
           message: error instanceof Error ? error.message : 'Unknown error',
           readyForAnalysis: false,
         });
       } finally {
-        controller.close();
+        console.log(`[script-parser-stream] Closing stream controller`);
+        try {
+          controller.close();
+        } catch (closeError) {
+          console.log(`[script-parser-stream] Controller already closed:`, closeError);
+        }
       }
     }
   });
@@ -1437,22 +1492,60 @@ async function parseWithAI(
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'openai/gpt-5',
+        model: 'google/gemini-2.5-flash',
         messages: [
           {
             role: 'system',
-            content: `Parse this ${isComic ? 'comic script' : 'screenplay'}. Return JSON with scenes and characters arrays. Expected ~${expectedPages} pages.`
+            content: `You are a professional script parser. Parse this ${isComic ? 'comic script' : 'screenplay'} and extract ALL scenes and characters.
+
+Return ONLY valid JSON with this exact structure:
+{
+  "scenes": [
+    {
+      "scene_number": 1,
+      "heading": "INT. LOCATION - DAY",
+      "int_ext": "INT",
+      "location": "LOCATION NAME",
+      "time_of_day": "DAY",
+      "description": "Brief scene description",
+      "page_start": 1,
+      "page_end": 2
+    }
+  ],
+  "characters": [
+    {
+      "name": "CHARACTER NAME",
+      "dialogue_count": 10,
+      "scene_count": 5,
+      "first_appearance": 1,
+      "description": "Brief character description"
+    }
+  ]
+}
+
+Rules:
+- Extract EVERY scene heading (INT./EXT. LOCATION - TIME)
+- int_ext must be "INT", "EXT", or "INT/EXT"
+- time_of_day: "DAY", "NIGHT", "DAWN", "DUSK", "MORNING", "EVENING", or null
+- Extract ALL speaking characters with accurate dialogue counts
+- Estimate page_start/page_end based on script position
+- Expected ~${expectedPages} pages total`
           },
           {
             role: 'user',
             content: content.substring(0, 80000)
           }
         ],
-        max_completion_tokens: 16000,
+        max_tokens: 16000,
+        temperature: 0.1,
       }),
     });
     
-    if (!res.ok) throw new Error(`AI API error: ${res.status}`);
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error('[script-parser-stream] AI API error:', res.status, errorText);
+      throw new Error(`AI API error: ${res.status}`);
+    }
     return res.json();
   });
   
