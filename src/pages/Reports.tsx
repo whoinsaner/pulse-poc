@@ -1,14 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/lib/auth';
 import { supabase } from '@/integrations/supabase/client';
-import { Report, ReportData, LENS_CONFIG, StakeholderLens } from '@/types/database';
+import { Report, ReportData, LENS_CONFIG, StakeholderLens, AnalysisStatus, AgentProgress } from '@/types/database';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScoreRing } from '@/components/ScoreRing';
 import { CategoryRadarChart } from '@/components/charts/CategoryRadarChart';
-import { ArrowLeft, FileText, Calendar, Eye, Trash2 } from 'lucide-react';
+import { InProgressAnalysis } from '@/components/report/InProgressAnalysis';
+import { ArrowLeft, FileText, Calendar, Eye, Trash2, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import {
@@ -30,10 +31,27 @@ interface ReportWithScript extends Report {
   };
 }
 
+interface AnalysisRun {
+  id: string;
+  script_id: string;
+  status: AnalysisStatus;
+  agent_progress: Record<string, AgentProgress> | null;
+  error_message: string | null;
+  created_at: string;
+  started_at: string | null;
+  completed_at: string | null;
+  scripts?: {
+    title: string;
+    genre: string | null;
+    script_type: string;
+  };
+}
+
 export default function Reports() {
   const navigate = useNavigate();
   const { user, profile, isLoading: authLoading } = useAuth();
   const [reports, setReports] = useState<ReportWithScript[]>([]);
+  const [inProgressAnalyses, setInProgressAnalyses] = useState<AnalysisRun[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedLens, setSelectedLens] = useState<StakeholderLens>('studio_executive');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -46,36 +64,96 @@ export default function Reports() {
     }
   }, [user, authLoading, navigate]);
 
-  useEffect(() => {
-    async function fetchReports() {
-      if (!profile?.current_organization_id) return;
+  const fetchData = useCallback(async () => {
+    if (!profile?.current_organization_id) return;
 
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('reports')
-        .select(`
-          *,
-          scripts (
-            title,
-            genre,
-            script_type
-          )
-        `)
-        .eq('organization_id', profile.current_organization_id)
-        .order('created_at', { ascending: false });
+    setLoading(true);
+    
+    // Fetch completed reports
+    const { data: reportsData, error: reportsError } = await supabase
+      .from('reports')
+      .select(`
+        *,
+        scripts (
+          title,
+          genre,
+          script_type
+        )
+      `)
+      .eq('organization_id', profile.current_organization_id)
+      .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Error fetching reports:', error);
-        setLoading(false);
-        return;
-      }
+    if (reportsError) {
+      console.error('Error fetching reports:', reportsError);
+    } else {
+      setReports(reportsData as unknown as ReportWithScript[]);
+    }
+    
+    // Fetch in-progress/failed analyses (not completed)
+    const { data: analysesData, error: analysesError } = await supabase
+      .from('analysis_runs')
+      .select(`
+        *,
+        scripts!inner (
+          title,
+          genre,
+          script_type,
+          organization_id
+        )
+      `)
+      .eq('scripts.organization_id', profile.current_organization_id)
+      .in('status', ['pending', 'processing', 'failed'])
+      .order('created_at', { ascending: false });
 
-      setReports(data as unknown as ReportWithScript[]);
-      setLoading(false);
+    if (analysesError) {
+      console.error('Error fetching analyses:', analysesError);
+    } else {
+      setInProgressAnalyses(analysesData as unknown as AnalysisRun[]);
     }
 
-    fetchReports();
+    setLoading(false);
   }, [profile?.current_organization_id]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+  
+  // Subscribe to realtime updates for in-progress analyses
+  useEffect(() => {
+    if (!profile?.current_organization_id || inProgressAnalyses.length === 0) return;
+    
+    const analysisIds = inProgressAnalyses.map(a => a.id);
+    
+    const channel = supabase
+      .channel('analysis-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'analysis_runs',
+        },
+        (payload) => {
+          const updated = payload.new as AnalysisRun;
+          if (analysisIds.includes(updated.id)) {
+            if (updated.status === 'completed') {
+              // Refresh to get the new report
+              fetchData();
+            } else {
+              // Update in place
+              setInProgressAnalyses(prev => 
+                prev.map(a => a.id === updated.id ? { ...a, ...updated } : a)
+              );
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [profile?.current_organization_id, inProgressAnalyses, fetchData]);
 
   const handleDeleteClick = (e: React.MouseEvent, report: ReportWithScript) => {
     e.stopPropagation();
@@ -132,10 +210,11 @@ export default function Reports() {
                 <ArrowLeft className="h-5 w-5" />
               </Button>
               <div>
-                <h1 className="text-xl font-bold">Analysis Reports</h1>
-                <p className="text-sm text-muted-foreground">
-                  {reports.length} report{reports.length !== 1 ? 's' : ''} completed
-                </p>
+              <h1 className="text-xl font-bold">Analysis Reports</h1>
+              <p className="text-sm text-muted-foreground">
+                {reports.length} completed
+                {inProgressAnalyses.length > 0 && ` • ${inProgressAnalyses.length} in progress`}
+              </p>
               </div>
             </div>
             <Button onClick={() => navigate('/upload')}>
@@ -166,119 +245,151 @@ export default function Reports() {
       </div>
 
       {/* Reports Grid */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12 space-y-8">
         {loading ? (
           <ReportsListSkeleton />
-        ) : reports.length === 0 ? (
-          <Card className="bg-card/50 border-dashed">
-            <CardContent className="flex flex-col items-center justify-center py-16">
-              <FileText className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No Reports Yet</h3>
-              <p className="text-muted-foreground text-center mb-4">
-                Upload and analyze scripts to see your reports here.
-              </p>
-              <Button onClick={() => navigate('/upload')}>Upload Script</Button>
-            </CardContent>
-          </Card>
         ) : (
-          <div className="grid gap-6">
-            {reports.map((report, index) => {
-              const reportData = report.full_report_data as ReportData;
-              const lensScore = reportData?.lensScores?.[selectedLens] ?? report.overall_score ?? 0;
-              
-              return (
-                <Card
-                  key={report.id}
-                  className={cn(
-                    'overflow-hidden transition-all duration-300 hover:shadow-lg hover:border-primary/30 cursor-pointer animate-fade-up',
-                    'group'
-                  )}
-                  style={{ animationDelay: `${index * 75}ms` }}
-                  onClick={() => navigate(`/report/${report.analysis_run_id}`)}
-                >
-                  <div className="grid lg:grid-cols-3 gap-6">
-                    {/* Left: Score and metadata */}
-                    <CardHeader className="lg:col-span-1 flex flex-row items-start gap-4 pb-0 lg:pb-6">
-                      <ScoreRing
-                        score={lensScore}
-                        size="lg"
-                        showLabel
-                        label={LENS_CONFIG[selectedLens].label}
-                      />
-                      <div className="flex-1 min-w-0">
-                        <CardTitle className="text-lg mb-1 truncate group-hover:text-primary transition-colors">
-                          {report.scripts?.title || report.title}
-                        </CardTitle>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Calendar className="h-3.5 w-3.5" />
-                          {new Date(report.created_at).toLocaleDateString()}
-                        </div>
-                        <div className="flex flex-wrap gap-2 mt-3">
-                          {report.scripts?.genre && (
-                            <span className="px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground text-xs">
-                              {report.scripts.genre}
-                            </span>
-                          )}
-                          {report.scripts?.script_type && (
-                            <span className="px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground text-xs capitalize">
-                              {report.scripts.script_type}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </CardHeader>
+          <>
+            {/* In-Progress Analyses Section */}
+            {inProgressAnalyses.length > 0 && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin text-amber-500" />
+                  <h2 className="text-lg font-semibold">In Progress & Partial Analyses</h2>
+                </div>
+                <div className="grid gap-4">
+                  {inProgressAnalyses.map((analysis) => (
+                    <InProgressAnalysis
+                      key={analysis.id}
+                      analysis={analysis}
+                      onRetry={fetchData}
+                      onViewPartial={
+                        Object.values(analysis.agent_progress || {}).some(a => a?.status === 'completed')
+                          ? () => navigate(`/report/${analysis.id}`)
+                          : undefined
+                      }
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* Completed Reports Section */}
+            {reports.length === 0 && inProgressAnalyses.length === 0 ? (
+              <Card className="bg-card/50 border-dashed">
+                <CardContent className="flex flex-col items-center justify-center py-16">
+                  <FileText className="h-12 w-12 text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">No Reports Yet</h3>
+                  <p className="text-muted-foreground text-center mb-4">
+                    Upload and analyze scripts to see your reports here.
+                  </p>
+                  <Button onClick={() => navigate('/upload')}>Upload Script</Button>
+                </CardContent>
+              </Card>
+            ) : reports.length > 0 && (
+              <div className="space-y-4">
+                <h2 className="text-lg font-semibold">Completed Reports</h2>
+                <div className="grid gap-6">
+                  {reports.map((report, index) => {
+                    const reportData = report.full_report_data as ReportData;
+                    const lensScore = reportData?.lensScores?.[selectedLens] ?? report.overall_score ?? 0;
+                    
+                    return (
+                      <Card
+                        key={report.id}
+                        className={cn(
+                          'overflow-hidden transition-all duration-300 hover:shadow-lg hover:border-primary/30 cursor-pointer animate-fade-up',
+                          'group'
+                        )}
+                        style={{ animationDelay: `${index * 75}ms` }}
+                        onClick={() => navigate(`/report/${report.analysis_run_id}`)}
+                      >
+                        <div className="grid lg:grid-cols-3 gap-6">
+                          {/* Left: Score and metadata */}
+                          <CardHeader className="lg:col-span-1 flex flex-row items-start gap-4 pb-0 lg:pb-6">
+                            <ScoreRing
+                              score={lensScore}
+                              size="lg"
+                              showLabel
+                              label={LENS_CONFIG[selectedLens].label}
+                            />
+                            <div className="flex-1 min-w-0">
+                              <CardTitle className="text-lg mb-1 truncate group-hover:text-primary transition-colors">
+                                {report.scripts?.title || report.title}
+                              </CardTitle>
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <Calendar className="h-3.5 w-3.5" />
+                                {new Date(report.created_at).toLocaleDateString()}
+                              </div>
+                              <div className="flex flex-wrap gap-2 mt-3">
+                                {report.scripts?.genre && (
+                                  <span className="px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground text-xs">
+                                    {report.scripts.genre}
+                                  </span>
+                                )}
+                                {report.scripts?.script_type && (
+                                  <span className="px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground text-xs capitalize">
+                                    {report.scripts.script_type}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </CardHeader>
 
-                    {/* Middle: Radar Chart */}
-                    <CardContent className="lg:col-span-1 pt-4 lg:pt-6">
-                      {reportData?.categoryScores && Object.keys(reportData.categoryScores).length > 0 && (
-                        <CategoryRadarChart
-                          categoryScores={reportData.categoryScores}
-                          compact
-                        />
-                      )}
-                    </CardContent>
-
-                    {/* Right: Quick stats and action */}
-                    <CardContent className="lg:col-span-1 pt-0 lg:pt-6 flex flex-col justify-between">
-                      <div className="grid grid-cols-2 gap-3">
-                        {Object.entries(reportData?.lensScores || {}).slice(0, 4).map(([lens, score]) => (
-                          <div
-                            key={lens}
-                            className={cn(
-                              'p-2 rounded-lg text-center',
-                              lens === selectedLens ? 'bg-primary/10' : 'bg-muted/50'
+                          {/* Middle: Radar Chart */}
+                          <CardContent className="lg:col-span-1 pt-4 lg:pt-6">
+                            {reportData?.categoryScores && Object.keys(reportData.categoryScores).length > 0 && (
+                              <CategoryRadarChart
+                                categoryScores={reportData.categoryScores}
+                                compact
+                              />
                             )}
-                          >
-                            <p className="text-xs text-muted-foreground truncate">
-                              {LENS_CONFIG[lens as StakeholderLens]?.label}
-                            </p>
-                            <p className="text-lg font-bold">{Math.round(score as number)}</p>
-                          </div>
-                        ))}
-                      </div>
-                      <div className="flex gap-2 mt-4">
-                        <Button 
-                          variant="outline" 
-                          className="flex-1 group-hover:bg-primary group-hover:text-primary-foreground transition-colors"
-                        >
-                          <Eye className="h-4 w-4 mr-2" />
-                          View Report
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                          onClick={(e) => handleDeleteClick(e, report)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </div>
-                </Card>
-              );
-            })}
-          </div>
+                          </CardContent>
+
+                          {/* Right: Quick stats and action */}
+                          <CardContent className="lg:col-span-1 pt-0 lg:pt-6 flex flex-col justify-between">
+                            <div className="grid grid-cols-2 gap-3">
+                              {Object.entries(reportData?.lensScores || {}).slice(0, 4).map(([lens, score]) => (
+                                <div
+                                  key={lens}
+                                  className={cn(
+                                    'p-2 rounded-lg text-center',
+                                    lens === selectedLens ? 'bg-primary/10' : 'bg-muted/50'
+                                  )}
+                                >
+                                  <p className="text-xs text-muted-foreground truncate">
+                                    {LENS_CONFIG[lens as StakeholderLens]?.label}
+                                  </p>
+                                  <p className="text-lg font-bold">{Math.round(score as number)}</p>
+                                </div>
+                              ))}
+                            </div>
+                            <div className="flex gap-2 mt-4">
+                              <Button 
+                                variant="outline" 
+                                className="flex-1 group-hover:bg-primary group-hover:text-primary-foreground transition-colors"
+                              >
+                                <Eye className="h-4 w-4 mr-2" />
+                                View Report
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                                onClick={(e) => handleDeleteClick(e, report)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </CardContent>
+                        </div>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </>
         )}
       </main>
 
