@@ -22,17 +22,19 @@ import {
   MoreVertical,
   Play,
   Trash2,
-  BarChart3,
+  Eye,
 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { AnalysisTrigger } from '@/components/AnalysisTrigger';
+import { ScriptContentViewer } from '@/components/ScriptContentViewer';
 import type { Script, ScriptFormat, ScriptType } from '@/types/database';
 
 const FORMAT_LABELS: Record<ScriptFormat, string> = {
@@ -61,6 +63,7 @@ export default function Scripts() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedScript, setSelectedScript] = useState<Script | null>(null);
   const [showAnalyzeDialog, setShowAnalyzeDialog] = useState(false);
+  const [showContentDialog, setShowContentDialog] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -127,6 +130,11 @@ export default function Scripts() {
   const handleAnalyze = (script: Script) => {
     setSelectedScript(script);
     setShowAnalyzeDialog(true);
+  };
+
+  const handleViewContent = (script: Script) => {
+    setSelectedScript(script);
+    setShowContentDialog(true);
   };
 
   if (authLoading) {
@@ -220,7 +228,7 @@ export default function Scripts() {
                           <MoreVertical className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
+                      <DropdownMenuContent align="end" className="z-[100]">
                         <DropdownMenuItem onClick={(e) => {
                           e.stopPropagation();
                           handleAnalyze(script);
@@ -228,17 +236,27 @@ export default function Scripts() {
                           <Play className="h-4 w-4 mr-2" />
                           Analyze
                         </DropdownMenuItem>
+                        <DropdownMenuItem onClick={(e) => {
+                          e.stopPropagation();
+                          handleViewContent(script);
+                        }}>
+                          <Eye className="h-4 w-4 mr-2" />
+                          View Content
+                        </DropdownMenuItem>
                         {userRole === 'admin' && (
-                          <DropdownMenuItem
-                            className="text-destructive"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDelete(script.id);
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete
-                          </DropdownMenuItem>
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-destructive"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDelete(script.id);
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </>
                         )}
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -289,6 +307,21 @@ export default function Scripts() {
                   setShowAnalyzeDialog(false);
                   navigate(`/reports/${runId}`);
                 }}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* View Content Dialog */}
+        <Dialog open={showContentDialog} onOpenChange={setShowContentDialog}>
+          <DialogContent className="max-w-3xl max-h-[85vh]">
+            <DialogHeader>
+              <DialogTitle>{selectedScript?.title} - Extracted Content</DialogTitle>
+            </DialogHeader>
+            {selectedScript && (
+              <ScriptContentViewer
+                scriptId={selectedScript.id}
+                scriptTitle={selectedScript.title}
               />
             )}
           </DialogContent>
