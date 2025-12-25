@@ -9,8 +9,9 @@ const corsHeaders = {
 interface AnalyzeRequest {
   scriptId: string;
   analysisRunId: string;
-  mode?: 'quick' | 'deep'; // NEW: analysis mode
+  mode?: 'quick' | 'deep';
   forceAnalysis?: boolean;
+  resume?: boolean; // Resume failed/pending agents only
 }
 
 // UASF Output Contract
@@ -782,9 +783,9 @@ serve(async (req) => {
   }
 
   try {
-    const { scriptId, analysisRunId, mode = 'deep', forceAnalysis = false } = await req.json() as AnalyzeRequest;
+    const { scriptId, analysisRunId, mode = 'deep', forceAnalysis = false, resume = false } = await req.json() as AnalyzeRequest;
     
-    console.log(`[analyze-script] Starting ${mode.toUpperCase()} analysis for script ${scriptId}, run ${analysisRunId}`);
+    console.log(`[analyze-script] Starting ${mode.toUpperCase()} analysis for script ${scriptId}, run ${analysisRunId}, resume: ${resume}`);
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -815,7 +816,7 @@ serve(async (req) => {
     ];
     
     // Filter agents based on script type
-    const agentsToRun = Object.entries(AGENTS).filter(([agentName]) => {
+    let agentsToRun = Object.entries(AGENTS).filter(([agentName]) => {
       if (isComic) {
         return coreAgents.includes(agentName) || comicAgents.includes(agentName);
       } else {
@@ -823,18 +824,60 @@ serve(async (req) => {
       }
     });
 
+    // Handle resume mode - only run failed/pending agents
+    let existingProgress: Record<string, { status: string; error?: string; retryCount?: number }> = {};
+    
+    if (resume) {
+      const { data: existingRun } = await supabase
+        .from('analysis_runs')
+        .select('agent_progress')
+        .eq('id', analysisRunId)
+        .single();
+      
+      existingProgress = (existingRun?.agent_progress as typeof existingProgress) || {};
+      
+      // Filter to only failed or pending agents
+      const agentsToRetry = agentsToRun.filter(([agentName]) => {
+        const progress = existingProgress[agentName];
+        return !progress || progress.status === 'failed' || progress.status === 'pending';
+      });
+      
+      console.log(`[analyze-script] Resume mode: retrying ${agentsToRetry.length} of ${agentsToRun.length} agents`);
+      agentsToRun = agentsToRetry;
+      
+      if (agentsToRun.length === 0) {
+        console.log('[analyze-script] No agents to retry, all completed');
+        return new Response(
+          JSON.stringify({ success: true, status: 'completed', message: 'All agents already completed' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
     console.log(`[analyze-script] Script type: ${script.script_type}, mode: ${mode}, running ${agentsToRun.length} agents`);
 
-    // Update analysis run status
+    // Update analysis run status (preserve existing progress in resume mode)
+    const newAgentProgress = resume
+      ? {
+          ...existingProgress,
+          ...Object.fromEntries(agentsToRun.map(([agent]) => [agent, { 
+            status: 'pending', 
+            retryCount: (existingProgress[agent]?.retryCount || 0) + 1 
+          }])),
+          _meta: { mode, chunked: mode === 'quick', resumed: true }
+        }
+      : {
+          ...Object.fromEntries(agentsToRun.map(([agent]) => [agent, { status: 'pending', retryCount: 0 }])),
+          _meta: { mode, chunked: mode === 'quick' }
+        };
+    
     await supabase
       .from('analysis_runs')
       .update({ 
         status: 'processing', 
-        started_at: new Date().toISOString(),
-        agent_progress: {
-          ...Object.fromEntries(agentsToRun.map(([agent]) => [agent, { status: 'pending' }])),
-          _meta: { mode, chunked: mode === 'quick' }
-        }
+        started_at: resume ? undefined : new Date().toISOString(),
+        error_message: null,
+        agent_progress: newAgentProgress
       })
       .eq('id', analysisRunId);
 
@@ -1102,61 +1145,95 @@ async function runStandardAnalysis(
   agentsToRun: [string, any][],
   parameterMap: Map<string, any>
 ): Promise<Array<{ agent: string; success: boolean; error?: string }>> {
+  const MAX_AGENT_RETRIES = 2;
+  const RETRY_DELAY_MS = 2000;
+  
+  // Helper to check if an error is transient and worth retrying
+  const isTransientError = (error: Error): boolean => {
+    const msg = error.message.toLowerCase();
+    return (
+      msg.includes('timeout') ||
+      msg.includes('rate limit') ||
+      msg.includes('429') ||
+      msg.includes('503') ||
+      msg.includes('empty') ||
+      msg.includes('network') ||
+      msg.includes('connection')
+    );
+  };
+  
   const agentPromises = agentsToRun.map(async ([agentName, agentConfig]) => {
-    try {
-      await updateAgentProgress(supabase, analysisRunId, agentName, 'running');
-
-      const result = await runAgent(apiKey, agentName, agentConfig, scriptContext, parameterMap);
-
-      for (const score of result.scores) {
-        if (!score.parameterId) continue;
+    let lastError: Error | null = null;
+    
+    for (let attempt = 0; attempt <= MAX_AGENT_RETRIES; attempt++) {
+      try {
+        if (attempt > 0) {
+          console.log(`[${agentName}] Retry attempt ${attempt}/${MAX_AGENT_RETRIES}`);
+          await new Promise(r => setTimeout(r, RETRY_DELAY_MS * attempt)); // Exponential backoff
+        }
         
-        await supabase.from('parameter_scores').insert({
-          analysis_run_id: analysisRunId,
-          parameter_id: score.parameterId,
-          score: score.score,
-          confidence: score.confidence,
-          evidence: {
-            items: score.evidence,
-            maturity: score.maturity,
-            riskLevel: score.riskLevel,
-            fixCost: score.fixCost,
-            upsideImpact: score.upsideImpact,
-          },
-          rationale: score.rationale,
-          agent_name: agentName,
-        });
-      }
+        await updateAgentProgress(supabase, analysisRunId, agentName, 'running');
 
-      if (result.insights?.length) {
-        for (const insight of result.insights) {
-          await supabase.from('insights').insert({
+        const result = await runAgent(apiKey, agentName, agentConfig, scriptContext, parameterMap);
+
+        for (const score of result.scores) {
+          if (!score.parameterId) continue;
+          
+          await supabase.from('parameter_scores').insert({
             analysis_run_id: analysisRunId,
-            category: insight.category,
-            title: insight.title,
-            description: insight.description,
-            priority: insight.priority,
-            actionable: insight.actionable,
-            supporting_evidence: {
-              evidence: insight.supportingEvidence,
-              affectedStakeholders: insight.affectedStakeholders,
-              minimalFix: insight.minimalFix,
-              maximalFix: insight.maximalFix,
+            parameter_id: score.parameterId,
+            score: score.score,
+            confidence: score.confidence,
+            evidence: {
+              items: score.evidence,
+              maturity: score.maturity,
+              riskLevel: score.riskLevel,
+              fixCost: score.fixCost,
+              upsideImpact: score.upsideImpact,
             },
+            rationale: score.rationale,
+            agent_name: agentName,
           });
         }
-      }
 
-      await updateAgentProgress(supabase, analysisRunId, agentName, 'completed');
-      console.log(`[analyze-script] ${agentName} completed`);
-      
-      return { agent: agentName, success: true };
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      console.error(`[analyze-script] ${agentName} failed:`, errorMessage);
-      await updateAgentProgress(supabase, analysisRunId, agentName, 'failed', errorMessage);
-      return { agent: agentName, success: false, error: errorMessage };
+        if (result.insights?.length) {
+          for (const insight of result.insights) {
+            await supabase.from('insights').insert({
+              analysis_run_id: analysisRunId,
+              category: insight.category,
+              title: insight.title,
+              description: insight.description,
+              priority: insight.priority,
+              actionable: insight.actionable,
+              supporting_evidence: {
+                evidence: insight.supportingEvidence,
+                affectedStakeholders: insight.affectedStakeholders,
+                minimalFix: insight.minimalFix,
+                maximalFix: insight.maximalFix,
+              },
+            });
+          }
+        }
+
+        await updateAgentProgress(supabase, analysisRunId, agentName, 'completed');
+        console.log(`[analyze-script] ${agentName} completed${attempt > 0 ? ` (after ${attempt} retries)` : ''}`);
+        
+        return { agent: agentName, success: true };
+      } catch (err) {
+        lastError = err instanceof Error ? err : new Error(String(err));
+        console.error(`[analyze-script] ${agentName} attempt ${attempt + 1} failed:`, lastError.message);
+        
+        // Only retry on transient errors
+        if (!isTransientError(lastError) || attempt === MAX_AGENT_RETRIES) {
+          break;
+        }
+      }
     }
+    
+    // All retries exhausted or non-transient error
+    const errorMessage = lastError?.message || 'Unknown error';
+    await updateAgentProgress(supabase, analysisRunId, agentName, 'failed', errorMessage);
+    return { agent: agentName, success: false, error: errorMessage };
   });
 
   return Promise.all(agentPromises);
