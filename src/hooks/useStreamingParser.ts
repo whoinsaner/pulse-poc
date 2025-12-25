@@ -1,0 +1,249 @@
+import { useState, useCallback, useRef } from 'react';
+
+export interface ParsingEvent {
+  type: 'stage' | 'progress' | 'chunk' | 'warning' | 'complete' | 'error';
+  data: any;
+}
+
+export interface ParsingProgress {
+  stage: 'download' | 'validate' | 'extract' | 'characters' | 'finalize';
+  percent: number;
+  message: string;
+  totalChunks?: number;
+}
+
+export interface ChunkStatus {
+  current: number;
+  total: number;
+  status: 'processing' | 'complete' | 'failed';
+  scenesFound?: number;
+  pageRange?: string;
+  error?: string;
+}
+
+export interface ParsingResult {
+  success: boolean;
+  scenesCount?: number;
+  charactersCount?: number;
+  estimatedPages?: number;
+  extractedPages?: number;
+  isComplete?: boolean;
+  readyForAnalysis?: boolean;
+  aiAssisted?: boolean;
+  coveragePercent?: number;
+  errorMessage?: string;
+}
+
+export interface ParsingWarnings {
+  warnings: string[];
+  recommendations?: string[];
+  failedChunks?: number[];
+}
+
+interface UseStreamingParserOptions {
+  onStageChange?: (stage: string) => void;
+  onProgress?: (progress: ParsingProgress) => void;
+  onChunkUpdate?: (chunk: ChunkStatus) => void;
+  onWarning?: (warnings: ParsingWarnings) => void;
+  onComplete?: (result: ParsingResult) => void;
+  onError?: (error: string) => void;
+}
+
+export function useStreamingParser(options: UseStreamingParserOptions = {}) {
+  const [isActive, setIsActive] = useState(false);
+  const [currentStage, setCurrentStage] = useState<string>('');
+  const [progress, setProgress] = useState<ParsingProgress | null>(null);
+  const [chunks, setChunks] = useState<ChunkStatus[]>([]);
+  const [warnings, setWarnings] = useState<ParsingWarnings | null>(null);
+  const [result, setResult] = useState<ParsingResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  const startStreaming = useCallback(async (
+    scriptId: string,
+    format: string,
+    filePath: string,
+    scriptType: string
+  ) => {
+    setIsActive(true);
+    setCurrentStage('');
+    setProgress(null);
+    setChunks([]);
+    setWarnings(null);
+    setResult(null);
+    setError(null);
+
+    abortControllerRef.current = new AbortController();
+
+    try {
+      const response = await fetch(
+        `https://mrdgivlozwhujmyifbaj.supabase.co/functions/v1/script-parser-stream`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            scriptId,
+            format,
+            filePath,
+            scriptType,
+          }),
+          signal: abortControllerRef.current.signal,
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error: ${response.status}`);
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error('No response body');
+
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        
+        // Process complete SSE events
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || ''; // Keep incomplete line in buffer
+
+        let eventType = '';
+        let eventData = '';
+
+        for (const line of lines) {
+          if (line.startsWith('event: ')) {
+            eventType = line.slice(7);
+          } else if (line.startsWith('data: ')) {
+            eventData = line.slice(6);
+          } else if (line === '' && eventType && eventData) {
+            // Process complete event
+            try {
+              const data = JSON.parse(eventData);
+              handleEvent(eventType, data);
+            } catch (e) {
+              console.error('Failed to parse SSE data:', e);
+            }
+            eventType = '';
+            eventData = '';
+          }
+        }
+      }
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        console.log('Streaming aborted');
+      } else {
+        const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+        setError(errorMsg);
+        options.onError?.(errorMsg);
+      }
+    } finally {
+      setIsActive(false);
+    }
+  }, [options]);
+
+  const handleEvent = useCallback((type: string, data: any) => {
+    switch (type) {
+      case 'stage':
+        setCurrentStage(data.stage);
+        options.onStageChange?.(data.stage);
+        break;
+      
+      case 'progress':
+        const progressData: ParsingProgress = {
+          stage: data.stage,
+          percent: data.percent,
+          message: data.message,
+          totalChunks: data.totalChunks,
+        };
+        setProgress(progressData);
+        options.onProgress?.(progressData);
+        break;
+      
+      case 'chunk':
+        const chunkData: ChunkStatus = {
+          current: data.current,
+          total: data.total,
+          status: data.status,
+          scenesFound: data.scenesFound,
+          pageRange: data.pageRange,
+          error: data.error,
+        };
+        setChunks(prev => {
+          const existing = prev.findIndex(c => c.current === data.current);
+          if (existing >= 0) {
+            const updated = [...prev];
+            updated[existing] = chunkData;
+            return updated;
+          }
+          return [...prev, chunkData];
+        });
+        options.onChunkUpdate?.(chunkData);
+        break;
+      
+      case 'warning':
+        const warningData: ParsingWarnings = {
+          warnings: data.warnings || [],
+          recommendations: data.recommendations,
+          failedChunks: data.failedChunks,
+        };
+        setWarnings(warningData);
+        options.onWarning?.(warningData);
+        break;
+      
+      case 'complete':
+        const resultData: ParsingResult = {
+          success: data.success,
+          scenesCount: data.scenesCount,
+          charactersCount: data.charactersCount,
+          estimatedPages: data.estimatedPages,
+          extractedPages: data.extractedPages,
+          isComplete: data.isComplete,
+          readyForAnalysis: data.readyForAnalysis,
+          aiAssisted: data.aiAssisted,
+          coveragePercent: data.coveragePercent,
+        };
+        setResult(resultData);
+        options.onComplete?.(resultData);
+        break;
+      
+      case 'error':
+        setError(data.message);
+        options.onError?.(data.message);
+        break;
+    }
+  }, [options]);
+
+  const abort = useCallback(() => {
+    abortControllerRef.current?.abort();
+    setIsActive(false);
+  }, []);
+
+  const reset = useCallback(() => {
+    setIsActive(false);
+    setCurrentStage('');
+    setProgress(null);
+    setChunks([]);
+    setWarnings(null);
+    setResult(null);
+    setError(null);
+  }, []);
+
+  return {
+    isActive,
+    currentStage,
+    progress,
+    chunks,
+    warnings,
+    result,
+    error,
+    startStreaming,
+    abort,
+    reset,
+  };
+}

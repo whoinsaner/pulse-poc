@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDropzone } from 'react-dropzone';
-import { Upload, FileText, X, Loader2, Check, AlertTriangle, PlayCircle, RefreshCw, Eye } from 'lucide-react';
+import { Upload, FileText, X, Loader2, Check, AlertTriangle, PlayCircle, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Card } from '@/components/ui/card';
@@ -12,7 +12,8 @@ import { useAuth } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
 import { ScriptFormat, ScriptType } from '@/types/database';
 import { ScriptPreview } from '@/components/ScriptPreview';
-import { ParsingStatus } from '@/components/ParsingStatus';
+import { StreamingParsingStatus } from '@/components/StreamingParsingStatus';
+import { useStreamingParser } from '@/hooks/useStreamingParser';
 
 interface ScriptUploadProps {
   onUploadComplete?: (scriptId: string) => void;
@@ -70,6 +71,38 @@ export function ScriptUpload({ onUploadComplete, onClose }: ScriptUploadProps) {
   const [currentScriptId, setCurrentScriptId] = useState<string | null>(null);
   const [currentFilePath, setCurrentFilePath] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [fileSizeWarning, setFileSizeWarning] = useState<string | null>(null);
+
+  // Streaming parser hook
+  const streamingParser = useStreamingParser({
+    onComplete: (result) => {
+      setParseResult({
+        success: result.success,
+        scenesCount: result.scenesCount,
+        charactersCount: result.charactersCount,
+        estimatedPages: result.estimatedPages,
+        extractedPages: result.extractedPages,
+        isComplete: result.isComplete,
+        readyForAnalysis: result.readyForAnalysis,
+        aiAssisted: result.aiAssisted,
+      });
+      
+      if (result.readyForAnalysis) {
+        setUploadState('parsed');
+        toast({
+          title: 'Script Parsed Successfully',
+          description: `${result.scenesCount || 0} scenes and ${result.charactersCount || 0} characters extracted.`,
+        });
+      } else {
+        setUploadState('format_issues');
+        setError(`Extraction ${result.coveragePercent}% complete. Some content may be missing.`);
+      }
+    },
+    onError: (errorMsg) => {
+      setError(errorMsg);
+      setUploadState('error');
+    },
+  });
 
   const detectFormat = (filename: string): ScriptFormat | null => {
     const ext = filename.toLowerCase().match(/\.[^.]+$/)?.[0];
