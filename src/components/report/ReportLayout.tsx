@@ -7,6 +7,7 @@ import { LensSelector } from '@/components/LensToggle';
 import { ExportDialog } from '@/components/report/ExportDialog';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { toast } from 'sonner';
 import { 
   ArrowLeft, 
   Share2, 
@@ -18,9 +19,21 @@ import {
   BarChart3,
   Palette,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  AlertTriangle,
+  RefreshCw,
+  Loader2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+interface AgentProgress {
+  [agentName: string]: {
+    status: 'pending' | 'running' | 'completed' | 'failed';
+    error?: string;
+    completedAt?: string;
+    retryCount?: number;
+  };
+}
 
 interface ReportContextValue {
   report: Report | null;
@@ -52,6 +65,8 @@ export default function ReportLayout() {
   const [loading, setLoading] = useState(true);
   const [activeLens, setActiveLens] = useState<StakeholderLens>('studio_executive');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [agentProgress, setAgentProgress] = useState<AgentProgress | null>(null);
+  const [isRetrying, setIsRetrying] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -60,29 +75,84 @@ export default function ReportLayout() {
   }, [user, authLoading, navigate]);
 
   useEffect(() => {
-    async function fetchReport() {
+    async function fetchReportAndAnalysis() {
       if (!runId || !profile?.current_organization_id) return;
 
       setLoading(true);
-      const { data, error } = await supabase
-        .from('reports')
-        .select('*')
-        .eq('analysis_run_id', runId)
-        .eq('organization_id', profile.current_organization_id)
-        .single();
+      
+      // Fetch report and analysis run in parallel
+      const [reportResult, analysisResult] = await Promise.all([
+        supabase
+          .from('reports')
+          .select('*')
+          .eq('analysis_run_id', runId)
+          .eq('organization_id', profile.current_organization_id)
+          .single(),
+        supabase
+          .from('analysis_runs')
+          .select('agent_progress, status')
+          .eq('id', runId)
+          .single()
+      ]);
 
-      if (error) {
-        console.error('Error fetching report:', error);
+      if (reportResult.error) {
+        console.error('Error fetching report:', reportResult.error);
         setLoading(false);
         return;
       }
 
-      setReport(data as unknown as Report);
+      setReport(reportResult.data as unknown as Report);
+      
+      if (analysisResult.data?.agent_progress) {
+        setAgentProgress(analysisResult.data.agent_progress as AgentProgress);
+      }
+      
       setLoading(false);
     }
 
-    fetchReport();
+    fetchReportAndAnalysis();
   }, [runId, profile?.current_organization_id]);
+
+  // Calculate failed agents
+  const failedAgents = agentProgress 
+    ? Object.entries(agentProgress)
+        .filter(([name, data]) => name !== '_meta' && data.status === 'failed')
+        .map(([name]) => name)
+    : [];
+
+  const retryFailedAgents = async () => {
+    if (!runId || !report) return;
+    
+    setIsRetrying(true);
+    try {
+      const response = await supabase.functions.invoke('analyze-script', {
+        body: {
+          runId,
+          scriptId: report.script_id,
+          resume: true,
+          forceAnalysis: true
+        }
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+
+      toast.success('Retry started', {
+        description: `Retrying ${failedAgents.length} failed agent(s)...`
+      });
+
+      // Refresh page to show updated progress
+      setTimeout(() => window.location.reload(), 2000);
+    } catch (error) {
+      console.error('Retry error:', error);
+      toast.error('Failed to retry agents', {
+        description: error instanceof Error ? error.message : 'Unknown error'
+      });
+    } finally {
+      setIsRetrying(false);
+    }
+  };
 
   const reportData = report?.full_report_data as ReportData | null;
   const isComic = reportData?.scriptMetadata?.scriptType === 'comic';
@@ -226,25 +296,56 @@ export default function ReportLayout() {
           sidebarCollapsed ? "ml-16" : "ml-64"
         )}>
           {/* Top Header */}
-          <header className="sticky top-0 z-30 h-16 border-b border-border bg-background/95 backdrop-blur flex items-center justify-between px-6">
-            <div>
-              <h1 className="font-semibold text-lg truncate max-w-md">
-                {reportData.scriptMetadata?.title || report.title}
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                {currentNav.label}
-              </p>
-            </div>
+          <header className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur">
+            {/* Failed Agents Banner */}
+            {failedAgents.length > 0 && (
+              <div className="bg-destructive/10 border-b border-destructive/20 px-6 py-2 flex items-center justify-between">
+                <div className="flex items-center gap-2 text-sm">
+                  <AlertTriangle className="h-4 w-4 text-destructive" />
+                  <span className="text-destructive font-medium">
+                    {failedAgents.length} agent{failedAgents.length > 1 ? 's' : ''} failed:
+                  </span>
+                  <span className="text-muted-foreground">
+                    {failedAgents.slice(0, 3).join(', ')}
+                    {failedAgents.length > 3 && ` +${failedAgents.length - 3} more`}
+                  </span>
+                </div>
+                <Button 
+                  size="sm" 
+                  variant="destructive" 
+                  onClick={retryFailedAgents}
+                  disabled={isRetrying}
+                >
+                  {isRetrying ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                  )}
+                  Retry Failed
+                </Button>
+              </div>
+            )}
             
-            <div className="flex items-center gap-3">
-              {sidebarCollapsed && (
-                <LensSelector activeLens={activeLens} onLensChange={setActiveLens} compact />
-              )}
-              <Button variant="outline" size="sm">
-                <Share2 className="h-4 w-4 mr-2" />
-                Share
-              </Button>
-              <ExportDialog reportId={report.id} reportTitle={report.title} />
+            <div className="h-16 flex items-center justify-between px-6">
+              <div>
+                <h1 className="font-semibold text-lg truncate max-w-md">
+                  {reportData.scriptMetadata?.title || report.title}
+                </h1>
+                <p className="text-sm text-muted-foreground">
+                  {currentNav.label}
+                </p>
+              </div>
+              
+              <div className="flex items-center gap-3">
+                {sidebarCollapsed && (
+                  <LensSelector activeLens={activeLens} onLensChange={setActiveLens} compact />
+                )}
+                <Button variant="outline" size="sm">
+                  <Share2 className="h-4 w-4 mr-2" />
+                  Share
+                </Button>
+                <ExportDialog reportId={report.id} reportTitle={report.title} />
+              </div>
             </div>
           </header>
 
