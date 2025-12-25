@@ -173,7 +173,7 @@ export function AnalysisTrigger({
     };
   }, [analysisRunId, isAnalyzing, handleRealtimeUpdate]);
 
-  const startAnalysis = async (forceAnalysis = false, mode: 'quick' | 'deep' = 'deep') => {
+  const startAnalysis = async (forceAnalysis = false, mode: 'quick' | 'deep' = 'deep', resume = false, existingRunId?: string) => {
     if (!user) {
       toast({
         title: 'Authentication required',
@@ -187,33 +187,43 @@ export function AnalysisTrigger({
       setIsAnalyzing(true);
       setError(null);
       setStatus('pending');
-      setAgentProgress({});
+      
+      // Don't reset progress when resuming
+      if (!resume) {
+        setAgentProgress({});
+        setElapsedTime(0);
+      }
       setLastUpdated(null);
-      setElapsedTime(0);
 
-      // Create analysis run
-      const { data: run, error: createError } = await supabase
-        .from('analysis_runs')
-        .insert({
-          script_id: scriptId,
-          initiated_by: user.id,
-          status: 'pending',
-        })
-        .select()
-        .single();
+      let runId = existingRunId;
+      
+      if (!resume || !existingRunId) {
+        // Create new analysis run
+        const { data: run, error: createError } = await supabase
+          .from('analysis_runs')
+          .insert({
+            script_id: scriptId,
+            initiated_by: user.id,
+            status: 'pending',
+          })
+          .select()
+          .single();
 
-      if (createError) throw createError;
+        if (createError) throw createError;
+        runId = run.id;
+      }
 
-      setAnalysisRunId(run.id);
-      console.log('[AnalysisTrigger] Created analysis run:', run.id, 'mode:', mode, 'forceAnalysis:', forceAnalysis);
+      setAnalysisRunId(runId!);
+      console.log('[AnalysisTrigger] Created analysis run:', runId, 'mode:', mode, 'forceAnalysis:', forceAnalysis, 'resume:', resume);
 
       // Trigger analysis edge function (non-blocking)
       supabase.functions.invoke('analyze-script', {
         body: {
           scriptId,
-          analysisRunId: run.id,
-          mode, // Pass the analysis mode
+          analysisRunId: runId,
+          mode,
           forceAnalysis,
+          resume,
         },
       }).then(({ error: invokeError }) => {
         if (invokeError) {
@@ -233,6 +243,15 @@ export function AnalysisTrigger({
         variant: 'destructive',
       });
     }
+  };
+
+  const retryFailedAgents = () => {
+    if (!analysisRunId) return;
+    toast({
+      title: 'Retrying failed agents',
+      description: 'Attempting to re-run failed analysis agents...',
+    });
+    startAnalysis(false, 'deep', true, analysisRunId);
   };
 
   const getProgressStats = () => {
@@ -480,9 +499,24 @@ export function AnalysisTrigger({
       )}
 
       {status === 'completed' && analysisRunId && (
-        <Button onClick={() => onAnalysisComplete?.(analysisRunId)} className="w-full">
-          <CheckCircle className="h-4 w-4 mr-2" />
-          View Full Report
+        <div className="space-y-2">
+          {stats.failed > 0 && (
+            <Button onClick={retryFailedAgents} variant="outline" className="w-full">
+              <AlertTriangle className="h-4 w-4 mr-2 text-amber-500" />
+              Retry {stats.failed} Failed Agent{stats.failed > 1 ? 's' : ''}
+            </Button>
+          )}
+          <Button onClick={() => onAnalysisComplete?.(analysisRunId)} className="w-full">
+            <CheckCircle className="h-4 w-4 mr-2" />
+            View Full Report
+          </Button>
+        </div>
+      )}
+
+      {status === 'failed' && analysisRunId && stats.failed > 0 && (
+        <Button onClick={retryFailedAgents} className="w-full">
+          <AlertTriangle className="h-4 w-4 mr-2" />
+          Retry Failed Agents ({stats.failed})
         </Button>
       )}
     </div>
