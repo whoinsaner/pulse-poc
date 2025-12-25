@@ -12,6 +12,7 @@ import { useAuth } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
 import { ScriptFormat, ScriptType } from '@/types/database';
 import { ScriptPreview } from '@/components/ScriptPreview';
+import { ParsingStatus } from '@/components/ParsingStatus';
 
 interface ScriptUploadProps {
   onUploadComplete?: (scriptId: string) => void;
@@ -345,22 +346,34 @@ export function ScriptUpload({ onUploadComplete, onClose }: ScriptUploadProps) {
         </div>
       )}
 
-      {(uploadState === 'uploading' || uploadState === 'parsing') && (
+      {uploadState === 'uploading' && (
         <div className="space-y-6 text-center">
           <div className="w-20 h-20 mx-auto rounded-full bg-primary/10 flex items-center justify-center">
             <Loader2 className="h-10 w-10 text-primary animate-spin" />
           </div>
           <div>
-            <p className="text-lg font-medium">
-              {uploadState === 'uploading' ? 'Uploading script...' : 'Parsing script...'}
-            </p>
+            <p className="text-lg font-medium">Uploading script...</p>
             <p className="text-sm text-muted-foreground mt-1">
-              {uploadState === 'parsing'
-                ? 'Extracting scenes, characters, and validating format'
-                : 'Please wait while we upload your file'}
+              Please wait while we upload your file
             </p>
           </div>
           <Progress value={progress} className="w-full" />
+        </div>
+      )}
+
+      {uploadState === 'parsing' && (
+        <div className="space-y-6">
+          <div className="text-center mb-4">
+            <h3 className="text-lg font-semibold">Parsing Your Script</h3>
+            <p className="text-sm text-muted-foreground">
+              {title || selectedFile?.name}
+            </p>
+          </div>
+          
+          <ParsingStatus 
+            isActive={uploadState === 'parsing'} 
+            format={detectedFormat || undefined}
+          />
         </div>
       )}
 
