@@ -232,7 +232,7 @@ Return JSON ONLY in this exact format (no markdown, no explanation):
             content: `Parse this ${isComic ? 'comic script' : 'screenplay'} and extract all scenes and characters. The script may be poorly formatted:\n\n${content.substring(0, 80000)}`
           }
         ],
-        max_tokens: 16000,
+        max_completion_tokens: 16000,
       }),
     });
 
@@ -326,7 +326,7 @@ Return ONLY the corrected script text, no explanations.`
             content: `Fix the formatting of this ${isComic ? 'comic script' : 'screenplay'}:\n\n${content.substring(0, 30000)}`
           }
         ],
-        max_tokens: 32000,
+        max_completion_tokens: 32000,
       }),
     });
 
@@ -994,7 +994,7 @@ Only return valid JSON, no markdown or explanations.`
                 ]
               }
             ],
-            max_tokens: 16000,
+            max_completion_tokens: 16000,
           }),
         });
 
@@ -1091,7 +1091,7 @@ Only return valid JSON.`
                   content: `Parse this screenplay PDF section (base64): ${chunkBase64}`
                 }
               ],
-              max_tokens: 12000,
+              max_completion_tokens: 12000,
             }),
           });
 
@@ -1241,7 +1241,7 @@ Only return valid JSON.`
                 ]
               }
             ],
-            max_tokens: 16000,
+            max_completion_tokens: 16000,
           }),
         });
 
@@ -1317,7 +1317,7 @@ Return JSON: {"scenes": [...], "characters": [...], "extracted_text": "..."}`
                 },
                 { role: 'user', content: `Parse DOCX section: ${chunkBase64}` }
               ],
-              max_tokens: 10000,
+              max_completion_tokens: 10000,
             }),
           });
           if (!response.ok) throw new Error(`AI error: ${response.status}`);
@@ -1605,7 +1605,7 @@ Only return valid JSON.`
                 ]
               }
             ],
-            max_tokens: 16000,
+            max_completion_tokens: 16000,
           }),
         });
 
@@ -1681,7 +1681,7 @@ Return JSON: {"panels": [{"page": N, "panel": N, "description": "..."}], "charac
                 },
                 { role: 'user', content: `Parse comic PDF section: ${chunkBase64}` }
               ],
-              max_tokens: 10000,
+              max_completion_tokens: 10000,
             }),
           });
           if (!response.ok) throw new Error(`AI error: ${response.status}`);

@@ -32,6 +32,8 @@ export interface ParsingResult {
   aiAssisted?: boolean;
   coveragePercent?: number;
   errorMessage?: string;
+  errorCode?: string;
+  recommendations?: string[];
 }
 
 export interface ParsingWarnings {
@@ -278,8 +280,33 @@ export function useStreamingParser(options: UseStreamingParserOptions = {}) {
         break;
       
       case 'error':
+        const errorResult: ParsingResult = {
+          success: false,
+          errorMessage: data.message,
+          errorCode: data.code,
+          recommendations: data.recommendations,
+        };
+        setResult(errorResult);
         setError(data.message);
         options.onError?.(data.message);
+        options.onComplete?.(errorResult);
+        break;
+      
+      case 'result':
+        // Handle result event (used for early termination like OCR_REQUIRED)
+        const resultFromError: ParsingResult = {
+          success: data.success,
+          scenesCount: data.scenes,
+          charactersCount: data.characters,
+          errorMessage: data.message,
+          errorCode: data.error,
+        };
+        setResult(resultFromError);
+        if (!data.success) {
+          setError(data.message);
+          options.onError?.(data.message);
+        }
+        options.onComplete?.(resultFromError);
         break;
     }
   }, [options, updateEta]);

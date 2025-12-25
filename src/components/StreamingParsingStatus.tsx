@@ -216,8 +216,8 @@ export function StreamingParsingStatus({
       {/* Format tips */}
       {format && (
         <div className="text-xs text-muted-foreground text-center mt-4 p-2 bg-muted/50 rounded-lg">
-          {format === 'pdf' && '📄 PDF parsing uses AI vision for complex layouts...'}
-          {format === 'docx' && '📝 Word document extraction with AI assistance...'}
+          {format === 'pdf' && '📄 Extracting text from PDF...'}
+          {format === 'docx' && '📝 Extracting text from Word document...'}
           {format === 'fdx' && '🎬 Final Draft XML provides best accuracy...'}
           {format === 'fountain' && '⛲ Fountain format for optimal parsing...'}
           {(format === 'txt' || format === 'highland') && '📜 Processing text-based format...'}
