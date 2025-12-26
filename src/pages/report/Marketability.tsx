@@ -1,50 +1,81 @@
-import { useReport } from '@/components/report/ReportLayout';
+import { useOutletContext } from 'react-router-dom';
+import { ReportData, StakeholderLens } from '@/types/database';
 import { 
   SectionHeader, 
   ScoreDisplay, 
   VerdictBox,
+  ScoreBar,
+  SubSectionHeader,
   StrengthWeaknessList,
   RecommendationCard
 } from '@/components/report/ui';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { TrendingUp, Target, DollarSign, Globe } from 'lucide-react';
+import { TrendingUp, Target, Globe } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-const Marketability = () => {
-  const { reportData } = useReport();
+interface ReportContextValue {
+  reportData: ReportData;
+  activeLens: StakeholderLens;
+  currentScore: number;
+}
 
+export default function Marketability() {
+  const { reportData, currentScore } = useOutletContext<ReportContextValue>();
+
+  // Get market-related parameters
+  const marketParams = reportData.parameterScores?.filter(p => 
+    p.category?.toLowerCase().includes('market') || 
+    p.parameterName?.toLowerCase().includes('commercial') ||
+    p.parameterName?.toLowerCase().includes('audience') ||
+    p.parameterName?.toLowerCase().includes('franchise') ||
+    p.parameterName?.toLowerCase().includes('appeal')
+  ) || [];
+
+  const marketScore = marketParams.length > 0 
+    ? marketParams.reduce((sum, p) => sum + p.score, 0) / marketParams.length 
+    : reportData.categoryScores?.['Market'] || currentScore;
+
+  const categoryScore = typeof reportData.categoryScores?.['Market'] === 'number'
+    ? reportData.categoryScores['Market']
+    : (reportData.categoryScores?.['Market'] as { score?: number })?.score || marketScore;
+
+  // Script metadata for context
+  const scriptMeta = reportData.scriptMetadata;
+  const genre = scriptMeta?.genre || 'Drama';
+  
+  // Derived market metrics
   const marketMetrics = [
-    { label: 'Commercial Appeal', score: 7.5, description: 'Broad audience potential' },
-    { label: 'Genre Clarity', score: 8.2, description: 'Easy to categorize and market' },
-    { label: 'Franchise Potential', score: 6.5, description: 'Sequel/expansion possibilities' },
-    { label: 'Star Vehicle', score: 8.0, description: 'Attractiveness to talent' },
+    { label: 'Commercial Appeal', score: Math.min(10, categoryScore), description: 'Broad audience potential' },
+    { label: 'Genre Clarity', score: Math.min(10, categoryScore + 0.5), description: 'Easy to categorize and market' },
+    { label: 'Franchise Potential', score: Math.min(10, categoryScore - 0.8), description: 'Sequel/expansion possibilities' },
+    { label: 'Star Vehicle', score: Math.min(10, categoryScore + 0.3), description: 'Attractiveness to talent' },
   ];
 
-  const comparables = [
-    { title: 'The Town', year: 2010, similarity: 'Tone, redemption arc, heist elements', boxOffice: '$154M worldwide' },
-    { title: 'Hell or High Water', year: 2016, similarity: 'Character-driven crime, moral complexity', boxOffice: '$38M worldwide' },
-    { title: 'Drive', year: 2011, similarity: 'Stylized crime thriller, protagonist isolation', boxOffice: '$78M worldwide' },
-  ];
+  const strengths = marketParams.filter(p => p.score >= 7).map(p => ({
+    text: p.displayName || p.parameterName,
+    detail: p.rationale?.slice(0, 80)
+  }));
 
+  const weaknesses = marketParams.filter(p => p.score < 5).map(p => ({
+    text: p.displayName || p.parameterName,
+    detail: p.rationale?.slice(0, 80)
+  }));
+
+  // Platform fit analysis
   const platformFit = [
-    { platform: 'Theatrical Wide', fit: 'Good', notes: 'Strong genre appeal, needs star attachment', recommendation: 'With A-list lead' },
-    { platform: 'Theatrical Limited', fit: 'Excellent', notes: 'Could expand based on word of mouth', recommendation: 'Platform release strategy' },
-    { platform: 'Streaming (Premium)', fit: 'Excellent', notes: 'Perfect for Netflix/Amazon original', recommendation: 'Primary target' },
-    { platform: 'Streaming (Standard)', fit: 'Good', notes: 'Would perform well but undersells potential', recommendation: 'Fallback option' },
-  ];
-
-  const targetQuadrants = [
-    { demo: 'Males 18-34', appeal: 'High', reason: 'Action, crime genre, antihero protagonist' },
-    { demo: 'Males 35-54', appeal: 'High', reason: 'Themes of redemption, mature storytelling' },
-    { demo: 'Females 18-34', appeal: 'Medium', reason: 'Character depth, emotional journey' },
-    { demo: 'Females 35-54', appeal: 'Medium', reason: 'Thematic resonance, quality drama' },
+    { platform: 'Theatrical Wide', fit: categoryScore >= 7 ? 'Good' : 'Limited', notes: 'Requires strong commercial elements' },
+    { platform: 'Theatrical Limited', fit: categoryScore >= 5 ? 'Excellent' : 'Good', notes: 'Quality positioning with expansion potential' },
+    { platform: 'Streaming Premium', fit: 'Excellent', notes: 'Ideal for Netflix/Amazon/Apple originals' },
+    { platform: 'Streaming Standard', fit: 'Good', notes: 'Would perform well across platforms' },
   ];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 max-w-6xl mx-auto">
       <SectionHeader
         title="Marketability Analysis"
         subtitle="Evaluating commercial viability, audience appeal, and distribution potential"
         icon={TrendingUp}
+        score={categoryScore}
       />
 
       {/* Market Metrics */}
@@ -62,149 +93,121 @@ const Marketability = () => {
 
       {/* Market Verdict */}
       <VerdictBox
-        type="success"
-        title="Market Positioning"
-        content="This script occupies a commercially viable space: elevated crime thriller with strong character work. It's the kind of material that attracts quality talent and awards attention while still delivering genre satisfaction. Best positioned as a premium streaming original or limited theatrical release with platform expansion."
+        type={categoryScore >= 7 ? 'success' : categoryScore >= 5 ? 'finding' : 'issue'}
+        title={categoryScore >= 7 ? 'Strong Commercial Potential' : categoryScore >= 5 ? 'Niche Market Position' : 'Limited Commercial Appeal'}
+        content={
+          categoryScore >= 7 
+            ? `This ${genre} script occupies a commercially viable space with clear audience appeal. Strong positioning for both theatrical and streaming distribution.`
+            : categoryScore >= 5
+            ? `The script has a defined audience but may require strategic positioning. Best suited for quality-focused distribution or streaming platforms.`
+            : `Commercial positioning is challenging. Consider strengthening genre elements or targeting a more specific niche audience.`
+        }
       />
-
-      {/* Comparable Titles */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Target className="h-5 w-5 text-primary" />
-            Comparable Titles
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {comparables.map((comp, idx) => (
-              <div key={idx} className="p-4 bg-muted/30 rounded-lg flex items-center justify-between">
-                <div>
-                  <h4 className="font-semibold">{comp.title} ({comp.year})</h4>
-                  <p className="text-sm text-muted-foreground">{comp.similarity}</p>
-                </div>
-                <div className="text-right">
-                  <span className="text-sm font-medium text-green-400">{comp.boxOffice}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Platform Fit */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Globe className="h-5 w-5 text-primary" />
-            Platform Fit Analysis
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left py-3 px-4 font-medium">Platform</th>
-                  <th className="text-left py-3 px-4 font-medium">Fit</th>
-                  <th className="text-left py-3 px-4 font-medium">Notes</th>
-                  <th className="text-left py-3 px-4 font-medium">Recommendation</th>
+      <Card className="p-6">
+        <SubSectionHeader title="Platform Fit Analysis" />
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b">
+                <th className="text-left py-3 px-4 font-medium">Platform</th>
+                <th className="text-left py-3 px-4 font-medium">Fit</th>
+                <th className="text-left py-3 px-4 font-medium">Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              {platformFit.map((platform, idx) => (
+                <tr key={idx} className="border-b last:border-0">
+                  <td className="py-3 px-4 font-medium">{platform.platform}</td>
+                  <td className="py-3 px-4">
+                    <span className={cn(
+                      "px-2 py-1 rounded text-xs font-medium",
+                      platform.fit === 'Excellent' ? 'bg-success/20 text-success' :
+                      platform.fit === 'Good' ? 'bg-chart-3/20 text-chart-3' :
+                      'bg-warning/20 text-warning'
+                    )}>
+                      {platform.fit}
+                    </span>
+                  </td>
+                  <td className="py-3 px-4 text-sm text-muted-foreground">{platform.notes}</td>
                 </tr>
-              </thead>
-              <tbody>
-                {platformFit.map((platform, idx) => (
-                  <tr key={idx} className="border-b last:border-0">
-                    <td className="py-3 px-4 font-medium">{platform.platform}</td>
-                    <td className="py-3 px-4">
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${
-                        platform.fit === 'Excellent' ? 'bg-green-500/20 text-green-400' :
-                        'bg-blue-500/20 text-blue-400'
-                      }`}>
-                        {platform.fit}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-sm text-muted-foreground">{platform.notes}</td>
-                    <td className="py-3 px-4 text-sm">{platform.recommendation}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </Card>
 
-      {/* Target Demographics */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <DollarSign className="h-5 w-5 text-primary" />
-            Target Audience Quadrants
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {targetQuadrants.map((quad, idx) => (
-              <div key={idx} className="p-4 bg-muted/30 rounded-lg">
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="font-semibold">{quad.demo}</h4>
-                  <span className={`px-2 py-1 rounded text-xs font-medium ${
-                    quad.appeal === 'High' ? 'bg-green-500/20 text-green-400' :
-                    'bg-yellow-500/20 text-yellow-400'
-                  }`}>
-                    {quad.appeal} Appeal
-                  </span>
-                </div>
-                <p className="text-sm text-muted-foreground">{quad.reason}</p>
+      {/* Parameter Breakdown */}
+      {marketParams.length > 0 && (
+        <Card className="p-6">
+          <SubSectionHeader title="Market Parameters" />
+          <div className="space-y-4">
+            {marketParams.slice(0, 8).map((param, index) => (
+              <div key={index}>
+                <ScoreBar 
+                  score={param.score} 
+                  label={param.displayName || param.parameterName}
+                  showValue 
+                />
               </div>
             ))}
           </div>
-        </CardContent>
-      </Card>
+        </Card>
+      )}
 
       {/* Strengths & Weaknesses */}
-      <StrengthWeaknessList
-        strengths={[
-          { text: 'Clear genre positioning with quality elevation' },
-          { text: 'Strong lead role attractive to A-list talent' },
-          { text: 'Proven comparable titles show market appetite' },
-          { text: 'Works across theatrical and streaming platforms' },
-        ]}
-        weaknesses={[
-          { text: 'Limited franchise/sequel potential' },
-          { text: 'Skews male in primary appeal' },
-          { text: 'May be too dark for some mainstream audiences' },
-          { text: 'Requires star attachment for wide theatrical' },
-        ]}
-      />
+      {(strengths.length > 0 || weaknesses.length > 0) ? (
+        <StrengthWeaknessList
+          strengths={strengths.length > 0 ? strengths : [{ text: 'Clear genre positioning' }]}
+          weaknesses={weaknesses.length > 0 ? weaknesses : [{ text: 'May require strategic positioning' }]}
+        />
+      ) : (
+        <StrengthWeaknessList
+          strengths={[
+            { text: 'Clear genre positioning' },
+            { text: 'Strong lead role attractive to talent' },
+            { text: 'Works across multiple platforms' },
+          ]}
+          weaknesses={[
+            { text: 'Limited franchise potential' },
+            { text: 'Requires star attachment for wide theatrical' },
+          ]}
+        />
+      )}
 
       {/* Recommendations */}
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold">Market Recommendations</h3>
+      <Card className="p-6">
+        <SubSectionHeader title="Market Recommendations" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {categoryScore < 7 && (
+            <RecommendationCard
+              title="Strengthen Commercial Elements"
+              description="Consider ways to broaden appeal without compromising artistic vision."
+              priority="high"
+              effort="moderate"
+            />
+          )}
           <RecommendationCard
             title="Target Premium Streamers"
-            description="Netflix or Amazon would be ideal homes. Position as prestige crime drama with festival potential."
+            description="Position as prestige content for quality-focused streaming platforms."
+            priority={categoryScore >= 7 ? 'high' : 'medium'}
+            effort="easy"
+          />
+          <RecommendationCard
+            title="Attach A-List Talent"
+            description="Strong performances can elevate commercial potential and distribution options."
             priority="high"
+            effort="difficult"
           />
           <RecommendationCard
-            title="Strengthen Female Appeal"
-            description="Consider developing the female supporting character to broaden demographic appeal without changing core."
-            priority="medium"
-          />
-          <RecommendationCard
-            title="Attach A-List Director"
-            description="This material is attractive to auteur directors looking for commercial material with depth."
-            priority="high"
-          />
-          <RecommendationCard
-            title="Consider Limited Series"
-            description="The character depth could also support a prestige limited series adaptation if film doesn't move forward."
+            title="Consider Alternative Formats"
+            description="The material might also work as a limited series if film doesn't move forward."
             priority="low"
+            effort="moderate"
           />
         </div>
-      </div>
+      </Card>
     </div>
   );
-};
-
-export default Marketability;
+}

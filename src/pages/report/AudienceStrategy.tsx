@@ -1,58 +1,88 @@
-import { useReport } from '@/components/report/ReportLayout';
+import { useOutletContext } from 'react-router-dom';
+import { ReportData, StakeholderLens } from '@/types/database';
 import { 
   SectionHeader, 
   ScoreDisplay, 
   VerdictBox,
+  ScoreBar,
+  SubSectionHeader,
   StrengthWeaknessList,
   RecommendationCard
 } from '@/components/report/ui';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Target, Users, Globe, Megaphone } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-const AudienceStrategy = () => {
-  const { reportData } = useReport();
+interface ReportContextValue {
+  reportData: ReportData;
+  activeLens: StakeholderLens;
+  currentScore: number;
+}
 
+export default function AudienceStrategy() {
+  const { reportData, currentScore } = useOutletContext<ReportContextValue>();
+
+  // Get market and audience-related parameters
+  const audienceParams = reportData.parameterScores?.filter(p => 
+    p.category?.toLowerCase().includes('market') || 
+    p.parameterName?.toLowerCase().includes('audience') ||
+    p.parameterName?.toLowerCase().includes('appeal') ||
+    p.parameterName?.toLowerCase().includes('commercial')
+  ) || [];
+
+  const audienceScore = audienceParams.length > 0 
+    ? audienceParams.reduce((sum, p) => sum + p.score, 0) / audienceParams.length 
+    : reportData.categoryScores?.['Market'] || currentScore;
+
+  const categoryScore = typeof reportData.categoryScores?.['Market'] === 'number'
+    ? reportData.categoryScores['Market']
+    : (reportData.categoryScores?.['Market'] as { score?: number })?.score || audienceScore;
+
+  // Script metadata
+  const scriptMeta = reportData.scriptMetadata;
+  const genre = scriptMeta?.genre || 'Drama';
+  
+  // Derived audience metrics
   const audienceMetrics = [
-    { label: 'Target Clarity', score: 8.2, description: 'Well-defined core audience' },
-    { label: 'Crossover Potential', score: 7.0, description: 'Appeal beyond core demo' },
-    { label: 'Word of Mouth', score: 7.8, description: 'Shareability and discussion' },
-    { label: 'Marketing Hooks', score: 8.5, description: 'Promotable elements' },
+    { label: 'Target Clarity', score: Math.min(10, categoryScore + 0.4), description: 'Well-defined core audience' },
+    { label: 'Crossover Potential', score: Math.min(10, categoryScore - 0.2), description: 'Appeal beyond core demo' },
+    { label: 'Word of Mouth', score: Math.min(10, categoryScore + 0.3), description: 'Shareability and discussion' },
+    { label: 'Marketing Hooks', score: Math.min(10, categoryScore + 0.6), description: 'Promotable elements' },
   ];
 
-  const primaryAudience = {
-    demo: 'Adults 25-54, Male-skewing',
-    psychographic: 'Quality-seeking genre fans who appreciate elevated crime thrillers with character depth',
-    viewing: 'Premium streaming subscribers, arthouse theatrical, festival attendees',
-    size: 'Medium-Large'
-  };
+  const strengths = audienceParams.filter(p => p.score >= 7).map(p => ({
+    text: p.displayName || p.parameterName,
+    detail: p.rationale?.slice(0, 80)
+  }));
 
+  const weaknesses = audienceParams.filter(p => p.score < 5).map(p => ({
+    text: p.displayName || p.parameterName,
+    detail: p.rationale?.slice(0, 80)
+  }));
+
+  // Marketing hooks based on genre and score
   const marketingHooks = [
-    { hook: 'Redemption Story', appeal: 'Universal', usage: 'Emotional trailers, character posters' },
-    { hook: 'Crime/Heist Elements', appeal: 'Genre fans', usage: 'Action-focused spots, comparison marketing' },
-    { hook: 'Prestige Talent', appeal: 'Quality-seekers', usage: 'Star-driven campaigns, festival positioning' },
-    { hook: 'Twist Ending', appeal: 'Word of mouth', usage: 'Post-release social, spoiler-free teasers' },
+    { hook: 'Character Journey', appeal: 'Universal', usage: 'Emotional trailers, character posters' },
+    { hook: 'Genre Elements', appeal: 'Core fans', usage: 'Action-focused spots, comparison marketing' },
+    { hook: 'Quality Talent', appeal: 'Quality-seekers', usage: 'Star-driven campaigns, festival positioning' },
+    { hook: 'Story Hook', appeal: 'Word of mouth', usage: 'Post-release social, spoiler-free teasers' },
   ];
 
+  // Release window analysis
   const releaseWindows = [
-    { window: 'Fall Festival Season', fit: 'Excellent', notes: 'Toronto/Venice premiere, awards positioning' },
-    { window: 'Q4 Awards Season', fit: 'Good', notes: 'Limited release expanding, adult audiences available' },
-    { window: 'January/February', fit: 'Good', notes: 'Counter-programming to blockbusters' },
-    { window: 'Summer', fit: 'Poor', notes: 'Too dark for summer moviegoing mood' },
-  ];
-
-  const socialStrategy = [
-    { platform: 'Twitter/X', approach: 'Film community engagement, critic quotes, festival buzz' },
-    { platform: 'Instagram', approach: 'Behind-the-scenes, stylized stills, star content' },
-    { platform: 'TikTok', approach: 'Scene recreations, quote clips, fan theories post-release' },
-    { platform: 'YouTube', approach: 'Trailer variations, making-of content, cast interviews' },
+    { window: 'Fall Festival Season', fit: categoryScore >= 7 ? 'Excellent' : 'Good' },
+    { window: 'Q4 Awards Season', fit: categoryScore >= 6 ? 'Good' : 'Limited' },
+    { window: 'January/February', fit: 'Good' },
+    { window: 'Summer', fit: categoryScore >= 7 ? 'Good' : 'Poor' },
   ];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 max-w-6xl mx-auto">
       <SectionHeader
         title="Audience Strategy"
         subtitle="Defining target audience, marketing approach, and release positioning"
         icon={Target}
+        score={categoryScore}
       />
 
       {/* Audience Metrics */}
@@ -69,156 +99,139 @@ const AudienceStrategy = () => {
       </div>
 
       {/* Primary Audience */}
-      <Card className="border-primary/30">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5 text-primary" />
-            Primary Audience Profile
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <h4 className="font-medium mb-2">Demographics</h4>
-              <p className="text-lg font-semibold text-primary">{primaryAudience.demo}</p>
-            </div>
-            <div>
-              <h4 className="font-medium mb-2">Market Size</h4>
-              <p className="text-lg font-semibold text-primary">{primaryAudience.size}</p>
-            </div>
-            <div className="md:col-span-2">
-              <h4 className="font-medium mb-2">Psychographic Profile</h4>
-              <p className="text-muted-foreground">{primaryAudience.psychographic}</p>
-            </div>
-            <div className="md:col-span-2">
-              <h4 className="font-medium mb-2">Viewing Habits</h4>
-              <p className="text-muted-foreground">{primaryAudience.viewing}</p>
-            </div>
+      <Card className="border-primary/30 p-6">
+        <SubSectionHeader title="Primary Audience Profile" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <h4 className="font-medium mb-2">Genre</h4>
+            <p className="text-lg font-semibold text-primary">{genre}</p>
           </div>
-        </CardContent>
+          <div>
+            <h4 className="font-medium mb-2">Market Size</h4>
+            <p className="text-lg font-semibold text-primary">
+              {categoryScore >= 7 ? 'Large' : categoryScore >= 5 ? 'Medium' : 'Niche'}
+            </p>
+          </div>
+          <div className="md:col-span-2">
+            <h4 className="font-medium mb-2">Positioning</h4>
+            <p className="text-muted-foreground">
+              {categoryScore >= 7 
+                ? 'Quality genre entertainment with broad appeal. Suitable for wide release or premium streaming.'
+                : categoryScore >= 5
+                ? 'Quality-focused content for discerning audiences. Best positioned for platform or limited release.'
+                : 'Niche appeal requiring targeted marketing. Consider specialty distributors or festival strategy.'}
+            </p>
+          </div>
+        </div>
       </Card>
 
       {/* Marketing Hooks */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Megaphone className="h-5 w-5 text-primary" />
-            Marketing Hooks
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {marketingHooks.map((hook, idx) => (
-              <div key={idx} className="p-4 bg-muted/30 rounded-lg">
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="font-semibold">{hook.hook}</h4>
-                  <span className={`px-2 py-1 rounded text-xs font-medium ${
-                    hook.appeal === 'Universal' ? 'bg-green-500/20 text-green-400' :
-                    hook.appeal === 'Genre fans' ? 'bg-blue-500/20 text-blue-400' :
-                    'bg-purple-500/20 text-purple-400'
-                  }`}>
-                    {hook.appeal}
-                  </span>
-                </div>
-                <p className="text-sm text-muted-foreground">{hook.usage}</p>
+      <Card className="p-6">
+        <SubSectionHeader title="Marketing Hooks" />
+        <div className="space-y-4">
+          {marketingHooks.map((hook, idx) => (
+            <div key={idx} className="p-4 bg-muted/30 rounded-lg">
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="font-semibold">{hook.hook}</h4>
+                <span className={cn(
+                  "px-2 py-1 rounded text-xs font-medium",
+                  hook.appeal === 'Universal' ? 'bg-success/20 text-success' :
+                  hook.appeal === 'Core fans' ? 'bg-chart-3/20 text-chart-3' :
+                  'bg-chart-4/20 text-chart-4'
+                )}>
+                  {hook.appeal}
+                </span>
               </div>
-            ))}
-          </div>
-        </CardContent>
+              <p className="text-sm text-muted-foreground">{hook.usage}</p>
+            </div>
+          ))}
+        </div>
       </Card>
 
       {/* Release Windows */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Globe className="h-5 w-5 text-primary" />
-            Release Window Analysis
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left py-3 px-4 font-medium">Window</th>
-                  <th className="text-left py-3 px-4 font-medium">Fit</th>
-                  <th className="text-left py-3 px-4 font-medium">Strategy Notes</th>
-                </tr>
-              </thead>
-              <tbody>
-                {releaseWindows.map((window, idx) => (
-                  <tr key={idx} className="border-b last:border-0">
-                    <td className="py-3 px-4 font-medium">{window.window}</td>
-                    <td className="py-3 px-4">
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${
-                        window.fit === 'Excellent' ? 'bg-green-500/20 text-green-400' :
-                        window.fit === 'Good' ? 'bg-blue-500/20 text-blue-400' :
-                        'bg-red-500/20 text-red-400'
-                      }`}>
-                        {window.fit}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-sm text-muted-foreground">{window.notes}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Social Strategy */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Social Media Strategy</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {socialStrategy.map((social, idx) => (
-              <div key={idx} className="p-4 bg-muted/30 rounded-lg">
-                <h4 className="font-semibold mb-2">{social.platform}</h4>
-                <p className="text-sm text-muted-foreground">{social.approach}</p>
-              </div>
-            ))}
-          </div>
-        </CardContent>
+      <Card className="p-6">
+        <SubSectionHeader title="Release Window Analysis" />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {releaseWindows.map((window, idx) => (
+            <div key={idx} className="p-4 rounded-lg bg-muted/30 text-center">
+              <p className="text-sm font-medium mb-2">{window.window}</p>
+              <span className={cn(
+                "px-3 py-1 rounded text-xs font-medium",
+                window.fit === 'Excellent' ? 'bg-success/20 text-success' :
+                window.fit === 'Good' ? 'bg-chart-3/20 text-chart-3' :
+                window.fit === 'Limited' ? 'bg-warning/20 text-warning' :
+                'bg-destructive/20 text-destructive'
+              )}>
+                {window.fit}
+              </span>
+            </div>
+          ))}
+        </div>
       </Card>
 
       {/* Campaign Verdict */}
       <VerdictBox
-        type="success"
-        title="Recommended Campaign Approach"
-        content="Lead with prestige positioning (festival premiere, critical acclaim) then expand to genre audiences. The redemption angle provides universal emotional hook while crime elements deliver genre satisfaction. Post-release, lean into twist/ending discussions to drive word of mouth. Star-driven campaign is essential for theatrical; can go more concept-forward for streaming."
+        type={categoryScore >= 7 ? 'success' : categoryScore >= 5 ? 'finding' : 'issue'}
+        title={categoryScore >= 7 ? 'Strong Marketing Potential' : categoryScore >= 5 ? 'Targeted Campaign Needed' : 'Challenging to Position'}
+        content={
+          categoryScore >= 7 
+            ? 'Multiple strong marketing angles available. Recommend prestige positioning with genre satisfaction. Star-driven campaign for theatrical, concept-forward for streaming.'
+            : categoryScore >= 5
+            ? 'Clear target audience exists but will require strategic positioning. Focus on quality markers and targeted reach rather than broad appeal.'
+            : 'Marketing challenges exist. Consider repositioning, festival strategy, or specialty distribution to find the right audience.'
+        }
       />
 
+      {/* Strengths & Weaknesses */}
+      {(strengths.length > 0 || weaknesses.length > 0) ? (
+        <StrengthWeaknessList
+          strengths={strengths.length > 0 ? strengths : [{ text: 'Identifiable target audience' }]}
+          weaknesses={weaknesses.length > 0 ? weaknesses : [{ text: 'May need strategic positioning' }]}
+        />
+      ) : (
+        <StrengthWeaknessList
+          strengths={[
+            { text: 'Clear genre positioning' },
+            { text: 'Multiple marketing angles available' },
+            { text: 'Strong word-of-mouth potential' },
+          ]}
+          weaknesses={[
+            { text: 'May require star attachment for broad appeal' },
+            { text: 'Crossover potential could be stronger' },
+          ]}
+        />
+      )}
+
       {/* Recommendations */}
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold">Audience Recommendations</h3>
+      <Card className="p-6">
+        <SubSectionHeader title="Audience Recommendations" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <RecommendationCard
-            title="Festival Premiere Strategy"
-            description="Target Toronto or Venice premiere to establish quality positioning before theatrical/streaming release."
+            title="Define Core Audience First"
+            description="Lock in the primary target before attempting to expand appeal to secondary audiences."
             priority="high"
+            effort="easy"
+          />
+          <RecommendationCard
+            title="Festival Premiere Strategy"
+            description="Consider Toronto, Venice, or Sundance premiere to establish quality positioning."
+            priority={categoryScore >= 6 ? 'high' : 'medium'}
+            effort="moderate"
           />
           <RecommendationCard
             title="Dual-Track Marketing"
-            description="Create prestige campaign for awards/critics and action-focused campaign for genre audiences."
-            priority="high"
+            description="Prepare both prestige and genre-focused campaigns for different audience segments."
+            priority="medium"
+            effort="moderate"
           />
           <RecommendationCard
-            title="Post-Release Discussion"
-            description="Prepare spoiler-friendly marketing assets for post-release word of mouth around the twist."
-            priority="medium"
-          />
-          <RecommendationCard
-            title="Expand Female Appeal"
-            description="Marketing should emphasize emotional journey and character depth to broaden beyond male-skewing core."
-            priority="medium"
+            title="Plan Post-Release Buzz"
+            description="Prepare assets for post-release word of mouth and social discussion."
+            priority="low"
+            effort="easy"
           />
         </div>
-      </div>
+      </Card>
     </div>
   );
-};
-
-export default AudienceStrategy;
+}
