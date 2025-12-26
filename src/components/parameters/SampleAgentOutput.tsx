@@ -13,73 +13,40 @@ import { Bot, Code, FileJson } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const AGENT_COLORS: Record<string, string> = {
+  ConceptAgent: "bg-amber-500/10 text-amber-500 border-amber-500/20",
+  StructureAgent: "bg-blue-500/10 text-blue-500 border-blue-500/20",
   CharacterAgent: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
+  ConflictAgent: "bg-red-500/10 text-red-500 border-red-500/20",
+  ThemeAgent: "bg-purple-500/10 text-purple-500 border-purple-500/20",
   DialogueAgent: "bg-violet-500/10 text-violet-500 border-violet-500/20",
-  NarrativeAgent: "bg-amber-500/10 text-amber-500 border-amber-500/20",
-  ProductionAgent: "bg-rose-500/10 text-rose-500 border-rose-500/20",
-  ThematicAgent: "bg-sky-500/10 text-sky-500 border-sky-500/20",
+  EmotionalArcAgent: "bg-pink-500/10 text-pink-500 border-pink-500/20",
+  WorldLogicAgent: "bg-cyan-500/10 text-cyan-500 border-cyan-500/20",
+  MarketAgent: "bg-orange-500/10 text-orange-500 border-orange-500/20",
+  ExecutionAgent: "bg-rose-500/10 text-rose-500 border-rose-500/20",
 };
 
 const SAMPLE_OUTPUTS: Record<string, { parameter: string; output: object }> = {
-  CharacterAgent: {
-    parameter: "protagonist_arc_clarity",
+  ConceptAgent: {
+    parameter: "concept_originality",
     output: {
-      score: 8.2,
+      score: 8.5,
       maturity: "well_developed",
       riskLevel: "low",
       fixCost: "low",
-      upsideImpact: "medium",
-      confidence: 0.89,
-      rationale: "The protagonist Sarah demonstrates a clear transformation from a risk-averse corporate lawyer to an empowered advocate. Her journey is marked by three distinct phases: denial (Act 1), confrontation (Act 2), and acceptance (Act 3). The character's internal conflict is externalized through her relationship with her estranged father, providing both emotional depth and narrative momentum.",
-      evidence: [
-        {
-          type: "dialogue_reference",
-          reference: "Scene 5, Page 12",
-          quote: "SARAH: I've spent my whole life playing it safe. Maybe it's time to take a risk.",
-          explanation: "This line marks the inciting incident and establishes Sarah's core internal conflict."
-        },
-        {
-          type: "scene_reference",
-          reference: "Scene 34, Page 67",
-          quote: null,
-          explanation: "The courtroom scene demonstrates Sarah's complete transformation as she abandons her prepared notes to speak from the heart."
-        },
-        {
-          type: "pattern_analysis",
-          reference: "Acts 1-3",
-          quote: null,
-          explanation: "Sarah's dialogue patterns shift from formal/defensive to personal/vulnerable, with a 340% increase in personal pronouns by Act 3."
-        }
-      ]
-    }
-  },
-  DialogueAgent: {
-    parameter: "dialogue_authenticity",
-    output: {
-      score: 7.5,
-      maturity: "developing",
-      riskLevel: "medium",
-      fixCost: "medium",
       upsideImpact: "high",
-      confidence: 0.82,
-      rationale: "Dialogue generally feels authentic with distinct character voices. However, exposition-heavy scenes in Act 1 occasionally break naturalistic flow. Supporting characters maintain consistent speech patterns, though Marcus's dialogue could benefit from more subtext.",
+      confidence: 0.92,
+      rationale: "The concept presents a fresh take on the thriller genre by combining corporate espionage with family drama. The 'what if' premise is immediately engaging and offers clear commercial potential with built-in audience appeal.",
       evidence: [
         {
-          type: "dialogue_reference",
-          reference: "Scene 12, Page 28",
-          quote: "MARCUS: Let me explain the entire history of our company... (continues for 15 lines)",
-          explanation: "This exposition dump breaks conversational authenticity and could be distributed across multiple scenes."
-        },
-        {
-          type: "pattern_analysis",
-          reference: "Full script",
+          type: "premise_analysis",
+          reference: "Logline",
           quote: null,
-          explanation: "Character voice distinctiveness score: 7.8/10. Each major character uses measurably different vocabulary and sentence structures."
+          explanation: "High-concept premise with clear protagonist goal and ticking-clock urgency."
         }
       ]
     }
   },
-  NarrativeAgent: {
+  StructureAgent: {
     parameter: "plot_momentum",
     output: {
       score: 8.7,
@@ -105,27 +72,53 @@ const SAMPLE_OUTPUTS: Record<string, { parameter: string; output: object }> = {
       ]
     }
   },
-  ProductionAgent: {
-    parameter: "location_variety",
+  CharacterAgent: {
+    parameter: "protagonist_arc_clarity",
     output: {
-      score: 6.8,
-      maturity: "needs_improvement",
-      riskLevel: "medium",
-      fixCost: "high",
+      score: 8.2,
+      maturity: "well_developed",
+      riskLevel: "low",
+      fixCost: "low",
       upsideImpact: "medium",
-      confidence: 0.85,
-      rationale: "The script features 34 unique locations, with heavy concentration in office and apartment settings (58% of scenes). While cost-effective, this may impact visual variety for theatrical release.",
+      confidence: 0.89,
+      rationale: "The protagonist Sarah demonstrates a clear transformation from a risk-averse corporate lawyer to an empowered advocate. Her journey is marked by three distinct phases: denial (Act 1), confrontation (Act 2), and acceptance (Act 3).",
       evidence: [
         {
-          type: "location_breakdown",
-          reference: "Full script",
+          type: "dialogue_reference",
+          reference: "Scene 5, Page 12",
+          quote: "SARAH: I've spent my whole life playing it safe. Maybe it's time to take a risk.",
+          explanation: "This line marks the inciting incident and establishes Sarah's core internal conflict."
+        },
+        {
+          type: "scene_reference",
+          reference: "Scene 34, Page 67",
           quote: null,
-          explanation: "INT. OFFICE: 22 scenes, INT. APARTMENT: 18 scenes, EXT. Various: 12 scenes. Consider consolidating some office scenes to free budget for 2-3 visually distinctive exteriors."
+          explanation: "The courtroom scene demonstrates Sarah's complete transformation as she abandons her prepared notes to speak from the heart."
         }
       ]
     }
   },
-  ThematicAgent: {
+  ConflictAgent: {
+    parameter: "central_conflict_clarity",
+    output: {
+      score: 7.8,
+      maturity: "developing",
+      riskLevel: "low",
+      fixCost: "medium",
+      upsideImpact: "high",
+      confidence: 0.86,
+      rationale: "The central conflict between protagonist and corporation is well-defined, but internal conflict could be more deeply integrated with external stakes.",
+      evidence: [
+        {
+          type: "conflict_mapping",
+          reference: "Acts 1-3",
+          quote: null,
+          explanation: "External conflict escalates appropriately, but Act 2 could benefit from more internal conflict beats."
+        }
+      ]
+    }
+  },
+  ThemeAgent: {
     parameter: "thematic_coherence",
     output: {
       score: 9.1,
@@ -140,13 +133,119 @@ const SAMPLE_OUTPUTS: Record<string, { parameter: string; output: object }> = {
           type: "motif_tracking",
           reference: "Full script",
           quote: null,
-          explanation: "Mirror imagery appears in 8 key scenes, each marking a character's self-confrontation moment. This visual motif elegantly externalizes the internal theme."
+          explanation: "Mirror imagery appears in 8 key scenes, each marking a character's self-confrontation moment."
         },
         {
           type: "dialogue_reference",
           reference: "Scene 45, Page 89",
           quote: "SARAH: I'm done rehearsing my life. This is the real performance.",
           explanation: "This line explicitly states the theme while feeling earned through the character's journey."
+        }
+      ]
+    }
+  },
+  DialogueAgent: {
+    parameter: "dialogue_authenticity",
+    output: {
+      score: 7.5,
+      maturity: "developing",
+      riskLevel: "medium",
+      fixCost: "medium",
+      upsideImpact: "high",
+      confidence: 0.82,
+      rationale: "Dialogue generally feels authentic with distinct character voices. However, exposition-heavy scenes in Act 1 occasionally break naturalistic flow.",
+      evidence: [
+        {
+          type: "dialogue_reference",
+          reference: "Scene 12, Page 28",
+          quote: "MARCUS: Let me explain the entire history of our company...",
+          explanation: "This exposition dump breaks conversational authenticity and could be distributed across multiple scenes."
+        },
+        {
+          type: "pattern_analysis",
+          reference: "Full script",
+          quote: null,
+          explanation: "Character voice distinctiveness score: 7.8/10. Each major character uses measurably different vocabulary."
+        }
+      ]
+    }
+  },
+  EmotionalArcAgent: {
+    parameter: "emotional_beats_variety",
+    output: {
+      score: 7.9,
+      maturity: "well_developed",
+      riskLevel: "low",
+      fixCost: "easy",
+      upsideImpact: "medium",
+      confidence: 0.87,
+      rationale: "Good variety of emotional beats with effective highs and lows. The audience journey tracks well with protagonist emotions.",
+      evidence: [
+        {
+          type: "emotional_mapping",
+          reference: "Full script",
+          quote: null,
+          explanation: "Emotional peaks at pages 25, 55, and 95 align with structural beats. Valley at page 70 creates effective contrast."
+        }
+      ]
+    }
+  },
+  WorldLogicAgent: {
+    parameter: "world_consistency",
+    output: {
+      score: 8.0,
+      maturity: "well_developed",
+      riskLevel: "low",
+      fixCost: "low",
+      upsideImpact: "low",
+      confidence: 0.88,
+      rationale: "The world rules are established clearly and maintained consistently. Legal procedures are accurately portrayed without slowing pacing.",
+      evidence: [
+        {
+          type: "logic_check",
+          reference: "Full script",
+          quote: null,
+          explanation: "No significant logic gaps detected. Minor continuity note: character's car color changes in Scene 42."
+        }
+      ]
+    }
+  },
+  MarketAgent: {
+    parameter: "commercial_viability",
+    output: {
+      score: 8.3,
+      maturity: "well_developed",
+      riskLevel: "low",
+      fixCost: "low",
+      upsideImpact: "high",
+      confidence: 0.90,
+      rationale: "Strong commercial potential with clear audience appeal. Genre positioning aligns with current market trends. Comparable titles have performed well theatrically.",
+      evidence: [
+        {
+          type: "market_analysis",
+          reference: "Comparable titles",
+          quote: null,
+          explanation: "Similar legal thrillers have averaged $45M domestic box office. This script's elevated emotional core could expand audience."
+        }
+      ]
+    }
+  },
+  ExecutionAgent: {
+    parameter: "production_feasibility",
+    output: {
+      score: 7.2,
+      maturity: "developing",
+      riskLevel: "medium",
+      fixCost: "high",
+      upsideImpact: "medium",
+      confidence: 0.85,
+      rationale: "The script features 34 unique locations, with heavy concentration in office and apartment settings (58% of scenes). While cost-effective, this may impact visual variety.",
+      evidence: [
+        {
+          type: "location_breakdown",
+          reference: "Full script",
+          quote: null,
+          explanation: "INT. OFFICE: 22 scenes, INT. APARTMENT: 18 scenes, EXT. Various: 12 scenes. Consider consolidating some office scenes."
         }
       ]
     }

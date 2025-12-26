@@ -23,14 +23,14 @@ interface ReportContextValue {
 export default function ConceptHook() {
   const { reportData, activeLens, currentScore } = useOutletContext<ReportContextValue>();
   
-  // Get concept-related scores from parameters
+  // Get concept-related scores from parameters - Concept & Hook category
   const conceptParams = reportData.parameterScores?.filter(p => 
-    p.category?.toLowerCase().includes('concept') || 
-    p.category?.toLowerCase().includes('hook') ||
+    ['concept', 'concept & hook', 'hook'].includes(p.category?.toLowerCase() || '') ||
     p.parameterName?.toLowerCase().includes('concept') ||
     p.parameterName?.toLowerCase().includes('hook') ||
     p.parameterName?.toLowerCase().includes('logline') ||
-    p.parameterName?.toLowerCase().includes('premise')
+    p.parameterName?.toLowerCase().includes('premise') ||
+    p.parameterName?.toLowerCase().includes('originality')
   ) || [];
 
   const conceptScore = conceptParams.length > 0 

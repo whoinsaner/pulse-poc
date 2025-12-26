@@ -83,7 +83,7 @@ export function DataFlowDiagram() {
           <FlowStep
             icon={<Bot className="h-5 w-5 text-emerald-500" />}
             title="Agent Analysis"
-            description="14 specialized agents evaluate their assigned parameters"
+            description="10 specialized agents: Concept, Structure, Character, Conflict, Theme, Dialogue, Emotional Arc, World Logic, Market, Execution"
             outputs={["scores", "rationale", "evidence", "confidence"]}
             color="border-emerald-500/30"
           />
@@ -106,7 +106,7 @@ export function DataFlowDiagram() {
           <FlowStep
             icon={<Gauge className="h-5 w-5 text-purple-500" />}
             title="Parameter Scores"
-            description="91 scored parameters with detailed evidence and rationale"
+            description="Parameters scored across 10 categories with detailed evidence and rationale"
             outputs={["0-10 score", "maturity", "risk level", "fix cost", "upside impact"]}
             color="border-purple-500/30"
           />
