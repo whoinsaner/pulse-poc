@@ -142,7 +142,7 @@ export default function SampleComicReportLayout() {
           {/* Sidebar Header */}
           <div className="h-16 flex items-center justify-between px-4 border-b border-border">
             {!sidebarCollapsed && (
-              <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
+              <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')}>
                 <ArrowLeft className="h-5 w-5" />
               </Button>
             )}
