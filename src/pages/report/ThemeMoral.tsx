@@ -181,26 +181,20 @@ const ThemeMoral = () => {
       </Card>
 
       {/* Strengths & Weaknesses */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <StrengthWeaknessList
-          type="strengths"
-          items={[
-            'Primary theme is powerful and universally relatable',
-            'Moral complexity avoids simple good vs evil',
-            'Theme emerges organically through character action',
-            'Ending honors thematic questions without being preachy',
-          ]}
-        />
-        <StrengthWeaknessList
-          type="weaknesses"
-          items={[
-            'Secondary themes could be more developed',
-            'Some thematic moments feel underlined too heavily',
-            'Family legacy theme is introduced but not fully explored',
-            'Antagonist\'s moral journey could be more nuanced',
-          ]}
-        />
-      </div>
+      <StrengthWeaknessList
+        strengths={[
+          { text: 'Primary theme is powerful and universally relatable' },
+          { text: 'Moral complexity avoids simple good vs evil' },
+          { text: 'Theme emerges organically through character action' },
+          { text: 'Ending honors thematic questions without being preachy' },
+        ]}
+        weaknesses={[
+          { text: 'Secondary themes could be more developed' },
+          { text: 'Some thematic moments feel underlined too heavily' },
+          { text: 'Family legacy theme is introduced but not fully explored' },
+          { text: "Antagonist's moral journey could be more nuanced" },
+        ]}
+      />
 
       {/* Recommendations */}
       <div className="space-y-4">

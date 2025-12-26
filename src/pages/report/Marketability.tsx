@@ -162,26 +162,20 @@ const Marketability = () => {
       </Card>
 
       {/* Strengths & Weaknesses */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <StrengthWeaknessList
-          type="strengths"
-          items={[
-            'Clear genre positioning with quality elevation',
-            'Strong lead role attractive to A-list talent',
-            'Proven comparable titles show market appetite',
-            'Works across theatrical and streaming platforms',
-          ]}
-        />
-        <StrengthWeaknessList
-          type="weaknesses"
-          items={[
-            'Limited franchise/sequel potential',
-            'Skews male in primary appeal',
-            'May be too dark for some mainstream audiences',
-            'Requires star attachment for wide theatrical',
-          ]}
-        />
-      </div>
+      <StrengthWeaknessList
+        strengths={[
+          { text: 'Clear genre positioning with quality elevation' },
+          { text: 'Strong lead role attractive to A-list talent' },
+          { text: 'Proven comparable titles show market appetite' },
+          { text: 'Works across theatrical and streaming platforms' },
+        ]}
+        weaknesses={[
+          { text: 'Limited franchise/sequel potential' },
+          { text: 'Skews male in primary appeal' },
+          { text: 'May be too dark for some mainstream audiences' },
+          { text: 'Requires star attachment for wide theatrical' },
+        ]}
+      />
 
       {/* Recommendations */}
       <div className="space-y-4">

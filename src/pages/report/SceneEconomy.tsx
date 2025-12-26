@@ -273,26 +273,20 @@ const SceneEconomy = () => {
       </Card>
 
       {/* Strengths & Weaknesses */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <StrengthWeaknessList
-          type="strengths"
-          items={[
-            'Act III is extremely efficient',
-            'Opening sequence wastes no time',
-            'Average scene length is appropriate',
-            'Escalation through acts is logical',
-          ]}
-        />
-        <StrengthWeaknessList
-          type="weaknesses"
-          items={[
-            'Act II-A has redundant scenes',
-            'Some exposition delivered inefficiently',
-            '6 pages could be trimmed without loss',
-            'Debate section slightly slow',
-          ]}
-        />
-      </div>
+      <StrengthWeaknessList
+        strengths={[
+          { text: 'Act III is extremely efficient' },
+          { text: 'Opening sequence wastes no time' },
+          { text: 'Average scene length is appropriate' },
+          { text: 'Escalation through acts is logical' },
+        ]}
+        weaknesses={[
+          { text: 'Act II-A has redundant scenes' },
+          { text: 'Some exposition delivered inefficiently' },
+          { text: '6 pages could be trimmed without loss' },
+          { text: 'Debate section slightly slow' },
+        ]}
+      />
 
       {/* Recommendations */}
       <div className="space-y-4">

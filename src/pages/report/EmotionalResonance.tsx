@@ -151,26 +151,20 @@ const EmotionalResonance = () => {
       </Card>
 
       {/* Strengths & Weaknesses */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <StrengthWeaknessList
-          type="strengths"
-          items={[
-            'Strong emotional peaks at midpoint and climax',
-            'Protagonist generates genuine audience empathy',
-            'Effective use of hope/despair contrast',
-            'Ending leaves lasting emotional impression',
-          ]}
-        />
-        <StrengthWeaknessList
-          type="weaknesses"
-          items={[
-            'Act I first loss needs more setup',
-            'Climax resolution feels slightly rushed',
-            'Some quieter emotional moments could breathe more',
-            'Secondary character emotional arcs underdeveloped',
-          ]}
-        />
-      </div>
+      <StrengthWeaknessList
+        strengths={[
+          { text: 'Strong emotional peaks at midpoint and climax' },
+          { text: 'Protagonist generates genuine audience empathy' },
+          { text: 'Effective use of hope/despair contrast' },
+          { text: 'Ending leaves lasting emotional impression' },
+        ]}
+        weaknesses={[
+          { text: 'Act I first loss needs more setup' },
+          { text: 'Climax resolution feels slightly rushed' },
+          { text: 'Some quieter emotional moments could breathe more' },
+          { text: 'Secondary character emotional arcs underdeveloped' },
+        ]}
+      />
 
       {/* Recommendations */}
       <div className="space-y-4">
