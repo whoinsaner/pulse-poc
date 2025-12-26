@@ -196,26 +196,20 @@ const Production = () => {
       </Card>
 
       {/* Strengths & Weaknesses */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <StrengthWeaknessList
-          type="strengths"
-          items={[
-            'Majority of locations are standard and accessible',
-            'Cast size is manageable for budget level',
-            'Minimal VFX requirements keep costs controlled',
-            'Script structure allows for efficient scheduling',
-          ]}
-        />
-        <StrengthWeaknessList
-          type="weaknesses"
-          items={[
-            'Flooded warehouse sequence is expensive',
-            'Night exterior work adds premium costs',
-            'Lead role requires 40+ days commitment',
-            'Vehicle sequences need careful planning',
-          ]}
-        />
-      </div>
+      <StrengthWeaknessList
+        strengths={[
+          { text: 'Majority of locations are standard and accessible' },
+          { text: 'Cast size is manageable for budget level' },
+          { text: 'Minimal VFX requirements keep costs controlled' },
+          { text: 'Script structure allows for efficient scheduling' },
+        ]}
+        weaknesses={[
+          { text: 'Flooded warehouse sequence is expensive' },
+          { text: 'Night exterior work adds premium costs' },
+          { text: 'Lead role requires 40+ days commitment' },
+          { text: 'Vehicle sequences need careful planning' },
+        ]}
+      />
 
       {/* Recommendations */}
       <div className="space-y-4">

@@ -140,7 +140,7 @@ const DialogueSubtext = () => {
                   {example.effectiveness}
                 </span>
               </div>
-              <QuoteCallout quote={example.surface} attribution="Dialogue" />
+              <QuoteCallout quote={example.surface} source="Dialogue" />
               <p className="text-sm text-muted-foreground">
                 <span className="font-medium">Subtext:</span> {example.subtext}
               </p>
@@ -150,26 +150,20 @@ const DialogueSubtext = () => {
       </Card>
 
       {/* Strengths & Weaknesses */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <StrengthWeaknessList
-          type="strengths"
-          items={[
-            'Distinct character voices that are immediately recognizable',
-            'Natural rhythm and cadence in conversations',
-            'Effective use of silence and pauses',
-            'Dialogue advances plot while revealing character',
-          ]}
-        />
-        <StrengthWeaknessList
-          type="weaknesses"
-          items={[
-            'Some exposition delivered too directly',
-            'Subtext could be deeper in emotional scenes',
-            'Secondary characters occasionally sound similar',
-            'A few on-the-nose moments in Act III',
-          ]}
-        />
-      </div>
+      <StrengthWeaknessList
+        strengths={[
+          { text: 'Distinct character voices that are immediately recognizable' },
+          { text: 'Natural rhythm and cadence in conversations' },
+          { text: 'Effective use of silence and pauses' },
+          { text: 'Dialogue advances plot while revealing character' },
+        ]}
+        weaknesses={[
+          { text: 'Some exposition delivered too directly' },
+          { text: 'Subtext could be deeper in emotional scenes' },
+          { text: 'Secondary characters occasionally sound similar' },
+          { text: 'A few on-the-nose moments in Act III' },
+        ]}
+      />
 
       {/* Recommendations */}
       <div className="space-y-4">

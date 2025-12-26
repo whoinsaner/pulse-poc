@@ -195,26 +195,20 @@ const VisualStorytelling = () => {
       </Card>
 
       {/* Strengths & Weaknesses */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <StrengthWeaknessList
-          type="strengths"
-          items={[
-            'Strong opening and closing visual bookends',
-            'Locations effectively contrast character worlds',
-            'Memorable set-piece at midpoint',
-            'Visual metaphors reinforce theme',
-          ]}
-        />
-        <StrengthWeaknessList
-          type="weaknesses"
-          items={[
-            'Some scenes over-rely on dialogue',
-            'Action lines occasionally lack visual specificity',
-            'Climax location feels generic',
-            'Missed opportunities for visual callbacks',
-          ]}
-        />
-      </div>
+      <StrengthWeaknessList
+        strengths={[
+          { text: 'Strong opening and closing visual bookends' },
+          { text: 'Locations effectively contrast character worlds' },
+          { text: 'Memorable set-piece at midpoint' },
+          { text: 'Visual metaphors reinforce theme' },
+        ]}
+        weaknesses={[
+          { text: 'Some scenes over-rely on dialogue' },
+          { text: 'Action lines occasionally lack visual specificity' },
+          { text: 'Climax location feels generic' },
+          { text: 'Missed opportunities for visual callbacks' },
+        ]}
+      />
 
       {/* Recommendations */}
       <div className="space-y-4">
