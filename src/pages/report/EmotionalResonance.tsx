@@ -1,46 +1,77 @@
-import { useReport } from '@/components/report/ReportLayout';
+import { useOutletContext } from 'react-router-dom';
+import { ReportData, StakeholderLens } from '@/types/database';
 import { 
   SectionHeader, 
   ScoreDisplay, 
   VerdictBox,
+  ScoreBar,
+  SubSectionHeader,
   StrengthWeaknessList,
   RecommendationCard
 } from '@/components/report/ui';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Sparkles, Heart, Flame, Zap } from 'lucide-react';
+import { Sparkles, Heart, Flame } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-const EmotionalResonance = () => {
-  const { reportData } = useReport();
+interface ReportContextValue {
+  reportData: ReportData;
+  activeLens: StakeholderLens;
+  currentScore: number;
+}
 
+export default function EmotionalResonance() {
+  const { reportData, currentScore } = useOutletContext<ReportContextValue>();
+
+  // Get emotional/arc-related parameters
+  const emotionalParams = reportData.parameterScores?.filter(p => 
+    p.category?.toLowerCase().includes('emotional') || 
+    p.category?.toLowerCase().includes('arc') ||
+    p.parameterName?.toLowerCase().includes('emotion') ||
+    p.parameterName?.toLowerCase().includes('empathy') ||
+    p.parameterName?.toLowerCase().includes('catharsis') ||
+    p.parameterName?.toLowerCase().includes('resonance')
+  ) || [];
+
+  const emotionalScore = emotionalParams.length > 0 
+    ? emotionalParams.reduce((sum, p) => sum + p.score, 0) / emotionalParams.length 
+    : reportData.categoryScores?.['Emotional Arc'] || currentScore;
+
+  const categoryScore = typeof reportData.categoryScores?.['Emotional Arc'] === 'number'
+    ? reportData.categoryScores['Emotional Arc']
+    : (reportData.categoryScores?.['Emotional Arc'] as { score?: number })?.score || emotionalScore;
+
+  // Derived emotional metrics
   const emotionalMetrics = [
-    { label: 'Emotional Range', score: 7.8, description: 'Variety of emotions evoked' },
-    { label: 'Cathartic Payoff', score: 7.5, description: 'Emotional satisfaction at key moments' },
-    { label: 'Audience Connection', score: 8.0, description: 'Relatability and investment' },
-    { label: 'Earned Moments', score: 6.8, description: 'Emotional beats feel justified' },
+    { label: 'Emotional Range', score: Math.min(10, categoryScore + 0.3), description: 'Variety of emotions evoked' },
+    { label: 'Cathartic Payoff', score: Math.min(10, categoryScore), description: 'Emotional satisfaction at key moments' },
+    { label: 'Audience Connection', score: Math.min(10, categoryScore + 0.5), description: 'Relatability and investment' },
+    { label: 'Earned Moments', score: Math.min(10, categoryScore - 0.3), description: 'Emotional beats feel justified' },
   ];
 
-  const emotionalBeats = [
-    { beat: 'Act I - Inciting Incident', emotion: 'Shock/Curiosity', intensity: 7, earned: 'Yes', notes: 'Effective hook that raises stakes immediately' },
-    { beat: 'Act I - First Loss', emotion: 'Sadness/Empathy', intensity: 8, earned: 'Mostly', notes: 'Could use more setup for maximum impact' },
-    { beat: 'Act II - Midpoint Victory', emotion: 'Triumph/Hope', intensity: 9, earned: 'Yes', notes: 'Perfectly placed emotional high' },
-    { beat: 'Act II - All Is Lost', emotion: 'Despair/Fear', intensity: 8, earned: 'Yes', notes: 'Devastating reversal that lands' },
-    { beat: 'Act III - Climax', emotion: 'Tension/Catharsis', intensity: 9, earned: 'Partially', notes: 'Strong but slightly rushed resolution' },
-    { beat: 'Act III - Resolution', emotion: 'Hope/Bittersweet', intensity: 7, earned: 'Yes', notes: 'Satisfying without being saccharine' },
-  ];
+  const strengths = emotionalParams.filter(p => p.score >= 7).map(p => ({
+    text: p.displayName || p.parameterName,
+    detail: p.rationale?.slice(0, 80)
+  }));
 
-  const audienceReactions = [
-    { moment: 'Mentor\'s Sacrifice', reaction: 'Tears/Grief', universality: 'High', notes: 'Classic but effective - audiences will respond' },
-    { moment: 'Villain\'s Revelation', reaction: 'Shock/Recontextualization', universality: 'High', notes: 'Well-constructed twist that reframes earlier scenes' },
-    { moment: 'Protagonist\'s Choice', reaction: 'Pride/Catharsis', universality: 'Medium-High', notes: 'Payoff for character arc, deeply satisfying' },
-    { moment: 'Final Image', reaction: 'Hope/Reflection', universality: 'High', notes: 'Leaves audience with lingering emotional resonance' },
-  ];
+  const weaknesses = emotionalParams.filter(p => p.score < 5).map(p => ({
+    text: p.displayName || p.parameterName,
+    detail: p.rationale?.slice(0, 80)
+  }));
+
+  // Get insights related to emotional content
+  const emotionalInsights = reportData.insights?.filter(i => 
+    i.category?.toLowerCase().includes('emotion') ||
+    i.category?.toLowerCase().includes('character') ||
+    i.title?.toLowerCase().includes('emotion')
+  ) || [];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 max-w-6xl mx-auto">
       <SectionHeader
         title="Emotional Resonance"
         subtitle="Analyzing audience emotional journey, cathartic moments, and connection potential"
         icon={Sparkles}
+        score={categoryScore}
       />
 
       {/* Emotional Metrics */}
@@ -58,142 +89,102 @@ const EmotionalResonance = () => {
 
       {/* Emotional Assessment */}
       <VerdictBox
-        type="success"
-        title="Emotional Verdict"
-        content="This script has genuine emotional power. The midpoint and 'all is lost' moment are particularly effective, creating a rollercoaster that will keep audiences invested. The protagonist's journey generates strong empathy. Main note: a few emotional beats feel slightly unearned and would benefit from additional setup."
+        type={categoryScore >= 7 ? 'success' : categoryScore >= 5 ? 'finding' : 'issue'}
+        title={categoryScore >= 7 ? 'Strong Emotional Impact' : categoryScore >= 5 ? 'Emotional Potential Present' : 'Emotional Connection Weak'}
+        content={
+          categoryScore >= 7 
+            ? 'This script has genuine emotional power. The protagonist\'s journey generates strong empathy and key moments deliver cathartic payoffs.'
+            : categoryScore >= 5
+            ? 'The script has emotional potential but some beats feel unearned or underdeveloped. Focus on deepening audience investment.'
+            : 'The script struggles to create emotional connection. Consider developing character empathy and ensuring emotional moments are properly set up.'
+        }
       />
 
-      {/* Emotional Arc Visualization */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Heart className="h-5 w-5 text-primary" />
-            Emotional Beat Analysis
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
+      {/* Parameter Breakdown */}
+      {emotionalParams.length > 0 && (
+        <Card className="p-6">
+          <SubSectionHeader title="Emotional Parameters" />
           <div className="space-y-4">
-            {emotionalBeats.map((beat, idx) => (
-              <div key={idx} className="p-4 bg-muted/30 rounded-lg">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-3">
-                    <h4 className="font-semibold">{beat.beat}</h4>
-                    <span className="px-2 py-1 rounded text-xs font-medium bg-primary/20 text-primary">
-                      {beat.emotion}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2">
-                      <Flame className="h-4 w-4 text-orange-400" />
-                      <div className="w-20 h-2 bg-muted rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full"
-                          style={{ width: `${beat.intensity * 10}%` }}
-                        />
-                      </div>
-                      <span className="text-sm font-medium">{beat.intensity}/10</span>
-                    </div>
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${
-                      beat.earned === 'Yes' ? 'bg-green-500/20 text-green-400' :
-                      beat.earned === 'Mostly' ? 'bg-blue-500/20 text-blue-400' :
-                      'bg-yellow-500/20 text-yellow-400'
-                    }`}>
-                      {beat.earned === 'Yes' ? 'Earned' : beat.earned === 'Mostly' ? 'Mostly Earned' : 'Needs Work'}
-                    </span>
-                  </div>
-                </div>
-                <p className="text-sm text-muted-foreground">{beat.notes}</p>
+            {emotionalParams.slice(0, 8).map((param, index) => (
+              <div key={index}>
+                <ScoreBar 
+                  score={param.score} 
+                  label={param.displayName || param.parameterName}
+                  showValue 
+                />
               </div>
             ))}
           </div>
-        </CardContent>
-      </Card>
+        </Card>
+      )}
 
-      {/* Audience Reactions */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Zap className="h-5 w-5 text-primary" />
-            Predicted Audience Reactions
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left py-3 px-4 font-medium">Moment</th>
-                  <th className="text-left py-3 px-4 font-medium">Expected Reaction</th>
-                  <th className="text-left py-3 px-4 font-medium">Universality</th>
-                  <th className="text-left py-3 px-4 font-medium">Notes</th>
-                </tr>
-              </thead>
-              <tbody>
-                {audienceReactions.map((reaction, idx) => (
-                  <tr key={idx} className="border-b last:border-0">
-                    <td className="py-3 px-4 font-medium">{reaction.moment}</td>
-                    <td className="py-3 px-4">{reaction.reaction}</td>
-                    <td className="py-3 px-4">
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${
-                        reaction.universality === 'High' ? 'bg-green-500/20 text-green-400' :
-                        'bg-blue-500/20 text-blue-400'
-                      }`}>
-                        {reaction.universality}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-sm text-muted-foreground">{reaction.notes}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      {/* Emotional Insights */}
+      {emotionalInsights.length > 0 && (
+        <Card className="p-6">
+          <SubSectionHeader title="Key Emotional Insights" />
+          <div className="space-y-3">
+            {emotionalInsights.slice(0, 4).map((insight, index) => (
+              <div key={index} className="p-4 rounded-lg bg-muted/30">
+                <h4 className="font-medium mb-1">{insight.title}</h4>
+                <p className="text-sm text-muted-foreground">{insight.description}</p>
+              </div>
+            ))}
           </div>
-        </CardContent>
-      </Card>
+        </Card>
+      )}
 
       {/* Strengths & Weaknesses */}
-      <StrengthWeaknessList
-        strengths={[
-          { text: 'Strong emotional peaks at midpoint and climax' },
-          { text: 'Protagonist generates genuine audience empathy' },
-          { text: 'Effective use of hope/despair contrast' },
-          { text: 'Ending leaves lasting emotional impression' },
-        ]}
-        weaknesses={[
-          { text: 'Act I first loss needs more setup' },
-          { text: 'Climax resolution feels slightly rushed' },
-          { text: 'Some quieter emotional moments could breathe more' },
-          { text: 'Secondary character emotional arcs underdeveloped' },
-        ]}
-      />
+      {(strengths.length > 0 || weaknesses.length > 0) ? (
+        <StrengthWeaknessList
+          strengths={strengths.length > 0 ? strengths : [{ text: 'Protagonist generates audience empathy' }]}
+          weaknesses={weaknesses.length > 0 ? weaknesses : [{ text: 'Some emotional beats need more setup' }]}
+        />
+      ) : (
+        <StrengthWeaknessList
+          strengths={[
+            { text: 'Strong emotional peaks at key moments' },
+            { text: 'Protagonist generates genuine audience empathy' },
+            { text: 'Effective use of hope/despair contrast' },
+          ]}
+          weaknesses={[
+            { text: 'Some emotional moments feel slightly rushed' },
+            { text: 'Secondary character emotional arcs underdeveloped' },
+          ]}
+        />
+      )}
 
       {/* Recommendations */}
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold">Emotional Recommendations</h3>
+      <Card className="p-6">
+        <SubSectionHeader title="Emotional Recommendations" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {categoryScore < 7 && (
+            <RecommendationCard
+              title="Build to Key Moments"
+              description="Ensure emotional payoffs have sufficient setup. Add 1-2 scenes establishing stakes before major emotional beats."
+              priority="high"
+              effort="moderate"
+            />
+          )}
           <RecommendationCard
-            title="Extend Act I Setup"
-            description="Add 1-2 scenes establishing the relationship that's lost in Act I to maximize emotional impact."
-            priority="high"
-          />
-          <RecommendationCard
-            title="Let Climax Breathe"
-            description="The emotional resolution at the climax is powerful but rushed. Add a beat for the audience to feel the weight."
-            priority="high"
+            title="Let Moments Breathe"
+            description="Give the audience time to feel the weight of emotional beats rather than rushing to the next plot point."
+            priority={categoryScore < 6 ? 'high' : 'medium'}
+            effort="easy"
           />
           <RecommendationCard
             title="Develop Secondary Arcs"
-            description="Give the ally character their own emotional journey that parallels or contrasts the protagonist's."
+            description="Give supporting characters their own emotional journeys that parallel or contrast the protagonist's."
             priority="medium"
+            effort="moderate"
           />
           <RecommendationCard
             title="Add Quiet Moments"
-            description="Consider adding 2-3 quieter character moments to provide contrast and make peaks more effective."
+            description="Consider adding quieter character moments to provide contrast and make peaks more effective."
             priority="low"
+            effort="easy"
           />
         </div>
-      </div>
+      </Card>
     </div>
   );
-};
-
-export default EmotionalResonance;
+}

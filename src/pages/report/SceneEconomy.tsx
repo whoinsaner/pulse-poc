@@ -1,107 +1,110 @@
-import { useReport } from '@/components/report/ReportLayout';
+import { useOutletContext } from 'react-router-dom';
+import { ReportData, StakeholderLens } from '@/types/database';
 import { 
   SectionHeader, 
   ScoreDisplay, 
   VerdictBox,
+  ScoreBar,
+  SubSectionHeader,
   StrengthWeaknessList,
   RecommendationCard
 } from '@/components/report/ui';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Layers, BarChart3, Clock, Scissors } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-const SceneEconomy = () => {
-  const { reportData } = useReport();
+interface ReportContextValue {
+  reportData: ReportData;
+  activeLens: StakeholderLens;
+  currentScore: number;
+}
 
+export default function SceneEconomy() {
+  const { reportData, currentScore } = useOutletContext<ReportContextValue>();
+
+  // Get structure-related parameters for economy analysis
+  const economyParams = reportData.parameterScores?.filter(p => 
+    p.category?.toLowerCase().includes('structure') || 
+    p.parameterName?.toLowerCase().includes('pacing') ||
+    p.parameterName?.toLowerCase().includes('economy') ||
+    p.parameterName?.toLowerCase().includes('efficiency')
+  ) || [];
+
+  const economyScore = economyParams.length > 0 
+    ? economyParams.reduce((sum, p) => sum + p.score, 0) / economyParams.length 
+    : reportData.categoryScores?.['Structure'] || currentScore;
+
+  const categoryScore = typeof reportData.categoryScores?.['Structure'] === 'number'
+    ? reportData.categoryScores['Structure']
+    : (reportData.categoryScores?.['Structure'] as { score?: number })?.score || economyScore;
+
+  // Scene analysis
+  const scenes = reportData.scenes || [];
+  const totalScenes = scenes.length;
+  const pageCount = reportData.scriptMetadata?.pageCount || 110;
+  const avgSceneLength = totalScenes > 0 ? (pageCount / totalScenes).toFixed(1) : 'N/A';
+  
+  // Estimate scene efficiency
+  const essentialCount = Math.floor(totalScenes * 0.8);
+  const beneficialCount = Math.floor(totalScenes * 0.15);
+  const questionableCount = totalScenes - essentialCount - beneficialCount;
+
+  // Derived economy metrics
   const economyMetrics = [
-    { label: 'Scene Efficiency', score: 7.2, description: 'Every scene earns its place' },
-    { label: 'Escalation Logic', score: 7.8, description: 'Stakes build appropriately' },
-    { label: 'Redundancy Control', score: 6.5, description: 'Minimal repetitive scenes' },
-    { label: 'Pacing Balance', score: 7.5, description: 'Action/dialogue rhythm' },
+    { label: 'Scene Efficiency', score: Math.min(10, categoryScore), description: 'Every scene earns its place' },
+    { label: 'Escalation Logic', score: Math.min(10, categoryScore + 0.4), description: 'Stakes build appropriately' },
+    { label: 'Redundancy Control', score: Math.min(10, categoryScore - 0.5), description: 'Minimal repetitive scenes' },
+    { label: 'Pacing Balance', score: Math.min(10, categoryScore + 0.2), description: 'Action/dialogue rhythm' },
   ];
 
-  const sceneBreakdown = {
-    total: 48,
-    essential: 38,
-    beneficial: 7,
-    questionable: 3,
-    averageLength: '2.3 pages'
-  };
-
+  // Act breakdown
+  const act1End = Math.floor(totalScenes * 0.25);
+  const act2End = Math.floor(totalScenes * 0.75);
+  
   const actAnalysis = [
     {
-      act: 'Act I (Pages 1-25)',
-      scenes: 12,
-      efficiency: 85,
-      notes: 'Tight setup, efficient character introductions',
-      issues: ['Scene 4 could be combined with Scene 5']
+      act: `Act I (Pages 1-${Math.floor(pageCount * 0.25)})`,
+      scenes: act1End,
+      efficiency: Math.min(100, categoryScore * 10 + 5),
+      notes: categoryScore >= 7 ? 'Tight setup, efficient character introductions' : 'Setup could be more efficient',
     },
     {
-      act: 'Act II-A (Pages 26-55)',
-      scenes: 15,
-      efficiency: 72,
-      notes: 'Some scenes feel redundant in demonstrating conflict',
-      issues: ['Scenes 18-19 cover similar ground', 'Scene 22 is largely expositional']
+      act: `Act II-A (Pages ${Math.floor(pageCount * 0.25)}-${Math.floor(pageCount * 0.5)})`,
+      scenes: Math.floor((act2End - act1End) / 2),
+      efficiency: Math.min(100, categoryScore * 9),
+      notes: categoryScore >= 7 ? 'Good momentum through rising action' : 'Some scenes feel redundant',
     },
     {
-      act: 'Act II-B (Pages 56-85)',
-      scenes: 13,
-      efficiency: 78,
-      notes: 'Good escalation, midpoint is strong',
-      issues: ['Scene 31 could be trimmed']
+      act: `Act II-B (Pages ${Math.floor(pageCount * 0.5)}-${Math.floor(pageCount * 0.75)})`,
+      scenes: Math.ceil((act2End - act1End) / 2),
+      efficiency: Math.min(100, categoryScore * 9.5),
+      notes: categoryScore >= 7 ? 'Strong midpoint and complications' : 'Could tighten some sequences',
     },
     {
-      act: 'Act III (Pages 86-110)',
-      scenes: 8,
-      efficiency: 90,
-      notes: 'Excellent momentum, every scene drives to climax',
-      issues: []
-    }
+      act: `Act III (Pages ${Math.floor(pageCount * 0.75)}-${pageCount})`,
+      scenes: totalScenes - act2End,
+      efficiency: Math.min(100, categoryScore * 10 + 8),
+      notes: categoryScore >= 7 ? 'Excellent momentum to climax' : 'Good momentum overall',
+    },
   ];
 
-  const questionableScenes = [
-    {
-      scene: 'Scene 18 (Pages 38-40)',
-      purpose: 'Shows protagonist\'s isolation',
-      issue: 'This is already established in Scene 15 and demonstrated better',
-      recommendation: 'Cut entirely, integrate any essential info into Scene 19',
-      savings: '2.5 pages'
-    },
-    {
-      scene: 'Scene 22 (Pages 48-50)',
-      purpose: 'Exposition about antagonist\'s past',
-      issue: 'Delivered through dialogue rather than action',
-      recommendation: 'Convert to visual flashback or cut, reveal through behavior',
-      savings: '2 pages'
-    },
-    {
-      scene: 'Scene 31 (Pages 68-70)',
-      purpose: 'Team preparation montage',
-      issue: 'Overlong, some beats are unnecessary',
-      recommendation: 'Trim to 1 page, focus on essential beats only',
-      savings: '1.5 pages'
-    }
-  ];
+  const strengths = economyParams.filter(p => p.score >= 7).map(p => ({
+    text: p.displayName || p.parameterName,
+    detail: p.rationale?.slice(0, 80)
+  }));
 
-  const pacingAnalysis = [
-    { section: 'Opening', pages: '1-5', type: 'Action', assessment: 'Strong hook, efficient' },
-    { section: 'Setup', pages: '6-15', type: 'Dialogue-heavy', assessment: 'Good character work' },
-    { section: 'Catalyst', pages: '16-20', type: 'Mixed', assessment: 'Well-paced escalation' },
-    { section: 'Debate', pages: '21-25', type: 'Dialogue-heavy', assessment: 'Slightly slow' },
-    { section: 'B-Story', pages: '26-35', type: 'Mixed', assessment: 'Good balance' },
-    { section: 'Fun & Games', pages: '36-50', type: 'Action-focused', assessment: 'Some redundancy' },
-    { section: 'Midpoint', pages: '51-55', type: 'Action', assessment: 'Excellent momentum' },
-    { section: 'Bad Guys Close In', pages: '56-70', type: 'Mixed', assessment: 'Good tension' },
-    { section: 'All Is Lost', pages: '71-80', type: 'Emotional', assessment: 'Powerful' },
-    { section: 'Dark Night', pages: '81-85', type: 'Dialogue-heavy', assessment: 'Effective' },
-    { section: 'Finale', pages: '86-110', type: 'Action', assessment: 'Excellent' },
-  ];
+  const weaknesses = economyParams.filter(p => p.score < 5).map(p => ({
+    text: p.displayName || p.parameterName,
+    detail: p.rationale?.slice(0, 80)
+  }));
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 max-w-6xl mx-auto">
       <SectionHeader
         title="Scene Economy"
         subtitle="Analyzing scene efficiency, pacing, and opportunities for tightening"
         icon={Layers}
+        score={categoryScore}
       />
 
       {/* Economy Metrics */}
@@ -128,24 +131,24 @@ const SceneEconomy = () => {
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <div className="text-center p-4 bg-muted/30 rounded-lg">
-              <p className="text-3xl font-bold text-primary">{sceneBreakdown.total}</p>
+              <p className="text-3xl font-bold text-primary">{totalScenes}</p>
               <p className="text-sm text-muted-foreground">Total Scenes</p>
             </div>
-            <div className="text-center p-4 bg-green-500/10 rounded-lg">
-              <p className="text-3xl font-bold text-green-400">{sceneBreakdown.essential}</p>
+            <div className="text-center p-4 bg-success/10 rounded-lg">
+              <p className="text-3xl font-bold text-success">{essentialCount}</p>
               <p className="text-sm text-muted-foreground">Essential</p>
             </div>
-            <div className="text-center p-4 bg-blue-500/10 rounded-lg">
-              <p className="text-3xl font-bold text-blue-400">{sceneBreakdown.beneficial}</p>
+            <div className="text-center p-4 bg-chart-3/10 rounded-lg">
+              <p className="text-3xl font-bold text-chart-3">{beneficialCount}</p>
               <p className="text-sm text-muted-foreground">Beneficial</p>
             </div>
-            <div className="text-center p-4 bg-yellow-500/10 rounded-lg">
-              <p className="text-3xl font-bold text-yellow-400">{sceneBreakdown.questionable}</p>
+            <div className="text-center p-4 bg-warning/10 rounded-lg">
+              <p className="text-3xl font-bold text-warning">{questionableCount}</p>
               <p className="text-sm text-muted-foreground">Questionable</p>
             </div>
             <div className="text-center p-4 bg-muted/30 rounded-lg">
-              <p className="text-3xl font-bold">{sceneBreakdown.averageLength}</p>
-              <p className="text-sm text-muted-foreground">Avg Length</p>
+              <p className="text-3xl font-bold">{avgSceneLength}</p>
+              <p className="text-sm text-muted-foreground">Avg Pages</p>
             </div>
           </div>
         </CardContent>
@@ -153,169 +156,119 @@ const SceneEconomy = () => {
 
       {/* Verdict */}
       <VerdictBox
-        type="info"
-        title="Economy Assessment"
-        content="The script is reasonably efficient at 110 pages with 48 scenes. Act I and Act III are particularly tight, while Act II-A has the most room for improvement. Cutting or reworking 3 questionable scenes could save 6 pages and improve pacing without losing anything essential."
+        type={categoryScore >= 7 ? 'success' : categoryScore >= 5 ? 'finding' : 'issue'}
+        title={categoryScore >= 7 ? 'Efficient Scene Structure' : categoryScore >= 5 ? 'Room for Tightening' : 'Scene Economy Issues'}
+        content={
+          categoryScore >= 7 
+            ? `The script is efficiently structured at ${pageCount} pages with ${totalScenes} scenes. Each act maintains good momentum and most scenes justify their presence.`
+            : categoryScore >= 5
+            ? `The script at ${pageCount} pages has opportunities for improvement. Cutting or reworking ${questionableCount} scenes could improve pacing without losing essential content.`
+            : `Scene economy needs attention. Several sequences feel redundant or could be combined. Focus on ensuring every scene advances plot, character, or theme.`
+        }
       />
 
       {/* Act-by-Act Analysis */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Clock className="h-5 w-5 text-primary" />
-            Act-by-Act Efficiency
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {actAnalysis.map((act, idx) => (
-              <div key={idx} className="p-4 bg-muted/30 rounded-lg">
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="font-semibold">{act.act}</h4>
-                  <div className="flex items-center gap-4">
-                    <span className="text-sm text-muted-foreground">{act.scenes} scenes</span>
-                    <div className="flex items-center gap-2">
-                      <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
-                        <div 
-                          className={`h-full rounded-full ${
-                            act.efficiency >= 85 ? 'bg-green-500' :
-                            act.efficiency >= 75 ? 'bg-blue-500' :
-                            'bg-yellow-500'
-                          }`}
-                          style={{ width: `${act.efficiency}%` }}
-                        />
-                      </div>
-                      <span className="text-sm font-medium">{act.efficiency}%</span>
+      <Card className="p-6">
+        <SubSectionHeader title="Act-by-Act Efficiency" />
+        <div className="space-y-4">
+          {actAnalysis.map((act, idx) => (
+            <div key={idx} className="p-4 bg-muted/30 rounded-lg">
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="font-semibold">{act.act}</h4>
+                <div className="flex items-center gap-4">
+                  <span className="text-sm text-muted-foreground">{act.scenes} scenes</span>
+                  <div className="flex items-center gap-2">
+                    <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
+                      <div 
+                        className={cn(
+                          "h-full rounded-full",
+                          act.efficiency >= 85 ? 'bg-success' :
+                          act.efficiency >= 75 ? 'bg-chart-3' :
+                          'bg-warning'
+                        )}
+                        style={{ width: `${act.efficiency}%` }}
+                      />
                     </div>
+                    <span className="text-sm font-medium">{act.efficiency.toFixed(0)}%</span>
                   </div>
                 </div>
-                <p className="text-sm text-muted-foreground mb-2">{act.notes}</p>
-                {act.issues.length > 0 && (
-                  <ul className="text-sm text-yellow-400 space-y-1">
-                    {act.issues.map((issue, i) => (
-                      <li key={i}>• {issue}</li>
-                    ))}
-                  </ul>
-                )}
               </div>
-            ))}
-          </div>
-        </CardContent>
+              <p className="text-sm text-muted-foreground">{act.notes}</p>
+            </div>
+          ))}
+        </div>
       </Card>
 
-      {/* Questionable Scenes */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Scissors className="h-5 w-5 text-primary" />
-            Scenes to Reconsider
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
+      {/* Parameter Breakdown */}
+      {economyParams.length > 0 && (
+        <Card className="p-6">
+          <SubSectionHeader title="Economy Parameters" />
           <div className="space-y-4">
-            {questionableScenes.map((scene, idx) => (
-              <div key={idx} className="p-4 bg-muted/30 rounded-lg border-l-4 border-yellow-500">
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="font-semibold">{scene.scene}</h4>
-                  <span className="px-2 py-1 rounded text-xs font-medium bg-green-500/20 text-green-400">
-                    Potential Savings: {scene.savings}
-                  </span>
-                </div>
-                <div className="space-y-2 text-sm">
-                  <p><span className="font-medium">Purpose:</span> <span className="text-muted-foreground">{scene.purpose}</span></p>
-                  <p><span className="font-medium">Issue:</span> <span className="text-muted-foreground">{scene.issue}</span></p>
-                  <p><span className="font-medium">Recommendation:</span> <span className="text-primary">{scene.recommendation}</span></p>
-                </div>
+            {economyParams.slice(0, 8).map((param, index) => (
+              <div key={index}>
+                <ScoreBar 
+                  score={param.score} 
+                  label={param.displayName || param.parameterName}
+                  showValue 
+                />
               </div>
             ))}
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Pacing Chart */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Pacing Flow</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left py-3 px-4 font-medium">Section</th>
-                  <th className="text-left py-3 px-4 font-medium">Pages</th>
-                  <th className="text-left py-3 px-4 font-medium">Type</th>
-                  <th className="text-left py-3 px-4 font-medium">Assessment</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pacingAnalysis.map((section, idx) => (
-                  <tr key={idx} className="border-b last:border-0">
-                    <td className="py-3 px-4 font-medium">{section.section}</td>
-                    <td className="py-3 px-4 text-muted-foreground">{section.pages}</td>
-                    <td className="py-3 px-4">
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${
-                        section.type === 'Action' ? 'bg-red-500/20 text-red-400' :
-                        section.type === 'Dialogue-heavy' ? 'bg-blue-500/20 text-blue-400' :
-                        section.type === 'Emotional' ? 'bg-purple-500/20 text-purple-400' :
-                        'bg-muted text-muted-foreground'
-                      }`}>
-                        {section.type}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-sm text-muted-foreground">{section.assessment}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
+        </Card>
+      )}
 
       {/* Strengths & Weaknesses */}
-      <StrengthWeaknessList
-        strengths={[
-          { text: 'Act III is extremely efficient' },
-          { text: 'Opening sequence wastes no time' },
-          { text: 'Average scene length is appropriate' },
-          { text: 'Escalation through acts is logical' },
-        ]}
-        weaknesses={[
-          { text: 'Act II-A has redundant scenes' },
-          { text: 'Some exposition delivered inefficiently' },
-          { text: '6 pages could be trimmed without loss' },
-          { text: 'Debate section slightly slow' },
-        ]}
-      />
+      {(strengths.length > 0 || weaknesses.length > 0) ? (
+        <StrengthWeaknessList
+          strengths={strengths.length > 0 ? strengths : [{ text: 'Act III is well-paced' }]}
+          weaknesses={weaknesses.length > 0 ? weaknesses : [{ text: 'Some scenes could be tightened' }]}
+        />
+      ) : (
+        <StrengthWeaknessList
+          strengths={[
+            { text: 'Act III is efficient' },
+            { text: 'Opening sequence wastes no time' },
+            { text: 'Average scene length is appropriate' },
+          ]}
+          weaknesses={[
+            { text: 'Some Act II scenes may be redundant' },
+            { text: 'Exposition could be delivered more efficiently' },
+          ]}
+        />
+      )}
 
       {/* Recommendations */}
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold">Economy Recommendations</h3>
+      <Card className="p-6">
+        <SubSectionHeader title="Economy Recommendations" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {questionableCount > 2 && (
+            <RecommendationCard
+              title="Review Questionable Scenes"
+              description={`${questionableCount} scenes may be redundant or could be combined. Review each for essential contribution.`}
+              priority="high"
+              effort="moderate"
+            />
+          )}
           <RecommendationCard
-            title="Cut Scene 18"
-            description="This scene is redundant with Scene 15. Remove entirely and fold essential info into Scene 19."
-            priority="high"
+            title="Tighten Act II"
+            description="The second act typically has the most room for improvement. Look for scenes covering the same ground."
+            priority={categoryScore < 7 ? 'high' : 'medium'}
+            effort="moderate"
           />
           <RecommendationCard
-            title="Rework Scene 22"
-            description="Convert exposition to visual flashback or reveal antagonist's past through present behavior."
-            priority="high"
-          />
-          <RecommendationCard
-            title="Trim Scene 31"
-            description="Cut the preparation montage to essential beats only. Target 1 page maximum."
+            title="Convert Exposition to Action"
+            description="Identify scenes that are primarily expositional and find ways to convey information through action."
             priority="medium"
+            effort="moderate"
           />
           <RecommendationCard
-            title="Combine Scenes 4-5"
-            description="These early setup scenes can be merged for efficiency without losing character work."
+            title="Combine Similar Scenes"
+            description="Look for adjacent scenes that could be merged without losing essential beats."
             priority="low"
+            effort="easy"
           />
         </div>
-      </div>
+      </Card>
     </div>
   );
-};
-
-export default SceneEconomy;
+}
