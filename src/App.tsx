@@ -19,6 +19,14 @@ import ProtagonistAnalysis from "./pages/report/ProtagonistAnalysis";
 import AntagonistAnalysis from "./pages/report/AntagonistAnalysis";
 import SupportingCast from "./pages/report/SupportingCast";
 import CharacterPsychology from "./pages/report/CharacterPsychology";
+import DialogueSubtext from "./pages/report/DialogueSubtext";
+import ThemeMoral from "./pages/report/ThemeMoral";
+import VisualStorytelling from "./pages/report/VisualStorytelling";
+import EmotionalResonance from "./pages/report/EmotionalResonance";
+import Marketability from "./pages/report/Marketability";
+import Production from "./pages/report/Production";
+import AudienceStrategy from "./pages/report/AudienceStrategy";
+import SceneEconomy from "./pages/report/SceneEconomy";
 import ReportAnalysis from "./pages/report/ReportAnalysis";
 import ReportInsights from "./pages/report/ReportInsights";
 import ReportNarrative from "./pages/report/ReportNarrative";
@@ -68,17 +76,44 @@ const App = () => (
               <Route path="antagonist" element={<AntagonistAnalysis />} />
               <Route path="supporting" element={<SupportingCast />} />
               <Route path="psychology" element={<CharacterPsychology />} />
+              <Route path="dialogue" element={<DialogueSubtext />} />
+              <Route path="theme" element={<ThemeMoral />} />
+              <Route path="visual" element={<VisualStorytelling />} />
+              <Route path="emotional" element={<EmotionalResonance />} />
+              <Route path="market" element={<Marketability />} />
+              <Route path="production" element={<Production />} />
+              <Route path="audience" element={<AudienceStrategy />} />
+              <Route path="rewrite" element={<RewritePriorities />} />
+              <Route path="scenes" element={<SceneEconomy />} />
+              <Route path="scorecard" element={<CompleteScorecard />} />
+              <Route path="script" element={<SampleScript />} />
               <Route path="analysis" element={<ReportAnalysis />} />
               <Route path="insights" element={<ReportInsights />} />
               <Route path="narrative" element={<ReportNarrative />} />
               <Route path="characters" element={<ReportCharacters />} />
               <Route path="platform" element={<ReportPlatform />} />
               <Route path="comic" element={<ReportComic />} />
-              <Route path="scorecard" element={<CompleteScorecard />} />
-              <Route path="rewrite" element={<RewritePriorities />} />
             </Route>
             <Route path="/sample-report" element={<SampleReportLayout />}>
               <Route index element={<ProjectSnapshot />} />
+              <Route path="concept" element={<ConceptHook />} />
+              <Route path="plot" element={<PlotAnalysis />} />
+              <Route path="structure" element={<StructuralEngineering />} />
+              <Route path="protagonist" element={<ProtagonistAnalysis />} />
+              <Route path="antagonist" element={<AntagonistAnalysis />} />
+              <Route path="supporting" element={<SupportingCast />} />
+              <Route path="psychology" element={<CharacterPsychology />} />
+              <Route path="dialogue" element={<DialogueSubtext />} />
+              <Route path="theme" element={<ThemeMoral />} />
+              <Route path="visual" element={<VisualStorytelling />} />
+              <Route path="emotional" element={<EmotionalResonance />} />
+              <Route path="market" element={<Marketability />} />
+              <Route path="production" element={<Production />} />
+              <Route path="audience" element={<AudienceStrategy />} />
+              <Route path="rewrite" element={<RewritePriorities />} />
+              <Route path="scenes" element={<SceneEconomy />} />
+              <Route path="scorecard" element={<CompleteScorecard />} />
+              <Route path="script" element={<SampleScript />} />
               <Route path="analysis" element={<ReportAnalysis />} />
               <Route path="insights" element={<ReportInsights />} />
               <Route path="narrative" element={<ReportNarrative />} />
@@ -88,7 +123,25 @@ const App = () => (
             <Route path="/sample-script" element={<SampleScript />} />
             <Route path="/sample-comic-report" element={<SampleComicReportLayout />}>
               <Route index element={<ProjectSnapshot />} />
+              <Route path="concept" element={<ConceptHook />} />
+              <Route path="plot" element={<PlotAnalysis />} />
+              <Route path="structure" element={<StructuralEngineering />} />
+              <Route path="protagonist" element={<ProtagonistAnalysis />} />
+              <Route path="antagonist" element={<AntagonistAnalysis />} />
+              <Route path="supporting" element={<SupportingCast />} />
+              <Route path="psychology" element={<CharacterPsychology />} />
+              <Route path="dialogue" element={<DialogueSubtext />} />
+              <Route path="theme" element={<ThemeMoral />} />
+              <Route path="visual" element={<VisualStorytelling />} />
+              <Route path="emotional" element={<EmotionalResonance />} />
               <Route path="comic" element={<ReportComic />} />
+              <Route path="market" element={<Marketability />} />
+              <Route path="production" element={<Production />} />
+              <Route path="audience" element={<AudienceStrategy />} />
+              <Route path="rewrite" element={<RewritePriorities />} />
+              <Route path="scenes" element={<SceneEconomy />} />
+              <Route path="scorecard" element={<CompleteScorecard />} />
+              <Route path="script" element={<SampleComicScript />} />
               <Route path="analysis" element={<ReportAnalysis />} />
               <Route path="insights" element={<ReportInsights />} />
               <Route path="narrative" element={<ReportNarrative />} />
