@@ -7,6 +7,7 @@ import { LensSelector } from '@/components/LensToggle';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   ArrowLeft, 
   LayoutDashboard, 
@@ -18,12 +19,22 @@ import {
   ChevronLeft,
   ChevronRight,
   Sparkles,
-  FileText
+  FileText,
+  Building,
+  User,
+  UserX,
+  MessageSquare,
+  Heart,
+  Eye,
+  TrendingUp,
+  Target,
+  ListTodo,
+  Layers,
+  LucideIcon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { createContext, useContext } from 'react';
 
-// Use the same interface as ReportLayout for compatibility
 interface ReportContextValue {
   report: Report;
   reportData: ReportData;
@@ -43,6 +54,75 @@ export function useSampleReport() {
   return context;
 }
 
+interface NavItem {
+  id: string;
+  label: string;
+  icon: LucideIcon;
+  path: string;
+}
+
+interface NavGroup {
+  label: string;
+  items: NavItem[];
+}
+
+const getNavGroups = (): NavGroup[] => [
+  {
+    label: 'OVERVIEW',
+    items: [
+      { id: 'snapshot', label: 'Project Snapshot', icon: LayoutDashboard, path: '' },
+    ],
+  },
+  {
+    label: 'STORY ANALYSIS',
+    items: [
+      { id: 'concept', label: 'Concept & Hook', icon: Lightbulb, path: '/concept' },
+      { id: 'plot', label: 'Plot Analysis', icon: TrendingUp, path: '/plot' },
+      { id: 'structure', label: 'Structural Engineering', icon: Building, path: '/structure' },
+    ],
+  },
+  {
+    label: 'CHARACTERS',
+    items: [
+      { id: 'protagonist', label: 'Protagonist', icon: User, path: '/protagonist' },
+      { id: 'antagonist', label: 'Antagonist', icon: UserX, path: '/antagonist' },
+      { id: 'supporting', label: 'Supporting Cast', icon: Users, path: '/supporting' },
+      { id: 'psychology', label: 'Character Psychology', icon: Brain, path: '/psychology' },
+    ],
+  },
+  {
+    label: 'CRAFT ELEMENTS',
+    items: [
+      { id: 'dialogue', label: 'Dialogue & Subtext', icon: MessageSquare, path: '/dialogue' },
+      { id: 'theme', label: 'Theme & Moral Core', icon: Heart, path: '/theme' },
+      { id: 'visual', label: 'Visual Storytelling', icon: Eye, path: '/visual' },
+      { id: 'emotional', label: 'Emotional Resonance', icon: Sparkles, path: '/emotional' },
+    ],
+  },
+  {
+    label: 'PRODUCTION & MARKET',
+    items: [
+      { id: 'market', label: 'Marketability', icon: TrendingUp, path: '/market' },
+      { id: 'production', label: 'Production', icon: Film, path: '/production' },
+      { id: 'audience', label: 'Audience Strategy', icon: Target, path: '/audience' },
+    ],
+  },
+  {
+    label: 'ACTION ITEMS',
+    items: [
+      { id: 'rewrite', label: 'Rewrite Priorities', icon: ListTodo, path: '/rewrite' },
+      { id: 'scenes', label: 'Scene Economy', icon: Layers, path: '/scenes' },
+    ],
+  },
+  {
+    label: 'REFERENCE',
+    items: [
+      { id: 'scorecard', label: 'Complete Scorecard', icon: BarChart3, path: '/scorecard' },
+      { id: 'script', label: 'View Script', icon: FileText, path: '/script' },
+    ],
+  },
+];
+
 export default function SampleReportLayout() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -58,6 +138,7 @@ export default function SampleReportLayout() {
 
   const reportData = SAMPLE_REPORT_DATA;
   const report = SAMPLE_REPORT;
+  const navGroups = getNavGroups();
 
   const getCurrentScore = () => {
     return reportData.lensScores?.[activeLens] ?? reportData.overallScore ?? 0;
@@ -78,17 +159,16 @@ export default function SampleReportLayout() {
     return null;
   }
 
-  const navItems = [
-    { id: 'overview', label: 'Overview', icon: LayoutDashboard, path: '' },
-    { id: 'analysis', label: 'AI Analysis', icon: Brain, path: '/analysis' },
-    { id: 'insights', label: 'Insights', icon: Lightbulb, path: '/insights' },
-    { id: 'narrative', label: 'Narrative', icon: Film, path: '/narrative' },
-    { id: 'characters', label: 'Characters', icon: Users, path: '/characters' },
-    { id: 'platform', label: 'Platform & Risk', icon: BarChart3, path: '/platform' },
-  ];
-
   const currentPath = location.pathname.replace('/sample-report', '') || '';
-  const currentNav = navItems.find(item => item.path === currentPath) || navItems[0];
+  
+  const findCurrentNav = () => {
+    for (const group of navGroups) {
+      const item = group.items.find(item => item.path === currentPath);
+      if (item) return item;
+    }
+    return navGroups[0].items[0];
+  };
+  const currentNav = findCurrentNav();
 
   const contextValue: ReportContextValue = {
     report: report as Report,
@@ -133,11 +213,11 @@ export default function SampleReportLayout() {
 
         {/* Sidebar Navigation */}
         <aside className={cn(
-          "fixed left-0 top-10 h-[calc(100vh-2.5rem)] z-40 transition-all duration-300 border-r border-border bg-card/95 backdrop-blur-xl",
-          sidebarCollapsed ? "w-16" : "w-64"
+          "fixed left-0 top-10 h-[calc(100vh-2.5rem)] z-40 transition-all duration-300 border-r border-border bg-card/95 backdrop-blur-xl flex flex-col",
+          sidebarCollapsed ? "w-16" : "w-72"
         )}>
           {/* Sidebar Header */}
-          <div className="h-16 flex items-center justify-between px-4 border-b border-border">
+          <div className="h-16 flex items-center justify-between px-4 border-b border-border shrink-0">
             {!sidebarCollapsed && (
               <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')}>
                 <ArrowLeft className="h-5 w-5" />
@@ -155,7 +235,7 @@ export default function SampleReportLayout() {
 
           {/* Score Display */}
           <div className={cn(
-            "p-4 border-b border-border",
+            "p-4 border-b border-border shrink-0",
             sidebarCollapsed ? "text-center" : ""
           )}>
             <div className={cn(
@@ -176,36 +256,50 @@ export default function SampleReportLayout() {
             </div>
           </div>
 
-          {/* Navigation Items */}
-          <nav className="p-2 space-y-1">
-            {navItems.map((item) => {
-              const isActive = item.path === currentPath;
-              const Icon = item.icon;
-              
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => navigate(`/sample-report${item.path}`)}
-                  className={cn(
-                    "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-left",
-                    isActive 
-                      ? "bg-primary text-primary-foreground" 
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
-                    sidebarCollapsed && "justify-center px-2"
-                  )}
-                >
-                  <Icon className={cn("h-5 w-5 shrink-0", isActive && "text-primary-foreground")} />
+          {/* Navigation Items - Scrollable */}
+          <ScrollArea className="flex-1">
+            <nav className="p-2 space-y-4">
+              {navGroups.map((group) => (
+                <div key={group.label}>
                   {!sidebarCollapsed && (
-                    <span className="font-medium">{item.label}</span>
+                    <p className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      {group.label}
+                    </p>
                   )}
-                </button>
-              );
-            })}
-          </nav>
+                  <div className="space-y-0.5">
+                    {group.items.map((item) => {
+                      const isActive = item.path === currentPath;
+                      const Icon = item.icon;
+                      
+                      return (
+                        <button
+                          key={item.id}
+                          onClick={() => navigate(`/sample-report${item.path}`)}
+                          className={cn(
+                            "w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-all text-left",
+                            isActive 
+                              ? "bg-primary text-primary-foreground" 
+                              : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
+                            sidebarCollapsed && "justify-center px-2"
+                          )}
+                          title={sidebarCollapsed ? item.label : undefined}
+                        >
+                          <Icon className={cn("h-4 w-4 shrink-0", isActive && "text-primary-foreground")} />
+                          {!sidebarCollapsed && (
+                            <span className="text-sm font-medium truncate">{item.label}</span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </nav>
+          </ScrollArea>
 
           {/* Lens Selector at bottom */}
           {!sidebarCollapsed && (
-            <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-border bg-card/95">
+            <div className="p-4 border-t border-border bg-card/95 shrink-0">
               <p className="text-xs text-muted-foreground mb-2">Viewing as</p>
               <LensSelector activeLens={activeLens} onLensChange={setActiveLens} compact />
             </div>
@@ -215,7 +309,7 @@ export default function SampleReportLayout() {
         {/* Main Content */}
         <main className={cn(
           "flex-1 transition-all duration-300 pt-10",
-          sidebarCollapsed ? "ml-16" : "ml-64"
+          sidebarCollapsed ? "ml-16" : "ml-72"
         )}>
           {/* Top Header */}
           <header className="sticky top-10 z-30 h-16 border-b border-border bg-background/95 backdrop-blur flex items-center justify-between px-6">
