@@ -24,14 +24,14 @@ interface ReportContextValue {
 export default function PlotAnalysis() {
   const { reportData, currentScore } = useOutletContext<ReportContextValue>();
   
-  // Get plot-related parameters
+  // Get plot-related parameters - Structure and Conflict categories
   const plotParams = reportData.parameterScores?.filter(p => 
-    p.category?.toLowerCase().includes('structure') || 
-    p.category?.toLowerCase().includes('plot') ||
+    ['structure', 'conflict'].includes(p.category?.toLowerCase() || '') ||
     p.parameterName?.toLowerCase().includes('plot') ||
     p.parameterName?.toLowerCase().includes('story') ||
     p.parameterName?.toLowerCase().includes('conflict') ||
-    p.parameterName?.toLowerCase().includes('tension')
+    p.parameterName?.toLowerCase().includes('tension') ||
+    p.parameterName?.toLowerCase().includes('pacing')
   ) || [];
 
   const plotScore = plotParams.length > 0 
