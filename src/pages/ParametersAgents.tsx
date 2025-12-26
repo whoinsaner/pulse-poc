@@ -43,6 +43,7 @@ import { AgentOutputSchema } from "@/components/parameters/AgentOutputSchema";
 import { InsightsSchema } from "@/components/parameters/InsightsSchema";
 import { DataFlowDiagram } from "@/components/parameters/DataFlowDiagram";
 import { SampleAgentOutput } from "@/components/parameters/SampleAgentOutput";
+import { AgentSectionMapping } from "@/components/parameters/AgentSectionMapping";
 
 interface Parameter {
   id: string;
@@ -108,11 +109,16 @@ const LENS_LABELS: Record<string, { label: string; description: string; color: s
 };
 
 const AGENT_COLORS: Record<string, string> = {
+  ConceptAgent: "bg-amber-500/10 text-amber-500 border-amber-500/20",
+  StructureAgent: "bg-blue-500/10 text-blue-500 border-blue-500/20",
   CharacterAgent: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
+  ConflictAgent: "bg-red-500/10 text-red-500 border-red-500/20",
+  ThemeAgent: "bg-purple-500/10 text-purple-500 border-purple-500/20",
   DialogueAgent: "bg-violet-500/10 text-violet-500 border-violet-500/20",
-  NarrativeAgent: "bg-amber-500/10 text-amber-500 border-amber-500/20",
-  ProductionAgent: "bg-rose-500/10 text-rose-500 border-rose-500/20",
-  ThematicAgent: "bg-sky-500/10 text-sky-500 border-sky-500/20",
+  EmotionalArcAgent: "bg-pink-500/10 text-pink-500 border-pink-500/20",
+  WorldLogicAgent: "bg-cyan-500/10 text-cyan-500 border-cyan-500/20",
+  MarketAgent: "bg-orange-500/10 text-orange-500 border-orange-500/20",
+  ExecutionAgent: "bg-rose-500/10 text-rose-500 border-rose-500/20",
   ComicArtDirectionAgent: "bg-fuchsia-500/10 text-fuchsia-500 border-fuchsia-500/20",
   ComicDialogueAgent: "bg-lime-500/10 text-lime-500 border-lime-500/20",
   ComicPacingAgent: "bg-teal-500/10 text-teal-500 border-teal-500/20",
@@ -319,6 +325,7 @@ export default function ParametersAgents() {
             {/* Output Schema Tab */}
             <TabsContent value="schema" className="space-y-6">
               <DataFlowDiagram />
+              <AgentSectionMapping />
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <AgentOutputSchema />
                 <InsightsSchema />
