@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -7,14 +7,30 @@ import { Badge } from '@/components/ui/badge';
 import type { Json } from '@/integrations/supabase/types';
 import { Progress } from '@/components/ui/progress';
 import { 
-  Loader2, Play, CheckCircle, XCircle, Clock, RefreshCw,
-  Lightbulb, Layers, Users, Swords, Sparkles, MessageSquare,
-  Globe, Heart, TrendingUp, Wrench, AlertTriangle, FileText, Timer
+  Loader2, CheckCircle, XCircle, Clock, RefreshCw,
+  Lightbulb, GitBranch, Users, Swords, Palette, MessageSquare,
+  Globe, Heart, TrendingUp, Cog, AlertTriangle, FileText, Timer,
+  FileInput, Tag, Scale, Blend, RefreshCcw, Search, Briefcase,
+  Eye, MessageCircle, Map, Mic, Gamepad2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { AnalysisStatus, AgentProgress } from '@/types/database';
+import { 
+  getAnalysisAgentsForScriptType, 
+  SYSTEM_AGENTS, 
+  META_AGENTS,
+  type AgentDefinition 
+} from '@/lib/scriptFramework';
 
 const AGENT_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes timeout for individual agents
+
+// Icon mapping from string names to Lucide components
+const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
+  Lightbulb, GitBranch, Users, Swords, Palette, MessageSquare,
+  Globe, Heart, TrendingUp, Cog, FileInput, Tag, Scale, Blend,
+  RefreshCw: RefreshCcw, Search, Briefcase, Eye, MessageCircle,
+  Timer, Map, Mic, Gamepad2
+};
 
 interface AnalysisRun {
   id: string;
@@ -38,25 +54,18 @@ interface InProgressAnalysisProps {
   onViewPartial?: () => void;
 }
 
-const AGENT_CONFIG = [
-  { name: 'ConceptAgent', label: 'Concept', icon: Lightbulb },
-  { name: 'StructureAgent', label: 'Structure', icon: Layers },
-  { name: 'CharacterAgent', label: 'Character', icon: Users },
-  { name: 'ConflictAgent', label: 'Conflict', icon: Swords },
-  { name: 'ThemeAgent', label: 'Theme', icon: Sparkles },
-  { name: 'DialogueAgent', label: 'Dialogue', icon: MessageSquare },
-  { name: 'WorldLogicAgent', label: 'World', icon: Globe },
-  { name: 'EmotionalArcAgent', label: 'Emotion', icon: Heart },
-  { name: 'MarketAgent', label: 'Market', icon: TrendingUp },
-  { name: 'ExecutionAgent', label: 'Execution', icon: Wrench },
-];
-
 export function InProgressAnalysis({ analysis, onRetry, onViewPartial }: InProgressAnalysisProps) {
   const { toast } = useToast();
   const [isRetrying, setIsRetrying] = useState(false);
   const [retryingAgent, setRetryingAgent] = useState<string | null>(null);
   
   const agentProgress = analysis.agent_progress || {};
+  const scriptType = analysis.scripts?.script_type || 'feature';
+  
+  // Get applicable agents for this script type from the framework
+  const applicableAgents = useMemo(() => {
+    return getAnalysisAgentsForScriptType(scriptType);
+  }, [scriptType]);
   
   // Check if an agent has timed out (running for too long)
   const isAgentTimedOut = (progress: AgentProgress | undefined): boolean => {
@@ -69,8 +78,8 @@ export function InProgressAnalysis({ analysis, onRetry, onViewPartial }: InProgr
   const getAgentStats = () => {
     let completed = 0, running = 0, failed = 0, pending = 0, timedOut = 0;
     
-    for (const agent of AGENT_CONFIG) {
-      const progress = agentProgress[agent.name];
+    for (const agent of applicableAgents) {
+      const progress = agentProgress[agent.id];
       if (progress?.status === 'completed') completed++;
       else if (progress?.status === 'running') {
         if (isAgentTimedOut(progress)) timedOut++;
@@ -80,7 +89,7 @@ export function InProgressAnalysis({ analysis, onRetry, onViewPartial }: InProgr
       else pending++;
     }
     
-    const total = AGENT_CONFIG.length;
+    const total = applicableAgents.length;
     const percentage = Math.round(((completed + running * 0.5) / total) * 100);
     return { completed, running, failed, pending, timedOut, total, percentage };
   };
@@ -202,13 +211,19 @@ export function InProgressAnalysis({ analysis, onRetry, onViewPartial }: InProgr
     }
   };
   
-  const getAgentIcon = (agent: typeof AGENT_CONFIG[0], status?: string, timedOut?: boolean) => {
-    const Icon = agent.icon;
+  const getAgentIcon = (agent: AgentDefinition, status?: string, timedOut?: boolean) => {
+    const Icon = ICON_MAP[agent.icon] || Lightbulb;
     if (timedOut) return <Timer className="h-3 w-3" />;
     if (status === 'running') return <Loader2 className="h-3 w-3 animate-spin" />;
     if (status === 'completed') return <CheckCircle className="h-3 w-3" />;
     if (status === 'failed') return <XCircle className="h-3 w-3" />;
     return <Icon className="h-3 w-3" />;
+  };
+  
+  // Get short label from agent name (e.g., "Concept & Hook" -> "Concept")
+  const getShortLabel = (name: string): string => {
+    const firstPart = name.split(' ')[0].replace('&', '').trim();
+    return firstPart.length > 8 ? firstPart.slice(0, 7) + '…' : firstPart;
   };
 
   return (
@@ -275,45 +290,58 @@ export function InProgressAnalysis({ analysis, onRetry, onViewPartial }: InProgr
           </div>
         )}
         
-        {/* Agent grid */}
-        <div className="grid grid-cols-5 sm:grid-cols-10 gap-1.5">
-          {AGENT_CONFIG.map((agent) => {
-            const progress = agentProgress[agent.name];
-            const status = progress?.status;
-            const timedOut = isAgentTimedOut(progress);
-            const canRetry = status === 'failed' || timedOut || status === 'pending';
-            const isRetryingThis = retryingAgent === agent.name;
-            
-            return (
-              <div
-                key={agent.name}
-                className={cn(
-                  'relative flex flex-col items-center gap-0.5 p-1.5 rounded-lg border transition-all',
-                  getAgentStatusClass(status, timedOut),
-                  canRetry && 'cursor-pointer hover:ring-2 hover:ring-primary/50'
-                )}
-                onClick={() => canRetry && handleRetryAgent(agent.name)}
-                title={`${agent.label}: ${timedOut ? 'timed out' : status || 'pending'}${canRetry ? ' (click to retry)' : ''}`}
-              >
-                {isRetryingThis ? (
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                ) : (
-                  getAgentIcon(agent, status, timedOut)
-                )}
-                <span className="text-[9px] font-medium truncate w-full text-center">
-                  {agent.label}
-                </span>
-                {(status === 'failed' || timedOut) && !isRetryingThis && (
-                  <div className={cn(
-                    "absolute -top-1 -right-1 w-3 h-3 rounded-full flex items-center justify-center",
-                    timedOut ? "bg-amber-500" : "bg-destructive"
-                  )}>
-                    <RefreshCw className="h-2 w-2 text-destructive-foreground" />
-                  </div>
-                )}
-              </div>
-            );
-          })}
+        {/* Agent grid - dynamic based on script type */}
+        <div className="space-y-3">
+          {/* Script type indicator */}
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="text-xs">
+              {scriptType.replace('_', ' ')}
+            </Badge>
+            <span className="text-xs text-muted-foreground">
+              {applicableAgents.length} agents active
+            </span>
+          </div>
+          
+          {/* Agent tiles */}
+          <div className="grid grid-cols-5 sm:grid-cols-10 gap-1.5">
+            {applicableAgents.map((agent) => {
+              const progress = agentProgress[agent.id];
+              const status = progress?.status;
+              const timedOut = isAgentTimedOut(progress);
+              const canRetry = status === 'failed' || timedOut || status === 'pending';
+              const isRetryingThis = retryingAgent === agent.id;
+              
+              return (
+                <div
+                  key={agent.id}
+                  className={cn(
+                    'relative flex flex-col items-center gap-0.5 p-1.5 rounded-lg border transition-all',
+                    getAgentStatusClass(status, timedOut),
+                    canRetry && 'cursor-pointer hover:ring-2 hover:ring-primary/50'
+                  )}
+                  onClick={() => canRetry && handleRetryAgent(agent.id)}
+                  title={`${agent.name}: ${timedOut ? 'timed out' : status || 'pending'}${canRetry ? ' (click to retry)' : ''}\n${agent.description}`}
+                >
+                  {isRetryingThis ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    getAgentIcon(agent, status, timedOut)
+                  )}
+                  <span className="text-[9px] font-medium truncate w-full text-center">
+                    {getShortLabel(agent.name)}
+                  </span>
+                  {(status === 'failed' || timedOut) && !isRetryingThis && (
+                    <div className={cn(
+                      "absolute -top-1 -right-1 w-3 h-3 rounded-full flex items-center justify-center",
+                      timedOut ? "bg-amber-500" : "bg-destructive"
+                    )}>
+                      <RefreshCw className="h-2 w-2 text-destructive-foreground" />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
         
         {/* Stats summary */}
