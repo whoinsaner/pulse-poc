@@ -96,6 +96,11 @@ export function InProgressAnalysis({ analysis, onRetry, onViewPartial }: InProgr
   
   const stats = getAgentStats();
   
+  // Calculate total parameters
+  const totalParams = useMemo(() => 
+    applicableAgents.reduce((sum, a) => sum + a.parameters.length, 0),
+  [applicableAgents]);
+  
   const handleResumeAnalysis = async () => {
     setIsRetrying(true);
     try {
@@ -298,7 +303,7 @@ export function InProgressAnalysis({ analysis, onRetry, onViewPartial }: InProgr
               {scriptType.replace('_', ' ')}
             </Badge>
             <span className="text-xs text-muted-foreground">
-              {applicableAgents.length} agents active
+              {applicableAgents.length} agents • {totalParams} parameters
             </span>
           </div>
           
@@ -315,12 +320,12 @@ export function InProgressAnalysis({ analysis, onRetry, onViewPartial }: InProgr
                 <div
                   key={agent.id}
                   className={cn(
-                    'relative flex flex-col items-center gap-0.5 p-1.5 rounded-lg border transition-all',
+                    'relative flex flex-col items-center gap-0.5 p-1.5 rounded-lg border transition-all group',
                     getAgentStatusClass(status, timedOut),
                     canRetry && 'cursor-pointer hover:ring-2 hover:ring-primary/50'
                   )}
                   onClick={() => canRetry && handleRetryAgent(agent.id)}
-                  title={`${agent.name}: ${timedOut ? 'timed out' : status || 'pending'}${canRetry ? ' (click to retry)' : ''}\n${agent.description}`}
+                  title={`${agent.name}: ${timedOut ? 'timed out' : status || 'pending'}\nParams: ${agent.parameters.slice(0, 3).join(', ')}${agent.parameters.length > 3 ? '...' : ''}`}
                 >
                   {isRetryingThis ? (
                     <Loader2 className="h-3 w-3 animate-spin" />
@@ -330,6 +335,12 @@ export function InProgressAnalysis({ analysis, onRetry, onViewPartial }: InProgr
                   <span className="text-[9px] font-medium truncate w-full text-center">
                     {getShortLabel(agent.name)}
                   </span>
+                  
+                  {/* Parameter count badge */}
+                  <span className="text-[8px] text-muted-foreground">
+                    {agent.parameters.length}p
+                  </span>
+                  
                   {(status === 'failed' || timedOut) && !isRetryingThis && (
                     <div className={cn(
                       "absolute -top-1 -right-1 w-3 h-3 rounded-full flex items-center justify-center",
