@@ -2,7 +2,6 @@ import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { 
   FileText, 
   Bot, 
@@ -89,7 +88,6 @@ function AgentNode({ agent, isActive, isHighlighted, showParameters }: AgentNode
     }
   };
 
-  // Format parameter name for display
   const formatParamName = (param: string) => {
     return param
       .split('_')
@@ -97,7 +95,6 @@ function AgentNode({ agent, isActive, isHighlighted, showParameters }: AgentNode
       .join(' ');
   };
 
-  // Format applicable script types for tooltip
   const getApplicableTypesText = () => {
     if (agent.applicableScriptTypes === 'all') return 'All script types';
     return agent.applicableScriptTypes
@@ -106,99 +103,78 @@ function AgentNode({ agent, isActive, isHighlighted, showParameters }: AgentNode
   };
 
   return (
-    <TooltipProvider>
-      <Tooltip delayDuration={300}>
-        <TooltipTrigger asChild>
-          <div 
-            className={cn(
-              "p-2 rounded-lg border-2 transition-all duration-300 cursor-pointer",
-              getCategoryColor(agent.category),
-              getCategoryBg(agent.category),
-              !isActive && "grayscale"
+    <div 
+      className={cn(
+        "p-3 rounded-lg border-2 transition-all duration-300",
+        getCategoryColor(agent.category),
+        getCategoryBg(agent.category),
+        !isActive && "grayscale"
+      )}
+    >
+      <Collapsible open={isExpanded && showParameters} onOpenChange={setIsExpanded}>
+        <CollapsibleTrigger className="w-full text-left" disabled={!showParameters}>
+          <div className="flex items-center gap-2">
+            {isActive && <Zap className="h-3 w-3 text-primary flex-shrink-0" />}
+            <span className={cn(
+              "text-xs font-semibold truncate flex-1",
+              !isActive && "text-muted-foreground"
+            )}>
+              {agent.name}
+            </span>
+            {showParameters && agent.parameters.length > 0 && (
+              isExpanded ? 
+                <ChevronDown className="h-3 w-3 text-muted-foreground flex-shrink-0" /> : 
+                <ChevronRight className="h-3 w-3 text-muted-foreground flex-shrink-0" />
             )}
-          >
-            <Collapsible open={isExpanded && showParameters} onOpenChange={setIsExpanded}>
-              <CollapsibleTrigger className="w-full text-left" disabled={!showParameters}>
-                <div className="flex items-center gap-2">
-                  {isActive && <Zap className="h-3 w-3 text-primary flex-shrink-0" />}
-                  <span className={cn(
-                    "text-xs font-medium truncate flex-1",
-                    !isActive && "text-muted-foreground"
-                  )}>
-                    {agent.name}
-                  </span>
-                  {showParameters && agent.parameters.length > 0 && (
-                    isExpanded ? 
-                      <ChevronDown className="h-3 w-3 text-muted-foreground flex-shrink-0" /> : 
-                      <ChevronRight className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                  )}
-                </div>
-                <div className="text-[10px] text-muted-foreground mt-1">
-                  {agent.parameters.length} params
-                </div>
-              </CollapsibleTrigger>
-              
-              <CollapsibleContent className="mt-2">
-                <div className="flex flex-wrap gap-1">
-                  {agent.parameters.map((param) => (
-                    <span 
-                      key={param}
-                      className={cn(
-                        "text-[9px] px-1.5 py-0.5 rounded-full border",
-                        getParamPillColor(agent.category)
-                      )}
-                    >
-                      {formatParamName(param)}
-                    </span>
-                  ))}
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
           </div>
-        </TooltipTrigger>
-        <TooltipContent side="top" className="max-w-xs p-3 space-y-2">
-          <div className="font-semibold">{agent.name}</div>
-          <p className="text-xs text-muted-foreground">{agent.description}</p>
-          
-          <div className="pt-1 border-t">
-            <div className="text-[10px] font-medium text-muted-foreground mb-1">Applicable Types:</div>
-            <div className="text-xs">{getApplicableTypesText()}</div>
+        </CollapsibleTrigger>
+        
+        {/* Description - always visible */}
+        <p className={cn(
+          "text-[10px] mt-1.5 line-clamp-2",
+          isActive ? "text-muted-foreground" : "text-muted-foreground/60"
+        )}>
+          {agent.description}
+        </p>
+
+        {/* Applicable types */}
+        <div className="text-[9px] text-muted-foreground/80 mt-1.5">
+          {getApplicableTypesText()}
+        </div>
+
+        {/* Report sections */}
+        {agent.reportSections.length > 0 && (
+          <div className="flex flex-wrap gap-1 mt-2">
+            {agent.reportSections.slice(0, 3).map((section) => (
+              <Badge key={section} variant="secondary" className="text-[8px] px-1 py-0 h-4">
+                {section}
+              </Badge>
+            ))}
+            {agent.reportSections.length > 3 && (
+              <Badge variant="secondary" className="text-[8px] px-1 py-0 h-4">
+                +{agent.reportSections.length - 3}
+              </Badge>
+            )}
           </div>
-          
-          {agent.reportSections.length > 0 && (
-            <div className="pt-1 border-t">
-              <div className="text-[10px] font-medium text-muted-foreground mb-1 flex items-center gap-1">
-                <FileOutput className="h-3 w-3" />
-                Report Sections:
-              </div>
-              <div className="flex flex-wrap gap-1">
-                {agent.reportSections.map((section) => (
-                  <Badge key={section} variant="secondary" className="text-[10px] px-1.5 py-0">
-                    {section}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          )}
-          
-          <div className="pt-1 border-t">
-            <div className="text-[10px] font-medium text-muted-foreground mb-1">Parameters ({agent.parameters.length}):</div>
-            <div className="flex flex-wrap gap-1">
-              {agent.parameters.slice(0, 6).map((param) => (
-                <Badge key={param} variant="outline" className="text-[9px] px-1.5 py-0">
-                  {formatParamName(param)}
-                </Badge>
-              ))}
-              {agent.parameters.length > 6 && (
-                <Badge variant="outline" className="text-[9px] px-1.5 py-0">
-                  +{agent.parameters.length - 6} more
-                </Badge>
-              )}
-            </div>
+        )}
+        
+        <CollapsibleContent className="mt-2 pt-2 border-t border-border/50">
+          <div className="flex flex-wrap gap-1">
+            {agent.parameters.map((param) => (
+              <span 
+                key={param}
+                className={cn(
+                  "text-[9px] px-1.5 py-0.5 rounded-full border",
+                  getParamPillColor(agent.category)
+                )}
+              >
+                {formatParamName(param)}
+              </span>
+            ))}
           </div>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+        </CollapsibleContent>
+      </Collapsible>
+    </div>
   );
 }
 
