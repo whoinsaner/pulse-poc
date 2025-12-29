@@ -13,7 +13,10 @@ import {
 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
-import type { AnalysisStatus, AgentProgress, ScriptType } from '@/types/database';
+import type { AnalysisStatus, AgentProgress, ScriptType, StakeholderLens } from '@/types/database';
+import { StakeholderSelector } from '@/components/StakeholderSelector';
+import { StakeholderBadge } from '@/components/StakeholderBadge';
+import { getAgentsForStakeholder } from '@/lib/stakeholderConfig';
 
 interface AnalysisTriggerProps {
   scriptId: string;
@@ -65,11 +68,20 @@ export function AnalysisTrigger({
   const [elapsedTime, setElapsedTime] = useState(0);
   const [isExtractionComplete, setIsExtractionComplete] = useState<boolean | null>(null);
   const [extractionError, setExtractionError] = useState<string | null>(null);
+  const [showStakeholderSelector, setShowStakeholderSelector] = useState(false);
+  const [selectedStakeholder, setSelectedStakeholder] = useState<StakeholderLens | null>(null);
+  const [pendingAnalysisMode, setPendingAnalysisMode] = useState<{ force: boolean; mode: 'quick' | 'deep' } | null>(null);
 
   const isComic = scriptType === 'comic';
-  const activeAgents = isComic 
-    ? [...UASF_AGENTS, ...COMIC_AGENTS, ...SYNTHESIS_AGENTS]
-    : [...UASF_AGENTS, ...SYNTHESIS_AGENTS];
+  
+  // Get agents based on selected stakeholder
+  const getActiveAgents = () => {
+    const agentNames = getAgentsForStakeholder(selectedStakeholder, isComic);
+    const allAgents = [...UASF_AGENTS, ...COMIC_AGENTS, ...SYNTHESIS_AGENTS];
+    return allAgents.filter(a => agentNames.includes(a.name));
+  };
+  
+  const activeAgents = getActiveAgents();
 
   // Check if script extraction is complete
   useEffect(() => {
@@ -173,7 +185,7 @@ export function AnalysisTrigger({
     };
   }, [analysisRunId, isAnalyzing, handleRealtimeUpdate]);
 
-  const startAnalysis = async (forceAnalysis = false, mode: 'quick' | 'deep' = 'deep', resume = false, existingRunId?: string) => {
+  const startAnalysis = async (forceAnalysis = false, mode: 'quick' | 'deep' = 'deep', resume = false, existingRunId?: string, stakeholderLens?: StakeholderLens | null) => {
     if (!user) {
       toast({
         title: 'Authentication required',
@@ -198,13 +210,14 @@ export function AnalysisTrigger({
       let runId = existingRunId;
       
       if (!resume || !existingRunId) {
-        // Create new analysis run
+        // Create new analysis run with stakeholder lens
         const { data: run, error: createError } = await supabase
           .from('analysis_runs')
           .insert({
             script_id: scriptId,
             initiated_by: user.id,
             status: 'pending',
+            stakeholder_lens: stakeholderLens || null,
           })
           .select()
           .single();
@@ -214,7 +227,7 @@ export function AnalysisTrigger({
       }
 
       setAnalysisRunId(runId!);
-      console.log('[AnalysisTrigger] Created analysis run:', runId, 'mode:', mode, 'forceAnalysis:', forceAnalysis, 'resume:', resume);
+      console.log('[AnalysisTrigger] Created analysis run:', runId, 'mode:', mode, 'forceAnalysis:', forceAnalysis, 'resume:', resume, 'stakeholderLens:', stakeholderLens);
 
       // Trigger analysis edge function (non-blocking)
       supabase.functions.invoke('analyze-script', {
@@ -224,6 +237,7 @@ export function AnalysisTrigger({
           mode,
           forceAnalysis,
           resume,
+          stakeholderLens: stakeholderLens || null,
         },
       }).then(({ error: invokeError }) => {
         if (invokeError) {
@@ -243,6 +257,20 @@ export function AnalysisTrigger({
         variant: 'destructive',
       });
     }
+  };
+
+  const handleStakeholderSelect = (lens: StakeholderLens | null) => {
+    setSelectedStakeholder(lens);
+    setShowStakeholderSelector(false);
+    if (pendingAnalysisMode) {
+      startAnalysis(pendingAnalysisMode.force, pendingAnalysisMode.mode, false, undefined, lens);
+      setPendingAnalysisMode(null);
+    }
+  };
+
+  const initiateAnalysis = (force: boolean, mode: 'quick' | 'deep') => {
+    setPendingAnalysisMode({ force, mode });
+    setShowStakeholderSelector(true);
   };
 
   const retryFailedAgents = () => {
@@ -306,6 +334,20 @@ export function AnalysisTrigger({
 
   const stats = getProgressStats();
 
+  // Show stakeholder selector
+  if (showStakeholderSelector) {
+    return (
+      <StakeholderSelector
+        onSelect={handleStakeholderSelect}
+        onCancel={() => {
+          setShowStakeholderSelector(false);
+          setPendingAnalysisMode(null);
+        }}
+        selectedLens={selectedStakeholder}
+      />
+    );
+  }
+
   if (!isAnalyzing && status === 'pending') {
     // Still checking extraction status
     if (isExtractionComplete === null) {
@@ -333,7 +375,7 @@ export function AnalysisTrigger({
           
           <div className="flex flex-col gap-2">
             <Button 
-              onClick={() => startAnalysis(true)} 
+              onClick={() => initiateAnalysis(true, 'deep')} 
               className="w-full" 
               variant="outline"
             >
@@ -351,11 +393,11 @@ export function AnalysisTrigger({
     return (
       <div className="space-y-2">
         <div className="grid grid-cols-2 gap-2">
-          <Button onClick={() => startAnalysis(false, 'quick')} variant="outline" className="w-full">
+          <Button onClick={() => initiateAnalysis(false, 'quick')} variant="outline" className="w-full">
             <Zap className="h-4 w-4 mr-2 text-amber-500" />
             Quick Analysis
           </Button>
-          <Button onClick={() => startAnalysis(false, 'deep')} className="w-full">
+          <Button onClick={() => initiateAnalysis(false, 'deep')} className="w-full">
             <Play className="h-4 w-4 mr-2" />
             Deep Analysis
           </Button>
