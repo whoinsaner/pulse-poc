@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -33,6 +34,7 @@ import {
   FileJson,
   Download,
   Film,
+  ArrowLeft,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { exportParametersToCSV } from "@/lib/exportUtils";
@@ -48,6 +50,12 @@ import { InsightsSchema } from "@/components/parameters/InsightsSchema";
 import { DataFlowDiagram } from "@/components/parameters/DataFlowDiagram";
 import { SampleAgentOutput } from "@/components/parameters/SampleAgentOutput";
 import { AgentSectionMapping } from "@/components/parameters/AgentSectionMapping";
+import {
+  SIMPLE_SCRIPT_TYPES,
+  ALL_AGENTS,
+  getAnalysisAgentsForScriptType,
+  CURRENT_PROMPT_VERSION,
+} from "@/lib/scriptFramework";
 
 interface Parameter {
   id: string;
@@ -333,12 +341,21 @@ export default function ParametersAgents() {
           <div className="container mx-auto px-6 py-4">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
+                <div className="flex items-center gap-3 mb-1">
+                  <Link to="/dashboard">
+                    <Button variant="ghost" size="sm" className="gap-1 -ml-2">
+                      <ArrowLeft className="h-4 w-4" />
+                      Back
+                    </Button>
+                  </Link>
+                </div>
                 <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
                   <Layers className="h-6 w-6 text-primary" />
                   Parameters & Agents
+                  <Badge variant="outline" className="text-xs font-normal">v{CURRENT_PROMPT_VERSION}</Badge>
                 </h1>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Explore the analysis framework and stakeholder perspectives
+                  Universal Script Analysis Framework — {ALL_AGENTS.length} agents across {SIMPLE_SCRIPT_TYPES.length} script types
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-3">
