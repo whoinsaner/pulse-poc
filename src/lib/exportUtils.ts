@@ -2,6 +2,20 @@
  * Utility functions for exporting data to CSV format
  */
 
+import {
+  SCRIPT_TYPES,
+  SIMPLE_SCRIPT_TYPES,
+  CORE_AGENTS,
+  COMIC_AGENTS,
+  SYSTEM_AGENTS,
+  META_AGENTS,
+  INTERACTIVE_AGENTS,
+  AUDIO_AGENTS,
+  ALL_AGENTS,
+  getAnalysisAgentsForScriptType,
+  type AgentDefinition,
+} from './scriptFramework';
+
 interface Parameter {
   id: string;
   name: string;
@@ -41,56 +55,6 @@ const LENS_DISPLAY_NAMES: Record<string, string> = {
   theatrical: 'Theatrical',
 };
 
-const SCRIPT_TYPES = [
-  'feature',
-  'pilot',
-  'episode',
-  'short',
-  'documentary',
-  'comic',
-] as const;
-
-const SCRIPT_TYPE_DISPLAY_NAMES: Record<string, string> = {
-  feature: 'Feature Film',
-  pilot: 'TV Pilot',
-  episode: 'TV Episode',
-  short: 'Short Film',
-  documentary: 'Documentary',
-  comic: 'Comic/Graphic Novel',
-};
-
-// Core agents that apply to all script types
-const CORE_AGENTS = [
-  'ConceptAgent',
-  'StructureAgent',
-  'CharacterAgent',
-  'ConflictAgent',
-  'ThemeAgent',
-  'DialogueAgent',
-  'EmotionalArcAgent',
-  'WorldLogicAgent',
-  'MarketAgent',
-  'ExecutionAgent',
-];
-
-// Comic-specific agents
-const COMIC_AGENTS = [
-  'ComicArtDirectionAgent',
-  'ComicDialogueAgent',
-  'ComicPacingAgent',
-  'ComicVisualAgent',
-];
-
-/**
- * Get agents applicable to a script type
- */
-function getAgentsForScriptType(scriptType: string): string[] {
-  if (scriptType === 'comic') {
-    return [...CORE_AGENTS, ...COMIC_AGENTS];
-  }
-  return CORE_AGENTS;
-}
-
 /**
  * Escapes a value for CSV format
  */
@@ -120,7 +84,8 @@ export function generateParametersCSV(
 
   const headers = [
     'Agent',
-    'Category',
+    'Agent Category',
+    'Parameter Category',
     'Parameter Name',
     'Display Name',
     'Description',
@@ -130,8 +95,10 @@ export function generateParametersCSV(
 
   const rows = parameters.map((param) => {
     const paramWeights = weightMap.get(param.id) || new Map();
+    const agentDef = ALL_AGENTS.find(a => a.id === param.agent_source);
     return [
-      param.agent_source,
+      param.agent_source.replace('Agent', ''),
+      agentDef?.category || 'analysis',
       param.category,
       param.name,
       param.display_name,
@@ -144,9 +111,9 @@ export function generateParametersCSV(
   rows.sort((a, b) => {
     const agentCompare = String(a[0]).localeCompare(String(b[0]));
     if (agentCompare !== 0) return agentCompare;
-    const categoryCompare = String(a[1]).localeCompare(String(b[1]));
+    const categoryCompare = String(a[2]).localeCompare(String(b[2]));
     if (categoryCompare !== 0) return categoryCompare;
-    return String(a[3]).localeCompare(String(b[3]));
+    return String(a[4]).localeCompare(String(b[4]));
   });
 
   return [
@@ -168,45 +135,62 @@ export function generateScriptTypeMatrixCSV(parameters: Parameter[]): string {
     paramsByAgent.get(param.agent_source)!.push(param);
   });
 
-  const allAgents = [...CORE_AGENTS, ...COMIC_AGENTS].filter((agent) =>
-    paramsByAgent.has(agent)
-  );
+  // Get all unique agents from parameters
+  const allAgentIds = [...new Set(parameters.map(p => p.agent_source))];
+  
+  // Use simple script types for backward compatibility with DB
+  const scriptTypes = SIMPLE_SCRIPT_TYPES;
 
   // Sheet 1: Agent × Script Type Matrix
-  const agentMatrixHeaders = ['Agent', 'Type', ...SCRIPT_TYPES.map((t) => SCRIPT_TYPE_DISPLAY_NAMES[t])];
+  const agentMatrixHeaders = ['Agent', 'Category', 'Type', ...scriptTypes.map((t) => t.label)];
   const agentMatrixRows: (string | number)[][] = [];
 
-  allAgents.forEach((agent) => {
-    const agentParams = paramsByAgent.get(agent) || [];
-    const isComicAgent = COMIC_AGENTS.includes(agent);
-    
-    agentMatrixRows.push([
-      agent.replace('Agent', ''),
-      isComicAgent ? 'Comic-Specific' : 'Core',
-      ...SCRIPT_TYPES.map((scriptType) => {
-        const applicableAgents = getAgentsForScriptType(scriptType);
-        if (applicableAgents.includes(agent)) {
-          return `✓ (${agentParams.length} params)`;
-        }
-        return '—';
-      }),
-    ]);
+  // Group agents by category
+  const agentCategories = [
+    { label: 'System Agents', agents: SYSTEM_AGENTS },
+    { label: 'Core Analysis Agents', agents: CORE_AGENTS },
+    { label: 'Comic Agents', agents: COMIC_AGENTS },
+    { label: 'Interactive Agents', agents: INTERACTIVE_AGENTS },
+    { label: 'Audio Agents', agents: AUDIO_AGENTS },
+    { label: 'Meta Agents', agents: META_AGENTS },
+  ];
+
+  agentCategories.forEach(({ label, agents }) => {
+    agents.forEach((agent) => {
+      const agentParams = paramsByAgent.get(agent.id) || [];
+      const paramCount = agentParams.length;
+      
+      agentMatrixRows.push([
+        agent.name,
+        label,
+        agent.category,
+        ...scriptTypes.map((scriptType) => {
+          const applicableAgents = getAnalysisAgentsForScriptType(scriptType.value);
+          const isApplicable = applicableAgents.some(a => a.id === agent.id);
+          if (isApplicable) {
+            return paramCount > 0 ? `✓ (${paramCount} params)` : '✓';
+          }
+          return '—';
+        }),
+      ]);
+    });
   });
 
   // Sheet 2: Detailed Parameter × Script Type Matrix
-  const paramMatrixHeaders = ['Agent', 'Parameter', 'Category', ...SCRIPT_TYPES.map((t) => SCRIPT_TYPE_DISPLAY_NAMES[t])];
+  const paramMatrixHeaders = ['Agent', 'Parameter', 'Category', ...scriptTypes.map((t) => t.label)];
   const paramMatrixRows: (string | number)[][] = [];
 
-  allAgents.forEach((agent) => {
-    const agentParams = paramsByAgent.get(agent) || [];
+  allAgentIds.forEach((agentId) => {
+    const agentParams = paramsByAgent.get(agentId) || [];
+    const agentDef = ALL_AGENTS.find(a => a.id === agentId);
     agentParams.forEach((param) => {
       paramMatrixRows.push([
-        agent.replace('Agent', ''),
+        agentDef?.name || agentId.replace('Agent', ''),
         param.display_name,
         param.category,
-        ...SCRIPT_TYPES.map((scriptType) => {
-          const applicableAgents = getAgentsForScriptType(scriptType);
-          return applicableAgents.includes(agent) ? '✓' : '—';
+        ...scriptTypes.map((scriptType) => {
+          const applicableAgents = getAnalysisAgentsForScriptType(scriptType.value);
+          return applicableAgents.some(a => a.id === agentId) ? '✓' : '—';
         }),
       ]);
     });
@@ -214,20 +198,34 @@ export function generateScriptTypeMatrixCSV(parameters: Parameter[]): string {
 
   // Summary stats
   const summaryHeaders = ['Script Type', 'Active Agents', 'Total Parameters'];
-  const summaryRows = SCRIPT_TYPES.map((scriptType) => {
-    const activeAgents = getAgentsForScriptType(scriptType);
+  const summaryRows = scriptTypes.map((scriptType) => {
+    const activeAgents = getAnalysisAgentsForScriptType(scriptType.value);
     const totalParams = activeAgents.reduce((sum, agent) => {
-      return sum + (paramsByAgent.get(agent)?.length || 0);
+      return sum + (paramsByAgent.get(agent.id)?.length || 0);
     }, 0);
     return [
-      SCRIPT_TYPE_DISPLAY_NAMES[scriptType],
+      scriptType.label,
       activeAgents.length,
       totalParams,
     ];
   });
 
+  // Agent category summary
+  const categoryHeaders = ['Agent Category', 'Count', 'Description'];
+  const categoryRows = agentCategories.map(({ label, agents }) => [
+    label,
+    agents.length,
+    agents.map(a => a.name).join(', '),
+  ]);
+
   // Combine all sections with clear separators
   const sections = [
+    '=== AGENT CATEGORIES ===',
+    '',
+    categoryHeaders.map(escapeCSV).join(','),
+    ...categoryRows.map((row) => row.map(escapeCSV).join(',')),
+    '',
+    '',
     '=== SUMMARY BY SCRIPT TYPE ===',
     '',
     summaryHeaders.map(escapeCSV).join(','),
@@ -280,8 +278,11 @@ export function exportParametersToCSV(
   
   const combinedContent = [
     '========================================',
-    'SHEET 1: PARAMETERS WITH LENS WEIGHTS',
+    'PULSE UNIVERSAL SCRIPT ANALYSIS FRAMEWORK',
     '========================================',
+    '',
+    'SHEET 1: PARAMETERS WITH LENS WEIGHTS',
+    '--------------------------------------',
     '',
     sheet1,
     '',
@@ -293,5 +294,5 @@ export function exportParametersToCSV(
     sheet2,
   ].join('\n');
   
-  downloadCSV(combinedContent, `parameters-framework-${timestamp}.csv`);
+  downloadCSV(combinedContent, `pulse-framework-${timestamp}.csv`);
 }
