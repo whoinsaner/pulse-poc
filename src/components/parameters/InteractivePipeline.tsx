@@ -2,17 +2,20 @@ import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { 
   FileText, 
   Bot, 
   GitBranch,
   Layers,
   Sparkles,
-  Eye,
   CheckCircle2,
   Settings2,
   Film,
-  Zap
+  Zap,
+  FileOutput,
+  ChevronDown,
+  ChevronRight
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { 
@@ -27,14 +30,18 @@ import {
   getAgentsForScriptType,
   AgentDefinition
 } from "@/lib/scriptFramework";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface AgentNodeProps {
   agent: AgentDefinition;
   isActive: boolean;
   isHighlighted: boolean;
+  showParameters: boolean;
 }
 
-function AgentNode({ agent, isActive, isHighlighted }: AgentNodeProps) {
+function AgentNode({ agent, isActive, isHighlighted, showParameters }: AgentNodeProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  
   const getCategoryColor = (category: string) => {
     switch (category) {
       case 'system': return 'border-slate-500';
@@ -67,28 +74,131 @@ function AgentNode({ agent, isActive, isHighlighted }: AgentNodeProps) {
     return 'bg-card';
   };
 
+  const getParamPillColor = (category: string) => {
+    if (!isActive) return 'bg-muted/50 text-muted-foreground';
+    switch (category) {
+      case 'system': return 'bg-slate-500/20 text-slate-300 border-slate-500/30';
+      case 'meta': return 'bg-amber-500/20 text-amber-300 border-amber-500/30';
+      case 'comic': return 'bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/30';
+      case 'analysis': 
+        if (agent.id.includes('Comic')) return 'bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/30';
+        if (agent.id.includes('Interactivity') || agent.id.includes('WorldBuilding')) return 'bg-sky-500/20 text-sky-300 border-sky-500/30';
+        if (agent.id.includes('Audio')) return 'bg-violet-500/20 text-violet-300 border-violet-500/30';
+        return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30';
+      default: return 'bg-muted/50 text-muted-foreground';
+    }
+  };
+
+  // Format parameter name for display
+  const formatParamName = (param: string) => {
+    return param
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
+
+  // Format applicable script types for tooltip
+  const getApplicableTypesText = () => {
+    if (agent.applicableScriptTypes === 'all') return 'All script types';
+    return agent.applicableScriptTypes
+      .map(t => SCRIPT_TYPES.find(st => st.value === t)?.label || t)
+      .join(', ');
+  };
+
   return (
-    <div 
-      className={cn(
-        "p-2 rounded-lg border-2 transition-all duration-300",
-        getCategoryColor(agent.category),
-        getCategoryBg(agent.category),
-        !isActive && "grayscale"
-      )}
-    >
-      <div className="flex items-center gap-2">
-        {isActive && <Zap className="h-3 w-3 text-primary" />}
-        <span className={cn(
-          "text-xs font-medium truncate",
-          !isActive && "text-muted-foreground"
-        )}>
-          {agent.name}
-        </span>
-      </div>
-      <div className="text-[10px] text-muted-foreground mt-1">
-        {agent.parameters.length} params
-      </div>
-    </div>
+    <TooltipProvider>
+      <Tooltip delayDuration={300}>
+        <TooltipTrigger asChild>
+          <div 
+            className={cn(
+              "p-2 rounded-lg border-2 transition-all duration-300 cursor-pointer",
+              getCategoryColor(agent.category),
+              getCategoryBg(agent.category),
+              !isActive && "grayscale"
+            )}
+          >
+            <Collapsible open={isExpanded && showParameters} onOpenChange={setIsExpanded}>
+              <CollapsibleTrigger className="w-full text-left" disabled={!showParameters}>
+                <div className="flex items-center gap-2">
+                  {isActive && <Zap className="h-3 w-3 text-primary flex-shrink-0" />}
+                  <span className={cn(
+                    "text-xs font-medium truncate flex-1",
+                    !isActive && "text-muted-foreground"
+                  )}>
+                    {agent.name}
+                  </span>
+                  {showParameters && agent.parameters.length > 0 && (
+                    isExpanded ? 
+                      <ChevronDown className="h-3 w-3 text-muted-foreground flex-shrink-0" /> : 
+                      <ChevronRight className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                  )}
+                </div>
+                <div className="text-[10px] text-muted-foreground mt-1">
+                  {agent.parameters.length} params
+                </div>
+              </CollapsibleTrigger>
+              
+              <CollapsibleContent className="mt-2">
+                <div className="flex flex-wrap gap-1">
+                  {agent.parameters.map((param) => (
+                    <span 
+                      key={param}
+                      className={cn(
+                        "text-[9px] px-1.5 py-0.5 rounded-full border",
+                        getParamPillColor(agent.category)
+                      )}
+                    >
+                      {formatParamName(param)}
+                    </span>
+                  ))}
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          </div>
+        </TooltipTrigger>
+        <TooltipContent side="top" className="max-w-xs p-3 space-y-2">
+          <div className="font-semibold">{agent.name}</div>
+          <p className="text-xs text-muted-foreground">{agent.description}</p>
+          
+          <div className="pt-1 border-t">
+            <div className="text-[10px] font-medium text-muted-foreground mb-1">Applicable Types:</div>
+            <div className="text-xs">{getApplicableTypesText()}</div>
+          </div>
+          
+          {agent.reportSections.length > 0 && (
+            <div className="pt-1 border-t">
+              <div className="text-[10px] font-medium text-muted-foreground mb-1 flex items-center gap-1">
+                <FileOutput className="h-3 w-3" />
+                Report Sections:
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {agent.reportSections.map((section) => (
+                  <Badge key={section} variant="secondary" className="text-[10px] px-1.5 py-0">
+                    {section}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          <div className="pt-1 border-t">
+            <div className="text-[10px] font-medium text-muted-foreground mb-1">Parameters ({agent.parameters.length}):</div>
+            <div className="flex flex-wrap gap-1">
+              {agent.parameters.slice(0, 6).map((param) => (
+                <Badge key={param} variant="outline" className="text-[9px] px-1.5 py-0">
+                  {formatParamName(param)}
+                </Badge>
+              ))}
+              {agent.parameters.length > 6 && (
+                <Badge variant="outline" className="text-[9px] px-1.5 py-0">
+                  +{agent.parameters.length - 6} more
+                </Badge>
+              )}
+            </div>
+          </div>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }
 
@@ -99,9 +209,10 @@ interface StageProps {
   activeAgentIds: string[];
   color: string;
   icon: React.ReactNode;
+  showParameters: boolean;
 }
 
-function Stage({ title, stageNumber, agents, activeAgentIds, color, icon }: StageProps) {
+function Stage({ title, stageNumber, agents, activeAgentIds, color, icon, showParameters }: StageProps) {
   const activeCount = agents.filter(a => activeAgentIds.includes(a.id)).length;
   
   return (
@@ -125,6 +236,7 @@ function Stage({ title, stageNumber, agents, activeAgentIds, color, icon }: Stag
             agent={agent} 
             isActive={activeAgentIds.includes(agent.id)}
             isHighlighted={activeAgentIds.includes(agent.id)}
+            showParameters={showParameters}
           />
         ))}
       </div>
@@ -134,6 +246,7 @@ function Stage({ title, stageNumber, agents, activeAgentIds, color, icon }: Stag
 
 export function InteractivePipeline() {
   const [selectedScriptType, setSelectedScriptType] = useState("feature_film");
+  const [showParameters, setShowParameters] = useState(true);
   
   // Get active agents for selected script type
   const activeAgents = useMemo(() => {
@@ -183,10 +296,19 @@ export function InteractivePipeline() {
               Interactive Agent Pipeline
             </CardTitle>
             <p className="text-sm text-muted-foreground mt-1">
-              See which agents run for each script type
+              See which agents run for each script type. Click agents to expand parameters.
             </p>
           </div>
           <div className="flex items-center gap-3">
+            <label className="flex items-center gap-2 text-xs cursor-pointer">
+              <input 
+                type="checkbox" 
+                checked={showParameters} 
+                onChange={(e) => setShowParameters(e.target.checked)}
+                className="rounded border-muted"
+              />
+              <span className="text-muted-foreground">Expand params</span>
+            </label>
             <div className="flex items-center gap-2">
               <Film className="h-4 w-4 text-muted-foreground" />
               <Select value={selectedScriptType} onValueChange={setSelectedScriptType}>
@@ -246,6 +368,7 @@ export function InteractivePipeline() {
           activeAgentIds={activeAgentIds}
           color="bg-slate-500"
           icon={<Settings2 className="h-4 w-4" />}
+          showParameters={showParameters}
         />
 
         {/* Stage 2: System - Resolution */}
@@ -256,6 +379,7 @@ export function InteractivePipeline() {
           activeAgentIds={activeAgentIds}
           color="bg-amber-500"
           icon={<CheckCircle2 className="h-4 w-4" />}
+          showParameters={showParameters}
         />
 
         {/* Stage 3: Analysis */}
@@ -266,6 +390,7 @@ export function InteractivePipeline() {
           activeAgentIds={activeAgentIds}
           color="bg-emerald-500"
           icon={<Bot className="h-4 w-4" />}
+          showParameters={showParameters}
         />
 
         {/* Stage 4: Meta */}
@@ -276,6 +401,7 @@ export function InteractivePipeline() {
           activeAgentIds={activeAgentIds}
           color="bg-purple-500"
           icon={<Sparkles className="h-4 w-4" />}
+          showParameters={showParameters}
         />
 
         {/* Legend */}

@@ -50,6 +50,7 @@ import { InsightsSchema } from "@/components/parameters/InsightsSchema";
 import { DataFlowDiagram } from "@/components/parameters/DataFlowDiagram";
 import { SampleAgentOutput } from "@/components/parameters/SampleAgentOutput";
 import { AgentSectionMapping } from "@/components/parameters/AgentSectionMapping";
+import { ParameterDependencyGraph } from "@/components/parameters/ParameterDependencyGraph";
 import { InteractivePipeline } from "@/components/parameters/InteractivePipeline";
 import {
   SCRIPT_TYPES,
@@ -441,13 +442,19 @@ export default function ParametersAgents() {
 
         <div className="container mx-auto px-6 py-6">
           <Tabs defaultValue="overview" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-grid">
+            <TabsList className="grid w-full grid-cols-6 lg:w-auto lg:inline-grid">
               <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="dependencies">Dependencies</TabsTrigger>
               <TabsTrigger value="schema">Output Schema</TabsTrigger>
               <TabsTrigger value="agents">By Agent</TabsTrigger>
               <TabsTrigger value="lenses">By Lens</TabsTrigger>
               <TabsTrigger value="matrix">Lens Matrix</TabsTrigger>
             </TabsList>
+
+            {/* Parameter Dependencies Tab */}
+            <TabsContent value="dependencies" className="space-y-6">
+              <ParameterDependencyGraph />
+            </TabsContent>
 
             {/* Output Schema Tab */}
             <TabsContent value="schema" className="space-y-6">
