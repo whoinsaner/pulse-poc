@@ -41,13 +41,62 @@ const LENS_DISPLAY_NAMES: Record<string, string> = {
   theatrical: 'Theatrical',
 };
 
+const SCRIPT_TYPES = [
+  'feature',
+  'pilot',
+  'episode',
+  'short',
+  'documentary',
+  'comic',
+] as const;
+
+const SCRIPT_TYPE_DISPLAY_NAMES: Record<string, string> = {
+  feature: 'Feature Film',
+  pilot: 'TV Pilot',
+  episode: 'TV Episode',
+  short: 'Short Film',
+  documentary: 'Documentary',
+  comic: 'Comic/Graphic Novel',
+};
+
+// Core agents that apply to all script types
+const CORE_AGENTS = [
+  'ConceptAgent',
+  'StructureAgent',
+  'CharacterAgent',
+  'ConflictAgent',
+  'ThemeAgent',
+  'DialogueAgent',
+  'EmotionalArcAgent',
+  'WorldLogicAgent',
+  'MarketAgent',
+  'ExecutionAgent',
+];
+
+// Comic-specific agents
+const COMIC_AGENTS = [
+  'ComicArtDirectionAgent',
+  'ComicDialogueAgent',
+  'ComicPacingAgent',
+  'ComicVisualAgent',
+];
+
+/**
+ * Get agents applicable to a script type
+ */
+function getAgentsForScriptType(scriptType: string): string[] {
+  if (scriptType === 'comic') {
+    return [...CORE_AGENTS, ...COMIC_AGENTS];
+  }
+  return CORE_AGENTS;
+}
+
 /**
  * Escapes a value for CSV format
  */
 function escapeCSV(value: string | number | null | undefined): string {
   if (value === null || value === undefined) return '';
   const str = String(value);
-  // If contains comma, quote, or newline, wrap in quotes and escape existing quotes
   if (str.includes(',') || str.includes('"') || str.includes('\n')) {
     return `"${str.replace(/"/g, '""')}"`;
   }
@@ -61,7 +110,6 @@ export function generateParametersCSV(
   parameters: Parameter[],
   lensWeights: LensWeight[]
 ): string {
-  // Create a map for quick lens weight lookup
   const weightMap = new Map<string, Map<string, number>>();
   lensWeights.forEach((lw) => {
     if (!weightMap.has(lw.parameter_id)) {
@@ -70,7 +118,6 @@ export function generateParametersCSV(
     weightMap.get(lw.parameter_id)!.set(lw.lens, lw.weight);
   });
 
-  // Build header row
   const headers = [
     'Agent',
     'Category',
@@ -81,7 +128,6 @@ export function generateParametersCSV(
     ...LENS_ORDER.map((lens) => LENS_DISPLAY_NAMES[lens] || lens),
   ];
 
-  // Build data rows
   const rows = parameters.map((param) => {
     const paramWeights = weightMap.get(param.id) || new Map();
     return [
@@ -95,7 +141,6 @@ export function generateParametersCSV(
     ];
   });
 
-  // Sort by Agent, then Category, then Display Name
   rows.sort((a, b) => {
     const agentCompare = String(a[0]).localeCompare(String(b[0]));
     if (agentCompare !== 0) return agentCompare;
@@ -104,43 +149,104 @@ export function generateParametersCSV(
     return String(a[3]).localeCompare(String(b[3]));
   });
 
-  // Convert to CSV string
-  const csvContent = [
-    headers.map(escapeCSV).join(','),
-    ...rows.map((row) => row.map(escapeCSV).join(',')),
-  ].join('\n');
-
-  return csvContent;
-}
-
-/**
- * Generates a summary CSV with agent statistics
- */
-export function generateAgentSummaryCSV(parameters: Parameter[]): string {
-  const agentStats = new Map<string, { count: number; categories: Set<string> }>();
-
-  parameters.forEach((param) => {
-    if (!agentStats.has(param.agent_source)) {
-      agentStats.set(param.agent_source, { count: 0, categories: new Set() });
-    }
-    const stats = agentStats.get(param.agent_source)!;
-    stats.count++;
-    stats.categories.add(param.category);
-  });
-
-  const headers = ['Agent', 'Parameter Count', 'Categories'];
-  const rows = Array.from(agentStats.entries())
-    .sort((a, b) => a[0].localeCompare(b[0]))
-    .map(([agent, stats]) => [
-      agent,
-      stats.count,
-      Array.from(stats.categories).sort().join('; '),
-    ]);
-
   return [
     headers.map(escapeCSV).join(','),
     ...rows.map((row) => row.map(escapeCSV).join(',')),
   ].join('\n');
+}
+
+/**
+ * Generates a matrix showing agents and parameters by script type
+ */
+export function generateScriptTypeMatrixCSV(parameters: Parameter[]): string {
+  // Group parameters by agent
+  const paramsByAgent = new Map<string, Parameter[]>();
+  parameters.forEach((param) => {
+    if (!paramsByAgent.has(param.agent_source)) {
+      paramsByAgent.set(param.agent_source, []);
+    }
+    paramsByAgent.get(param.agent_source)!.push(param);
+  });
+
+  const allAgents = [...CORE_AGENTS, ...COMIC_AGENTS].filter((agent) =>
+    paramsByAgent.has(agent)
+  );
+
+  // Sheet 1: Agent × Script Type Matrix
+  const agentMatrixHeaders = ['Agent', 'Type', ...SCRIPT_TYPES.map((t) => SCRIPT_TYPE_DISPLAY_NAMES[t])];
+  const agentMatrixRows: (string | number)[][] = [];
+
+  allAgents.forEach((agent) => {
+    const agentParams = paramsByAgent.get(agent) || [];
+    const isComicAgent = COMIC_AGENTS.includes(agent);
+    
+    agentMatrixRows.push([
+      agent.replace('Agent', ''),
+      isComicAgent ? 'Comic-Specific' : 'Core',
+      ...SCRIPT_TYPES.map((scriptType) => {
+        const applicableAgents = getAgentsForScriptType(scriptType);
+        if (applicableAgents.includes(agent)) {
+          return `✓ (${agentParams.length} params)`;
+        }
+        return '—';
+      }),
+    ]);
+  });
+
+  // Sheet 2: Detailed Parameter × Script Type Matrix
+  const paramMatrixHeaders = ['Agent', 'Parameter', 'Category', ...SCRIPT_TYPES.map((t) => SCRIPT_TYPE_DISPLAY_NAMES[t])];
+  const paramMatrixRows: (string | number)[][] = [];
+
+  allAgents.forEach((agent) => {
+    const agentParams = paramsByAgent.get(agent) || [];
+    agentParams.forEach((param) => {
+      paramMatrixRows.push([
+        agent.replace('Agent', ''),
+        param.display_name,
+        param.category,
+        ...SCRIPT_TYPES.map((scriptType) => {
+          const applicableAgents = getAgentsForScriptType(scriptType);
+          return applicableAgents.includes(agent) ? '✓' : '—';
+        }),
+      ]);
+    });
+  });
+
+  // Summary stats
+  const summaryHeaders = ['Script Type', 'Active Agents', 'Total Parameters'];
+  const summaryRows = SCRIPT_TYPES.map((scriptType) => {
+    const activeAgents = getAgentsForScriptType(scriptType);
+    const totalParams = activeAgents.reduce((sum, agent) => {
+      return sum + (paramsByAgent.get(agent)?.length || 0);
+    }, 0);
+    return [
+      SCRIPT_TYPE_DISPLAY_NAMES[scriptType],
+      activeAgents.length,
+      totalParams,
+    ];
+  });
+
+  // Combine all sections with clear separators
+  const sections = [
+    '=== SUMMARY BY SCRIPT TYPE ===',
+    '',
+    summaryHeaders.map(escapeCSV).join(','),
+    ...summaryRows.map((row) => row.map(escapeCSV).join(',')),
+    '',
+    '',
+    '=== AGENT APPLICABILITY MATRIX ===',
+    '',
+    agentMatrixHeaders.map(escapeCSV).join(','),
+    ...agentMatrixRows.map((row) => row.map(escapeCSV).join(',')),
+    '',
+    '',
+    '=== DETAILED PARAMETER MATRIX ===',
+    '',
+    paramMatrixHeaders.map(escapeCSV).join(','),
+    ...paramMatrixRows.map((row) => row.map(escapeCSV).join(',')),
+  ];
+
+  return sections.join('\n');
 }
 
 /**
@@ -160,13 +266,32 @@ export function downloadCSV(content: string, filename: string): void {
 }
 
 /**
- * Exports the full parameters framework to CSV
+ * Exports the full parameters framework to CSV (single file with multiple sheets)
  */
 export function exportParametersToCSV(
   parameters: Parameter[],
   lensWeights: LensWeight[]
 ): void {
   const timestamp = new Date().toISOString().split('T')[0];
-  const csv = generateParametersCSV(parameters, lensWeights);
-  downloadCSV(csv, `parameters-framework-${timestamp}.csv`);
+  
+  // Combine both sheets into one file with separators
+  const sheet1 = generateParametersCSV(parameters, lensWeights);
+  const sheet2 = generateScriptTypeMatrixCSV(parameters);
+  
+  const combinedContent = [
+    '========================================',
+    'SHEET 1: PARAMETERS WITH LENS WEIGHTS',
+    '========================================',
+    '',
+    sheet1,
+    '',
+    '',
+    '========================================',
+    'SHEET 2: SCRIPT TYPE APPLICABILITY',
+    '========================================',
+    '',
+    sheet2,
+  ].join('\n');
+  
+  downloadCSV(combinedContent, `parameters-framework-${timestamp}.csv`);
 }
