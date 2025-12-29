@@ -51,10 +51,14 @@ import { DataFlowDiagram } from "@/components/parameters/DataFlowDiagram";
 import { SampleAgentOutput } from "@/components/parameters/SampleAgentOutput";
 import { AgentSectionMapping } from "@/components/parameters/AgentSectionMapping";
 import {
+  SCRIPT_TYPES,
   SIMPLE_SCRIPT_TYPES,
   ALL_AGENTS,
   getAnalysisAgentsForScriptType,
   CURRENT_PROMPT_VERSION,
+  CONFIDENCE_LEVELS,
+  getConfidenceLevel,
+  ScriptTypeCategory,
 } from "@/lib/scriptFramework";
 
 interface Parameter {
@@ -335,7 +339,7 @@ export default function ParametersAgents() {
                   <Badge variant="outline" className="text-xs font-normal">v{CURRENT_PROMPT_VERSION}</Badge>
                 </h1>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Universal Script Analysis Framework — {ALL_AGENTS.length} agents across {SIMPLE_SCRIPT_TYPES.length} script types
+                  Universal Script Analysis Framework — {ALL_AGENTS.length} agents across {SCRIPT_TYPES.length} script types
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-3">
@@ -351,17 +355,31 @@ export default function ParametersAgents() {
                       }
                     }
                   }}>
-                    <SelectTrigger className="w-[160px]">
-                      <SelectValue placeholder="Script Type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Script Types</SelectItem>
-                      {SIMPLE_SCRIPT_TYPES.map((type) => (
-                        <SelectItem key={type.value} value={type.value}>
-                          {type.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="Script Type" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-80">
+                    <SelectItem value="all">All Script Types</SelectItem>
+                    {/* Group script types by category */}
+                    {Object.entries(
+                      SCRIPT_TYPES.reduce((acc, type) => {
+                        if (!acc[type.category]) acc[type.category] = [];
+                        acc[type.category].push(type);
+                        return acc;
+                      }, {} as Record<string, typeof SCRIPT_TYPES>)
+                    ).map(([category, types]) => (
+                      <div key={category}>
+                        <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide border-t first:border-t-0">
+                          {category.replace('_', ' ')}
+                        </div>
+                        {types.map((type) => (
+                          <SelectItem key={type.value} value={type.value}>
+                            {type.label}
+                          </SelectItem>
+                        ))}
+                      </div>
+                    ))}
+                  </SelectContent>
                   </Select>
                 </div>
                 <div className="flex items-center gap-2">
@@ -448,7 +466,7 @@ export default function ParametersAgents() {
                         {selectedScriptType !== "all" && (
                           <Badge variant="secondary" className="gap-1">
                             <Film className="h-3 w-3" />
-                            {SIMPLE_SCRIPT_TYPES.find(t => t.value === selectedScriptType)?.label}
+                            {SCRIPT_TYPES.find(t => t.value === selectedScriptType)?.label || selectedScriptType}
                           </Badge>
                         )}
                         {selectedAgent !== "all" && (
