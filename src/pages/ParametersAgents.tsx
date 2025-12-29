@@ -31,7 +31,10 @@ import {
   Minus,
   Info,
   FileJson,
+  Download,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { exportParametersToCSV } from "@/lib/exportUtils";
 import {
   Tooltip,
   TooltipContent,
@@ -307,6 +310,20 @@ export default function ParametersAgents() {
                     </SelectContent>
                   </Select>
                 </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => exportParametersToCSV(parameters, lensWeights.map(lw => ({
+                    id: lw.id,
+                    lens: lw.lens,
+                    weight: lw.weight,
+                    parameter_id: lw.parameter_id,
+                  })))}
+                  disabled={isLoading || parameters.length === 0}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Export CSV
+                </Button>
               </div>
             </div>
           </div>
