@@ -112,6 +112,11 @@ const LENS_LABELS: Record<string, { label: string; description: string; color: s
     description: "ROI potential and risk assessment",
     color: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
   },
+  investor: {
+    label: "Investor",
+    description: "Market clarity, budget realism, platform fit, franchise scalability",
+    color: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
+  },
   ott_platform: {
     label: "OTT Platform",
     description: "Streaming metrics and binge-worthiness",
@@ -553,7 +558,7 @@ export default function ParametersAgents() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-3xl font-bold">{SIMPLE_SCRIPT_TYPES.length}</div>
+                    <div className="text-3xl font-bold">{SCRIPT_TYPES.length}</div>
                     <p className="text-xs text-muted-foreground mt-1">
                       Supported formats
                     </p>
@@ -573,24 +578,48 @@ export default function ParametersAgents() {
                   <CardContent>
                     <ScrollArea className="h-[400px] pr-4">
                       <div className="space-y-3">
-                        {agents.map((agent) => (
-                          <div
-                            key={agent}
-                            className="p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
-                          >
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <Badge
-                                  variant="outline"
-                                  className={cn("font-medium", AGENT_COLORS[agent])}
-                                >
-                                  {agent.replace("Agent", "")}
-                                </Badge>
+                        {agents.map((agent) => {
+                          // Determine agent category from the agent arrays
+                          const isSystemAgent = agent.includes('Normalizer') || agent.includes('Classifier') || agent.includes('Arbitration') || agent.includes('Blending');
+                          const isMetaAgent = agent.includes('Evolution') || agent.includes('Feedback') || agent.includes('Explainability') || agent.includes('Investor');
+                          const isComicAgent = agent.includes('Comic');
+                          const isInteractiveAgent = agent.includes('Interactivity') || agent.includes('WorldBuilding');
+                          const isAudioAgent = agent.includes('Audio');
+                          
+                          const categoryLabel = isSystemAgent ? 'System' 
+                            : isMetaAgent ? 'Meta'
+                            : isComicAgent ? 'Comic'
+                            : isInteractiveAgent ? 'Interactive'
+                            : isAudioAgent ? 'Audio'
+                            : 'Core';
+                          const categoryColor = isSystemAgent ? 'bg-slate-500/10 text-slate-500'
+                            : isMetaAgent ? 'bg-amber-500/10 text-amber-500'
+                            : isComicAgent ? 'bg-fuchsia-500/10 text-fuchsia-500'
+                            : isInteractiveAgent ? 'bg-sky-500/10 text-sky-500'
+                            : isAudioAgent ? 'bg-violet-500/10 text-violet-500'
+                            : 'bg-emerald-500/10 text-emerald-500';
+                          
+                          return (
+                            <div
+                              key={agent}
+                              className="p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <Badge
+                                    variant="outline"
+                                    className={cn("font-medium", AGENT_COLORS[agent])}
+                                  >
+                                    {agent.replace("Agent", "")}
+                                  </Badge>
+                                  <Badge variant="outline" className={cn("text-xs", categoryColor)}>
+                                    {categoryLabel}
+                                  </Badge>
+                                </div>
+                                <span className="text-sm text-muted-foreground">
+                                  {parametersByAgent[agent]?.length || 0} parameters
+                                </span>
                               </div>
-                              <span className="text-sm text-muted-foreground">
-                                {parametersByAgent[agent]?.length || 0} parameters
-                              </span>
-                            </div>
                             <div className="mt-2 flex flex-wrap gap-1">
                               {parametersByAgent[agent]?.slice(0, 4).map((param) => (
                                 <span
@@ -607,7 +636,8 @@ export default function ParametersAgents() {
                               )}
                             </div>
                           </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </ScrollArea>
                   </CardContent>
@@ -674,7 +704,28 @@ export default function ParametersAgents() {
               <Accordion type="multiple" className="space-y-4">
                 {agents
                   .filter((agent) => selectedAgent === "all" || agent === selectedAgent)
-                  .map((agent) => (
+                  .map((agent) => {
+                    // Determine agent category from agent name
+                    const isSystemAgent = agent.includes('Normalizer') || agent.includes('Classifier') || agent.includes('Arbitration') || agent.includes('Blending');
+                    const isMetaAgent = agent.includes('Evolution') || agent.includes('Feedback') || agent.includes('Explainability') || agent.includes('Investor');
+                    const isComicAgent = agent.includes('Comic');
+                    const isInteractiveAgent = agent.includes('Interactivity') || agent.includes('WorldBuilding');
+                    const isAudioAgent = agent.includes('Audio');
+                    
+                    const categoryLabel = isSystemAgent ? 'System' 
+                      : isMetaAgent ? 'Meta'
+                      : isComicAgent ? 'Comic'
+                      : isInteractiveAgent ? 'Interactive'
+                      : isAudioAgent ? 'Audio'
+                      : 'Core';
+                    const categoryColor = isSystemAgent ? 'bg-slate-500/10 text-slate-500'
+                      : isMetaAgent ? 'bg-amber-500/10 text-amber-500'
+                      : isComicAgent ? 'bg-fuchsia-500/10 text-fuchsia-500'
+                      : isInteractiveAgent ? 'bg-sky-500/10 text-sky-500'
+                      : isAudioAgent ? 'bg-violet-500/10 text-violet-500'
+                      : 'bg-emerald-500/10 text-emerald-500';
+                    
+                    return (
                     <AccordionItem
                       key={agent}
                       value={agent}
@@ -688,6 +739,9 @@ export default function ParametersAgents() {
                           >
                             <Bot className="h-3 w-3 mr-1" />
                             {agent.replace("Agent", "")}
+                          </Badge>
+                          <Badge variant="outline" className={cn("text-xs", categoryColor)}>
+                            {categoryLabel}
                           </Badge>
                           <span className="text-sm text-muted-foreground">
                             {parametersByAgent[agent]?.length || 0} parameters
@@ -761,7 +815,8 @@ export default function ParametersAgents() {
                         </div>
                       </AccordionContent>
                     </AccordionItem>
-                  ))}
+                    );
+                  })}
               </Accordion>
             </TabsContent>
 
