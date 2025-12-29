@@ -166,22 +166,9 @@ const formatParamName = (param: string) => {
     .join(' ');
 };
 
-// Get category color for a parameter based on its primary agent
-const getAgentColor = (agentId: string) => {
-  const agent = ALL_AGENTS.find(a => a.id === agentId);
-  if (!agent) return 'bg-muted text-muted-foreground';
-  
-  switch (agent.category) {
-    case 'system': return 'bg-slate-500/20 text-slate-300 border-slate-500/30';
-    case 'meta': return 'bg-amber-500/20 text-amber-300 border-amber-500/30';
-    case 'comic': return 'bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/30';
-    case 'analysis': 
-      if (agentId.includes('Comic')) return 'bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/30';
-      if (agentId.includes('Interactivity') || agentId.includes('WorldBuilding')) return 'bg-sky-500/20 text-sky-300 border-sky-500/30';
-      if (agentId.includes('Audio')) return 'bg-violet-500/20 text-violet-300 border-violet-500/30';
-      return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30';
-    default: return 'bg-muted text-muted-foreground';
-  }
+// Modern pill style - high contrast, readable on any background
+const getPillStyle = () => {
+  return 'bg-background text-foreground border-border shadow-sm hover:bg-accent hover:text-accent-foreground';
 };
 
 export function ParameterDependencyGraph() {
@@ -336,16 +323,16 @@ export function ParameterDependencyGraph() {
                         <button
                           onClick={() => setSelectedParameter(isSelected ? null : param.id)}
                           className={cn(
-                            "px-2.5 py-1.5 rounded-full text-xs border transition-all",
-                            getAgentColor(primaryAgent),
-                            isSelected && "ring-2 ring-primary ring-offset-1 ring-offset-background",
-                            isConnected && !isSelected && "ring-2 ring-primary/50",
+                            "px-2.5 py-1.5 rounded-full text-xs font-medium border transition-all",
+                            getPillStyle(),
+                            isSelected && "ring-2 ring-primary ring-offset-1 ring-offset-background bg-primary text-primary-foreground",
+                            isConnected && !isSelected && "ring-2 ring-primary/50 bg-primary/10",
                             selectedParameter && !isSelected && !isConnected && "opacity-40"
                           )}
                         >
                           {param.name}
                           {param.agents.length > 1 && (
-                            <span className="ml-1 opacity-60">×{param.agents.length}</span>
+                            <span className="ml-1.5 text-[10px] opacity-70">×{param.agents.length}</span>
                           )}
                         </button>
                       </TooltipTrigger>
@@ -392,13 +379,13 @@ export function ParameterDependencyGraph() {
                 className="p-3 rounded-lg border bg-card hover:bg-muted/30 transition-colors"
               >
                 <div className="flex items-center gap-2 mb-2">
-                  <Badge variant="outline" className={getAgentColor(overlap.agent1.id)}>
+                  <Badge variant="outline" className="bg-background text-foreground border-border">
                     {overlap.agent1.name}
                   </Badge>
                   <ArrowRight className="h-3 w-3 text-muted-foreground" />
                   <Layers className="h-3 w-3 text-muted-foreground" />
                   <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                  <Badge variant="outline" className={getAgentColor(overlap.agent2.id)}>
+                  <Badge variant="outline" className="bg-background text-foreground border-border">
                     {overlap.agent2.name}
                   </Badge>
                 </div>
@@ -408,9 +395,9 @@ export function ParameterDependencyGraph() {
                     <div>
                       <span className="text-muted-foreground">Shared sections: </span>
                       {overlap.sharedSections.map((section, i) => (
-                        <Badge key={section} variant="secondary" className="ml-1 text-[10px]">
+                        <span key={section} className="ml-1 px-1.5 py-0.5 rounded bg-secondary text-secondary-foreground text-[10px]">
                           {section}
-                        </Badge>
+                        </span>
                       ))}
                     </div>
                   )}

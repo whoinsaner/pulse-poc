@@ -73,19 +73,9 @@ function AgentNode({ agent, isActive, isHighlighted, showParameters }: AgentNode
     return 'bg-card';
   };
 
-  const getParamPillColor = (category: string) => {
-    if (!isActive) return 'bg-muted/50 text-muted-foreground';
-    switch (category) {
-      case 'system': return 'bg-slate-500/20 text-slate-300 border-slate-500/30';
-      case 'meta': return 'bg-amber-500/20 text-amber-300 border-amber-500/30';
-      case 'comic': return 'bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/30';
-      case 'analysis': 
-        if (agent.id.includes('Comic')) return 'bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/30';
-        if (agent.id.includes('Interactivity') || agent.id.includes('WorldBuilding')) return 'bg-sky-500/20 text-sky-300 border-sky-500/30';
-        if (agent.id.includes('Audio')) return 'bg-violet-500/20 text-violet-300 border-violet-500/30';
-        return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30';
-      default: return 'bg-muted/50 text-muted-foreground';
-    }
+  const getParamPillStyle = () => {
+    if (!isActive) return 'bg-muted text-muted-foreground/70 border-transparent';
+    return 'bg-background/90 text-foreground border-border/50 shadow-sm';
   };
 
   const formatParamName = (param: string) => {
@@ -146,14 +136,14 @@ function AgentNode({ agent, isActive, isHighlighted, showParameters }: AgentNode
         {agent.reportSections.length > 0 && (
           <div className="flex flex-wrap gap-1 mt-2">
             {agent.reportSections.slice(0, 3).map((section) => (
-              <Badge key={section} variant="secondary" className="text-[8px] px-1 py-0 h-4">
+              <span key={section} className="text-[8px] px-1.5 py-0.5 rounded bg-background/80 text-foreground/80 border border-border/40 shadow-sm">
                 {section}
-              </Badge>
+              </span>
             ))}
             {agent.reportSections.length > 3 && (
-              <Badge variant="secondary" className="text-[8px] px-1 py-0 h-4">
+              <span className="text-[8px] px-1.5 py-0.5 rounded bg-background/80 text-foreground/80 border border-border/40 shadow-sm">
                 +{agent.reportSections.length - 3}
-              </Badge>
+              </span>
             )}
           </div>
         )}
@@ -164,8 +154,8 @@ function AgentNode({ agent, isActive, isHighlighted, showParameters }: AgentNode
               <span 
                 key={param}
                 className={cn(
-                  "text-[9px] px-1.5 py-0.5 rounded-full border",
-                  getParamPillColor(agent.category)
+                  "text-[9px] px-2 py-0.5 rounded-full border font-medium",
+                  getParamPillStyle()
                 )}
               >
                 {formatParamName(param)}

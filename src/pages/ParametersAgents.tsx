@@ -83,87 +83,47 @@ interface LensWeight {
   category: string;
 }
 
-const LENS_LABELS: Record<string, { label: string; description: string; color: string }> = {
+const LENS_LABELS: Record<string, { label: string; description: string }> = {
   studio_executive: {
     label: "Studio Executive",
     description: "Focus on commercial viability and audience appeal",
-    color: "bg-blue-500/10 text-blue-500 border-blue-500/20",
   },
   producer: {
     label: "Producer",
     description: "Balance of creative vision and practical execution",
-    color: "bg-purple-500/10 text-purple-500 border-purple-500/20",
   },
   actor: {
     label: "Actor",
     description: "Character depth and performative opportunities",
-    color: "bg-pink-500/10 text-pink-500 border-pink-500/20",
   },
   director: {
     label: "Director",
     description: "Visual storytelling and creative control",
-    color: "bg-orange-500/10 text-orange-500 border-orange-500/20",
   },
   writer: {
     label: "Writer",
     description: "Narrative craft and thematic resonance",
-    color: "bg-green-500/10 text-green-500 border-green-500/20",
   },
   financier: {
     label: "Financier",
     description: "ROI potential and risk assessment",
-    color: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
   },
   investor: {
     label: "Investor",
     description: "Market clarity, budget realism, platform fit, franchise scalability",
-    color: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
   },
   ott_platform: {
     label: "OTT Platform",
     description: "Streaming metrics and binge-worthiness",
-    color: "bg-red-500/10 text-red-500 border-red-500/20",
   },
   theatrical: {
     label: "Theatrical",
     description: "Big-screen impact and theatrical experience",
-    color: "bg-cyan-500/10 text-cyan-500 border-cyan-500/20",
   },
 };
 
-const AGENT_COLORS: Record<string, string> = {
-  // System Agents
-  IntakeNormalizerAgent: "bg-slate-500/10 text-slate-500 border-slate-500/20",
-  ScriptTypeClassifierAgent: "bg-blue-500/10 text-blue-500 border-blue-500/20",
-  ClassifierArbitrationAgent: "bg-amber-500/10 text-amber-500 border-amber-500/20",
-  MultiTypeBlendingAgent: "bg-purple-500/10 text-purple-500 border-purple-500/20",
-  // Core Agents
-  ConceptAgent: "bg-amber-500/10 text-amber-500 border-amber-500/20",
-  StructureAgent: "bg-blue-500/10 text-blue-500 border-blue-500/20",
-  CharacterAgent: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
-  ConflictAgent: "bg-red-500/10 text-red-500 border-red-500/20",
-  ThemeAgent: "bg-purple-500/10 text-purple-500 border-purple-500/20",
-  DialogueAgent: "bg-violet-500/10 text-violet-500 border-violet-500/20",
-  EmotionalArcAgent: "bg-pink-500/10 text-pink-500 border-pink-500/20",
-  WorldLogicAgent: "bg-cyan-500/10 text-cyan-500 border-cyan-500/20",
-  MarketAgent: "bg-orange-500/10 text-orange-500 border-orange-500/20",
-  ExecutionAgent: "bg-rose-500/10 text-rose-500 border-rose-500/20",
-  // Comic Agents
-  ComicArtDirectionAgent: "bg-fuchsia-500/10 text-fuchsia-500 border-fuchsia-500/20",
-  ComicDialogueAgent: "bg-lime-500/10 text-lime-500 border-lime-500/20",
-  ComicPacingAgent: "bg-teal-500/10 text-teal-500 border-teal-500/20",
-  ComicVisualAgent: "bg-indigo-500/10 text-indigo-500 border-indigo-500/20",
-  // Interactive Agents
-  InteractivityAgent: "bg-sky-500/10 text-sky-500 border-sky-500/20",
-  WorldBuildingAgent: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
-  // Audio Agents
-  AudioNarrativeAgent: "bg-violet-500/10 text-violet-500 border-violet-500/20",
-  // Meta Agents
-  ScriptEvolutionAgent: "bg-teal-500/10 text-teal-500 border-teal-500/20",
-  CreatorFeedbackLoopAgent: "bg-green-500/10 text-green-500 border-green-500/20",
-  ExplainabilityTraceAgent: "bg-indigo-500/10 text-indigo-500 border-indigo-500/20",
-  InvestorReadinessAgent: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
-};
+// Modern pill style - high contrast, readable on any background
+const PILL_STYLE = "bg-background text-foreground border-border shadow-sm";
 
 // Get agents applicable to a script type using the framework
 function getAgentsForScriptType(scriptType: string): string[] {
@@ -617,7 +577,7 @@ export default function ParametersAgents() {
                                 <div className="flex items-center gap-2">
                                   <Badge
                                     variant="outline"
-                                    className={cn("font-medium", AGENT_COLORS[agent])}
+                                    className={cn("font-medium", PILL_STYLE)}
                                   >
                                     {agent.replace("Agent", "")}
                                   </Badge>
@@ -677,7 +637,7 @@ export default function ParametersAgents() {
                               <div className="flex items-center justify-between">
                                 <Badge
                                   variant="outline"
-                                  className={cn("font-medium", lensInfo?.color)}
+                                  className={cn("font-medium", PILL_STYLE)}
                                 >
                                   {lensInfo?.label || lens}
                                 </Badge>
@@ -744,7 +704,7 @@ export default function ParametersAgents() {
                         <div className="flex items-center gap-3">
                           <Badge
                             variant="outline"
-                            className={cn("font-medium", AGENT_COLORS[agent])}
+                            className={cn("font-medium", PILL_STYLE)}
                           >
                             <Bot className="h-3 w-3 mr-1" />
                             {agent.replace("Agent", "")}
@@ -799,7 +759,7 @@ export default function ParametersAgents() {
                                               <span
                                                 className={cn(
                                                   "text-xs px-1.5 py-0.5 rounded flex items-center gap-0.5",
-                                                  LENS_LABELS[lw.lens]?.color
+                                                  PILL_STYLE
                                                 )}
                                               >
                                                 <Icon className={cn("h-2.5 w-2.5", indicator.color)} />
@@ -856,7 +816,7 @@ export default function ParametersAgents() {
                           <div className="flex items-center gap-3">
                             <Badge
                               variant="outline"
-                              className={cn("font-medium", lensInfo?.color)}
+                              className={cn("font-medium", PILL_STYLE)}
                             >
                               <Eye className="h-3 w-3 mr-1" />
                               {lensInfo?.label || lens}
@@ -930,7 +890,7 @@ export default function ParametersAgents() {
                               <th key={lens} className="p-2 text-center">
                                 <Badge
                                   variant="outline"
-                                  className={cn("font-medium text-xs", LENS_LABELS[lens]?.color)}
+                                  className={cn("font-medium text-xs", PILL_STYLE)}
                                 >
                                   {LENS_LABELS[lens]?.label.split(" ")[0]}
                                 </Badge>
