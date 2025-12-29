@@ -1,3 +1,4 @@
+import { useParams, Link } from 'react-router-dom';
 import { StakeholderLens, LENS_CONFIG } from '@/types/database';
 import { cn } from '@/lib/utils';
 import { 
@@ -12,8 +13,10 @@ import {
   TrendingUp,
   TrendingDown,
   Minus,
-  Crown
+  Crown,
+  ExternalLink
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface FullLensComparisonProps {
   lensScores: Record<StakeholderLens, number>;
@@ -50,6 +53,8 @@ export function FullLensComparison({
   activeLens, 
   onLensSelect 
 }: FullLensComparisonProps) {
+  const { runId } = useParams<{ runId: string }>();
+  
   const sortedLenses = LENS_ORDER
     .filter(lens => lensScores[lens] !== undefined)
     .sort((a, b) => lensScores[b] - lensScores[a]);
@@ -198,6 +203,18 @@ export function FullLensComparison({
                     style={{ width: `${score * 10}%` }}
                   />
                 </div>
+
+                {/* View Full Report Link */}
+                {runId && (
+                  <Link 
+                    to={`/report/${runId}/stakeholder/${lens}`}
+                    onClick={(e) => e.stopPropagation()}
+                    className="mt-3 flex items-center gap-1 text-xs text-primary hover:underline"
+                  >
+                    <ExternalLink className="h-3 w-3" />
+                    View Full {config.label} Report
+                  </Link>
+                )}
 
                 {/* Active indicator */}
                 {isActive && (

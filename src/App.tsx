@@ -35,6 +35,7 @@ import ReportPlatform from "./pages/report/ReportPlatform";
 import ReportComic from "./pages/report/ReportComic";
 import CompleteScorecard from "./pages/report/CompleteScorecard";
 import RewritePriorities from "./pages/report/RewritePriorities";
+import StakeholderReport from "./pages/report/StakeholderReport";
 import SampleReportLayout from "./pages/SampleReport";
 import SampleScript from "./pages/SampleScript";
 import SampleComicReportLayout from "./pages/SampleComicReport";
@@ -93,6 +94,7 @@ const App = () => (
               <Route path="characters" element={<ReportCharacters />} />
               <Route path="platform" element={<ReportPlatform />} />
               <Route path="comic" element={<ReportComic />} />
+              <Route path="stakeholder/:stakeholder" element={<StakeholderReport />} />
             </Route>
             <Route path="/sample-report" element={<SampleReportLayout />}>
               <Route index element={<ProjectSnapshot />} />

@@ -23,6 +23,7 @@ export type Database = {
           id: string
           initiated_by: string
           script_id: string
+          stakeholder_lens: string | null
           started_at: string | null
           status: Database["public"]["Enums"]["analysis_status"]
         }
@@ -34,6 +35,7 @@ export type Database = {
           id?: string
           initiated_by: string
           script_id: string
+          stakeholder_lens?: string | null
           started_at?: string | null
           status?: Database["public"]["Enums"]["analysis_status"]
         }
@@ -45,6 +47,7 @@ export type Database = {
           id?: string
           initiated_by?: string
           script_id?: string
+          stakeholder_lens?: string | null
           started_at?: string | null
           status?: Database["public"]["Enums"]["analysis_status"]
         }
@@ -622,6 +625,53 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stakeholder_reports: {
+        Row: {
+          created_at: string
+          executive_summary: string | null
+          generated_at: string
+          id: string
+          is_stale: boolean | null
+          relevant_insights: Json | null
+          relevant_parameters: Json | null
+          report_id: string
+          stakeholder_lens: string
+          stakeholder_score: number | null
+        }
+        Insert: {
+          created_at?: string
+          executive_summary?: string | null
+          generated_at?: string
+          id?: string
+          is_stale?: boolean | null
+          relevant_insights?: Json | null
+          relevant_parameters?: Json | null
+          report_id: string
+          stakeholder_lens: string
+          stakeholder_score?: number | null
+        }
+        Update: {
+          created_at?: string
+          executive_summary?: string | null
+          generated_at?: string
+          id?: string
+          is_stale?: boolean | null
+          relevant_insights?: Json | null
+          relevant_parameters?: Json | null
+          report_id?: string
+          stakeholder_lens?: string
+          stakeholder_score?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stakeholder_reports_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "reports"
             referencedColumns: ["id"]
           },
         ]
