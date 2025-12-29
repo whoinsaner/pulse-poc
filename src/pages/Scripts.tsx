@@ -14,6 +14,11 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
+import {
   ArrowLeft,
   Upload,
   FileText,
@@ -23,6 +28,12 @@ import {
   Play,
   Trash2,
   Eye,
+  ChevronDown,
+  ChevronRight,
+  Plus,
+  Sparkles,
+  BookOpen,
+  Loader2,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -35,6 +46,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { AnalysisTrigger } from '@/components/AnalysisTrigger';
 import { ScriptContentViewer } from '@/components/ScriptContentViewer';
+import { SAMPLE_SCRIPTS, type SampleScriptData } from '@/data/sampleScripts';
 import type { Script, ScriptFormat, ScriptType } from '@/types/database';
 
 const FORMAT_LABELS: Record<ScriptFormat, string> = {
@@ -64,6 +76,9 @@ export default function Scripts() {
   const [selectedScript, setSelectedScript] = useState<Script | null>(null);
   const [showAnalyzeDialog, setShowAnalyzeDialog] = useState(false);
   const [showContentDialog, setShowContentDialog] = useState(false);
+  const [sampleScriptsOpen, setSampleScriptsOpen] = useState(true);
+  const [addingScript, setAddingScript] = useState<string | null>(null);
+  const [previewScript, setPreviewScript] = useState<SampleScriptData | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -135,6 +150,71 @@ export default function Scripts() {
   const handleViewContent = (script: Script) => {
     setSelectedScript(script);
     setShowContentDialog(true);
+  };
+
+  const handleAddSampleScript = async (sample: SampleScriptData) => {
+    if (!currentOrganization || !user) return;
+
+    setAddingScript(sample.id);
+
+    try {
+      // Create a blob from the script content
+      const blob = new Blob([sample.content], { type: 'text/plain' });
+      const fileName = `${sample.id}-${Date.now()}.txt`;
+      const filePath = `${currentOrganization.id}/${fileName}`;
+
+      // Upload to storage
+      const { error: uploadError } = await supabase.storage
+        .from('scripts')
+        .upload(filePath, blob);
+
+      if (uploadError) throw uploadError;
+
+      // Get the public URL
+      const { data: urlData } = supabase.storage
+        .from('scripts')
+        .getPublicUrl(filePath);
+
+      // Create script record
+      const { data: scriptData, error: scriptError } = await supabase
+        .from('scripts')
+        .insert({
+          title: sample.title,
+          file_url: urlData.publicUrl,
+          format: 'txt' as ScriptFormat,
+          script_type: sample.scriptType as ScriptType,
+          organization_id: currentOrganization.id,
+          uploaded_by: user.id,
+          genre: sample.genre,
+          logline: sample.logline,
+          page_count: sample.pageCount,
+          file_size_bytes: blob.size,
+        })
+        .select()
+        .single();
+
+      if (scriptError) throw scriptError;
+
+      toast({
+        title: 'Script added',
+        description: `"${sample.title}" has been added to your library`,
+      });
+
+      fetchScripts();
+    } catch (error) {
+      console.error('Error adding sample script:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to add sample script',
+        variant: 'destructive',
+      });
+    } finally {
+      setAddingScript(null);
+    }
+  };
+
+  const isScriptInLibrary = (sampleId: string) => {
+    return scripts.some((s) => s.title === SAMPLE_SCRIPTS.find((ss) => ss.id === sampleId)?.title);
   };
 
   if (authLoading) {
@@ -293,6 +373,100 @@ export default function Scripts() {
           </div>
         )}
 
+        {/* Sample Scripts Section */}
+        <div className="mt-12">
+          <Collapsible open={sampleScriptsOpen} onOpenChange={setSampleScriptsOpen}>
+            <CollapsibleTrigger asChild>
+              <Button variant="ghost" className="w-full justify-between p-4 h-auto mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <Sparkles className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="text-left">
+                    <h2 className="text-xl font-semibold">Sample Scripts</h2>
+                    <p className="text-sm text-muted-foreground">
+                      {SAMPLE_SCRIPTS.length} professional scripts across various genres
+                    </p>
+                  </div>
+                </div>
+                {sampleScriptsOpen ? (
+                  <ChevronDown className="h-5 w-5" />
+                ) : (
+                  <ChevronRight className="h-5 w-5" />
+                )}
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {SAMPLE_SCRIPTS.map((sample) => {
+                  const inLibrary = isScriptInLibrary(sample.id);
+                  const isAdding = addingScript === sample.id;
+
+                  return (
+                    <Card
+                      key={sample.id}
+                      className={cn(
+                        'group transition-all duration-200',
+                        inLibrary ? 'opacity-60' : 'hover:border-primary/50 hover:shadow-lg'
+                      )}
+                    >
+                      <CardContent className="p-6">
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+                            <BookOpen className="h-6 w-6 text-primary" />
+                          </div>
+                          <Badge variant="outline" className="text-xs">
+                            {sample.scriptType}
+                          </Badge>
+                        </div>
+
+                        <h3 className="font-semibold text-lg mb-1">{sample.title}</h3>
+                        <Badge variant="secondary" className="mb-3">
+                          {sample.genre}
+                        </Badge>
+
+                        <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
+                          {sample.logline}
+                        </p>
+
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
+                          <FileText className="h-4 w-4" />
+                          <span>{sample.pageCount} pages</span>
+                        </div>
+
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex-1"
+                            onClick={() => setPreviewScript(sample)}
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            Preview
+                          </Button>
+                          <Button
+                            size="sm"
+                            className="flex-1"
+                            disabled={inLibrary || isAdding}
+                            onClick={() => handleAddSampleScript(sample)}
+                          >
+                            {isAdding ? (
+                              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                            ) : (
+                              <Plus className="h-4 w-4 mr-1" />
+                            )}
+                            {inLibrary ? 'Added' : isAdding ? 'Adding...' : 'Add'}
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        </div>
+
         {/* Analyze Dialog */}
         <Dialog open={showAnalyzeDialog} onOpenChange={setShowAnalyzeDialog}>
           <DialogContent>
@@ -323,6 +497,50 @@ export default function Scripts() {
                 scriptId={selectedScript.id}
                 scriptTitle={selectedScript.title}
               />
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Sample Script Preview Dialog */}
+        <Dialog open={!!previewScript} onOpenChange={() => setPreviewScript(null)}>
+          <DialogContent className="max-w-4xl max-h-[85vh]">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <BookOpen className="h-5 w-5" />
+                {previewScript?.title}
+                <Badge variant="secondary" className="ml-2">
+                  {previewScript?.genre}
+                </Badge>
+              </DialogTitle>
+            </DialogHeader>
+            {previewScript && (
+              <div className="space-y-4">
+                <div className="p-4 bg-muted/50 rounded-lg">
+                  <p className="text-sm text-muted-foreground italic">
+                    "{previewScript.logline}"
+                  </p>
+                </div>
+                <div className="max-h-[60vh] overflow-y-auto">
+                  <pre className="font-mono text-sm whitespace-pre-wrap p-4 bg-muted/30 rounded-lg">
+                    {previewScript.content}
+                  </pre>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => setPreviewScript(null)}>
+                    Close
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      handleAddSampleScript(previewScript);
+                      setPreviewScript(null);
+                    }}
+                    disabled={isScriptInLibrary(previewScript.id)}
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    {isScriptInLibrary(previewScript.id) ? 'Already Added' : 'Add to Library'}
+                  </Button>
+                </div>
+              </div>
             )}
           </DialogContent>
         </Dialog>
