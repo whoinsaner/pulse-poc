@@ -11,6 +11,7 @@ interface AnalysisRun {
   created_at: string;
   started_at: string | null;
   completed_at: string | null;
+  stakeholder_lens: string | null;
   scripts?: {
     title: string;
     genre: string | null;
@@ -56,6 +57,7 @@ export function useRealtimeAnalysis({
           created_at,
           started_at,
           completed_at,
+          stakeholder_lens,
           scripts (
             title,
             genre,
@@ -123,6 +125,7 @@ export function useRealtimeAnalysis({
             created_at: string;
             started_at: string | null;
             completed_at: string | null;
+            stakeholder_lens: string | null;
           };
           
           setAnalysis(prev => {

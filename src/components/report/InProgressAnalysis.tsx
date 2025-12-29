@@ -16,7 +16,7 @@ import {
   Layers
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { AnalysisStatus, AgentProgress } from '@/types/database';
+import type { AnalysisStatus, AgentProgress, StakeholderLens } from '@/types/database';
 import { 
   getAgentsForScriptType,
   getAnalysisAgentsForScriptType, 
@@ -28,6 +28,7 @@ import {
   AUDIO_AGENTS,
   type AgentDefinition 
 } from '@/lib/scriptFramework';
+import { getExpectedAgentsForAnalysis } from '@/lib/stakeholderConfig';
 import { AnalysisPipelineVisualization } from './AnalysisPipelineVisualization';
 import { ParameterBreakdownPanel } from './ParameterBreakdownPanel';
 import { useRealtimeAnalysis } from '@/hooks/useRealtimeAnalysis';
@@ -51,6 +52,7 @@ interface AnalysisRun {
   created_at: string;
   started_at: string | null;
   completed_at: string | null;
+  stakeholder_lens?: string | null;
   scripts?: {
     title: string;
     genre: string | null;
@@ -96,6 +98,12 @@ export function InProgressAnalysis({ analysis: initialAnalysis, onRetry, onViewP
   const analysis = realtimeAnalysis || initialAnalysis;
   const agentProgress = realtimeAgentProgress || analysis.agent_progress || {};
   const scriptType = analysis.scripts?.script_type || 'feature';
+  const stakeholderLens = analysis.stakeholder_lens as StakeholderLens | null;
+  
+  // Get expected agents based on script type AND stakeholder lens
+  const expectedAgentIds = useMemo(() => {
+    return getExpectedAgentsForAnalysis(scriptType, stakeholderLens);
+  }, [scriptType, stakeholderLens]);
   
   // Get ALL applicable agents for this script type (including system and meta)
   const allApplicableAgents = useMemo(() => {
@@ -135,8 +143,9 @@ export function InProgressAnalysis({ analysis: initialAnalysis, onRetry, onViewP
   const getAgentStats = () => {
     let completed = 0, running = 0, failed = 0, pending = 0, timedOut = 0;
     
-    for (const agent of allApplicableAgents) {
-      const progress = agentProgress[agent.id];
+    // Use expected agents based on stakeholder lens for accurate counting
+    for (const agentId of expectedAgentIds) {
+      const progress = agentProgress[agentId];
       if (progress?.status === 'completed') completed++;
       else if (progress?.status === 'running') {
         if (isAgentTimedOut(progress)) timedOut++;
@@ -146,8 +155,8 @@ export function InProgressAnalysis({ analysis: initialAnalysis, onRetry, onViewP
       else pending++;
     }
     
-    const total = allApplicableAgents.length;
-    const percentage = Math.round(((completed + running * 0.5) / total) * 100);
+    const total = expectedAgentIds.length;
+    const percentage = total > 0 ? Math.min(100, Math.round(((completed + running * 0.5) / total) * 100)) : 0;
     return { completed, running, failed, pending, timedOut, total, percentage };
   };
   
@@ -414,7 +423,8 @@ export function InProgressAnalysis({ analysis: initialAnalysis, onRetry, onViewP
         <CollapsibleContent className="mt-2">
           <AnalysisPipelineVisualization 
             scriptType={scriptType} 
-            agentProgress={agentProgress} 
+            agentProgress={agentProgress}
+            stakeholderLens={stakeholderLens}
           />
         </CollapsibleContent>
       </Collapsible>
