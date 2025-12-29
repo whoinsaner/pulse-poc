@@ -45,12 +45,19 @@ import Team from "./pages/Team";
 import ParametersAgents from "./pages/ParametersAgents";
 import NotFound from "./pages/NotFound";
 
-const queryClient = new QueryClient();
-
 function ReportsRedirect() {
   const { runId } = useParams<{ runId: string }>();
   return <Navigate to={`/report/${runId}`} replace />;
 }
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      staleTime: 5 * 60 * 1000,
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
