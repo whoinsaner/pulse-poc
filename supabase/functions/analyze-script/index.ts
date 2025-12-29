@@ -6,6 +6,20 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// ============= MODEL TIER CONFIGURATION =============
+// Hybrid model tiering: Pro for complex agents, Flash for simpler agents
+const MODEL_STANDARD = 'google/gemini-2.5-flash';
+const MODEL_PRO = 'google/gemini-2.5-pro';
+
+// Agents requiring deeper reasoning get the Pro model
+const PRO_MODEL_AGENTS = new Set([
+  'CharacterAgent',      // Complex: 7 params, psychological depth, character arcs, want vs need
+  'ThemeAgent',          // Complex: 6 params, thematic analysis, cultural resonance, symbolism
+  'DialogueAgent',       // Complex: 6 params, subtext detection, voice differentiation
+  'EmotionalArcAgent',   // Complex: 6 params, emotional mapping, catharsis, audience psychology
+  'InsightSynthesisAgent', // Complex: synthesizes all agent outputs into actionable insights
+]);
+
 interface AnalyzeRequest {
   scriptId: string;
   analysisRunId: string;
@@ -1875,6 +1889,10 @@ MATURITY MAPPING:
 CRITICAL: You MUST respond with ONLY the JSON object. No text before or after. No markdown code blocks. Start your response with { and end with }.`;
 
 
+  // Determine model tier based on agent complexity
+  const model = PRO_MODEL_AGENTS.has(agentName) ? MODEL_PRO : MODEL_STANDARD;
+  console.log(`[${agentName}] Using model: ${model}`);
+
   // Retry logic for empty responses with exponential backoff
   const MAX_RETRIES = 3;
   let content = '';
@@ -1882,8 +1900,9 @@ CRITICAL: You MUST respond with ONLY the JSON object. No text before or after. N
   
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     if (attempt > 0) {
-      // Exponential backoff: 2s, 4s, 8s
-      const delay = 2000 * Math.pow(2, attempt - 1);
+      // Exponential backoff: 2s, 4s, 8s (slightly longer for Pro model)
+      const baseDelay = PRO_MODEL_AGENTS.has(agentName) ? 3000 : 2000;
+      const delay = baseDelay * Math.pow(2, attempt - 1);
       console.log(`[${agentName}] Retry attempt ${attempt} after ${lastStatusCode === 429 ? 'rate limit' : 'empty response'}, waiting ${delay}ms`);
       await new Promise(r => setTimeout(r, delay));
     }
@@ -1896,7 +1915,7 @@ CRITICAL: You MUST respond with ONLY the JSON object. No text before or after. N
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'google/gemini-2.5-flash', // Switch to Gemini for better rate limits
+          model: model, // Dynamic model selection based on agent tier
           messages: [
             { role: 'system', content: config.systemPrompt },
             { role: 'user', content: userPrompt }
@@ -2055,7 +2074,8 @@ Return JSON array:
 ]`;
 
   try {
-    // Use Gemini Pro for synthesis - better reasoning for executive insights
+    // Use Pro model for synthesis - better reasoning for executive insights
+    console.log(`[InsightSynthesisAgent] Using model: ${MODEL_PRO}`);
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -2063,7 +2083,7 @@ Return JSON array:
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-pro', // Upgraded for synthesis tasks
+        model: MODEL_PRO, // Pro model for synthesis tasks
         messages: [
           { role: 'system', content: 'You are InsightSynthesisAgent, a senior script analyst synthesizing findings into executive-level actionable insights.' },
           { role: 'user', content: prompt }
