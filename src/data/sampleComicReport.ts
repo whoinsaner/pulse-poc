@@ -19,6 +19,7 @@ export const SAMPLE_COMIC_REPORT_DATA: ReportData = {
     financier: 80.4,
     ott_platform: 83.9,
     theatrical: 81.6,
+    investor: 78.9,
   } as Record<StakeholderLens, number>,
   categoryScores: {
     // Standard categories
@@ -429,8 +430,11 @@ The neon-noir aesthetic is clearly defined throughout. Art direction calls for h
 **Commercial Assessment:**
 Strong positioning for both direct market and digital platforms. High adaptation potential for animation or live-action. The "Lone Wolf and Cub meets Ghost in the Shell" pitch is instantly graspable.
 
+**Investment Outlook:**
+Content IP with multiple revenue streams: single issues, collected editions, digital subscriptions, and media adaptation rights. The cyberpunk genre maintains consistent market interest with proven international appeal.
+
 **Overall Recommendation:**
-Highly recommend for development. This is a visually compelling, commercially viable project with strong creative fundamentals.`,
+Highly recommend for development. This is a visually compelling, commercially viable project with strong creative fundamentals. Analysis powered by 10-agent UASF scoring system.`,
   full_report_data: SAMPLE_COMIC_REPORT_DATA,
   pdf_url: null,
   created_at: new Date().toISOString(),
