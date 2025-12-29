@@ -10,7 +10,7 @@ import {
   Layers, Zap
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { AgentProgress } from '@/types/database';
+import type { AgentProgress, StakeholderLens } from '@/types/database';
 import { 
   SYSTEM_AGENTS, 
   CORE_AGENTS, 
@@ -21,6 +21,7 @@ import {
   getAnalysisAgentsForScriptType,
   type AgentDefinition 
 } from '@/lib/scriptFramework';
+import { getExpectedAgentsForAnalysis } from '@/lib/stakeholderConfig';
 
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   Lightbulb, GitBranch, Users, Swords, Palette, MessageSquare,
@@ -131,29 +132,42 @@ function PipelineStage({ title, agents, activeAgentIds, agentProgress, stageColo
 interface AnalysisPipelineVisualizationProps {
   scriptType: string;
   agentProgress: Record<string, AgentProgress>;
+  stakeholderLens?: StakeholderLens | null;
 }
 
 export function AnalysisPipelineVisualization({ 
   scriptType, 
-  agentProgress 
+  agentProgress,
+  stakeholderLens
 }: AnalysisPipelineVisualizationProps) {
+  // Get expected agents based on script type AND stakeholder lens
+  const expectedAgentIds = useMemo(() => {
+    return getExpectedAgentsForAnalysis(scriptType, stakeholderLens ?? null);
+  }, [scriptType, stakeholderLens]);
+  
   const applicableAgents = useMemo(() => {
     return getAnalysisAgentsForScriptType(scriptType);
   }, [scriptType]);
   
-  const activeAgentIds = useMemo(() => applicableAgents.map(a => a.id), [applicableAgents]);
+  // Filter to only show expected agents
+  const activeAgentIds = useMemo(() => expectedAgentIds, [expectedAgentIds]);
   
-  // Calculate overall stats
+  // Calculate overall stats using expected agents
   const stats = useMemo(() => {
-    const total = applicableAgents.length;
-    const completed = applicableAgents.filter(a => agentProgress[a.id]?.status === 'completed').length;
-    const running = applicableAgents.filter(a => agentProgress[a.id]?.status === 'running').length;
-    const failed = applicableAgents.filter(a => agentProgress[a.id]?.status === 'failed').length;
+    const total = expectedAgentIds.length;
+    const completed = expectedAgentIds.filter(id => agentProgress[id]?.status === 'completed').length;
+    const running = expectedAgentIds.filter(id => agentProgress[id]?.status === 'running').length;
+    const failed = expectedAgentIds.filter(id => agentProgress[id]?.status === 'failed').length;
     const pending = total - completed - running - failed;
-    const totalParams = applicableAgents.reduce((sum, a) => sum + a.parameters.length, 0);
+    
+    // Calculate total params from applicable agents that are in expected list
+    const allAgents = [...SYSTEM_AGENTS, ...CORE_AGENTS, ...COMIC_AGENTS, ...INTERACTIVE_AGENTS, ...AUDIO_AGENTS, ...META_AGENTS];
+    const totalParams = allAgents
+      .filter(a => expectedAgentIds.includes(a.id))
+      .reduce((sum, a) => sum + a.parameters.length, 0);
     
     return { total, completed, running, failed, pending, totalParams };
-  }, [applicableAgents, agentProgress]);
+  }, [expectedAgentIds, agentProgress]);
 
   // Categorize agents by pipeline stage
   const analysisAgents = [...CORE_AGENTS, ...COMIC_AGENTS, ...INTERACTIVE_AGENTS, ...AUDIO_AGENTS];

@@ -140,6 +140,40 @@ export function getAgentsForStakeholder(
   return agents;
 }
 
+// Get the expected agents for an analysis run (used for progress calculation)
+// This combines script-type filtering with stakeholder filtering + system agents
+export function getExpectedAgentsForAnalysis(
+  scriptType: string,
+  stakeholderLens: StakeholderLens | null
+): string[] {
+  const isComic = scriptType === 'comic';
+  
+  // System agents always run
+  const systemAgentIds = [
+    'IntakeNormalizerAgent',
+    'ScriptTypeClassifierAgent', 
+    'ClassifierArbitrationAgent',
+    'MultiTypeBlendingAgent'
+  ];
+  
+  // Meta agents always run
+  const metaAgentIds = [
+    'ScriptEvolutionAgent',
+    'CreatorFeedbackLoopAgent',
+    'ExplainabilityTraceAgent',
+    'InvestorReadinessAgent'
+  ];
+  
+  // Get stakeholder-filtered analysis agents
+  const analysisAgentIds = getAgentsForStakeholder(stakeholderLens, isComic);
+  
+  // Combine all agents (stakeholder agents already include StakeholderLensAgent and InsightSynthesisAgent)
+  const allAgents = [...systemAgentIds, ...analysisAgentIds, ...metaAgentIds];
+  
+  // Deduplicate
+  return [...new Set(allAgents)];
+}
+
 // Stakeholder descriptions for selection UI
 export const STAKEHOLDER_DESCRIPTIONS: Record<StakeholderLens, { 
   title: string; 
