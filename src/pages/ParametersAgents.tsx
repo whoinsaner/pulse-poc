@@ -32,6 +32,7 @@ import {
   Info,
   FileJson,
   Download,
+  Film,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { exportParametersToCSV } from "@/lib/exportUtils";
@@ -128,9 +129,53 @@ const AGENT_COLORS: Record<string, string> = {
   ComicVisualAgent: "bg-indigo-500/10 text-indigo-500 border-indigo-500/20",
 };
 
+// Script types with display names
+const SCRIPT_TYPES: { value: string; label: string; description: string }[] = [
+  { value: "feature", label: "Feature Film", description: "Full-length theatrical film" },
+  { value: "pilot", label: "TV Pilot", description: "First episode of a TV series" },
+  { value: "episode", label: "TV Episode", description: "Regular series episode" },
+  { value: "short", label: "Short Film", description: "Short-form narrative" },
+  { value: "documentary", label: "Documentary", description: "Non-fiction film" },
+  { value: "comic", label: "Comic/Graphic Novel", description: "Sequential art storytelling" },
+];
+
+// Core agents that apply to all script types
+const CORE_AGENTS = [
+  "ConceptAgent",
+  "StructureAgent",
+  "CharacterAgent",
+  "ConflictAgent",
+  "ThemeAgent",
+  "DialogueAgent",
+  "EmotionalArcAgent",
+  "WorldLogicAgent",
+  "MarketAgent",
+  "ExecutionAgent",
+];
+
+// Comic-specific agents
+const COMIC_AGENTS = [
+  "ComicArtDirectionAgent",
+  "ComicDialogueAgent",
+  "ComicPacingAgent",
+  "ComicVisualAgent",
+];
+
+// Get agents applicable to a script type
+function getAgentsForScriptType(scriptType: string): string[] {
+  if (scriptType === "comic") {
+    return [...CORE_AGENTS, ...COMIC_AGENTS];
+  }
+  if (scriptType === "all") {
+    return [...CORE_AGENTS, ...COMIC_AGENTS];
+  }
+  return CORE_AGENTS;
+}
+
 export default function ParametersAgents() {
   const [selectedLens, setSelectedLens] = useState<string>("all");
   const [selectedAgent, setSelectedAgent] = useState<string>("all");
+  const [selectedScriptType, setSelectedScriptType] = useState<string>("all");
 
   const { data: parameters = [], isLoading: loadingParams } = useQuery({
     queryKey: ["parameters"],
@@ -224,9 +269,20 @@ export default function ParametersAgents() {
     return { icon: Minus, label: "Standard", color: "text-muted-foreground" };
   };
 
-  // Filter parameters based on selection
+  // Get applicable agents based on script type
+  const applicableAgents = useMemo(() => {
+    return getAgentsForScriptType(selectedScriptType);
+  }, [selectedScriptType]);
+
+  // Filter parameters based on selection (including script type)
   const filteredParameters = useMemo(() => {
     let result = parameters;
+    
+    // Filter by script type (which agents are applicable)
+    if (selectedScriptType !== "all") {
+      result = result.filter((p) => applicableAgents.includes(p.agent_source));
+    }
+    
     if (selectedAgent !== "all") {
       result = result.filter((p) => p.agent_source === selectedAgent);
     }
@@ -237,7 +293,15 @@ export default function ParametersAgents() {
       result = result.filter((p) => paramIdsWithLens.includes(p.id));
     }
     return result;
-  }, [parameters, selectedAgent, selectedLens, lensWeights]);
+  }, [parameters, selectedAgent, selectedLens, selectedScriptType, lensWeights, applicableAgents]);
+
+  // Filter agents dropdown based on script type
+  const filteredAgentsForDropdown = useMemo(() => {
+    if (selectedScriptType === "all") {
+      return agents;
+    }
+    return agents.filter((agent) => applicableAgents.includes(agent));
+  }, [agents, selectedScriptType, applicableAgents]);
 
   // Group filtered parameters by category
   const filteredByCategory = useMemo(() => {
@@ -277,16 +341,41 @@ export default function ParametersAgents() {
                   Explore the analysis framework and stakeholder perspectives
                 </p>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <Film className="h-4 w-4 text-muted-foreground" />
+                  <Select value={selectedScriptType} onValueChange={(value) => {
+                    setSelectedScriptType(value);
+                    // Reset agent filter if current agent is not applicable
+                    if (value !== "all" && selectedAgent !== "all") {
+                      const newApplicable = getAgentsForScriptType(value);
+                      if (!newApplicable.includes(selectedAgent)) {
+                        setSelectedAgent("all");
+                      }
+                    }
+                  }}>
+                    <SelectTrigger className="w-[160px]">
+                      <SelectValue placeholder="Script Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Script Types</SelectItem>
+                      {SCRIPT_TYPES.map((type) => (
+                        <SelectItem key={type.value} value={type.value}>
+                          {type.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div className="flex items-center gap-2">
                   <Bot className="h-4 w-4 text-muted-foreground" />
                   <Select value={selectedAgent} onValueChange={setSelectedAgent}>
-                    <SelectTrigger className="w-[180px]">
+                    <SelectTrigger className="w-[160px]">
                       <SelectValue placeholder="Filter by Agent" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Agents</SelectItem>
-                      {agents.map((agent) => (
+                      {filteredAgentsForDropdown.map((agent) => (
                         <SelectItem key={agent} value={agent}>
                           {agent.replace("Agent", "")}
                         </SelectItem>
@@ -297,7 +386,7 @@ export default function ParametersAgents() {
                 <div className="flex items-center gap-2">
                   <Eye className="h-4 w-4 text-muted-foreground" />
                   <Select value={selectedLens} onValueChange={setSelectedLens}>
-                    <SelectTrigger className="w-[180px]">
+                    <SelectTrigger className="w-[160px]">
                       <SelectValue placeholder="Filter by Lens" />
                     </SelectTrigger>
                     <SelectContent>
@@ -352,30 +441,80 @@ export default function ParametersAgents() {
 
             {/* Overview Tab */}
             <TabsContent value="overview" className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Active Filter Banner */}
+              {(selectedScriptType !== "all" || selectedLens !== "all" || selectedAgent !== "all") && (
+                <Card className="bg-primary/5 border-primary/20">
+                  <CardContent className="py-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4 flex-wrap">
+                        <span className="text-sm font-medium">Active Filters:</span>
+                        {selectedScriptType !== "all" && (
+                          <Badge variant="secondary" className="gap-1">
+                            <Film className="h-3 w-3" />
+                            {SCRIPT_TYPES.find(t => t.value === selectedScriptType)?.label}
+                          </Badge>
+                        )}
+                        {selectedAgent !== "all" && (
+                          <Badge variant="secondary" className="gap-1">
+                            <Bot className="h-3 w-3" />
+                            {selectedAgent.replace("Agent", "")}
+                          </Badge>
+                        )}
+                        {selectedLens !== "all" && (
+                          <Badge variant="secondary" className="gap-1">
+                            <Eye className="h-3 w-3" />
+                            {LENS_LABELS[selectedLens]?.label}
+                          </Badge>
+                        )}
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedScriptType("all");
+                          setSelectedAgent("all");
+                          setSelectedLens("all");
+                        }}
+                      >
+                        Clear All
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+              
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <Card>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium text-muted-foreground">
-                      Total Parameters
+                      {selectedScriptType !== "all" ? "Applicable Parameters" : "Total Parameters"}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-3xl font-bold">{parameters.length}</div>
+                    <div className="text-3xl font-bold">{filteredParameters.length}</div>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Across {Object.keys(parametersByCategory).length} categories
+                      {selectedScriptType !== "all" 
+                        ? `For ${SCRIPT_TYPES.find(t => t.value === selectedScriptType)?.label}`
+                        : `Across ${Object.keys(parametersByCategory).length} categories`
+                      }
                     </p>
                   </CardContent>
                 </Card>
                 <Card>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium text-muted-foreground">
-                      Analysis Agents
+                      {selectedScriptType !== "all" ? "Active Agents" : "Analysis Agents"}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-3xl font-bold">{agents.length}</div>
+                    <div className="text-3xl font-bold">{applicableAgents.length}</div>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Specialized AI evaluators
+                      {selectedScriptType === "comic" 
+                        ? "Core + Comic-specific" 
+                        : selectedScriptType !== "all"
+                        ? "Core agents only"
+                        : "Specialized AI evaluators"
+                      }
                     </p>
                   </CardContent>
                 </Card>
@@ -389,6 +528,19 @@ export default function ParametersAgents() {
                     <div className="text-3xl font-bold">{lenses.length}</div>
                     <p className="text-xs text-muted-foreground mt-1">
                       Unique perspectives for analysis
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">
+                      Script Types
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold">{SCRIPT_TYPES.length}</div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Supported formats
                     </p>
                   </CardContent>
                 </Card>
