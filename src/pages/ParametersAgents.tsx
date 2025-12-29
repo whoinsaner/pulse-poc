@@ -50,6 +50,7 @@ import { InsightsSchema } from "@/components/parameters/InsightsSchema";
 import { DataFlowDiagram } from "@/components/parameters/DataFlowDiagram";
 import { SampleAgentOutput } from "@/components/parameters/SampleAgentOutput";
 import { AgentSectionMapping } from "@/components/parameters/AgentSectionMapping";
+import { InteractivePipeline } from "@/components/parameters/InteractivePipeline";
 import {
   SCRIPT_TYPES,
   SIMPLE_SCRIPT_TYPES,
@@ -514,7 +515,7 @@ export default function ParametersAgents() {
                     <div className="text-3xl font-bold">{filteredParameters.length}</div>
                     <p className="text-xs text-muted-foreground mt-1">
                       {selectedScriptType !== "all" 
-                        ? `For ${SIMPLE_SCRIPT_TYPES.find(t => t.value === selectedScriptType)?.label}`
+                        ? `For ${SCRIPT_TYPES.find(t => t.value === selectedScriptType)?.label || selectedScriptType}`
                         : `Across ${Object.keys(parametersByCategory).length} categories`
                       }
                     </p>
@@ -527,13 +528,11 @@ export default function ParametersAgents() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-3xl font-bold">{applicableAgents.length}</div>
+                    <div className="text-3xl font-bold">{selectedScriptType === "all" ? ALL_AGENTS.length : applicableAgents.length}</div>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {selectedScriptType === "comic" 
-                        ? "Core + Comic-specific" 
-                        : selectedScriptType !== "all"
-                        ? "Core agents only"
-                        : "Specialized AI evaluators"
+                      {selectedScriptType !== "all"
+                        ? `Active for ${SCRIPT_TYPES.find(t => t.value === selectedScriptType)?.label || selectedScriptType}`
+                        : "Total across all types"
                       }
                     </p>
                   </CardContent>
@@ -565,6 +564,9 @@ export default function ParametersAgents() {
                   </CardContent>
                 </Card>
               </div>
+
+              {/* Interactive Pipeline Visualization */}
+              <InteractivePipeline />
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Agents Overview */}
