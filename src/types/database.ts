@@ -143,7 +143,7 @@ export interface ParameterScore {
 }
 
 export interface Evidence {
-  type: 'scene' | 'dialogue' | 'action' | 'character' | 'structure';
+  type: 'scene' | 'dialogue' | 'action' | 'character' | 'structure' | 'theme' | 'world' | 'market' | 'production' | 'content' | 'overall';
   reference: string;
   quote?: string;
   page?: number;
