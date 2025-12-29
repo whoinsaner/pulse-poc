@@ -13,15 +13,20 @@ import {
 } from '@/components/report/ui';
 import { User, Heart, Target, Zap, Brain, TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useStakeholderFiltering } from '@/hooks/useStakeholderFiltering';
+import { StakeholderFilterNotice } from '@/components/report/StakeholderFilterNotice';
 
 interface ReportContextValue {
   reportData: ReportData;
   activeLens: StakeholderLens;
   currentScore: number;
+  stakeholderLens: StakeholderLens | null;
 }
 
 export default function ProtagonistAnalysis() {
-  const { reportData, currentScore } = useOutletContext<ReportContextValue>();
+  const { reportData, currentScore, stakeholderLens } = useOutletContext<ReportContextValue>();
+  
+  const { isFiltered, filterParameters, getFilterStats } = useStakeholderFiltering({ stakeholderLens });
   
   // Find the protagonist (character with most dialogue/scenes)
   const characters = reportData.characters || [];
@@ -72,6 +77,10 @@ export default function ProtagonistAnalysis() {
     detail: p.rationale?.slice(0, 80)
   }));
 
+  // Filter parameters based on stakeholder lens
+  const filteredCharacterParams = filterParameters(characterParams);
+  const filterStats = getFilterStats(characterParams);
+
   return (
     <div className="space-y-8 max-w-6xl mx-auto">
       <SectionHeader
@@ -80,6 +89,15 @@ export default function ProtagonistAnalysis() {
         icon={User}
         score={categoryScore}
       />
+
+      {/* Stakeholder Filter Notice */}
+      {isFiltered && stakeholderLens && (
+        <StakeholderFilterNotice 
+          stakeholderLens={stakeholderLens}
+          shownCount={filterStats.shown}
+          totalCount={filterStats.total}
+        />
+      )}
 
       {/* Score Overview */}
       <div className="grid md:grid-cols-4 gap-4">
@@ -197,11 +215,11 @@ export default function ProtagonistAnalysis() {
       </Card>
 
       {/* Parameter Scores */}
-      {characterParams.length > 0 && (
+      {filteredCharacterParams.length > 0 && (
         <Card className="p-6">
           <SubSectionHeader title="Character Parameters" />
           <div className="space-y-4">
-            {characterParams.slice(0, 8).map((param, index) => (
+            {filteredCharacterParams.slice(0, 8).map((param, index) => (
               <div key={index}>
                 <ScoreBar 
                   score={param.score} 

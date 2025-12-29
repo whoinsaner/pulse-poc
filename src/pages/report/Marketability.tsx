@@ -12,15 +12,20 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { TrendingUp, Target, Globe } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useStakeholderFiltering } from '@/hooks/useStakeholderFiltering';
+import { StakeholderFilterNotice } from '@/components/report/StakeholderFilterNotice';
 
 interface ReportContextValue {
   reportData: ReportData;
   activeLens: StakeholderLens;
   currentScore: number;
+  stakeholderLens: StakeholderLens | null;
 }
 
 export default function Marketability() {
-  const { reportData, currentScore } = useOutletContext<ReportContextValue>();
+  const { reportData, currentScore, stakeholderLens } = useOutletContext<ReportContextValue>();
+
+  const { isFiltered, filterParameters, getFilterStats } = useStakeholderFiltering({ stakeholderLens });
 
   // Get market-related parameters
   const marketParams = reportData.parameterScores?.filter(p => 
@@ -69,6 +74,10 @@ export default function Marketability() {
     { platform: 'Streaming Standard', fit: 'Good', notes: 'Would perform well across platforms' },
   ];
 
+  // Filter parameters based on stakeholder lens
+  const filteredMarketParams = filterParameters(marketParams);
+  const filterStats = getFilterStats(marketParams);
+
   return (
     <div className="space-y-8 max-w-6xl mx-auto">
       <SectionHeader
@@ -77,6 +86,15 @@ export default function Marketability() {
         icon={TrendingUp}
         score={categoryScore}
       />
+
+      {/* Stakeholder Filter Notice */}
+      {isFiltered && stakeholderLens && (
+        <StakeholderFilterNotice 
+          stakeholderLens={stakeholderLens}
+          shownCount={filterStats.shown}
+          totalCount={filterStats.total}
+        />
+      )}
 
       {/* Market Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -139,11 +157,11 @@ export default function Marketability() {
       </Card>
 
       {/* Parameter Breakdown */}
-      {marketParams.length > 0 && (
+      {filteredMarketParams.length > 0 && (
         <Card className="p-6">
           <SubSectionHeader title="Market Parameters" />
           <div className="space-y-4">
-            {marketParams.slice(0, 8).map((param, index) => (
+            {filteredMarketParams.slice(0, 8).map((param, index) => (
               <div key={index}>
                 <ScoreBar 
                   score={param.score} 

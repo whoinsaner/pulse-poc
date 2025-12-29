@@ -12,15 +12,20 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Film, DollarSign, MapPin, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useStakeholderFiltering } from '@/hooks/useStakeholderFiltering';
+import { StakeholderFilterNotice } from '@/components/report/StakeholderFilterNotice';
 
 interface ReportContextValue {
   reportData: ReportData;
   activeLens: StakeholderLens;
   currentScore: number;
+  stakeholderLens: StakeholderLens | null;
 }
 
 export default function Production() {
-  const { reportData, currentScore } = useOutletContext<ReportContextValue>();
+  const { reportData, currentScore, stakeholderLens } = useOutletContext<ReportContextValue>();
+
+  const { isFiltered, filterParameters, getFilterStats } = useStakeholderFiltering({ stakeholderLens });
 
   // Get execution/production-related parameters
   const productionParams = reportData.parameterScores?.filter(p => 
@@ -79,6 +84,10 @@ export default function Production() {
     detail: p.rationale?.slice(0, 80)
   }));
 
+  // Filter parameters based on stakeholder lens
+  const filteredProductionParams = filterParameters(productionParams);
+  const filterStats = getFilterStats(productionParams);
+
   return (
     <div className="space-y-8 max-w-6xl mx-auto">
       <SectionHeader
@@ -87,6 +96,15 @@ export default function Production() {
         icon={Film}
         score={categoryScore}
       />
+
+      {/* Stakeholder Filter Notice */}
+      {isFiltered && stakeholderLens && (
+        <StakeholderFilterNotice 
+          stakeholderLens={stakeholderLens}
+          shownCount={filterStats.shown}
+          totalCount={filterStats.total}
+        />
+      )}
 
       {/* Production Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -170,11 +188,11 @@ export default function Production() {
       />
 
       {/* Parameter Breakdown */}
-      {productionParams.length > 0 && (
+      {filteredProductionParams.length > 0 && (
         <Card className="p-6">
           <SubSectionHeader title="Production Parameters" />
           <div className="space-y-4">
-            {productionParams.slice(0, 8).map((param, index) => (
+            {filteredProductionParams.slice(0, 8).map((param, index) => (
               <div key={index}>
                 <ScoreBar 
                   score={param.score} 
