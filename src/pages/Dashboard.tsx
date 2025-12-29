@@ -5,7 +5,7 @@ import { Logo } from '@/components/Logo';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Upload, FileText, BarChart3, Users, LogOut, Plus, Layers } from 'lucide-react';
+import { Upload, FileText, BarChart3, Users, LogOut, Plus, Layers, FlaskConical } from 'lucide-react';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -130,6 +130,18 @@ export default function Dashboard() {
               <div>
                 <h3 className="font-semibold">Parameters</h3>
                 <p className="text-sm text-muted-foreground">Agents & lenses</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="card-hover cursor-pointer group" onClick={() => navigate('/test-pipeline')}>
+            <CardContent className="p-6 flex items-center gap-4">
+              <div className="p-3 rounded-lg bg-orange-500/10 group-hover:bg-orange-500/20 transition-colors">
+                <FlaskConical className="h-6 w-6 text-orange-500" />
+              </div>
+              <div>
+                <h3 className="font-semibold">Test Pipeline</h3>
+                <p className="text-sm text-muted-foreground">Run full analysis test</p>
               </div>
             </CardContent>
           </Card>
