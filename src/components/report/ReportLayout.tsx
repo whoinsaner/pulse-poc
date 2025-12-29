@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Report, StakeholderLens, ReportData, LENS_CONFIG } from '@/types/database';
 import { LensSelector } from '@/components/LensToggle';
 import { ExportDialog } from '@/components/report/ExportDialog';
+import { StakeholderBadge } from '@/components/StakeholderBadge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -39,6 +40,7 @@ import {
   LucideIcon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { isNavSectionRelevant } from '@/lib/stakeholderConfig';
 
 interface AgentProgress {
   [agentName: string]: {
@@ -56,6 +58,7 @@ interface ReportContextValue {
   setActiveLens: (lens: StakeholderLens) => void;
   currentScore: number;
   isComic: boolean;
+  stakeholderLens: StakeholderLens | null;
 }
 
 import { createContext, useContext } from 'react';
@@ -167,6 +170,7 @@ export default function ReportLayout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [agentProgress, setAgentProgress] = useState<AgentProgress | null>(null);
   const [isRetrying, setIsRetrying] = useState(false);
+  const [stakeholderLens, setStakeholderLens] = useState<StakeholderLens | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -189,7 +193,7 @@ export default function ReportLayout() {
           .single(),
         supabase
           .from('analysis_runs')
-          .select('agent_progress, status')
+          .select('agent_progress, status, stakeholder_lens')
           .eq('id', runId)
           .single()
       ]);
@@ -204,6 +208,13 @@ export default function ReportLayout() {
       
       if (analysisResult.data?.agent_progress) {
         setAgentProgress(analysisResult.data.agent_progress as AgentProgress);
+      }
+      
+      // Set stakeholder lens from analysis run
+      if (analysisResult.data?.stakeholder_lens) {
+        setStakeholderLens(analysisResult.data.stakeholder_lens as StakeholderLens);
+        // Also set active lens to match for consistent scoring
+        setActiveLens(analysisResult.data.stakeholder_lens as StakeholderLens);
       }
       
       setLoading(false);
@@ -253,7 +264,13 @@ export default function ReportLayout() {
 
   const reportData = report?.full_report_data as ReportData | null;
   const isComic = reportData?.scriptMetadata?.scriptType === 'comic';
-  const navGroups = getNavGroups(isComic);
+  const allNavGroups = getNavGroups(isComic);
+  
+  // Filter navigation groups based on stakeholder lens
+  const navGroups = allNavGroups.map(group => ({
+    ...group,
+    items: group.items.filter(item => isNavSectionRelevant(item.id, stakeholderLens))
+  })).filter(group => group.items.length > 0);
 
   const getCurrentScore = () => {
     if (!reportData) return report?.overall_score || 0;
@@ -295,6 +312,7 @@ export default function ReportLayout() {
     setActiveLens,
     currentScore: getCurrentScore(),
     isComic,
+    stakeholderLens,
   };
 
   return (
@@ -327,6 +345,12 @@ export default function ReportLayout() {
             "p-4 border-b border-border shrink-0",
             sidebarCollapsed ? "text-center" : ""
           )}>
+            {/* Stakeholder Lens Badge */}
+            {stakeholderLens && !sidebarCollapsed && (
+              <div className="mb-3">
+                <StakeholderBadge lens={stakeholderLens} size="sm" showLabel />
+              </div>
+            )}
             <div className={cn(
               "rounded-xl p-4",
               "bg-gradient-to-br from-primary/10 via-primary/5 to-transparent"
@@ -339,7 +363,7 @@ export default function ReportLayout() {
               </p>
               {!sidebarCollapsed && (
                 <p className="text-xs text-muted-foreground mt-1">
-                  {LENS_CONFIG[activeLens].label} Score
+                  {stakeholderLens ? LENS_CONFIG[stakeholderLens].label : LENS_CONFIG[activeLens].label} Score
                 </p>
               )}
             </div>
@@ -386,11 +410,22 @@ export default function ReportLayout() {
             </nav>
           </ScrollArea>
 
-          {/* Lens Selector at bottom */}
-          {!sidebarCollapsed && (
+          {/* Lens Selector at bottom - only show if comprehensive analysis */}
+          {!sidebarCollapsed && !stakeholderLens && (
             <div className="p-4 border-t border-border bg-card/95 shrink-0">
               <p className="text-xs text-muted-foreground mb-2">Viewing as</p>
               <LensSelector activeLens={activeLens} onLensChange={setActiveLens} compact />
+            </div>
+          )}
+          
+          {/* Show stakeholder info for stakeholder-specific reports */}
+          {!sidebarCollapsed && stakeholderLens && (
+            <div className="p-4 border-t border-border bg-card/95 shrink-0">
+              <p className="text-xs text-muted-foreground mb-2">Stakeholder Report</p>
+              <p className="text-sm font-medium">{LENS_CONFIG[stakeholderLens].label}</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {navGroups.reduce((sum, g) => sum + g.items.length, 0)} sections analyzed
+              </p>
             </div>
           )}
         </aside>
@@ -442,7 +477,11 @@ export default function ReportLayout() {
               </div>
               
               <div className="flex items-center gap-3">
-                {sidebarCollapsed && (
+                {/* Show stakeholder badge in header */}
+                {stakeholderLens && (
+                  <StakeholderBadge lens={stakeholderLens} size="sm" showLabel />
+                )}
+                {sidebarCollapsed && !stakeholderLens && (
                   <LensSelector activeLens={activeLens} onLensChange={setActiveLens} compact />
                 )}
                 <Button variant="outline" size="sm">
