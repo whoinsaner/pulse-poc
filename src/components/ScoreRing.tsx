@@ -1,7 +1,8 @@
 import { cn } from '@/lib/utils';
 
 interface ScoreRingProps {
-  score: number;
+  score: number; // Expected 0-10 scale
+  maxScore?: number;
   size?: 'sm' | 'md' | 'lg' | 'xl';
   showLabel?: boolean;
   label?: string;
@@ -9,8 +10,13 @@ interface ScoreRingProps {
   animated?: boolean;
 }
 
+/**
+ * ScoreRing - Displays a circular score indicator
+ * STANDARDIZED 10-POINT SCALE: All scores should be 0-10
+ */
 export function ScoreRing({
   score,
+  maxScore = 10,
   size = 'md',
   showLabel = true,
   label,
@@ -27,21 +33,24 @@ export function ScoreRing({
   const { diameter, stroke, fontSize, labelSize } = sizes[size];
   const radius = (diameter - stroke) / 2;
   const circumference = 2 * Math.PI * radius;
-  const progress = (score / 100) * circumference;
+  // Convert 0-10 to percentage for ring progress
+  const percentage = (score / maxScore) * 100;
+  const progress = (percentage / 100) * circumference;
 
+  // 10-point scale thresholds
   const getScoreColor = (score: number) => {
-    if (score >= 80) return 'var(--score-excellent)';
-    if (score >= 65) return 'var(--score-good)';
-    if (score >= 50) return 'var(--score-average)';
-    if (score >= 35) return 'var(--score-poor)';
+    if (score >= 8) return 'var(--score-excellent)';
+    if (score >= 6.5) return 'var(--score-good)';
+    if (score >= 5) return 'var(--score-average)';
+    if (score >= 3) return 'var(--score-poor)';
     return 'var(--score-critical)';
   };
 
   const getScoreClass = (score: number) => {
-    if (score >= 80) return 'score-excellent';
-    if (score >= 65) return 'score-good';
-    if (score >= 50) return 'score-average';
-    if (score >= 35) return 'score-poor';
+    if (score >= 8) return 'score-excellent';
+    if (score >= 6.5) return 'score-good';
+    if (score >= 5) return 'score-average';
+    if (score >= 3) return 'score-poor';
     return 'score-critical';
   };
 
@@ -90,7 +99,7 @@ export function ScoreRing({
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <span className={cn('font-bold', fontSize, getScoreClass(score))}>
-          {Math.round(score)}
+          {score.toFixed(1)}
         </span>
         {showLabel && label && (
           <span className={cn('text-muted-foreground mt-1', labelSize)}>

@@ -30,7 +30,8 @@ interface AgentMapping {
   sections: string[];
 }
 
-const AGENT_MAPPINGS: AgentMapping[] = [
+// Core agents (all script types)
+const CORE_AGENT_MAPPINGS: AgentMapping[] = [
   {
     agent: "ConceptAgent",
     color: "bg-amber-500/10 text-amber-500 border-amber-500/30",
@@ -103,6 +104,40 @@ const AGENT_MAPPINGS: AgentMapping[] = [
   }
 ];
 
+// Comic-specific agents
+const COMIC_AGENT_MAPPINGS: AgentMapping[] = [
+  {
+    agent: "ComicVisualAgent",
+    color: "bg-indigo-500/10 text-indigo-500 border-indigo-500/30",
+    icon: <Eye className="h-4 w-4" />,
+    category: "Comic Visual",
+    sections: ["Visual Storytelling", "Art Direction"]
+  },
+  {
+    agent: "ComicDialogueAgent",
+    color: "bg-teal-500/10 text-teal-500 border-teal-500/30",
+    icon: <MessageSquare className="h-4 w-4" />,
+    category: "Comic Dialogue",
+    sections: ["Dialogue & Subtext", "Balloon Efficiency"]
+  },
+  {
+    agent: "ComicPacingAgent",
+    color: "bg-lime-500/10 text-lime-500 border-lime-500/30",
+    icon: <Target className="h-4 w-4" />,
+    category: "Comic Pacing",
+    sections: ["Scene Economy", "Panel Flow"]
+  },
+  {
+    agent: "ComicArtDirectionAgent",
+    color: "bg-fuchsia-500/10 text-fuchsia-500 border-fuchsia-500/30",
+    icon: <Palette className="h-4 w-4" />,
+    category: "Art Direction",
+    sections: ["Visual Storytelling", "Artist Guidance"]
+  }
+];
+
+const AGENT_MAPPINGS: AgentMapping[] = [...CORE_AGENT_MAPPINGS, ...COMIC_AGENT_MAPPINGS];
+
 const SECTION_ICONS: Record<string, React.ReactNode> = {
   "Concept & Hook": <Lightbulb className="h-3 w-3" />,
   "Structural Engineering": <GitBranch className="h-3 w-3" />,
@@ -134,53 +169,106 @@ export function AgentSectionMapping() {
           How each agent's analysis feeds into specific report sections
         </p>
       </CardHeader>
-      <CardContent>
-        <div className="space-y-3">
-          {AGENT_MAPPINGS.map((mapping) => (
-            <div 
-              key={mapping.agent}
-              className={cn(
-                "flex flex-col md:flex-row md:items-center gap-3 p-3 rounded-lg border",
-                mapping.color
-              )}
-            >
-              {/* Agent */}
-              <div className="flex items-center gap-2 min-w-[180px]">
-                {mapping.icon}
-                <span className="font-semibold text-sm">{mapping.agent}</span>
+      <CardContent className="space-y-6">
+        {/* Core Agents Section */}
+        <div>
+          <h4 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            Core Agents (All Script Types)
+          </h4>
+          <div className="space-y-3">
+            {CORE_AGENT_MAPPINGS.map((mapping) => (
+              <div 
+                key={mapping.agent}
+                className={cn(
+                  "flex flex-col md:flex-row md:items-center gap-3 p-3 rounded-lg border",
+                  mapping.color
+                )}
+              >
+                {/* Agent */}
+                <div className="flex items-center gap-2 min-w-[180px]">
+                  {mapping.icon}
+                  <span className="font-semibold text-sm">{mapping.agent}</span>
+                </div>
+                
+                {/* Category Badge */}
+                <Badge variant="secondary" className="w-fit text-xs">
+                  {mapping.category}
+                </Badge>
+                
+                {/* Arrow */}
+                <ArrowRight className="h-4 w-4 text-muted-foreground hidden md:block" />
+                
+                {/* Report Sections */}
+                <div className="flex flex-wrap gap-2 flex-1">
+                  {mapping.sections.map((section) => (
+                    <div 
+                      key={section}
+                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-background border text-xs font-medium"
+                    >
+                      {SECTION_ICONS[section]}
+                      <span>{section}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
-              
-              {/* Category Badge */}
-              <Badge variant="secondary" className="w-fit text-xs">
-                {mapping.category}
-              </Badge>
-              
-              {/* Arrow */}
-              <ArrowRight className="h-4 w-4 text-muted-foreground hidden md:block" />
-              
-              {/* Report Sections */}
-              <div className="flex flex-wrap gap-2 flex-1">
-                {mapping.sections.map((section) => (
-                  <div 
-                    key={section}
-                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-background border text-xs font-medium"
-                  >
-                    {SECTION_ICONS[section]}
-                    <span>{section}</span>
-                  </div>
-                ))}
+            ))}
+          </div>
+        </div>
+
+        {/* Comic Agents Section */}
+        <div>
+          <h4 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
+            <Film className="h-4 w-4" />
+            Comic-Specific Agents
+          </h4>
+          <div className="space-y-3">
+            {COMIC_AGENT_MAPPINGS.map((mapping) => (
+              <div 
+                key={mapping.agent}
+                className={cn(
+                  "flex flex-col md:flex-row md:items-center gap-3 p-3 rounded-lg border",
+                  mapping.color
+                )}
+              >
+                {/* Agent */}
+                <div className="flex items-center gap-2 min-w-[180px]">
+                  {mapping.icon}
+                  <span className="font-semibold text-sm">{mapping.agent}</span>
+                </div>
+                
+                {/* Category Badge */}
+                <Badge variant="secondary" className="w-fit text-xs">
+                  {mapping.category}
+                </Badge>
+                
+                {/* Arrow */}
+                <ArrowRight className="h-4 w-4 text-muted-foreground hidden md:block" />
+                
+                {/* Report Sections */}
+                <div className="flex flex-wrap gap-2 flex-1">
+                  {mapping.sections.map((section) => (
+                    <div 
+                      key={section}
+                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-background border text-xs font-medium"
+                    >
+                      {SECTION_ICONS[section] || <Eye className="h-3 w-3" />}
+                      <span>{section}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
 
         {/* Legend */}
-        <div className="mt-6 p-4 bg-muted/30 rounded-lg">
+        <div className="p-4 bg-muted/30 rounded-lg">
           <h4 className="text-sm font-medium mb-2">How It Works</h4>
           <p className="text-xs text-muted-foreground">
-            Each agent analyzes specific aspects of the script and produces parameter scores. 
-            These scores are then filtered by category and displayed in the corresponding report sections. 
-            Some agents contribute to multiple sections when their analysis is relevant across different perspectives.
+            Each agent analyzes specific aspects of the script and produces parameter scores on a 10-point scale. 
+            Core agents run for all script types, while Comic-specific agents only run for comic/graphic narrative scripts.
+            Scores are then filtered by category and displayed in the corresponding report sections.
           </p>
         </div>
       </CardContent>

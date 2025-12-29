@@ -5,32 +5,37 @@ import { cn } from '@/lib/utils';
 import { ParameterScoreData } from '@/types/database';
 
 interface ParameterScoringProps {
-  categoryScores: Record<string, number>;
+  categoryScores: Record<string, number>; // Expected 0-10 scale
   parameterScores?: ParameterScoreData[];
 }
 
+/**
+ * ParameterScoring - Displays category scores
+ * STANDARDIZED 10-POINT SCALE: All scores should be 0-10
+ */
 export function ParameterScoring({ categoryScores, parameterScores }: ParameterScoringProps) {
+  // 10-point scale thresholds
   const getScoreColor = (score: number) => {
-    if (score >= 80) return 'text-success';
-    if (score >= 60) return 'text-chart-3';
-    if (score >= 50) return 'text-chart-4';
-    if (score >= 40) return 'text-warning';
-    return 'text-destructive';
+    if (score >= 8) return 'score-excellent';
+    if (score >= 6.5) return 'score-good';
+    if (score >= 5) return 'score-average';
+    if (score >= 3) return 'score-poor';
+    return 'score-critical';
   };
 
   const getScoreBg = (score: number) => {
-    if (score >= 80) return 'bg-success/10';
-    if (score >= 60) return 'bg-chart-3/10';
-    if (score >= 50) return 'bg-chart-4/10';
-    if (score >= 40) return 'bg-warning/10';
-    return 'bg-destructive/10';
+    if (score >= 8) return 'score-bg-excellent';
+    if (score >= 6.5) return 'score-bg-good';
+    if (score >= 5) return 'score-bg-average';
+    if (score >= 3) return 'score-bg-poor';
+    return 'score-bg-critical';
   };
 
-  // Use category scores as the primary display
+  // Use category scores as the primary display (already 0-10)
   const parameters = Object.entries(categoryScores).map(([category, score]) => ({
     name: category,
     displayName: category,
-    score: score,
+    score: score, // Already 0-10 scale
     description: `Analysis of ${category.toLowerCase()} aspects of the script`,
     category,
   }));
@@ -69,7 +74,7 @@ export function ParameterScoring({ categoryScores, parameterScores }: ParameterS
                   getScoreBg(param.score),
                   getScoreColor(param.score)
                 )}>
-                  {(param.score / 10).toFixed(1)}
+                  {param.score.toFixed(1)}
                 </div>
               </div>
             </div>

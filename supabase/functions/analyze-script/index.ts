@@ -1613,12 +1613,15 @@ CRITICAL: You MUST respond with ONLY the JSON object. No text before or after. N
   // Robust JSON extraction with multiple strategies
   const parsed = extractJsonFromResponse(content, agentName);
 
+  // STANDARDIZED 10-POINT SCORING: Store scores as 0-10 directly
   const scores = (parsed.scores || []).map((s: any) => {
     const param = parameterMap.get(s.parameter);
+    // Clamp score to 0-10 range (AI outputs 0-10)
+    const normalizedScore = Math.min(10, Math.max(0, s.score || 0));
     return {
       parameterId: param?.id,
       parameterName: s.parameter,
-      score: Math.min(100, Math.max(0, (s.score || 0) * 10)),
+      score: normalizedScore, // Store as 0-10
       confidence: 0.85,
       maturity: s.maturity || 'Developing',
       riskLevel: s.riskLevel || 'Medium',
@@ -1681,7 +1684,7 @@ async function runInsightSynthesis(
 
   const scoresSummary = scores?.map((s: any) => {
     const evidence = s.evidence || {};
-    return `${s.parameters?.display_name}: ${s.score}/100 (${evidence.maturity || 'N/A'}) - ${s.rationale}`;
+    return `${s.parameters?.display_name}: ${s.score}/10 (${evidence.maturity || 'N/A'}) - ${s.rationale}`;
   }).join('\n') || '';
 
   const prompt = `You are InsightSynthesisAgent.

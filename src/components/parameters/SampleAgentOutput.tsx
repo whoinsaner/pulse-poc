@@ -13,6 +13,7 @@ import { Bot, Code, FileJson } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const AGENT_COLORS: Record<string, string> = {
+  // Core agents
   ConceptAgent: "bg-amber-500/10 text-amber-500 border-amber-500/20",
   StructureAgent: "bg-blue-500/10 text-blue-500 border-blue-500/20",
   CharacterAgent: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
@@ -23,6 +24,11 @@ const AGENT_COLORS: Record<string, string> = {
   WorldLogicAgent: "bg-cyan-500/10 text-cyan-500 border-cyan-500/20",
   MarketAgent: "bg-orange-500/10 text-orange-500 border-orange-500/20",
   ExecutionAgent: "bg-rose-500/10 text-rose-500 border-rose-500/20",
+  // Comic-specific agents
+  ComicVisualAgent: "bg-indigo-500/10 text-indigo-500 border-indigo-500/20",
+  ComicDialogueAgent: "bg-teal-500/10 text-teal-500 border-teal-500/20",
+  ComicPacingAgent: "bg-lime-500/10 text-lime-500 border-lime-500/20",
+  ComicArtDirectionAgent: "bg-fuchsia-500/10 text-fuchsia-500 border-fuchsia-500/20",
 };
 
 const SAMPLE_OUTPUTS: Record<string, { parameter: string; output: object }> = {
@@ -246,6 +252,87 @@ const SAMPLE_OUTPUTS: Record<string, { parameter: string; output: object }> = {
           reference: "Full script",
           quote: null,
           explanation: "INT. OFFICE: 22 scenes, INT. APARTMENT: 18 scenes, EXT. Various: 12 scenes. Consider consolidating some office scenes."
+        }
+      ]
+    }
+  },
+  // Comic-specific agent outputs
+  ComicVisualAgent: {
+    parameter: "visual_storytelling",
+    output: {
+      score: 8.0,
+      maturity: "well_developed",
+      riskLevel: "low",
+      fixCost: "medium",
+      upsideImpact: "high",
+      confidence: 0.88,
+      rationale: "Strong visual storytelling with effective use of panel layouts and page composition. The script provides clear visual directions while leaving appropriate creative space for the artist.",
+      evidence: [
+        {
+          type: "panel_analysis",
+          reference: "Pages 1-24",
+          quote: null,
+          explanation: "Effective use of splash pages at key dramatic moments. Panel density varies appropriately with action pacing."
+        }
+      ]
+    }
+  },
+  ComicDialogueAgent: {
+    parameter: "balloon_efficiency",
+    output: {
+      score: 7.4,
+      maturity: "developing",
+      riskLevel: "medium",
+      fixCost: "low",
+      upsideImpact: "medium",
+      confidence: 0.85,
+      rationale: "Dialogue generally fits balloon constraints but some panels are text-heavy. Consider trimming exposition in action sequences.",
+      evidence: [
+        {
+          type: "dialogue_density",
+          reference: "Issue #1",
+          quote: null,
+          explanation: "Average word count per balloon: 18 words. Industry standard: 15-20. Some balloons exceed 30 words."
+        }
+      ]
+    }
+  },
+  ComicPacingAgent: {
+    parameter: "panel_to_panel_flow",
+    output: {
+      score: 8.3,
+      maturity: "well_developed",
+      riskLevel: "low",
+      fixCost: "low",
+      upsideImpact: "medium",
+      confidence: 0.90,
+      rationale: "Excellent panel-to-panel transitions with natural eye flow. Page turns are strategically placed for maximum impact.",
+      evidence: [
+        {
+          type: "pacing_analysis",
+          reference: "Full issue",
+          quote: null,
+          explanation: "Strong cliffhanger placements at pages 11 and 22. Decompressed moments balanced with rapid-fire action sequences."
+        }
+      ]
+    }
+  },
+  ComicArtDirectionAgent: {
+    parameter: "artist_guidance",
+    output: {
+      score: 7.8,
+      maturity: "well_developed",
+      riskLevel: "low",
+      fixCost: "low",
+      upsideImpact: "medium",
+      confidence: 0.87,
+      rationale: "Clear character and setting descriptions provided. Reference notes for key visual elements help maintain consistency.",
+      evidence: [
+        {
+          type: "reference_quality",
+          reference: "Character sheets",
+          quote: null,
+          explanation: "Main characters have detailed visual descriptions. Supporting cast could use more specificity for consistent rendering."
         }
       ]
     }
