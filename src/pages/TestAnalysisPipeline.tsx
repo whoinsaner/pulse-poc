@@ -57,7 +57,8 @@ export default function TestAnalysisPipeline() {
       // Create a text blob for the script content
       const scriptContent = SAMPLE_SCRIPT.content;
       const blob = new Blob([scriptContent], { type: 'text/plain' });
-      const fileName = `sample-scripts/${Date.now()}-${SAMPLE_SCRIPT.title.replace(/\s+/g, '-')}.txt`;
+      // Use org ID as folder to satisfy RLS policies
+      const fileName = `${orgId}/${Date.now()}-${SAMPLE_SCRIPT.title.replace(/\s+/g, '-')}.txt`;
 
       // Upload to storage
       const { error: uploadError } = await supabase.storage
