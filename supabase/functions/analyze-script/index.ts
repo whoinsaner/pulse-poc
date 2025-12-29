@@ -1039,6 +1039,11 @@ function chunkBySize(text: string, maxSize: number): string[] {
 
 // ============= MAIN SERVER =============
 
+// Declare EdgeRuntime for background tasks
+declare const EdgeRuntime: {
+  waitUntil: (promise: Promise<any>) => void;
+};
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -1254,64 +1259,88 @@ serve(async (req) => {
       console.log(`[analyze-script] Deep mode context: ${scenes.length} scenes, ${characters.length} characters, fallback: ${usingFallbackMode}`);
     }
 
-    // ============= RUN AGENTS =============
+    // ============= RUN AGENTS AS BACKGROUND TASK =============
     
-    let agentResults: Array<{ agent: string; success: boolean; error?: string }>;
+    // Use EdgeRuntime.waitUntil for long-running analysis
+    const runAnalysisBackground = async () => {
+      try {
+        let agentResults: Array<{ agent: string; success: boolean; error?: string }>;
+        
+        if (mode === 'quick' && chunks.length > 3) {
+          // Chunked analysis for large scripts
+          agentResults = await runChunkedAnalysis(
+            supabase,
+            lovableApiKey,
+            analysisRunId,
+            script,
+            chunks,
+            agentsToRun,
+            parameterMap
+          );
+        } else {
+          // Standard analysis (deep mode or small quick scripts)
+          agentResults = await runStandardAnalysis(
+            supabase,
+            lovableApiKey,
+            analysisRunId,
+            scriptContext,
+            agentsToRun,
+            parameterMap
+          );
+        }
+
+        // Run synthesis agents with upgraded model
+        await runInsightSynthesis(supabase, lovableApiKey, analysisRunId, scriptContext);
+        await runStakeholderLensAgent(supabase, lovableApiKey, analysisRunId);
+
+        // Generate report
+        await generateReport(supabase, analysisRunId, scriptId, script, mode);
+
+        // Update final status
+        const failedAgents = agentResults.filter(r => !r.success);
+        const finalStatus = failedAgents.length === agentResults.length ? 'failed' : 'completed';
+        
+        await supabase
+          .from('analysis_runs')
+          .update({ 
+            status: finalStatus,
+            completed_at: new Date().toISOString(),
+            error_message: failedAgents.length > 0 
+              ? `${failedAgents.length} agents failed: ${failedAgents.map(f => f.agent).join(', ')}`
+              : null
+          })
+          .eq('id', analysisRunId);
+
+        console.log(`[analyze-script] ${mode.toUpperCase()} Analysis complete: ${finalStatus}`);
+      } catch (bgError) {
+        const errorMessage = bgError instanceof Error ? bgError.message : 'Unknown background error';
+        console.error('[analyze-script] Background analysis error:', errorMessage);
+        
+        await supabase
+          .from('analysis_runs')
+          .update({ 
+            status: 'failed',
+            completed_at: new Date().toISOString(),
+            error_message: errorMessage
+          })
+          .eq('id', analysisRunId);
+      }
+    };
+
+    // Start background processing - function continues after response is sent
+    EdgeRuntime.waitUntil(runAnalysisBackground());
+
+    // Return immediately so client knows analysis started
+    console.log(`[analyze-script] Analysis started in background for ${analysisRunId}`);
     
-    if (mode === 'quick' && chunks.length > 3) {
-      // Chunked analysis for large scripts
-      agentResults = await runChunkedAnalysis(
-        supabase,
-        lovableApiKey,
-        analysisRunId,
-        script,
-        chunks,
-        agentsToRun,
-        parameterMap
-      );
-    } else {
-      // Standard analysis (deep mode or small quick scripts)
-      agentResults = await runStandardAnalysis(
-        supabase,
-        lovableApiKey,
-        analysisRunId,
-        scriptContext,
-        agentsToRun,
-        parameterMap
-      );
-    }
-
-    // Run synthesis agents
-    await runInsightSynthesis(supabase, lovableApiKey, analysisRunId, scriptContext);
-    await runStakeholderLensAgent(supabase, lovableApiKey, analysisRunId);
-
-    // Generate report
-    await generateReport(supabase, analysisRunId, scriptId, script, mode);
-
-    // Update final status
-    const failedAgents = agentResults.filter(r => !r.success);
-    const finalStatus = failedAgents.length === agentResults.length ? 'failed' : 'completed';
-    
-    await supabase
-      .from('analysis_runs')
-      .update({ 
-        status: finalStatus,
-        completed_at: new Date().toISOString(),
-        error_message: failedAgents.length > 0 
-          ? `${failedAgents.length} agents failed: ${failedAgents.map(f => f.agent).join(', ')}`
-          : null
-      })
-      .eq('id', analysisRunId);
-
-    console.log(`[analyze-script] ${mode.toUpperCase()} Analysis complete: ${finalStatus}`);
-
     return new Response(
       JSON.stringify({ 
         success: true, 
-        status: finalStatus,
+        status: 'processing',
         mode,
-        chunks: chunks.length,
-        results: agentResults 
+        analysisRunId,
+        message: 'Analysis started in background. Monitor progress via realtime updates.',
+        estimatedTime: mode === 'quick' ? '2-5 minutes' : '5-15 minutes'
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
@@ -1996,6 +2025,7 @@ Return JSON array:
 ]`;
 
   try {
+    // Use Gemini Pro for synthesis - better reasoning for executive insights
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -2003,12 +2033,11 @@ Return JSON array:
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'openai/gpt-5',
+        model: 'google/gemini-2.5-pro', // Upgraded for synthesis tasks
         messages: [
           { role: 'system', content: 'You are InsightSynthesisAgent, a senior script analyst synthesizing findings into executive-level actionable insights.' },
           { role: 'user', content: prompt }
         ],
-        max_completion_tokens: 3000,
       }),
     });
 
