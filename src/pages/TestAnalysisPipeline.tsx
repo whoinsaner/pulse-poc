@@ -143,17 +143,7 @@ export default function TestAnalysisPipeline() {
 
   const handleAnalysisComplete = async (analysisRunId: string) => {
     setStep('complete');
-    
-    // Fetch the report ID
-    const { data: report } = await supabase
-      .from('reports')
-      .select('id')
-      .eq('analysis_run_id', analysisRunId)
-      .single();
-
-    if (report) {
-      setReportId(report.id);
-    }
+    setReportId(analysisRunId); // Store the analysis run ID for navigation
 
     toast({
       title: 'Pipeline test complete!',
@@ -163,7 +153,8 @@ export default function TestAnalysisPipeline() {
 
   const viewReport = () => {
     if (reportId) {
-      navigate(`/reports/${reportId}`);
+      // Navigate using analysis run ID - this is how report routes work
+      navigate(`/report/${reportId}`);
     } else if (addedScriptId) {
       navigate(`/scripts/${addedScriptId}`);
     }
