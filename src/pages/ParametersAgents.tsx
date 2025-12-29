@@ -121,6 +121,12 @@ const LENS_LABELS: Record<string, { label: string; description: string; color: s
 };
 
 const AGENT_COLORS: Record<string, string> = {
+  // System Agents
+  IntakeNormalizerAgent: "bg-slate-500/10 text-slate-500 border-slate-500/20",
+  ScriptTypeClassifierAgent: "bg-blue-500/10 text-blue-500 border-blue-500/20",
+  ClassifierArbitrationAgent: "bg-amber-500/10 text-amber-500 border-amber-500/20",
+  MultiTypeBlendingAgent: "bg-purple-500/10 text-purple-500 border-purple-500/20",
+  // Core Agents
   ConceptAgent: "bg-amber-500/10 text-amber-500 border-amber-500/20",
   StructureAgent: "bg-blue-500/10 text-blue-500 border-blue-500/20",
   CharacterAgent: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
@@ -131,53 +137,27 @@ const AGENT_COLORS: Record<string, string> = {
   WorldLogicAgent: "bg-cyan-500/10 text-cyan-500 border-cyan-500/20",
   MarketAgent: "bg-orange-500/10 text-orange-500 border-orange-500/20",
   ExecutionAgent: "bg-rose-500/10 text-rose-500 border-rose-500/20",
+  // Comic Agents
   ComicArtDirectionAgent: "bg-fuchsia-500/10 text-fuchsia-500 border-fuchsia-500/20",
   ComicDialogueAgent: "bg-lime-500/10 text-lime-500 border-lime-500/20",
   ComicPacingAgent: "bg-teal-500/10 text-teal-500 border-teal-500/20",
   ComicVisualAgent: "bg-indigo-500/10 text-indigo-500 border-indigo-500/20",
+  // Interactive Agents
+  InteractivityAgent: "bg-sky-500/10 text-sky-500 border-sky-500/20",
+  WorldBuildingAgent: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
+  // Audio Agents
+  AudioNarrativeAgent: "bg-violet-500/10 text-violet-500 border-violet-500/20",
+  // Meta Agents
+  ScriptEvolutionAgent: "bg-teal-500/10 text-teal-500 border-teal-500/20",
+  CreatorFeedbackLoopAgent: "bg-green-500/10 text-green-500 border-green-500/20",
+  ExplainabilityTraceAgent: "bg-indigo-500/10 text-indigo-500 border-indigo-500/20",
+  InvestorReadinessAgent: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
 };
 
-// Script types with display names
-const SCRIPT_TYPES: { value: string; label: string; description: string }[] = [
-  { value: "feature", label: "Feature Film", description: "Full-length theatrical film" },
-  { value: "pilot", label: "TV Pilot", description: "First episode of a TV series" },
-  { value: "episode", label: "TV Episode", description: "Regular series episode" },
-  { value: "short", label: "Short Film", description: "Short-form narrative" },
-  { value: "documentary", label: "Documentary", description: "Non-fiction film" },
-  { value: "comic", label: "Comic/Graphic Novel", description: "Sequential art storytelling" },
-];
-
-// Core agents that apply to all script types
-const CORE_AGENTS = [
-  "ConceptAgent",
-  "StructureAgent",
-  "CharacterAgent",
-  "ConflictAgent",
-  "ThemeAgent",
-  "DialogueAgent",
-  "EmotionalArcAgent",
-  "WorldLogicAgent",
-  "MarketAgent",
-  "ExecutionAgent",
-];
-
-// Comic-specific agents
-const COMIC_AGENTS = [
-  "ComicArtDirectionAgent",
-  "ComicDialogueAgent",
-  "ComicPacingAgent",
-  "ComicVisualAgent",
-];
-
-// Get agents applicable to a script type
+// Get agents applicable to a script type using the framework
 function getAgentsForScriptType(scriptType: string): string[] {
-  if (scriptType === "comic") {
-    return [...CORE_AGENTS, ...COMIC_AGENTS];
-  }
-  if (scriptType === "all") {
-    return [...CORE_AGENTS, ...COMIC_AGENTS];
-  }
-  return CORE_AGENTS;
+  const agents = getAnalysisAgentsForScriptType(scriptType);
+  return agents.map(a => a.id);
 }
 
 export default function ParametersAgents() {
@@ -376,7 +356,7 @@ export default function ParametersAgents() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Script Types</SelectItem>
-                      {SCRIPT_TYPES.map((type) => (
+                      {SIMPLE_SCRIPT_TYPES.map((type) => (
                         <SelectItem key={type.value} value={type.value}>
                           {type.label}
                         </SelectItem>
@@ -468,7 +448,7 @@ export default function ParametersAgents() {
                         {selectedScriptType !== "all" && (
                           <Badge variant="secondary" className="gap-1">
                             <Film className="h-3 w-3" />
-                            {SCRIPT_TYPES.find(t => t.value === selectedScriptType)?.label}
+                            {SIMPLE_SCRIPT_TYPES.find(t => t.value === selectedScriptType)?.label}
                           </Badge>
                         )}
                         {selectedAgent !== "all" && (
@@ -511,7 +491,7 @@ export default function ParametersAgents() {
                     <div className="text-3xl font-bold">{filteredParameters.length}</div>
                     <p className="text-xs text-muted-foreground mt-1">
                       {selectedScriptType !== "all" 
-                        ? `For ${SCRIPT_TYPES.find(t => t.value === selectedScriptType)?.label}`
+                        ? `For ${SIMPLE_SCRIPT_TYPES.find(t => t.value === selectedScriptType)?.label}`
                         : `Across ${Object.keys(parametersByCategory).length} categories`
                       }
                     </p>
@@ -555,7 +535,7 @@ export default function ParametersAgents() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-3xl font-bold">{SCRIPT_TYPES.length}</div>
+                    <div className="text-3xl font-bold">{SIMPLE_SCRIPT_TYPES.length}</div>
                     <p className="text-xs text-muted-foreground mt-1">
                       Supported formats
                     </p>

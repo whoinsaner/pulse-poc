@@ -1067,26 +1067,35 @@ serve(async (req) => {
     }
 
     // Determine which agents to run based on script type
-    const isComic = script?.script_type === 'comic';
-    const comicAgents = ['ComicVisualAgent', 'ComicDialogueAgent', 'ComicPacingAgent', 'ComicArtDirectionAgent'];
+    const scriptType = script?.script_type || 'feature';
+    const isComic = scriptType === 'comic';
+    const isInteractive = ['game_narrative', 'interactive_fiction'].includes(scriptType);
+    const isAudio = ['audio_drama', 'podcast_fiction'].includes(scriptType);
     
-    // Core agents for all script types (UASF Modules A-J)
-    const coreAgents = [
-      'ConceptAgent', 'StructureAgent', 'CharacterAgent', 'ConflictAgent',
-      'ThemeAgent', 'DialogueAgent', 'WorldLogicAgent', 'EmotionalArcAgent',
-      'MarketAgent', 'ExecutionAgent'
-    ];
+    // Agent categories
+    const systemAgents = ['IntakeNormalizerAgent', 'ScriptTypeClassifierAgent', 'ClassifierArbitrationAgent', 'MultiTypeBlendingAgent'];
+    const coreAgents = ['ConceptAgent', 'StructureAgent', 'CharacterAgent', 'ConflictAgent', 'ThemeAgent', 'DialogueAgent', 'WorldLogicAgent', 'EmotionalArcAgent', 'MarketAgent', 'ExecutionAgent'];
+    const comicAgents = ['ComicVisualAgent', 'ComicDialogueAgent', 'ComicPacingAgent', 'ComicArtDirectionAgent'];
+    const interactiveAgents = ['InteractivityAgent', 'WorldBuildingAgent'];
+    const audioAgents = ['AudioNarrativeAgent'];
+    const metaAgents = ['ScriptEvolutionAgent', 'CreatorFeedbackLoopAgent', 'ExplainabilityTraceAgent', 'InvestorReadinessAgent'];
+    
+    // Build agent list based on script type
+    let activeAgentNames = [...systemAgents, ...coreAgents];
+    
+    if (isComic) activeAgentNames.push(...comicAgents);
+    if (isInteractive) activeAgentNames.push(...interactiveAgents);
+    if (isAudio) activeAgentNames.push(...audioAgents);
+    
+    // Meta agents run after analysis
+    activeAgentNames.push(...metaAgents);
     
     // Filter agents based on script type
     let agentsToRun = Object.entries(AGENTS).filter(([agentName]) => {
-      if (isComic) {
-        return coreAgents.includes(agentName) || comicAgents.includes(agentName);
-      } else {
-        return !comicAgents.includes(agentName);
-      }
+      return activeAgentNames.includes(agentName);
     });
 
-    // Handle resume mode - only run failed/pending agents
+    console.log(`[analyze-script] Script type: ${scriptType}, mode: ${mode}, running ${agentsToRun.length} agents (comic: ${isComic}, interactive: ${isInteractive}, audio: ${isAudio})`);
     let existingProgress: Record<string, { status: string; error?: string; retryCount?: number }> = {};
     
     if (resume) {
