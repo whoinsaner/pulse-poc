@@ -12,6 +12,7 @@ interface AnalyzeRequest {
   mode?: 'quick' | 'deep';
   forceAnalysis?: boolean;
   resume?: boolean; // Resume failed/pending agents only
+  stakeholderLens?: string | null; // Filter agents by stakeholder
 }
 
 // UASF Output Contract
@@ -1050,9 +1051,9 @@ serve(async (req) => {
   }
 
   try {
-    const { scriptId, analysisRunId, mode = 'deep', forceAnalysis = false, resume = false } = await req.json() as AnalyzeRequest;
+    const { scriptId, analysisRunId, mode = 'deep', forceAnalysis = false, resume = false, stakeholderLens = null } = await req.json() as AnalyzeRequest;
     
-    console.log(`[analyze-script] Starting ${mode.toUpperCase()} analysis for script ${scriptId}, run ${analysisRunId}, resume: ${resume}`);
+    console.log(`[analyze-script] Starting ${mode.toUpperCase()} analysis for script ${scriptId}, run ${analysisRunId}, stakeholder: ${stakeholderLens || 'all'}, resume: ${resume}`);
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -1071,7 +1072,7 @@ serve(async (req) => {
       throw new Error(`Script not found: ${scriptError?.message}`);
     }
 
-    // Determine which agents to run based on script type
+    // Determine which agents to run based on script type and stakeholder lens
     const scriptType = script?.script_type || 'feature';
     const isComic = scriptType === 'comic';
     const isInteractive = ['game_narrative', 'interactive_fiction'].includes(scriptType);
@@ -1083,24 +1084,53 @@ serve(async (req) => {
     const comicAgents = ['ComicVisualAgent', 'ComicDialogueAgent', 'ComicPacingAgent', 'ComicArtDirectionAgent'];
     const interactiveAgents = ['InteractivityAgent', 'WorldBuildingAgent'];
     const audioAgents = ['AudioNarrativeAgent'];
-    const metaAgents = ['ScriptEvolutionAgent', 'CreatorFeedbackLoopAgent', 'ExplainabilityTraceAgent', 'InvestorReadinessAgent'];
+    const metaAgents = ['StakeholderLensAgent', 'InsightSynthesisAgent'];
     
-    // Build agent list based on script type
-    let activeAgentNames = [...systemAgents, ...coreAgents];
+    // Stakeholder-specific agent mappings
+    const STAKEHOLDER_AGENTS: Record<string, string[]> = {
+      studio_executive: ['ConceptAgent', 'MarketAgent', 'ExecutionAgent', 'StructureAgent'],
+      producer: ['StructureAgent', 'ExecutionAgent', 'ConflictAgent', 'WorldLogicAgent'],
+      actor: ['CharacterAgent', 'DialogueAgent', 'EmotionalArcAgent', 'ConflictAgent'],
+      director: ['StructureAgent', 'ThemeAgent', 'EmotionalArcAgent', 'WorldLogicAgent'],
+      writer: ['ConceptAgent', 'StructureAgent', 'CharacterAgent', 'DialogueAgent', 'ThemeAgent', 'ConflictAgent'],
+      financier: ['ConceptAgent', 'MarketAgent', 'ExecutionAgent'],
+      ott_platform: ['ConceptAgent', 'CharacterAgent', 'EmotionalArcAgent', 'MarketAgent'],
+      theatrical: ['ConceptAgent', 'EmotionalArcAgent', 'MarketAgent', 'ExecutionAgent'],
+    };
     
-    if (isComic) activeAgentNames.push(...comicAgents);
-    if (isInteractive) activeAgentNames.push(...interactiveAgents);
-    if (isAudio) activeAgentNames.push(...audioAgents);
+    // Build agent list based on script type and stakeholder
+    let activeAgentNames: string[];
     
-    // Meta agents run after analysis
-    activeAgentNames.push(...metaAgents);
+    if (stakeholderLens && STAKEHOLDER_AGENTS[stakeholderLens]) {
+      // Stakeholder-specific analysis - only run relevant agents
+      console.log(`[analyze-script] Stakeholder-specific analysis for: ${stakeholderLens}`);
+      activeAgentNames = [
+        ...systemAgents,
+        ...STAKEHOLDER_AGENTS[stakeholderLens],
+        ...metaAgents
+      ];
+      
+      // Add comic agents if relevant for this stakeholder
+      if (isComic && (stakeholderLens === 'director' || stakeholderLens === 'writer')) {
+        activeAgentNames.push(...comicAgents);
+      }
+    } else {
+      // Comprehensive analysis - run all agents
+      activeAgentNames = [...systemAgents, ...coreAgents];
+      
+      if (isComic) activeAgentNames.push(...comicAgents);
+      if (isInteractive) activeAgentNames.push(...interactiveAgents);
+      if (isAudio) activeAgentNames.push(...audioAgents);
+      
+      activeAgentNames.push(...metaAgents);
+    }
     
     // Filter agents based on script type
     let agentsToRun = Object.entries(AGENTS).filter(([agentName]) => {
       return activeAgentNames.includes(agentName);
     });
 
-    console.log(`[analyze-script] Script type: ${scriptType}, mode: ${mode}, running ${agentsToRun.length} agents (comic: ${isComic}, interactive: ${isInteractive}, audio: ${isAudio})`);
+    console.log(`[analyze-script] Script type: ${scriptType}, mode: ${mode}, stakeholder: ${stakeholderLens || 'all'}, running ${agentsToRun.length} agents (comic: ${isComic}, interactive: ${isInteractive}, audio: ${isAudio})`);
     let existingProgress: Record<string, { status: string; error?: string; retryCount?: number }> = {};
     
     if (resume) {
