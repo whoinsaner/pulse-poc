@@ -115,7 +115,27 @@ export function ThemeMotifTracker({ scenes, insights }: ThemeMotifTrackerProps) 
   };
 
   if (scenes.length === 0) {
-    return null;
+    return (
+      <section className="min-h-[400px] py-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-8">
+            <span className="px-4 py-1.5 rounded-full bg-chart-5/10 text-chart-5 text-sm font-medium">
+              Thematic Analysis
+            </span>
+            <h2 className="text-4xl sm:text-5xl font-bold mt-6 mb-4">
+              Themes & Motifs
+            </h2>
+          </div>
+          <div className="flex flex-col items-center justify-center p-12 rounded-2xl bg-muted/30 border border-border">
+            <Sparkles className="h-16 w-16 text-muted-foreground/50 mb-4" />
+            <h3 className="text-xl font-semibold mb-2">No Thematic Data Available</h3>
+            <p className="text-muted-foreground text-center max-w-md">
+              Theme and motif detection requires scene analysis. Run analysis to identify recurring symbols and thematic elements.
+            </p>
+          </div>
+        </div>
+      </section>
+    );
   }
 
   const getCategoryIcon = (category: 'theme' | 'symbol' | 'motif') => {

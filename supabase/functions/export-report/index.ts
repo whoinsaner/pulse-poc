@@ -8,7 +8,7 @@ const corsHeaders = {
 
 interface ExportRequest {
   reportId: string;
-  format: 'json' | 'summary' | 'full';
+  format: 'json' | 'summary' | 'full' | 'pdf';
 }
 
 serve(async (req) => {
@@ -98,6 +98,24 @@ serve(async (req) => {
           content: summaryContent,
           title: `${report.title} - Executive Summary`,
           format: 'markdown'
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (format === 'pdf') {
+      // Generate PDF-ready markdown content
+      // Note: Full PDF generation would require a PDF library
+      // For now, we return markdown that can be converted client-side
+      const pdfContent = generateFullReport(report, fullReportData, insights, scores, characters);
+      
+      return new Response(
+        JSON.stringify({ 
+          content: pdfContent,
+          title: `${report.title} - Analysis Report`,
+          format: 'pdf-ready',
+          // PDF base64 would be here if we had a PDF library
+          pdf: null
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
