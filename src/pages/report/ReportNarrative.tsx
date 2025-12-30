@@ -4,6 +4,7 @@ import { NarrativeTimeline } from '@/components/report/NarrativeTimeline';
 import { SceneHeatmap } from '@/components/report/SceneHeatmap';
 import { PacingAnalysis } from '@/components/report/PacingAnalysis';
 import { SceneComplexityAnalyzer } from '@/components/report/SceneComplexityAnalyzer';
+import { NarrativeGraphViewer } from '@/components/report/NarrativeGraphViewer';
 
 interface ReportContextValue {
   reportData: ReportData;
@@ -81,6 +82,17 @@ export default function ReportNarrative() {
           scenes={reportData.scenes || []} 
           characters={reportData.characters || []} 
         />
+      </section>
+
+      {/* Narrative Graph Visualization */}
+      <section>
+        <div className="mb-6">
+          <h3 className="text-2xl font-bold mb-2">Relationship Graph</h3>
+          <p className="text-muted-foreground">
+            Interactive visualization of character relationships and plot connections
+          </p>
+        </div>
+        <NarrativeGraphViewer graphData={reportData.narrativeGraph} />
       </section>
     </div>
   );
