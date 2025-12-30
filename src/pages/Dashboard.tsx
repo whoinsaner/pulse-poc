@@ -5,7 +5,8 @@ import { Logo } from '@/components/Logo';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Upload, FileText, BarChart3, Users, LogOut, Plus, Layers, FlaskConical } from 'lucide-react';
+import { DashboardStats } from '@/components/DashboardStats';
+import { Upload, FileText, BarChart3, Users, LogOut, Plus, Layers, FlaskConical, Settings, Cpu } from 'lucide-react';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -64,7 +65,10 @@ export default function Dashboard() {
               <span className="text-sm text-muted-foreground">
                 {profile?.full_name || profile?.email}
               </span>
-              <Button variant="ghost" size="sm" onClick={signOut}>
+              <Button variant="ghost" size="icon" onClick={() => navigate('/settings')}>
+                <Settings className="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="icon" onClick={signOut}>
                 <LogOut className="h-4 w-4" />
               </Button>
             </div>
@@ -147,19 +151,35 @@ export default function Dashboard() {
           </Card>
 
           {userRole === 'admin' && (
-            <Card className="card-hover cursor-pointer group" onClick={() => navigate('/team')}>
-              <CardContent className="p-6 flex items-center gap-4">
-                <div className="p-3 rounded-lg bg-warning/10 group-hover:bg-warning/20 transition-colors">
-                  <Users className="h-6 w-6 text-warning" />
-                </div>
-                <div>
-                  <h3 className="font-semibold">Team</h3>
-                  <p className="text-sm text-muted-foreground">Manage members</p>
-                </div>
-              </CardContent>
-            </Card>
+            <>
+              <Card className="card-hover cursor-pointer group" onClick={() => navigate('/team')}>
+                <CardContent className="p-6 flex items-center gap-4">
+                  <div className="p-3 rounded-lg bg-warning/10 group-hover:bg-warning/20 transition-colors">
+                    <Users className="h-6 w-6 text-warning" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold">Team</h3>
+                    <p className="text-sm text-muted-foreground">Manage members</p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="card-hover cursor-pointer group" onClick={() => navigate('/admin/models')}>
+                <CardContent className="p-6 flex items-center gap-4">
+                  <div className="p-3 rounded-lg bg-cyan-500/10 group-hover:bg-cyan-500/20 transition-colors">
+                    <Cpu className="h-6 w-6 text-cyan-500" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold">AI Models</h3>
+                    <p className="text-sm text-muted-foreground">Configure agents</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </>
           )}
         </div>
+
+        {/* Dashboard Statistics */}
+        <DashboardStats className="mb-8" />
 
         {/* Sample Reports */}
         <Card className="mb-8">
