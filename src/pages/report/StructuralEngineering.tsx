@@ -95,13 +95,13 @@ export default function StructuralEngineering() {
         ].map((act, index) => {
           const gradeInfo = getActGrade(act.score);
           return (
-            <Card key={index} className="p-5">
+            <Card key={index} className="glass-premium p-5">
               <div className="flex items-start justify-between mb-3">
                 <div>
-                  <h4 className="font-semibold">{act.name}</h4>
+                  <h4 className="font-display font-semibold">{act.name}</h4>
                   <p className="text-xs text-muted-foreground">{act.subtitle}</p>
                 </div>
-                <div className={cn("px-3 py-1 rounded-lg font-bold text-lg", gradeInfo.bg, gradeInfo.color)}>
+                <div className={cn("px-3 py-1 rounded-lg font-mono font-bold text-lg", gradeInfo.bg, gradeInfo.color)}>
                   {gradeInfo.grade}
                 </div>
               </div>
@@ -134,11 +134,11 @@ export default function StructuralEngineering() {
       />
 
       {/* Structural Identity */}
-      <Card className="p-6">
+      <Card className="glass-premium p-6">
         <SubSectionHeader title="Structural Identity" />
         <div className="grid md:grid-cols-2 gap-6">
           <div>
-            <h4 className="font-medium mb-3">Current Structure Pattern</h4>
+            <h4 className="font-display font-medium mb-3">Current Structure Pattern</h4>
             <p className="text-sm text-muted-foreground mb-4">
               The script follows a {categoryScore >= 7 ? 'classical' : 'modified'} three-act structure 
               with {totalScenes} scenes across approximately {pageCount} pages.
@@ -146,20 +146,20 @@ export default function StructuralEngineering() {
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
                 <span>Page Count</span>
-                <span className="font-medium">{pageCount} pages</span>
+                <span className="font-mono font-medium">{pageCount} pages</span>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span>Scene Count</span>
-                <span className="font-medium">{totalScenes} scenes</span>
+                <span className="font-mono font-medium">{totalScenes} scenes</span>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span>Avg. Scene Length</span>
-                <span className="font-medium">{totalScenes > 0 ? (pageCount / totalScenes).toFixed(1) : 'N/A'} pages</span>
+                <span className="font-mono font-medium">{totalScenes > 0 ? (pageCount / totalScenes).toFixed(1) : 'N/A'} pages</span>
               </div>
             </div>
           </div>
           <div>
-            <h4 className="font-medium mb-3">Key Beat Placement</h4>
+            <h4 className="font-display font-medium mb-3">Key Beat Placement</h4>
             <div className="space-y-3">
               <div className="flex items-center gap-3">
                 <div className="w-2 h-2 rounded-full bg-chart-1" />
@@ -193,7 +193,7 @@ export default function StructuralEngineering() {
 
       {/* Parameter Breakdown */}
       {structureParams.length > 0 && (
-        <Card className="p-6">
+        <Card className="glass-premium p-6">
           <SubSectionHeader title="Structure Parameters" />
           <div className="space-y-4">
             {structureParams.slice(0, 8).map((param, index) => (
@@ -218,7 +218,7 @@ export default function StructuralEngineering() {
       )}
 
       {/* Recommendations */}
-      <Card className="p-6">
+      <Card className="glass-premium p-6">
         <SubSectionHeader title="Structure Recommendations" />
         <div className="space-y-3">
           {categoryScore < 7 && (

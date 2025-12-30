@@ -76,10 +76,10 @@ export default function ThemeMoral() {
       {/* Theme Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {themeMetrics.map((metric) => (
-          <Card key={metric.label} className="bg-card/50">
+          <Card key={metric.label} className="glass-premium">
             <CardContent className="pt-6">
               <ScoreDisplay score={metric.score} maxScore={10} size="md" />
-              <h3 className="font-semibold mt-2">{metric.label}</h3>
+              <h3 className="font-display font-semibold mt-2">{metric.label}</h3>
               <p className="text-sm text-muted-foreground">{metric.description}</p>
             </CardContent>
           </Card>
@@ -101,7 +101,7 @@ export default function ThemeMoral() {
 
       {/* Parameter Breakdown */}
       {themeParams.length > 0 && (
-        <Card className="p-6">
+        <Card className="glass-premium p-6">
           <SubSectionHeader title="Theme Parameters" />
           <div className="space-y-4">
             {themeParams.slice(0, 8).map((param, index) => (
@@ -119,12 +119,12 @@ export default function ThemeMoral() {
 
       {/* Theme Insights */}
       {themeInsights.length > 0 && (
-        <Card className="p-6">
+        <Card className="glass-premium p-6">
           <SubSectionHeader title="Thematic Insights" />
           <div className="space-y-3">
             {themeInsights.slice(0, 4).map((insight, index) => (
-              <div key={index} className="p-4 rounded-lg bg-muted/30">
-                <h4 className="font-medium mb-1">{insight.title}</h4>
+              <div key={index} className="p-4 rounded-lg bg-muted/30 border border-border/50">
+                <h4 className="font-display font-medium mb-1">{insight.title}</h4>
                 <p className="text-sm text-muted-foreground">{insight.description}</p>
               </div>
             ))}
@@ -133,13 +133,13 @@ export default function ThemeMoral() {
       )}
 
       {/* Moral Questions */}
-      <Card className="p-6">
+      <Card className="glass-premium p-6">
         <SubSectionHeader title="Moral Complexity Analysis" />
         <div className="grid md:grid-cols-2 gap-6">
           <div className="p-4 rounded-lg bg-primary/10 border border-primary/30">
             <div className="flex items-center gap-2 mb-3">
               <Scale className="h-5 w-5 text-primary" />
-              <h4 className="font-semibold">Moral Nuance</h4>
+              <h4 className="font-display font-semibold">Moral Nuance</h4>
             </div>
             <p className="text-sm text-muted-foreground mb-3">
               Does the story present moral questions without easy answers?
@@ -156,7 +156,7 @@ export default function ThemeMoral() {
           <div className="p-4 rounded-lg bg-chart-3/10 border border-chart-3/30">
             <div className="flex items-center gap-2 mb-3">
               <BookOpen className="h-5 w-5 text-chart-3" />
-              <h4 className="font-semibold">Theme Integration</h4>
+              <h4 className="font-display font-semibold">Theme Integration</h4>
             </div>
             <p className="text-sm text-muted-foreground mb-3">
               Is the theme woven through plot, character, and dialogue?
@@ -194,7 +194,7 @@ export default function ThemeMoral() {
       )}
 
       {/* Recommendations */}
-      <Card className="p-6">
+      <Card className="glass-premium p-6">
         <SubSectionHeader title="Theme Recommendations" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {categoryScore < 7 && (

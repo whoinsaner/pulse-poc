@@ -21,7 +21,7 @@ export default function ReportCharacters() {
         <span className="px-4 py-1.5 rounded-full bg-chart-3/10 text-chart-3 text-sm font-medium">
           Character Study
         </span>
-        <h2 className="text-3xl lg:text-4xl font-bold mt-4 mb-2">
+        <h2 className="font-display text-3xl lg:text-4xl font-bold mt-4 mb-2">
           Character Analysis
         </h2>
         <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
@@ -32,7 +32,7 @@ export default function ReportCharacters() {
       {/* Character Overview */}
       <section>
         <div className="mb-6">
-          <h3 className="text-2xl font-bold mb-2">Character Profiles</h3>
+          <h3 className="font-display text-2xl font-bold mb-2">Character Profiles</h3>
           <p className="text-muted-foreground">
             Detailed analysis of each character in your script
           </p>
@@ -43,7 +43,7 @@ export default function ReportCharacters() {
       {/* Character Arc Visualization */}
       <section>
         <div className="mb-6">
-          <h3 className="text-2xl font-bold mb-2">Character Arcs</h3>
+          <h3 className="font-display text-2xl font-bold mb-2">Character Arcs</h3>
           <p className="text-muted-foreground">
             Emotional journeys and development milestones
           </p>
@@ -57,7 +57,7 @@ export default function ReportCharacters() {
       {/* Character Network */}
       <section>
         <div className="mb-6">
-          <h3 className="text-2xl font-bold mb-2">Relationship Network</h3>
+          <h3 className="font-display text-2xl font-bold mb-2">Relationship Network</h3>
           <p className="text-muted-foreground">
             Connections and dynamics between characters
           </p>
@@ -68,7 +68,7 @@ export default function ReportCharacters() {
       {/* Dialogue Analysis */}
       <section>
         <div className="mb-6">
-          <h3 className="text-2xl font-bold mb-2">Dialogue Patterns</h3>
+          <h3 className="font-display text-2xl font-bold mb-2">Dialogue Patterns</h3>
           <p className="text-muted-foreground">
             Voice, style, and distribution of dialogue
           </p>

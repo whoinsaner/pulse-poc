@@ -48,19 +48,19 @@ export default function RewritePriorities() {
       <SectionHeader title="Rewrite Priorities" subtitle="Tiered action items for script improvement" icon={ListTodo} />
 
       <div className="grid md:grid-cols-3 gap-4">
-        <Card className="p-5 text-center">
+        <Card className="glass-premium p-5 text-center">
           <AlertTriangle className="h-5 w-5 mx-auto mb-2 text-destructive" />
-          <p className="text-2xl font-bold">{criticalIssues.length}</p>
+          <p className="text-2xl font-mono font-bold">{criticalIssues.length}</p>
           <p className="text-sm text-muted-foreground">Critical Issues</p>
         </Card>
-        <Card className="p-5 text-center">
+        <Card className="glass-premium p-5 text-center">
           <Clock className="h-5 w-5 mx-auto mb-2 text-warning" />
-          <p className="text-2xl font-bold">{difficulty}</p>
+          <p className="text-2xl font-display font-bold">{difficulty}</p>
           <p className="text-sm text-muted-foreground">Rewrite Difficulty</p>
         </Card>
-        <Card className="p-5 text-center">
+        <Card className="glass-premium p-5 text-center">
           <Zap className="h-5 w-5 mx-auto mb-2 text-success" />
-          <p className="text-2xl font-bold">{totalIssues}</p>
+          <p className="text-2xl font-mono font-bold">{totalIssues}</p>
           <p className="text-sm text-muted-foreground">Total Action Items</p>
         </Card>
       </div>
