@@ -14,6 +14,47 @@ export type Database = {
   }
   public: {
     Tables: {
+      agent_model_mappings: {
+        Row: {
+          agent_name: string
+          config_id: string | null
+          created_at: string | null
+          id: string
+          max_retries: number | null
+          model: string
+          retry_delay_ms: number | null
+          temperature: number | null
+        }
+        Insert: {
+          agent_name: string
+          config_id?: string | null
+          created_at?: string | null
+          id?: string
+          max_retries?: number | null
+          model: string
+          retry_delay_ms?: number | null
+          temperature?: number | null
+        }
+        Update: {
+          agent_name?: string
+          config_id?: string | null
+          created_at?: string | null
+          id?: string
+          max_retries?: number | null
+          model?: string
+          retry_delay_ms?: number | null
+          temperature?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_model_mappings_config_id_fkey"
+            columns: ["config_id"]
+            isOneToOne: false
+            referencedRelation: "model_configurations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       analysis_runs: {
         Row: {
           agent_progress: Json | null
@@ -22,6 +63,7 @@ export type Database = {
           error_message: string | null
           id: string
           initiated_by: string
+          quality_mode: string | null
           script_id: string
           stakeholder_lens: string | null
           started_at: string | null
@@ -34,6 +76,7 @@ export type Database = {
           error_message?: string | null
           id?: string
           initiated_by: string
+          quality_mode?: string | null
           script_id: string
           stakeholder_lens?: string | null
           started_at?: string | null
@@ -46,6 +89,7 @@ export type Database = {
           error_message?: string | null
           id?: string
           initiated_by?: string
+          quality_mode?: string | null
           script_id?: string
           stakeholder_lens?: string | null
           started_at?: string | null
@@ -224,6 +268,47 @@ export type Database = {
             columns: ["parameter_id"]
             isOneToOne: false
             referencedRelation: "parameters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      model_configurations: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_default: boolean | null
+          is_system: boolean | null
+          name: string
+          organization_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_default?: boolean | null
+          is_system?: boolean | null
+          name: string
+          organization_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_default?: boolean | null
+          is_system?: boolean | null
+          name?: string
+          organization_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "model_configurations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
