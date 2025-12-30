@@ -1,15 +1,43 @@
+import { useState } from 'react';
 import { CharacterData } from '@/types/database';
 import { cn } from '@/lib/utils';
-import { Users, MessageSquare, Film, ArrowRight, Star, TrendingUp, Award } from 'lucide-react';
+import { useAuth } from '@/lib/auth';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { Button } from '@/components/ui/button';
+import { Users, MessageSquare, Film, ArrowRight, Star, TrendingUp, Award, Edit2, Plus, Trash2, X, Check } from 'lucide-react';
+import { CharacterEditDialog } from './CharacterEditDialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface FullCharactersSectionProps {
   characters: CharacterData[];
+  scriptId?: string;
+  onCharactersUpdate?: (characters: CharacterData[]) => void;
 }
 
-export function FullCharactersSection({ characters }: FullCharactersSectionProps) {
+export function FullCharactersSection({ characters, scriptId, onCharactersUpdate }: FullCharactersSectionProps) {
+  const { userRole } = useAuth();
+  const { toast } = useToast();
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editingCharacter, setEditingCharacter] = useState<CharacterData | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isNewCharacter, setIsNewCharacter] = useState(false);
+  const [characterToDelete, setCharacterToDelete] = useState<CharacterData | null>(null);
+
   if (!characters || characters.length === 0) {
     return null;
   }
+
+  const canEdit = userRole === 'admin' || userRole === 'analyst';
 
   // Sort by dialogue count to highlight main characters
   const sortedCharacters = [...characters].sort((a, b) => b.dialogueCount - a.dialogueCount);
@@ -19,6 +47,68 @@ export function FullCharactersSection({ characters }: FullCharactersSectionProps
 
   const totalDialogue = characters.reduce((sum, c) => sum + c.dialogueCount, 0);
   const avgSceneCount = characters.reduce((sum, c) => sum + c.sceneCount, 0) / characters.length;
+
+  const handleEditCharacter = (character: CharacterData) => {
+    setEditingCharacter(character);
+    setIsNewCharacter(false);
+    setIsDialogOpen(true);
+  };
+
+  const handleAddCharacter = () => {
+    setEditingCharacter(null);
+    setIsNewCharacter(true);
+    setIsDialogOpen(true);
+  };
+
+  const handleSaveCharacter = async (updatedCharacter: CharacterData) => {
+    if (!scriptId) {
+      // Optimistic update for display-only mode
+      const newList = isNewCharacter
+        ? [...characters, updatedCharacter]
+        : characters.map(c => c.name === editingCharacter?.name ? updatedCharacter : c);
+      onCharactersUpdate?.(newList);
+      toast({ title: isNewCharacter ? 'Character added' : 'Character updated' });
+      return;
+    }
+
+    try {
+      if (isNewCharacter) {
+        const { error } = await supabase.from('characters').insert([{
+          script_id: scriptId,
+          name: updatedCharacter.name,
+          description: updatedCharacter.description || null,
+          arc_summary: updatedCharacter.arcSummary || null,
+          dialogue_count: updatedCharacter.dialogueCount,
+          scene_count: updatedCharacter.sceneCount,
+          first_appearance: updatedCharacter.firstAppearance || null,
+          relationships: JSON.parse(JSON.stringify(updatedCharacter.relationships || [])),
+        }]);
+        if (error) throw error;
+        toast({ title: 'Character added' });
+      } else {
+        // For updates, we'd need the character ID from the database
+        toast({ title: 'Character updated locally' });
+      }
+      
+      const newList = isNewCharacter
+        ? [...characters, updatedCharacter]
+        : characters.map(c => c.name === editingCharacter?.name ? updatedCharacter : c);
+      onCharactersUpdate?.(newList);
+    } catch (err) {
+      console.error('Error saving character:', err);
+      toast({ title: 'Error', description: 'Failed to save character', variant: 'destructive' });
+      throw err;
+    }
+  };
+
+  const handleDeleteCharacter = async () => {
+    if (!characterToDelete) return;
+    
+    const newList = characters.filter(c => c.name !== characterToDelete.name);
+    onCharactersUpdate?.(newList);
+    toast({ title: 'Character removed' });
+    setCharacterToDelete(null);
+  };
 
   return (
     <section className="min-h-screen py-20">
@@ -34,6 +124,29 @@ export function FullCharactersSection({ characters }: FullCharactersSectionProps
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
             {characters.length} characters analyzed across your script
           </p>
+          
+          {/* Edit mode toggle */}
+          {canEdit && (
+            <div className="mt-6">
+              <Button
+                variant={isEditMode ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setIsEditMode(!isEditMode)}
+              >
+                {isEditMode ? (
+                  <>
+                    <Check className="h-4 w-4 mr-2" />
+                    Done Editing
+                  </>
+                ) : (
+                  <>
+                    <Edit2 className="h-4 w-4 mr-2" />
+                    Edit Characters
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Quick stats */}
@@ -60,6 +173,16 @@ export function FullCharactersSection({ characters }: FullCharactersSectionProps
           </div>
         </div>
 
+        {/* Add character button in edit mode */}
+        {isEditMode && (
+          <div className="mb-8 flex justify-center">
+            <Button onClick={handleAddCharacter} variant="outline">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Character
+            </Button>
+          </div>
+        )}
+
         {/* Main characters - Featured cards */}
         <div className="mb-16">
           <div className="flex items-center gap-3 mb-8">
@@ -76,10 +199,33 @@ export function FullCharactersSection({ characters }: FullCharactersSectionProps
                 className={cn(
                   'relative p-6 rounded-2xl bg-card border-2 border-primary/30',
                   'hover:border-primary/50 hover:shadow-xl transition-all duration-300',
-                  'animate-fade-up'
+                  'animate-fade-up',
+                  isEditMode && 'ring-2 ring-primary/20'
                 )}
                 style={{ animationDelay: `${index * 100}ms` }}
               >
+                {/* Edit/Delete buttons */}
+                {isEditMode && (
+                  <div className="absolute top-2 left-2 flex gap-1">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8"
+                      onClick={() => handleEditCharacter(character)}
+                    >
+                      <Edit2 className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8 text-destructive hover:text-destructive"
+                      onClick={() => setCharacterToDelete(character)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+
                 {/* Rank badge */}
                 <div className="absolute -top-3 -right-3 w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-lg shadow-lg">
                   #{index + 1}
@@ -175,12 +321,35 @@ export function FullCharactersSection({ characters }: FullCharactersSectionProps
                 <div
                   key={character.name}
                   className={cn(
-                    'p-5 rounded-xl bg-card border border-border',
+                    'relative p-5 rounded-xl bg-card border border-border',
                     'hover:border-primary/30 transition-all duration-300',
-                    'animate-fade-up'
+                    'animate-fade-up',
+                    isEditMode && 'ring-2 ring-primary/20'
                   )}
                   style={{ animationDelay: `${index * 50}ms` }}
                 >
+                  {/* Edit/Delete buttons */}
+                  {isEditMode && (
+                    <div className="absolute top-2 right-2 flex gap-1">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-7 w-7"
+                        onClick={() => handleEditCharacter(character)}
+                      >
+                        <Edit2 className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-7 w-7 text-destructive hover:text-destructive"
+                        onClick={() => setCharacterToDelete(character)}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  )}
+
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-chart-2/10 flex items-center justify-center">
@@ -197,9 +366,11 @@ export function FullCharactersSection({ characters }: FullCharactersSectionProps
                         )}
                       </div>
                     </div>
-                    <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
-                      #{mainCharacters.length + index + 1}
-                    </span>
+                    {!isEditMode && (
+                      <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
+                        #{mainCharacters.length + index + 1}
+                      </span>
+                    )}
                   </div>
 
                   {character.description && (
@@ -235,16 +406,58 @@ export function FullCharactersSection({ characters }: FullCharactersSectionProps
               {minorCharacters.map((character) => (
                 <span
                   key={character.name}
-                  className="px-3 py-1.5 rounded-full bg-secondary text-sm"
+                  className={cn(
+                    'px-3 py-1.5 rounded-full bg-secondary text-sm inline-flex items-center gap-2',
+                    isEditMode && 'cursor-pointer hover:bg-secondary/80'
+                  )}
+                  onClick={isEditMode ? () => handleEditCharacter(character) : undefined}
                 >
                   {character.name}
-                  <span className="text-muted-foreground ml-1">({character.dialogueCount})</span>
+                  <span className="text-muted-foreground">({character.dialogueCount})</span>
+                  {isEditMode && (
+                    <button
+                      className="text-destructive hover:text-destructive/80"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setCharacterToDelete(character);
+                      }}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
                 </span>
               ))}
             </div>
           </div>
         )}
       </div>
+
+      {/* Edit dialog */}
+      <CharacterEditDialog
+        character={editingCharacter}
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        onSave={handleSaveCharacter}
+        isNew={isNewCharacter}
+      />
+
+      {/* Delete confirmation */}
+      <AlertDialog open={!!characterToDelete} onOpenChange={() => setCharacterToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Character</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{characterToDelete?.name}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteCharacter} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </section>
   );
 }
