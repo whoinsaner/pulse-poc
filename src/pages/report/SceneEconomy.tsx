@@ -121,34 +121,34 @@ export default function SceneEconomy() {
       </div>
 
       {/* Scene Breakdown Overview */}
-      <Card className="border-primary/30">
+      <Card className="glass-premium border-primary/30">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 font-display">
             <BarChart3 className="h-5 w-5 text-primary" />
             Scene Breakdown
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            <div className="text-center p-4 bg-muted/30 rounded-lg">
-              <p className="text-3xl font-bold text-primary">{totalScenes}</p>
-              <p className="text-sm text-muted-foreground">Total Scenes</p>
+            <div className="text-center p-5 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 hover:border-primary/40 transition-all duration-300">
+              <p className="text-4xl font-mono font-bold text-primary glow-gold">{totalScenes}</p>
+              <p className="text-sm text-muted-foreground mt-1">Total Scenes</p>
             </div>
-            <div className="text-center p-4 bg-success/10 rounded-lg">
-              <p className="text-3xl font-bold text-success">{essentialCount}</p>
-              <p className="text-sm text-muted-foreground">Essential</p>
+            <div className="text-center p-5 rounded-xl bg-gradient-to-br from-success/10 to-success/5 border border-success/20 hover:border-success/40 transition-all duration-300">
+              <p className="text-4xl font-mono font-bold text-success">{essentialCount}</p>
+              <p className="text-sm text-muted-foreground mt-1">Essential</p>
             </div>
-            <div className="text-center p-4 bg-chart-3/10 rounded-lg">
-              <p className="text-3xl font-bold text-chart-3">{beneficialCount}</p>
-              <p className="text-sm text-muted-foreground">Beneficial</p>
+            <div className="text-center p-5 rounded-xl bg-gradient-to-br from-chart-3/10 to-chart-3/5 border border-chart-3/20 hover:border-chart-3/40 transition-all duration-300">
+              <p className="text-4xl font-mono font-bold text-chart-3">{beneficialCount}</p>
+              <p className="text-sm text-muted-foreground mt-1">Beneficial</p>
             </div>
-            <div className="text-center p-4 bg-warning/10 rounded-lg">
-              <p className="text-3xl font-bold text-warning">{questionableCount}</p>
-              <p className="text-sm text-muted-foreground">Questionable</p>
+            <div className="text-center p-5 rounded-xl bg-gradient-to-br from-warning/10 to-warning/5 border border-warning/20 hover:border-warning/40 transition-all duration-300">
+              <p className="text-4xl font-mono font-bold text-warning">{questionableCount}</p>
+              <p className="text-sm text-muted-foreground mt-1">Questionable</p>
             </div>
-            <div className="text-center p-4 bg-muted/30 rounded-lg">
-              <p className="text-3xl font-bold">{avgSceneLength}</p>
-              <p className="text-sm text-muted-foreground">Avg Pages</p>
+            <div className="text-center p-5 rounded-xl bg-gradient-to-br from-muted/30 to-muted/10 border border-border/30 hover:border-border/50 transition-all duration-300">
+              <p className="text-4xl font-mono font-bold text-foreground">{avgSceneLength}</p>
+              <p className="text-sm text-muted-foreground mt-1">Avg Pages</p>
             </div>
           </div>
         </CardContent>
@@ -168,28 +168,33 @@ export default function SceneEconomy() {
       />
 
       {/* Act-by-Act Analysis */}
-      <Card className="p-6">
+      <Card className="glass-premium p-6">
         <SubSectionHeader title="Act-by-Act Efficiency" />
         <div className="space-y-4">
           {actAnalysis.map((act, idx) => (
-            <div key={idx} className="p-4 bg-muted/30 rounded-lg">
-              <div className="flex items-center justify-between mb-2">
-                <h4 className="font-semibold">{act.act}</h4>
+            <div key={idx} className="p-5 rounded-xl bg-gradient-to-r from-muted/20 to-transparent border border-border/30 hover:border-border/50 transition-all duration-300">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="font-display font-semibold text-foreground">{act.act}</h4>
                 <div className="flex items-center gap-4">
-                  <span className="text-sm text-muted-foreground">{act.scenes} scenes</span>
-                  <div className="flex items-center gap-2">
-                    <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
+                  <span className="text-sm font-mono text-muted-foreground">{act.scenes} scenes</span>
+                  <div className="flex items-center gap-3">
+                    <div className="w-28 h-2.5 bg-muted/50 rounded-full overflow-hidden">
                       <div 
                         className={cn(
-                          "h-full rounded-full",
-                          act.efficiency >= 85 ? 'bg-success' :
-                          act.efficiency >= 75 ? 'bg-chart-3' :
-                          'bg-warning'
+                          "h-full rounded-full transition-all duration-500",
+                          act.efficiency >= 85 ? 'bg-gradient-to-r from-success/80 to-success' :
+                          act.efficiency >= 75 ? 'bg-gradient-to-r from-chart-3/80 to-chart-3' :
+                          'bg-gradient-to-r from-warning/80 to-warning'
                         )}
                         style={{ width: `${act.efficiency}%` }}
                       />
                     </div>
-                    <span className="text-sm font-medium">{act.efficiency.toFixed(0)}%</span>
+                    <span className={cn(
+                      "text-sm font-mono font-bold",
+                      act.efficiency >= 85 ? 'text-success' :
+                      act.efficiency >= 75 ? 'text-chart-3' :
+                      'text-warning'
+                    )}>{act.efficiency.toFixed(0)}%</span>
                   </div>
                 </div>
               </div>
@@ -201,7 +206,7 @@ export default function SceneEconomy() {
 
       {/* Parameter Breakdown */}
       {economyParams.length > 0 && (
-        <Card className="p-6">
+        <Card className="glass-premium p-6">
           <SubSectionHeader title="Economy Parameters" />
           <div className="space-y-4">
             {economyParams.slice(0, 8).map((param, index) => (
@@ -238,7 +243,7 @@ export default function SceneEconomy() {
       )}
 
       {/* Recommendations */}
-      <Card className="p-6">
+      <Card className="glass-premium p-6">
         <SubSectionHeader title="Economy Recommendations" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {questionableCount > 2 && (

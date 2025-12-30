@@ -98,30 +98,30 @@ export default function VisualStorytelling() {
       />
 
       {/* Location Overview */}
-      <Card className="p-6">
+      <Card className="glass-premium p-6">
         <SubSectionHeader title="Location Analysis" />
         <div className="grid md:grid-cols-3 gap-4 mb-6">
-          <div className="p-4 rounded-lg bg-muted/30 text-center">
-            <p className="text-3xl font-bold text-primary">{scenes.length}</p>
-            <p className="text-sm text-muted-foreground">Total Scenes</p>
+          <div className="p-5 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 text-center group hover:border-primary/40 transition-all duration-300">
+            <p className="text-4xl font-mono font-bold text-primary glow-gold">{scenes.length}</p>
+            <p className="text-sm text-muted-foreground mt-1">Total Scenes</p>
           </div>
-          <div className="p-4 rounded-lg bg-muted/30 text-center">
-            <p className="text-3xl font-bold text-chart-3">{uniqueLocations.size}</p>
-            <p className="text-sm text-muted-foreground">Unique Locations</p>
+          <div className="p-5 rounded-xl bg-gradient-to-br from-chart-3/10 to-chart-3/5 border border-chart-3/20 text-center group hover:border-chart-3/40 transition-all duration-300">
+            <p className="text-4xl font-mono font-bold text-chart-3">{uniqueLocations.size}</p>
+            <p className="text-sm text-muted-foreground mt-1">Unique Locations</p>
           </div>
-          <div className="p-4 rounded-lg bg-muted/30 text-center">
-            <p className="text-3xl font-bold text-chart-4">
+          <div className="p-5 rounded-xl bg-gradient-to-br from-chart-4/10 to-chart-4/5 border border-chart-4/20 text-center group hover:border-chart-4/40 transition-all duration-300">
+            <p className="text-4xl font-mono font-bold text-chart-4">
               {uniqueLocations.size > 0 ? (scenes.length / uniqueLocations.size).toFixed(1) : 'N/A'}
             </p>
-            <p className="text-sm text-muted-foreground">Avg Scenes/Location</p>
+            <p className="text-sm text-muted-foreground mt-1">Avg Scenes/Location</p>
           </div>
         </div>
         {scenes.length > 0 && (
-          <div className="space-y-2">
-            <p className="text-sm font-medium mb-2">Top Locations:</p>
+          <div className="space-y-3">
+            <p className="text-sm font-display font-medium">Top Locations:</p>
             <div className="flex flex-wrap gap-2">
               {Array.from(uniqueLocations).slice(0, 8).map((location, idx) => (
-                <span key={idx} className="px-3 py-1 bg-primary/10 text-primary text-sm rounded-full">
+                <span key={idx} className="px-4 py-1.5 bg-gradient-to-r from-primary/15 to-primary/10 text-primary text-sm rounded-full border border-primary/20 hover:border-primary/40 transition-colors">
                   {location}
                 </span>
               ))}
@@ -132,7 +132,7 @@ export default function VisualStorytelling() {
 
       {/* Parameter Breakdown */}
       {visualParams.length > 0 && (
-        <Card className="p-6">
+        <Card className="glass-premium p-6">
           <SubSectionHeader title="Visual Parameters" />
           <div className="space-y-4">
             {visualParams.slice(0, 8).map((param, index) => (
@@ -149,28 +149,28 @@ export default function VisualStorytelling() {
       )}
 
       {/* Director's Opportunities */}
-      <Card className="p-6">
+      <Card className="glass-premium p-6">
         <SubSectionHeader title="Director's Opportunities" />
-        <ul className="space-y-3">
-          <li className="flex items-start gap-3">
-            <div className="w-2 h-2 rounded-full bg-primary mt-2" />
+        <ul className="space-y-4">
+          <li className="flex items-start gap-4 p-4 rounded-xl bg-gradient-to-r from-primary/5 to-transparent border border-primary/10 hover:border-primary/30 transition-all duration-300">
+            <div className="w-3 h-3 rounded-full bg-gradient-to-br from-primary to-primary/60 mt-1.5 shrink-0" />
             <div>
-              <span className="font-medium">Visual Motif Development</span>
-              <p className="text-sm text-muted-foreground">Identify recurring visual elements that can become thematic threads</p>
+              <span className="font-display font-semibold text-foreground">Visual Motif Development</span>
+              <p className="text-sm text-muted-foreground mt-1">Identify recurring visual elements that can become thematic threads</p>
             </div>
           </li>
-          <li className="flex items-start gap-3">
-            <div className="w-2 h-2 rounded-full bg-primary mt-2" />
+          <li className="flex items-start gap-4 p-4 rounded-xl bg-gradient-to-r from-chart-3/5 to-transparent border border-chart-3/10 hover:border-chart-3/30 transition-all duration-300">
+            <div className="w-3 h-3 rounded-full bg-gradient-to-br from-chart-3 to-chart-3/60 mt-1.5 shrink-0" />
             <div>
-              <span className="font-medium">Color Palette Contrast</span>
-              <p className="text-sm text-muted-foreground">Consider how different character worlds can be distinguished visually</p>
+              <span className="font-display font-semibold text-foreground">Color Palette Contrast</span>
+              <p className="text-sm text-muted-foreground mt-1">Consider how different character worlds can be distinguished visually</p>
             </div>
           </li>
-          <li className="flex items-start gap-3">
-            <div className="w-2 h-2 rounded-full bg-primary mt-2" />
+          <li className="flex items-start gap-4 p-4 rounded-xl bg-gradient-to-r from-chart-4/5 to-transparent border border-chart-4/10 hover:border-chart-4/30 transition-all duration-300">
+            <div className="w-3 h-3 rounded-full bg-gradient-to-br from-chart-4 to-chart-4/60 mt-1.5 shrink-0" />
             <div>
-              <span className="font-medium">Opening/Closing Imagery</span>
-              <p className="text-sm text-muted-foreground">Strengthen visual bookends to reinforce thematic arc</p>
+              <span className="font-display font-semibold text-foreground">Opening/Closing Imagery</span>
+              <p className="text-sm text-muted-foreground mt-1">Strengthen visual bookends to reinforce thematic arc</p>
             </div>
           </li>
         </ul>
@@ -197,7 +197,7 @@ export default function VisualStorytelling() {
       )}
 
       {/* Recommendations */}
-      <Card className="p-6">
+      <Card className="glass-premium p-6">
         <SubSectionHeader title="Visual Recommendations" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {categoryScore < 7 && (
