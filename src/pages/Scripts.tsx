@@ -34,6 +34,7 @@ import {
   Sparkles,
   BookOpen,
   Loader2,
+  Info,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -46,6 +47,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { AnalysisTrigger } from '@/components/AnalysisTrigger';
 import { ScriptContentViewer } from '@/components/ScriptContentViewer';
+import { ScriptDetailDialog } from '@/components/ScriptDetailDialog';
 import { SAMPLE_SCRIPTS, type SampleScriptData } from '@/data/sampleScripts';
 import type { Script, ScriptFormat, ScriptType } from '@/types/database';
 
@@ -76,6 +78,7 @@ export default function Scripts() {
   const [selectedScript, setSelectedScript] = useState<Script | null>(null);
   const [showAnalyzeDialog, setShowAnalyzeDialog] = useState(false);
   const [showContentDialog, setShowContentDialog] = useState(false);
+  const [showDetailDialog, setShowDetailDialog] = useState(false);
   const [sampleScriptsOpen, setSampleScriptsOpen] = useState(true);
   const [addingScript, setAddingScript] = useState<string | null>(null);
   const [previewScript, setPreviewScript] = useState<SampleScriptData | null>(null);
@@ -323,6 +326,14 @@ export default function Scripts() {
                           <Eye className="h-4 w-4 mr-2" />
                           View Content
                         </DropdownMenuItem>
+                        <DropdownMenuItem onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedScript(script);
+                          setShowDetailDialog(true);
+                        }}>
+                          <Info className="h-4 w-4 mr-2" />
+                          Details & History
+                        </DropdownMenuItem>
                         {userRole === 'admin' && (
                           <>
                             <DropdownMenuSeparator />
@@ -544,6 +555,13 @@ export default function Scripts() {
             )}
           </DialogContent>
         </Dialog>
+
+        {/* Script Detail Dialog */}
+        <ScriptDetailDialog
+          script={selectedScript}
+          open={showDetailDialog}
+          onOpenChange={setShowDetailDialog}
+        />
       </main>
     </div>
   );
