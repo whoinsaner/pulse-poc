@@ -7,11 +7,14 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from '@/components/ui/dialog';
 import {
   Collapsible,
@@ -35,6 +38,7 @@ import {
   BookOpen,
   Loader2,
   Info,
+  AlertTriangle,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -79,6 +83,14 @@ export default function Scripts() {
   const [showAnalyzeDialog, setShowAnalyzeDialog] = useState(false);
   const [showContentDialog, setShowContentDialog] = useState(false);
   const [showDetailDialog, setShowDetailDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleteConfirmed, setDeleteConfirmed] = useState(false);
+  const [relatedCounts, setRelatedCounts] = useState<{
+    analysisRuns: number;
+    reports: number;
+    versions: number;
+  } | null>(null);
+  const [isLoadingRelated, setIsLoadingRelated] = useState(false);
   const [sampleScriptsOpen, setSampleScriptsOpen] = useState(true);
   const [addingScript, setAddingScript] = useState<string | null>(null);
   const [previewScript, setPreviewScript] = useState<SampleScriptData | null>(null);
@@ -118,7 +130,27 @@ export default function Scripts() {
     setIsLoading(false);
   };
 
-  const handleDelete = async (scriptId: string) => {
+  const fetchRelatedCounts = async (scriptId: string) => {
+    setIsLoadingRelated(true);
+    try {
+      const [analysisRes, reportsRes, versionsRes] = await Promise.all([
+        supabase.from('analysis_runs').select('id', { count: 'exact', head: true }).eq('script_id', scriptId),
+        supabase.from('reports').select('id', { count: 'exact', head: true }).eq('script_id', scriptId),
+        supabase.from('script_versions').select('id', { count: 'exact', head: true }).eq('script_id', scriptId),
+      ]);
+      setRelatedCounts({
+        analysisRuns: analysisRes.count ?? 0,
+        reports: reportsRes.count ?? 0,
+        versions: versionsRes.count ?? 0,
+      });
+    } catch (err) {
+      console.error('Error fetching related counts:', err);
+    } finally {
+      setIsLoadingRelated(false);
+    }
+  };
+
+  const handleDeleteClick = async (script: Script) => {
     if (userRole !== 'admin') {
       toast({
         title: 'Permission denied',
@@ -127,8 +159,17 @@ export default function Scripts() {
       });
       return;
     }
+    setSelectedScript(script);
+    setDeleteConfirmed(false);
+    setRelatedCounts(null);
+    setShowDeleteDialog(true);
+    await fetchRelatedCounts(script.id);
+  };
 
-    const { error } = await supabase.from('scripts').delete().eq('id', scriptId);
+  const confirmDelete = async () => {
+    if (!selectedScript) return;
+    
+    const { error } = await supabase.from('scripts').delete().eq('id', selectedScript.id);
 
     if (error) {
       toast({
@@ -139,10 +180,12 @@ export default function Scripts() {
     } else {
       toast({
         title: 'Script deleted',
-        description: 'The script has been removed',
+        description: 'The script and all related data have been removed',
       });
       fetchScripts();
     }
+    setShowDeleteDialog(false);
+    setSelectedScript(null);
   };
 
   const handleAnalyze = (script: Script) => {
@@ -341,7 +384,7 @@ export default function Scripts() {
                               className="text-destructive"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleDelete(script.id);
+                                handleDeleteClick(script);
                               }}
                             >
                               <Trash2 className="h-4 w-4 mr-2" />
@@ -562,6 +605,81 @@ export default function Scripts() {
           open={showDetailDialog}
           onOpenChange={setShowDetailDialog}
         />
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-destructive">
+                <AlertTriangle className="h-5 w-5" />
+                Delete Script
+              </DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete "{selectedScript?.title}"? This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+
+            {isLoadingRelated ? (
+              <div className="flex items-center justify-center py-4">
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              </div>
+            ) : relatedCounts && (relatedCounts.analysisRuns > 0 || relatedCounts.reports > 0 || relatedCounts.versions > 0) ? (
+              <div className="space-y-4">
+                <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/30">
+                  <p className="text-sm font-medium text-amber-700 dark:text-amber-400 mb-2">
+                    This will also delete:
+                  </p>
+                  <ul className="text-sm text-muted-foreground space-y-1">
+                    {relatedCounts.analysisRuns > 0 && (
+                      <li>• {relatedCounts.analysisRuns} analysis run{relatedCounts.analysisRuns > 1 ? 's' : ''}</li>
+                    )}
+                    {relatedCounts.reports > 0 && (
+                      <li>• {relatedCounts.reports} report{relatedCounts.reports > 1 ? 's' : ''}</li>
+                    )}
+                    {relatedCounts.versions > 0 && (
+                      <li>• {relatedCounts.versions} version{relatedCounts.versions > 1 ? 's' : ''}</li>
+                    )}
+                  </ul>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="confirm-delete"
+                    checked={deleteConfirmed}
+                    onCheckedChange={(checked) => setDeleteConfirmed(checked === true)}
+                  />
+                  <label
+                    htmlFor="confirm-delete"
+                    className="text-sm text-muted-foreground cursor-pointer"
+                  >
+                    I understand this will permanently delete all related data
+                  </label>
+                </div>
+              </div>
+            ) : null}
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={confirmDelete}
+                disabled={
+                  isLoadingRelated ||
+                  (relatedCounts &&
+                    (relatedCounts.analysisRuns > 0 ||
+                      relatedCounts.reports > 0 ||
+                      relatedCounts.versions > 0) &&
+                    !deleteConfirmed)
+                }
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete Script
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </main>
     </div>
   );
