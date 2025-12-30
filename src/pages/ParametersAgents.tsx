@@ -52,6 +52,7 @@ import { SampleAgentOutput } from "@/components/parameters/SampleAgentOutput";
 import { AgentSectionMapping } from "@/components/parameters/AgentSectionMapping";
 import { ParameterDependencyGraph } from "@/components/parameters/ParameterDependencyGraph";
 import { InteractivePipeline } from "@/components/parameters/InteractivePipeline";
+import { LensWeightsEditor } from "@/components/LensWeightsEditor";
 import {
   SCRIPT_TYPES,
   SIMPLE_SCRIPT_TYPES,
@@ -402,13 +403,14 @@ export default function ParametersAgents() {
 
         <div className="container mx-auto px-6 py-6">
           <Tabs defaultValue="overview" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-6 lg:w-auto lg:inline-grid">
+            <TabsList className="grid w-full grid-cols-7 lg:w-auto lg:inline-grid">
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="dependencies">Dependencies</TabsTrigger>
               <TabsTrigger value="schema">Output Schema</TabsTrigger>
               <TabsTrigger value="agents">By Agent</TabsTrigger>
               <TabsTrigger value="lenses">By Lens</TabsTrigger>
               <TabsTrigger value="matrix">Lens Matrix</TabsTrigger>
+              <TabsTrigger value="weights">Weights</TabsTrigger>
             </TabsList>
 
             {/* Parameter Dependencies Tab */}
@@ -968,6 +970,11 @@ export default function ParametersAgents() {
                   </div>
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            {/* Weights Tab */}
+            <TabsContent value="weights" className="space-y-6">
+              <LensWeightsEditor />
             </TabsContent>
           </Tabs>
         </div>
