@@ -6,27 +6,153 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// ============= MODEL TIER CONFIGURATION =============
-// Hybrid model tiering: Pro for complex agents, Flash for simpler agents
-const MODEL_STANDARD = 'google/gemini-2.5-flash';
-const MODEL_PRO = 'google/gemini-2.5-pro';
+// ============= PLUG-AND-PLAY MODEL REGISTRY =============
+// Comprehensive model registry with tier info, cost, and capabilities
+const MODEL_REGISTRY = {
+  // Gemini Models
+  'google/gemini-2.5-flash-lite': {
+    tier: 'lite',
+    costTier: 1,
+    description: 'Fastest, cheapest. Good for classification and simple tasks.',
+    supportsTemperature: true,
+  },
+  'google/gemini-2.5-flash': {
+    tier: 'standard',
+    costTier: 2,
+    description: 'Balanced performance and cost. Good for most analysis.',
+    supportsTemperature: true,
+  },
+  'google/gemini-2.5-pro': {
+    tier: 'pro',
+    costTier: 3,
+    description: 'Highest quality. Best for complex reasoning tasks.',
+    supportsTemperature: true,
+  },
+  'google/gemini-3-pro-preview': {
+    tier: 'pro',
+    costTier: 4,
+    description: 'Next-gen pro model. Cutting-edge reasoning.',
+    supportsTemperature: true,
+  },
+  // OpenAI Models
+  'openai/gpt-5-nano': {
+    tier: 'lite',
+    costTier: 2,
+    description: 'Fast GPT for simple tasks.',
+    supportsTemperature: false,
+  },
+  'openai/gpt-5-mini': {
+    tier: 'standard',
+    costTier: 3,
+    description: 'Balanced GPT model.',
+    supportsTemperature: false,
+  },
+  'openai/gpt-5': {
+    tier: 'pro',
+    costTier: 4,
+    description: 'Most powerful GPT. Complex reasoning.',
+    supportsTemperature: false,
+  },
+} as const;
 
-// Agents requiring deeper reasoning get the Pro model
-const PRO_MODEL_AGENTS = new Set([
-  'CharacterAgent',      // Complex: 7 params, psychological depth, character arcs, want vs need
-  'ThemeAgent',          // Complex: 6 params, thematic analysis, cultural resonance, symbolism
-  'DialogueAgent',       // Complex: 6 params, subtext detection, voice differentiation
-  'EmotionalArcAgent',   // Complex: 6 params, emotional mapping, catharsis, audience psychology
-  'InsightSynthesisAgent', // Complex: synthesizes all agent outputs into actionable insights
+type ModelId = keyof typeof MODEL_REGISTRY;
+type QualityMode = 'fast' | 'balanced' | 'quality';
+
+// ============= QUALITY MODE PRESETS (Fallback when DB unavailable) =============
+const QUALITY_MODE_PRESETS: Record<QualityMode, Record<string, { model: ModelId; maxRetries: number; retryDelayMs: number }>> = {
+  fast: {
+    default: { model: 'google/gemini-2.5-flash-lite', maxRetries: 3, retryDelayMs: 1500 },
+    complex: { model: 'google/gemini-2.5-flash', maxRetries: 3, retryDelayMs: 2000 },
+    synthesis: { model: 'google/gemini-2.5-flash', maxRetries: 3, retryDelayMs: 2000 },
+  },
+  balanced: {
+    default: { model: 'google/gemini-2.5-flash-lite', maxRetries: 3, retryDelayMs: 1500 },
+    complex: { model: 'google/gemini-2.5-flash', maxRetries: 3, retryDelayMs: 2000 },
+    synthesis: { model: 'google/gemini-2.5-pro', maxRetries: 3, retryDelayMs: 3000 },
+  },
+  quality: {
+    default: { model: 'google/gemini-2.5-flash', maxRetries: 3, retryDelayMs: 2000 },
+    complex: { model: 'google/gemini-2.5-pro', maxRetries: 3, retryDelayMs: 3000 },
+    synthesis: { model: 'google/gemini-2.5-pro', maxRetries: 3, retryDelayMs: 3000 },
+  },
+};
+
+// Agents that require deeper reasoning (complex tier)
+const COMPLEX_AGENTS = new Set([
+  'CharacterAgent',
+  'ThemeAgent',
+  'DialogueAgent',
+  'EmotionalArcAgent',
 ]);
+
+// Synthesis agents
+const SYNTHESIS_AGENTS = new Set([
+  'InsightSynthesisAgent',
+]);
+
+// Model configuration interface
+interface ModelConfig {
+  model: ModelId;
+  maxRetries: number;
+  retryDelayMs: number;
+  temperature?: number;
+}
+
+// Get model configuration for an agent - checks DB first, falls back to presets
+async function getAgentModelConfig(
+  supabaseClient: any,
+  agentName: string,
+  qualityMode: QualityMode,
+  organizationId?: string
+): Promise<ModelConfig> {
+  // Map quality mode to config ID
+  const configIdMap: Record<QualityMode, string> = {
+    fast: '00000000-0000-0000-0000-000000000001',
+    balanced: '00000000-0000-0000-0000-000000000002',
+    quality: '00000000-0000-0000-0000-000000000003',
+  };
+
+  try {
+    // Try to load from database first (system presets or org-specific)
+    const { data: mapping, error } = await supabaseClient
+      .from('agent_model_mappings')
+      .select('model, max_retries, retry_delay_ms, temperature')
+      .eq('config_id', configIdMap[qualityMode])
+      .eq('agent_name', agentName)
+      .maybeSingle();
+
+    if (!error && mapping) {
+      console.log(`[ModelConfig] Loaded from DB for ${agentName}: ${mapping.model}`);
+      return {
+        model: mapping.model as ModelId,
+        maxRetries: mapping.max_retries || 3,
+        retryDelayMs: mapping.retry_delay_ms || 2000,
+        temperature: mapping.temperature,
+      };
+    }
+  } catch (err) {
+    console.log(`[ModelConfig] DB lookup failed for ${agentName}, using preset fallback`);
+  }
+
+  // Fallback to presets
+  const preset = QUALITY_MODE_PRESETS[qualityMode];
+  const isSynthesis = SYNTHESIS_AGENTS.has(agentName);
+  const isComplex = COMPLEX_AGENTS.has(agentName);
+  
+  const config = isSynthesis ? preset.synthesis : (isComplex ? preset.complex : preset.default);
+  console.log(`[ModelConfig] Using preset for ${agentName} (${qualityMode}): ${config.model}`);
+  
+  return config;
+}
 
 interface AnalyzeRequest {
   scriptId: string;
   analysisRunId: string;
   mode?: 'quick' | 'deep';
+  qualityMode?: QualityMode; // NEW: User-selectable quality mode
   forceAnalysis?: boolean;
-  resume?: boolean; // Resume failed/pending agents only
-  stakeholderLens?: string | null; // Filter agents by stakeholder
+  resume?: boolean;
+  stakeholderLens?: string | null;
 }
 
 // UASF Output Contract
@@ -1065,9 +1191,9 @@ serve(async (req) => {
   }
 
   try {
-    const { scriptId, analysisRunId, mode = 'deep', forceAnalysis = false, resume = false, stakeholderLens = null } = await req.json() as AnalyzeRequest;
+    const { scriptId, analysisRunId, mode = 'deep', qualityMode = 'balanced', forceAnalysis = false, resume = false, stakeholderLens = null } = await req.json() as AnalyzeRequest;
     
-    console.log(`[analyze-script] Starting ${mode.toUpperCase()} analysis for script ${scriptId}, run ${analysisRunId}, stakeholder: ${stakeholderLens || 'all'}, resume: ${resume}`);
+    console.log(`[analyze-script] Starting ${mode.toUpperCase()} analysis for script ${scriptId}, run ${analysisRunId}, quality: ${qualityMode}, stakeholder: ${stakeholderLens || 'all'}, resume: ${resume}`);
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -1319,7 +1445,8 @@ serve(async (req) => {
             script,
             chunks,
             agentsToRun,
-            parameterMap
+            parameterMap,
+            qualityMode
           );
         } else {
           // Standard analysis (deep mode or small quick scripts)
@@ -1329,12 +1456,13 @@ serve(async (req) => {
             analysisRunId,
             scriptContext,
             agentsToRun,
-            parameterMap
+            parameterMap,
+            qualityMode
           );
         }
 
-        // Run synthesis agents with upgraded model
-        await runInsightSynthesis(supabase, lovableApiKey, analysisRunId, scriptContext);
+        // Run synthesis agents with dynamic model config
+        await runInsightSynthesis(supabase, lovableApiKey, analysisRunId, scriptContext, qualityMode);
         await runStakeholderLensAgent(supabase, lovableApiKey, analysisRunId);
 
         // Generate report
@@ -1487,10 +1615,10 @@ async function runStandardAnalysis(
   analysisRunId: string,
   scriptContext: string,
   agentsToRun: [string, any][],
-  parameterMap: Map<string, any>
+  parameterMap: Map<string, any>,
+  qualityMode: QualityMode = 'balanced'
 ): Promise<Array<{ agent: string; success: boolean; error?: string }>> {
   const MAX_AGENT_RETRIES = 3;
-  const BASE_RETRY_DELAY_MS = 2000;
   const BATCH_SIZE = 3; // Run 3 agents at a time to avoid rate limits
   const BATCH_DELAY_MS = 3000; // Wait 3s between batches
   
@@ -1511,20 +1639,22 @@ async function runStandardAnalysis(
   };
 
   const runSingleAgent = async ([agentName, agentConfig]: [string, any]): Promise<{ agent: string; success: boolean; error?: string }> => {
+    // Get model config for this agent
+    const modelConfig = await getAgentModelConfig(supabase, agentName, qualityMode);
     let lastError: Error | null = null;
     
-    for (let attempt = 0; attempt <= MAX_AGENT_RETRIES; attempt++) {
+    for (let attempt = 0; attempt <= modelConfig.maxRetries; attempt++) {
       try {
         if (attempt > 0) {
-          // Exponential backoff: 2s, 4s, 8s
-          const delay = BASE_RETRY_DELAY_MS * Math.pow(2, attempt - 1);
-          console.log(`[${agentName}] Retry attempt ${attempt}/${MAX_AGENT_RETRIES}, waiting ${delay}ms`);
+          // Exponential backoff using config's retry delay
+          const delay = modelConfig.retryDelayMs * Math.pow(2, attempt - 1);
+          console.log(`[${agentName}] Retry attempt ${attempt}/${modelConfig.maxRetries}, waiting ${delay}ms`);
           await new Promise(r => setTimeout(r, delay));
         }
         
-        await updateAgentProgress(supabase, analysisRunId, agentName, 'running');
+        await updateAgentProgress(supabase, analysisRunId, agentName, 'running', undefined, modelConfig.model);
 
-        const result = await runAgent(apiKey, agentName, agentConfig, scriptContext, parameterMap);
+        const result = await runAgent(apiKey, agentName, agentConfig, scriptContext, parameterMap, modelConfig);
 
         for (const score of result.scores) {
           if (!score.parameterId) continue;
@@ -1574,7 +1704,7 @@ async function runStandardAnalysis(
         console.error(`[analyze-script] ${agentName} attempt ${attempt + 1} failed:`, lastError.message);
         
         // Only retry on transient errors
-        if (!isTransientError(lastError) || attempt === MAX_AGENT_RETRIES) {
+        if (!isTransientError(lastError) || attempt === modelConfig.maxRetries) {
           break;
         }
       }
@@ -1617,9 +1747,10 @@ async function runChunkedAnalysis(
   script: any,
   chunks: string[],
   agentsToRun: [string, any][],
-  parameterMap: Map<string, any>
+  parameterMap: Map<string, any>,
+  qualityMode: QualityMode = 'balanced'
 ): Promise<Array<{ agent: string; success: boolean; error?: string }>> {
-  console.log(`[analyze-script] Running chunked analysis with ${chunks.length} chunks`);
+  console.log(`[analyze-script] Running chunked analysis with ${chunks.length} chunks, quality: ${qualityMode}`);
 
   // Update progress with chunk info
   await supabase
@@ -1627,15 +1758,18 @@ async function runChunkedAnalysis(
     .update({
       agent_progress: {
         ...Object.fromEntries(agentsToRun.map(([agent]) => [agent, { status: 'pending' }])),
-        _meta: { mode: 'quick', chunked: true, totalChunks: chunks.length }
+        _meta: { mode: 'quick', chunked: true, totalChunks: chunks.length, qualityMode }
       }
     })
     .eq('id', analysisRunId);
 
   // For each agent, analyze chunks and aggregate
   const agentPromises = agentsToRun.map(async ([agentName, agentConfig]) => {
+    // Get model config for this agent
+    const modelConfig = await getAgentModelConfig(supabase, agentName, qualityMode);
+    
     try {
-      await updateAgentProgress(supabase, analysisRunId, agentName, 'running');
+      await updateAgentProgress(supabase, analysisRunId, agentName, 'running', undefined, modelConfig.model);
 
       // Analyze each chunk
       const chunkResults: ChunkResult[] = [];
@@ -1644,9 +1778,9 @@ async function runChunkedAnalysis(
         const chunkContext = buildQuickContext(script, chunks[i]);
         const chunkLabel = `Chunk ${i + 1}/${chunks.length}`;
         
-        console.log(`[analyze-script] ${agentName} analyzing ${chunkLabel}`);
+        console.log(`[analyze-script] ${agentName} analyzing ${chunkLabel} with ${modelConfig.model}`);
         
-        const result = await runAgent(apiKey, agentName, agentConfig, chunkContext, parameterMap);
+        const result = await runAgent(apiKey, agentName, agentConfig, chunkContext, parameterMap, modelConfig);
         
         chunkResults.push({
           chunkIndex: i,
@@ -1826,7 +1960,8 @@ async function runAgent(
   agentName: string,
   config: { parameters: string[]; systemPrompt: string },
   context: string,
-  parameterMap: Map<string, any>
+  parameterMap: Map<string, any>,
+  modelConfig: ModelConfig
 ): Promise<AgentResult> {
   const parametersToScore = config.parameters
     .map(name => parameterMap.get(name))
@@ -1889,20 +2024,17 @@ MATURITY MAPPING:
 CRITICAL: You MUST respond with ONLY the JSON object. No text before or after. No markdown code blocks. Start your response with { and end with }.`;
 
 
-  // Determine model tier based on agent complexity
-  const model = PRO_MODEL_AGENTS.has(agentName) ? MODEL_PRO : MODEL_STANDARD;
-  console.log(`[${agentName}] Using model: ${model}`);
+  // Use the model config passed from caller
+  console.log(`[${agentName}] Using model: ${modelConfig.model}`);
 
   // Retry logic for empty responses with exponential backoff
-  const MAX_RETRIES = 3;
   let content = '';
   let lastStatusCode = 0;
   
-  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+  for (let attempt = 0; attempt <= modelConfig.maxRetries; attempt++) {
     if (attempt > 0) {
-      // Exponential backoff: 2s, 4s, 8s (slightly longer for Pro model)
-      const baseDelay = PRO_MODEL_AGENTS.has(agentName) ? 3000 : 2000;
-      const delay = baseDelay * Math.pow(2, attempt - 1);
+      // Exponential backoff using config's retry delay
+      const delay = modelConfig.retryDelayMs * Math.pow(2, attempt - 1);
       console.log(`[${agentName}] Retry attempt ${attempt} after ${lastStatusCode === 429 ? 'rate limit' : 'empty response'}, waiting ${delay}ms`);
       await new Promise(r => setTimeout(r, delay));
     }
@@ -1915,7 +2047,7 @@ CRITICAL: You MUST respond with ONLY the JSON object. No text before or after. N
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: model, // Dynamic model selection based on agent tier
+          model: modelConfig.model, // Dynamic model from config
           messages: [
             { role: 'system', content: config.systemPrompt },
             { role: 'user', content: userPrompt }
@@ -1927,8 +2059,8 @@ CRITICAL: You MUST respond with ONLY the JSON object. No text before or after. N
       
       if (response.status === 429) {
         console.log(`[${agentName}] Rate limited (429), will retry`);
-        if (attempt === MAX_RETRIES) {
-          throw new Error(`AI API rate limited after ${MAX_RETRIES + 1} attempts`);
+        if (attempt === modelConfig.maxRetries) {
+          throw new Error(`AI API rate limited after ${modelConfig.maxRetries + 1} attempts`);
         }
         continue;
       }
@@ -1949,12 +2081,12 @@ CRITICAL: You MUST respond with ONLY the JSON object. No text before or after. N
         break;
       }
       
-      if (attempt === MAX_RETRIES) {
-        throw new Error(`Empty response from AI after ${MAX_RETRIES + 1} attempts`);
+      if (attempt === modelConfig.maxRetries) {
+        throw new Error(`Empty response from AI after ${modelConfig.maxRetries + 1} attempts`);
       }
     } catch (fetchErr) {
       console.error(`[${agentName}] Fetch error on attempt ${attempt + 1}:`, fetchErr);
-      if (attempt === MAX_RETRIES) {
+      if (attempt === modelConfig.maxRetries) {
         throw fetchErr;
       }
     }
@@ -1998,7 +2130,8 @@ async function updateAgentProgress(
   analysisRunId: string,
   agentName: string,
   status: string,
-  error?: string
+  error?: string,
+  model?: string
 ) {
   const { data: run } = await supabase
     .from('analysis_runs')
@@ -2012,6 +2145,7 @@ async function updateAgentProgress(
     ...(status === 'running' && { startedAt: new Date().toISOString() }),
     ...(status === 'completed' && { completedAt: new Date().toISOString() }),
     ...(error && { error }),
+    ...(model && { model }), // Track which model was used
   };
 
   await supabase
@@ -2024,8 +2158,12 @@ async function runInsightSynthesis(
   supabase: any,
   apiKey: string,
   analysisRunId: string,
-  context: string
+  context: string,
+  qualityMode: QualityMode = 'balanced'
 ) {
+  // Get model config for synthesis agent
+  const modelConfig = await getAgentModelConfig(supabase, 'InsightSynthesisAgent', qualityMode);
+  
   const { data: scores } = await supabase
     .from('parameter_scores')
     .select('*, parameters(*)')
@@ -2074,8 +2212,7 @@ Return JSON array:
 ]`;
 
   try {
-    // Use Pro model for synthesis - better reasoning for executive insights
-    console.log(`[InsightSynthesisAgent] Using model: ${MODEL_PRO}`);
+    console.log(`[InsightSynthesisAgent] Using model: ${modelConfig.model}`);
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -2083,7 +2220,7 @@ Return JSON array:
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: MODEL_PRO, // Pro model for synthesis tasks
+        model: modelConfig.model,
         messages: [
           { role: 'system', content: 'You are InsightSynthesisAgent, a senior script analyst synthesizing findings into executive-level actionable insights.' },
           { role: 'user', content: prompt }

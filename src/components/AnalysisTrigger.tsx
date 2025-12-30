@@ -17,6 +17,7 @@ import type { AnalysisStatus, AgentProgress, ScriptType, StakeholderLens } from 
 import { StakeholderSelector } from '@/components/StakeholderSelector';
 import { StakeholderBadge } from '@/components/StakeholderBadge';
 import { getAgentsForStakeholder } from '@/lib/stakeholderConfig';
+import { QualityModeSelector, type QualityMode } from '@/components/QualityModeSelector';
 
 interface AnalysisTriggerProps {
   scriptId: string;
@@ -71,6 +72,7 @@ export function AnalysisTrigger({
   const [showStakeholderSelector, setShowStakeholderSelector] = useState(false);
   const [selectedStakeholder, setSelectedStakeholder] = useState<StakeholderLens | null>(null);
   const [pendingAnalysisMode, setPendingAnalysisMode] = useState<{ force: boolean; mode: 'quick' | 'deep' } | null>(null);
+  const [qualityMode, setQualityMode] = useState<QualityMode>('balanced');
 
   const isComic = scriptType === 'comic';
   
@@ -210,7 +212,7 @@ export function AnalysisTrigger({
       let runId = existingRunId;
       
       if (!resume || !existingRunId) {
-        // Create new analysis run with stakeholder lens
+        // Create new analysis run with stakeholder lens and quality mode
         const { data: run, error: createError } = await supabase
           .from('analysis_runs')
           .insert({
@@ -218,6 +220,7 @@ export function AnalysisTrigger({
             initiated_by: user.id,
             status: 'pending',
             stakeholder_lens: stakeholderLens || null,
+            quality_mode: qualityMode,
           })
           .select()
           .single();
@@ -227,7 +230,7 @@ export function AnalysisTrigger({
       }
 
       setAnalysisRunId(runId!);
-      console.log('[AnalysisTrigger] Created analysis run:', runId, 'mode:', mode, 'forceAnalysis:', forceAnalysis, 'resume:', resume, 'stakeholderLens:', stakeholderLens);
+      console.log('[AnalysisTrigger] Created analysis run:', runId, 'mode:', mode, 'quality:', qualityMode, 'forceAnalysis:', forceAnalysis, 'resume:', resume, 'stakeholderLens:', stakeholderLens);
 
       // Trigger analysis edge function (non-blocking)
       supabase.functions.invoke('analyze-script', {
@@ -235,6 +238,7 @@ export function AnalysisTrigger({
           scriptId,
           analysisRunId: runId,
           mode,
+          qualityMode,
           forceAnalysis,
           resume,
           stakeholderLens: stakeholderLens || null,
@@ -391,7 +395,12 @@ export function AnalysisTrigger({
     }
 
     return (
-      <div className="space-y-2">
+      <div className="space-y-4">
+        <QualityModeSelector 
+          value={qualityMode} 
+          onChange={setQualityMode} 
+          disabled={false}
+        />
         <div className="grid grid-cols-2 gap-2">
           <Button onClick={() => initiateAnalysis(false, 'quick')} variant="outline" className="w-full">
             <Zap className="h-4 w-4 mr-2 text-amber-500" />
