@@ -120,56 +120,57 @@ export default function Production() {
       </div>
 
       {/* Budget Estimate */}
-      <Card className="border-primary/30">
+      <Card className="glass-premium border-primary/30">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 font-display">
             <DollarSign className="h-5 w-5 text-primary" />
             Budget Estimate
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-3 gap-4 mb-4">
-            <div className="text-center p-4 bg-muted/30 rounded-lg">
-              <p className="text-sm text-muted-foreground mb-1">Low Budget</p>
-              <p className="text-2xl font-bold text-warning">{budgetEstimate.low}</p>
-              <p className="text-xs text-muted-foreground mt-1">Indie approach</p>
+          <div className="grid grid-cols-3 gap-4 mb-6">
+            <div className="text-center p-5 rounded-xl bg-gradient-to-br from-warning/10 to-warning/5 border border-warning/20 hover:border-warning/40 transition-all duration-300 group">
+              <p className="text-sm text-muted-foreground mb-2">Low Budget</p>
+              <p className="text-3xl font-mono font-bold text-warning">{budgetEstimate.low}</p>
+              <p className="text-xs text-muted-foreground mt-2 opacity-75 group-hover:opacity-100 transition-opacity">Indie approach</p>
             </div>
-            <div className="text-center p-4 bg-primary/10 rounded-lg border border-primary/30">
-              <p className="text-sm text-muted-foreground mb-1">Target Budget</p>
-              <p className="text-2xl font-bold text-primary">{budgetEstimate.target}</p>
-              <p className="text-xs text-muted-foreground mt-1">Recommended</p>
+            <div className="text-center p-5 rounded-xl bg-gradient-to-br from-primary/15 to-primary/5 border-2 border-primary/40 hover:border-primary/60 transition-all duration-300 relative overflow-hidden group">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              <p className="text-sm text-muted-foreground mb-2 relative">Target Budget</p>
+              <p className="text-3xl font-mono font-bold text-primary glow-gold relative">{budgetEstimate.target}</p>
+              <p className="text-xs text-primary/70 mt-2 font-medium relative">Recommended</p>
             </div>
-            <div className="text-center p-4 bg-muted/30 rounded-lg">
-              <p className="text-sm text-muted-foreground mb-1">High Budget</p>
-              <p className="text-2xl font-bold text-success">{budgetEstimate.high}</p>
-              <p className="text-xs text-muted-foreground mt-1">A-list package</p>
+            <div className="text-center p-5 rounded-xl bg-gradient-to-br from-success/10 to-success/5 border border-success/20 hover:border-success/40 transition-all duration-300 group">
+              <p className="text-sm text-muted-foreground mb-2">High Budget</p>
+              <p className="text-3xl font-mono font-bold text-success">{budgetEstimate.high}</p>
+              <p className="text-xs text-muted-foreground mt-2 opacity-75 group-hover:opacity-100 transition-opacity">A-list package</p>
             </div>
           </div>
-          <p className="text-sm text-muted-foreground text-center">
+          <p className="text-sm text-muted-foreground text-center font-mono">
             Based on {uniqueLocations.size} locations, {characters.length} characters, and {pageCount} pages
           </p>
         </CardContent>
       </Card>
 
       {/* Production Overview */}
-      <Card className="p-6">
+      <Card className="glass-premium p-6">
         <SubSectionHeader title="Production Requirements" />
         <div className="grid md:grid-cols-4 gap-4 mb-6">
-          <div className="p-4 rounded-lg bg-muted/30 text-center">
-            <p className="text-3xl font-bold text-primary">{scenes.length}</p>
-            <p className="text-sm text-muted-foreground">Total Scenes</p>
+          <div className="p-5 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 text-center hover:border-primary/40 transition-all duration-300">
+            <p className="text-4xl font-mono font-bold text-primary">{scenes.length}</p>
+            <p className="text-sm text-muted-foreground mt-1">Total Scenes</p>
           </div>
-          <div className="p-4 rounded-lg bg-muted/30 text-center">
-            <p className="text-3xl font-bold text-chart-3">{uniqueLocations.size}</p>
-            <p className="text-sm text-muted-foreground">Unique Locations</p>
+          <div className="p-5 rounded-xl bg-gradient-to-br from-chart-3/10 to-chart-3/5 border border-chart-3/20 text-center hover:border-chart-3/40 transition-all duration-300">
+            <p className="text-4xl font-mono font-bold text-chart-3">{uniqueLocations.size}</p>
+            <p className="text-sm text-muted-foreground mt-1">Unique Locations</p>
           </div>
-          <div className="p-4 rounded-lg bg-muted/30 text-center">
-            <p className="text-3xl font-bold text-chart-4">{characters.length}</p>
-            <p className="text-sm text-muted-foreground">Speaking Roles</p>
+          <div className="p-5 rounded-xl bg-gradient-to-br from-chart-4/10 to-chart-4/5 border border-chart-4/20 text-center hover:border-chart-4/40 transition-all duration-300">
+            <p className="text-4xl font-mono font-bold text-chart-4">{characters.length}</p>
+            <p className="text-sm text-muted-foreground mt-1">Speaking Roles</p>
           </div>
-          <div className="p-4 rounded-lg bg-muted/30 text-center">
-            <p className="text-3xl font-bold text-chart-5">{pageCount}</p>
-            <p className="text-sm text-muted-foreground">Page Count</p>
+          <div className="p-5 rounded-xl bg-gradient-to-br from-chart-5/10 to-chart-5/5 border border-chart-5/20 text-center hover:border-chart-5/40 transition-all duration-300">
+            <p className="text-4xl font-mono font-bold text-chart-5">{pageCount}</p>
+            <p className="text-sm text-muted-foreground mt-1">Page Count</p>
           </div>
         </div>
       </Card>
@@ -189,7 +190,7 @@ export default function Production() {
 
       {/* Parameter Breakdown */}
       {filteredProductionParams.length > 0 && (
-        <Card className="p-6">
+        <Card className="glass-premium p-6">
           <SubSectionHeader title="Production Parameters" />
           <div className="space-y-4">
             {filteredProductionParams.slice(0, 8).map((param, index) => (
@@ -226,7 +227,7 @@ export default function Production() {
       )}
 
       {/* Recommendations */}
-      <Card className="p-6">
+      <Card className="glass-premium p-6">
         <SubSectionHeader title="Production Recommendations" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {uniqueLocations.size > 15 && (
