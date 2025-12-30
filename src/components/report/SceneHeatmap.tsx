@@ -52,7 +52,27 @@ export function SceneHeatmap({ scenes }: SceneHeatmapProps) {
   const [hoveredScene, setHoveredScene] = useState<number | null>(null);
 
   if (!scenes || scenes.length === 0) {
-    return null;
+    return (
+      <section className="min-h-[400px] py-20 bg-card/30">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-8">
+            <span className="px-4 py-1.5 rounded-full bg-chart-4/10 text-chart-4 text-sm font-medium">
+              Visual Analysis
+            </span>
+            <h2 className="text-4xl sm:text-5xl font-bold mt-6 mb-4">
+              Scene Heatmap
+            </h2>
+          </div>
+          <div className="flex flex-col items-center justify-center p-12 rounded-2xl bg-muted/30 border border-border">
+            <Flame className="h-16 w-16 text-muted-foreground/50 mb-4" />
+            <h3 className="text-xl font-semibold mb-2">No Scene Data Available</h3>
+            <p className="text-muted-foreground text-center max-w-md">
+              Scene data hasn't been parsed yet. Upload a script and run analysis to visualize scene intensity.
+            </p>
+          </div>
+        </div>
+      </section>
+    );
   }
 
   const sortedScenes = [...scenes].sort((a, b) => a.sceneNumber - b.sceneNumber);

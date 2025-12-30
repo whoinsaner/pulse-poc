@@ -245,7 +245,27 @@ export function BudgetEstimator({ scenes, characters, pageCount = 100 }: BudgetE
   const budget = useMemo(() => estimateBudget(scenes, characters, pageCount), [scenes, characters, pageCount]);
 
   if (scenes.length === 0) {
-    return null;
+    return (
+      <section className="min-h-[400px] py-20 bg-card/30">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-8">
+            <span className="px-4 py-1.5 rounded-full bg-chart-3/10 text-chart-3 text-sm font-medium">
+              Financial Analysis
+            </span>
+            <h2 className="text-4xl sm:text-5xl font-bold mt-6 mb-4">
+              Budget Estimate
+            </h2>
+          </div>
+          <div className="flex flex-col items-center justify-center p-12 rounded-2xl bg-muted/30 border border-border">
+            <DollarSign className="h-16 w-16 text-muted-foreground/50 mb-4" />
+            <h3 className="text-xl font-semibold mb-2">No Budget Data Available</h3>
+            <p className="text-muted-foreground text-center max-w-md">
+              Budget estimation requires scene and character data. Run a full analysis to generate production cost estimates.
+            </p>
+          </div>
+        </div>
+      </section>
+    );
   }
 
   const formatCurrency = (amount: number) => {

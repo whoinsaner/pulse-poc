@@ -1,12 +1,14 @@
 import { useOutletContext } from 'react-router-dom';
-import { ReportData, StakeholderLens, LENS_CONFIG } from '@/types/database';
+import { ReportData, StakeholderLens, LENS_CONFIG, Report } from '@/types/database';
 import { ScoreRing } from '@/components/ScoreRing';
 import { FullLensComparison } from '@/components/report/FullLensComparison';
+import { StakeholderReportCache } from '@/components/report/StakeholderReportCache';
 import { Card } from '@/components/ui/card';
 import { FileText, Sparkles, Target, Zap, TrendingUp, Users, Film, Brain } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface ReportContextValue {
+  report: Report;
   reportData: ReportData;
   activeLens: StakeholderLens;
   setActiveLens: (lens: StakeholderLens) => void;
@@ -15,7 +17,7 @@ interface ReportContextValue {
 }
 
 export default function ReportOverview() {
-  const { reportData, activeLens, setActiveLens, currentScore } = useOutletContext<ReportContextValue>();
+  const { report, reportData, activeLens, setActiveLens, currentScore } = useOutletContext<ReportContextValue>();
   
   const metadata = reportData.scriptMetadata;
   
@@ -261,6 +263,17 @@ export default function ReportOverview() {
             overallScore={reportData.overallScore || 0}
             activeLens={activeLens}
             onLensSelect={setActiveLens}
+          />
+        </section>
+      )}
+
+      {/* Cached Stakeholder Reports */}
+      {report?.id && (
+        <section>
+          <h2 className="text-2xl font-bold mb-6">Stakeholder Report History</h2>
+          <StakeholderReportCache 
+            reportId={report.id}
+            onSelectLens={setActiveLens}
           />
         </section>
       )}

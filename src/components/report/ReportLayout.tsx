@@ -484,7 +484,20 @@ export default function ReportLayout() {
                 {sidebarCollapsed && !stakeholderLens && (
                   <LensSelector activeLens={activeLens} onLensChange={setActiveLens} compact />
                 )}
-                <Button variant="outline" size="sm">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => {
+                    const shareUrl = window.location.href;
+                    navigator.clipboard.writeText(shareUrl).then(() => {
+                      toast.success('Link copied to clipboard', {
+                        description: 'Share this link to give others access to this report.'
+                      });
+                    }).catch(() => {
+                      toast.error('Failed to copy link');
+                    });
+                  }}
+                >
                   <Share2 className="h-4 w-4 mr-2" />
                   Share
                 </Button>
