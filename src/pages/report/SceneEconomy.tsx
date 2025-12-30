@@ -110,10 +110,10 @@ export default function SceneEconomy() {
       {/* Economy Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {economyMetrics.map((metric) => (
-          <Card key={metric.label} className="bg-card/50">
+          <Card key={metric.label} className="glass-premium">
             <CardContent className="pt-6">
               <ScoreDisplay score={metric.score} maxScore={10} size="md" />
-              <h3 className="font-semibold mt-2">{metric.label}</h3>
+              <h3 className="font-display font-semibold mt-2">{metric.label}</h3>
               <p className="text-sm text-muted-foreground">{metric.description}</p>
             </CardContent>
           </Card>

@@ -101,22 +101,22 @@ export default function ProtagonistAnalysis() {
 
       {/* Score Overview */}
       <div className="grid md:grid-cols-4 gap-4">
-        <Card className="p-5 text-center">
+        <Card className="glass-premium p-5 text-center">
           <Heart className="h-5 w-5 mx-auto mb-2 text-destructive" />
           <p className="text-sm text-muted-foreground mb-1">Empathy Score</p>
           <ScoreDisplay score={subScores.empathy} size="sm" showLabel={false} />
         </Card>
-        <Card className="p-5 text-center">
+        <Card className="glass-premium p-5 text-center">
           <Zap className="h-5 w-5 mx-auto mb-2 text-chart-4" />
           <p className="text-sm text-muted-foreground mb-1">Uniqueness</p>
           <ScoreDisplay score={subScores.uniqueness} size="sm" showLabel={false} />
         </Card>
-        <Card className="p-5 text-center">
+        <Card className="glass-premium p-5 text-center">
           <TrendingUp className="h-5 w-5 mx-auto mb-2 text-chart-3" />
           <p className="text-sm text-muted-foreground mb-1">Arc Quality</p>
           <ScoreDisplay score={subScores.arcQuality} size="sm" showLabel={false} />
         </Card>
-        <Card className="p-5 text-center">
+        <Card className="glass-premium p-5 text-center">
           <Target className="h-5 w-5 mx-auto mb-2 text-primary" />
           <p className="text-sm text-muted-foreground mb-1">Overall</p>
           <ScoreDisplay score={categoryScore} size="sm" />
@@ -138,13 +138,13 @@ export default function ProtagonistAnalysis() {
 
       {/* Character Fundamentals */}
       {protagonist && (
-        <Card className="p-6">
+        <Card className="glass-premium p-6">
           <SubSectionHeader title="Character Fundamentals" />
           <div className="grid md:grid-cols-2 gap-6">
             <div className="space-y-4">
               <div>
                 <p className="text-sm text-muted-foreground">Character Name</p>
-                <p className="font-semibold text-lg">{protagonist.name}</p>
+                <p className="font-display font-semibold text-lg">{protagonist.name}</p>
               </div>
               {protagonist.description && (
                 <div>
@@ -155,11 +155,11 @@ export default function ProtagonistAnalysis() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-muted-foreground">Dialogue Lines</p>
-                  <p className="font-semibold">{protagonist.dialogueCount}</p>
+                  <p className="font-mono font-semibold">{protagonist.dialogueCount}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Scene Appearances</p>
-                  <p className="font-semibold">{protagonist.sceneCount}</p>
+                  <p className="font-mono font-semibold">{protagonist.sceneCount}</p>
                 </div>
               </div>
             </div>
@@ -189,7 +189,7 @@ export default function ProtagonistAnalysis() {
       )}
 
       {/* Character Arc Breakdown */}
-      <Card className="p-6">
+      <Card className="glass-premium p-6">
         <SubSectionHeader title="Character Arc Breakdown" />
         <div className="space-y-6">
           <div className="grid md:grid-cols-3 gap-4">
@@ -198,13 +198,13 @@ export default function ProtagonistAnalysis() {
               { act: 'Act II', phase: 'Tests & Transformation', desc: 'Character faces challenges that force growth and self-reflection' },
               { act: 'Act III', phase: 'New Self', desc: 'Protagonist demonstrates change through climactic choices' },
             ].map((phase, index) => (
-              <div key={index} className="p-4 rounded-lg bg-muted/30 border border-border">
+              <div key={index} className="p-4 rounded-lg bg-muted/30 border border-border/50">
                 <div className="flex items-center gap-2 mb-2">
                   <span className={cn(
                     "w-2 h-2 rounded-full",
                     index === 0 ? "bg-chart-1" : index === 1 ? "bg-chart-2" : "bg-chart-3"
                   )} />
-                  <span className="font-semibold">{phase.act}</span>
+                  <span className="font-display font-semibold">{phase.act}</span>
                 </div>
                 <p className="text-sm font-medium mb-1">{phase.phase}</p>
                 <p className="text-xs text-muted-foreground">{phase.desc}</p>
@@ -216,7 +216,7 @@ export default function ProtagonistAnalysis() {
 
       {/* Parameter Scores */}
       {filteredCharacterParams.length > 0 && (
-        <Card className="p-6">
+        <Card className="glass-premium p-6">
           <SubSectionHeader title="Character Parameters" />
           <div className="space-y-4">
             {filteredCharacterParams.slice(0, 8).map((param, index) => (
@@ -241,7 +241,7 @@ export default function ProtagonistAnalysis() {
       )}
 
       {/* Recommendations */}
-      <Card className="p-6">
+      <Card className="glass-premium p-6">
         <SubSectionHeader title="Protagonist Recommendations" />
         <div className="space-y-3">
           {subScores.empathy < 7 && (

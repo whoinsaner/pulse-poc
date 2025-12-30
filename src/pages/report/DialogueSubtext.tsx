@@ -93,10 +93,10 @@ export default function DialogueSubtext() {
       {/* Overall Assessment */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {dialogueMetrics.map((metric) => (
-          <Card key={metric.label} className="bg-card/50">
+          <Card key={metric.label} className="glass-premium">
             <CardContent className="pt-6">
               <ScoreDisplay score={metric.score} maxScore={10} size="md" />
-              <h3 className="font-semibold mt-2">{metric.label}</h3>
+              <h3 className="font-display font-semibold mt-2">{metric.label}</h3>
               <p className="text-sm text-muted-foreground">{metric.description}</p>
             </CardContent>
           </Card>
@@ -118,24 +118,24 @@ export default function DialogueSubtext() {
 
       {/* Character Voice Analysis */}
       {topCharacters.length > 0 && (
-        <Card className="p-6">
+        <Card className="glass-premium p-6">
           <SubSectionHeader title="Character Voice Distinctiveness" />
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b">
-                  <th className="text-left py-3 px-4 font-medium">Character</th>
-                  <th className="text-left py-3 px-4 font-medium">Dialogue Lines</th>
-                  <th className="text-left py-3 px-4 font-medium">Scene Presence</th>
-                  <th className="text-left py-3 px-4 font-medium">Description</th>
+                <tr className="border-b border-border/50">
+                  <th className="text-left py-3 px-4 font-display font-medium">Character</th>
+                  <th className="text-left py-3 px-4 font-display font-medium">Dialogue Lines</th>
+                  <th className="text-left py-3 px-4 font-display font-medium">Scene Presence</th>
+                  <th className="text-left py-3 px-4 font-display font-medium">Description</th>
                 </tr>
               </thead>
               <tbody>
                 {topCharacters.map((char, idx) => (
-                  <tr key={idx} className="border-b last:border-0">
+                  <tr key={idx} className="border-b border-border/30 last:border-0">
                     <td className="py-3 px-4 font-medium">{char.name}</td>
-                    <td className="py-3 px-4">{char.dialogueCount}</td>
-                    <td className="py-3 px-4">{char.sceneCount} scenes</td>
+                    <td className="py-3 px-4 font-mono">{char.dialogueCount}</td>
+                    <td className="py-3 px-4 font-mono">{char.sceneCount} scenes</td>
                     <td className="py-3 px-4 text-muted-foreground text-sm truncate max-w-xs">
                       {char.description || 'No description available'}
                     </td>
@@ -149,7 +149,7 @@ export default function DialogueSubtext() {
 
       {/* Parameter Breakdown */}
       {filteredDialogueParams.length > 0 && (
-        <Card className="p-6">
+        <Card className="glass-premium p-6">
           <SubSectionHeader title="Dialogue Parameters" />
           <div className="space-y-4">
             {filteredDialogueParams.slice(0, 8).map((param, index) => (
@@ -186,7 +186,7 @@ export default function DialogueSubtext() {
       )}
 
       {/* Recommendations */}
-      <Card className="p-6">
+      <Card className="glass-premium p-6">
         <SubSectionHeader title="Dialogue Recommendations" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {categoryScore < 7 && (

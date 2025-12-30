@@ -65,27 +65,27 @@ export default function AntagonistAnalysis() {
 
       {/* Power Breakdown */}
       <div className="grid md:grid-cols-5 gap-4">
-        <Card className="p-5 text-center">
+        <Card className="glass-premium p-5 text-center">
           <Sword className="h-5 w-5 mx-auto mb-2 text-destructive" />
           <p className="text-sm text-muted-foreground mb-1">Physical</p>
           <ScoreDisplay score={powerScores.physical} size="sm" showLabel={false} />
         </Card>
-        <Card className="p-5 text-center">
+        <Card className="glass-premium p-5 text-center">
           <Brain className="h-5 w-5 mx-auto mb-2 text-chart-6" />
           <p className="text-sm text-muted-foreground mb-1">Psychological</p>
           <ScoreDisplay score={powerScores.psychological} size="sm" showLabel={false} />
         </Card>
-        <Card className="p-5 text-center">
+        <Card className="glass-premium p-5 text-center">
           <Target className="h-5 w-5 mx-auto mb-2 text-chart-4" />
           <p className="text-sm text-muted-foreground mb-1">Tactical</p>
           <ScoreDisplay score={powerScores.tactical} size="sm" showLabel={false} />
         </Card>
-        <Card className="p-5 text-center">
+        <Card className="glass-premium p-5 text-center">
           <Zap className="h-5 w-5 mx-auto mb-2 text-chart-2" />
           <p className="text-sm text-muted-foreground mb-1">Dramatic</p>
           <ScoreDisplay score={powerScores.dramatic} size="sm" showLabel={false} />
         </Card>
-        <Card className="p-5 text-center bg-primary/5 border-primary/20">
+        <Card className="glass-premium p-5 text-center bg-primary/5 border-primary/20">
           <Shield className="h-5 w-5 mx-auto mb-2 text-primary" />
           <p className="text-sm text-muted-foreground mb-1">Overall</p>
           <ScoreDisplay score={avgPower} size="sm" />
@@ -107,13 +107,13 @@ export default function AntagonistAnalysis() {
 
       {/* Antagonist Fundamentals */}
       {antagonist && (
-        <Card className="p-6">
+        <Card className="glass-premium p-6">
           <SubSectionHeader title="Antagonist Profile" />
           <div className="grid md:grid-cols-2 gap-6">
             <div className="space-y-4">
               <div>
                 <p className="text-sm text-muted-foreground">Character Name</p>
-                <p className="font-semibold text-lg">{antagonist.name}</p>
+                <p className="font-display font-semibold text-lg">{antagonist.name}</p>
               </div>
               {antagonist.description && (
                 <div>
@@ -124,11 +124,11 @@ export default function AntagonistAnalysis() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-muted-foreground">Dialogue Lines</p>
-                  <p className="font-semibold">{antagonist.dialogueCount}</p>
+                  <p className="font-mono font-semibold">{antagonist.dialogueCount}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Scene Appearances</p>
-                  <p className="font-semibold">{antagonist.sceneCount}</p>
+                  <p className="font-mono font-semibold">{antagonist.sceneCount}</p>
                 </div>
               </div>
             </div>
@@ -146,7 +146,7 @@ export default function AntagonistAnalysis() {
       )}
 
       {/* Villain Archetype */}
-      <Card className="p-6">
+      <Card className="glass-premium p-6">
         <SubSectionHeader title="Antagonist Archetype Analysis" />
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
@@ -159,10 +159,10 @@ export default function AntagonistAnalysis() {
               key={index}
               className={cn(
                 "p-4 rounded-lg border",
-                archetype.match ? "border-primary/30 bg-primary/5" : "border-border bg-muted/20"
+                archetype.match ? "border-primary/30 bg-primary/5" : "border-border/50 bg-muted/20"
               )}
             >
-              <p className={cn("font-semibold mb-1", archetype.match && "text-primary")}>{archetype.type}</p>
+              <p className={cn("font-display font-semibold mb-1", archetype.match && "text-primary")}>{archetype.type}</p>
               <p className="text-xs text-muted-foreground">{archetype.desc}</p>
               {archetype.match && (
                 <span className="inline-block mt-2 px-2 py-0.5 bg-primary/20 text-primary text-xs rounded-full">
@@ -176,7 +176,7 @@ export default function AntagonistAnalysis() {
 
       {/* Parameter Scores */}
       {conflictParams.length > 0 && (
-        <Card className="p-6">
+        <Card className="glass-premium p-6">
           <SubSectionHeader title="Conflict Parameters" />
           <div className="space-y-4">
             {conflictParams.slice(0, 6).map((param, index) => (
@@ -193,7 +193,7 @@ export default function AntagonistAnalysis() {
       )}
 
       {/* Recommendations */}
-      <Card className="p-6">
+      <Card className="glass-premium p-6">
         <SubSectionHeader title="Antagonist Recommendations" />
         <div className="space-y-3">
           {avgPower < 7 && (

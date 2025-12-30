@@ -80,17 +80,17 @@ export default function PlotAnalysis() {
 
       {/* Plot Fundamentals Grid */}
       <div className="grid md:grid-cols-3 gap-4">
-        <Card className="p-5 text-center">
+        <Card className="glass-premium p-5 text-center">
           <p className="text-sm text-muted-foreground mb-2">Plot Originality</p>
           <ScoreDisplay score={plotScore * 0.9 + Math.random()} size="md" showLabel={false} />
           <p className="text-xs text-muted-foreground mt-2">Fresh take on familiar elements</p>
         </Card>
-        <Card className="p-5 text-center">
+        <Card className="glass-premium p-5 text-center">
           <p className="text-sm text-muted-foreground mb-2">Conflict Density</p>
           <ScoreDisplay score={plotScore * 0.95 + Math.random() * 0.5} size="md" showLabel={false} />
           <p className="text-xs text-muted-foreground mt-2">Obstacles and tension throughout</p>
         </Card>
-        <Card className="p-5 text-center">
+        <Card className="glass-premium p-5 text-center">
           <p className="text-sm text-muted-foreground mb-2">Overall Plot Score</p>
           <ScoreDisplay score={plotScore} size="md" />
         </Card>
@@ -111,14 +111,14 @@ export default function PlotAnalysis() {
 
       {/* Act Structure Analysis */}
       {totalScenes > 0 && (
-        <Card className="p-6">
+        <Card className="glass-premium p-6">
           <SubSectionHeader title="Act Structure Analysis" />
           <div className="space-y-6">
             <div className="grid md:grid-cols-3 gap-4">
               {actBreakdown.map((act, index) => (
-                <div key={index} className="p-4 rounded-lg bg-muted/30 border border-border">
+                <div key={index} className="p-4 rounded-lg bg-muted/30 border border-border/50">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="font-semibold">{act.act}</span>
+                    <span className="font-display font-semibold">{act.act}</span>
                     <span className="text-sm text-muted-foreground">{act.scenes} scenes</span>
                   </div>
                   <div className="h-2 rounded-full bg-muted overflow-hidden mb-2">
@@ -140,7 +140,7 @@ export default function PlotAnalysis() {
 
       {/* Parameter Breakdown */}
       {plotParams.length > 0 && (
-        <Card className="p-6">
+        <Card className="glass-premium p-6">
           <SubSectionHeader title="Plot Parameters" />
           <div className="space-y-4">
             {plotParams.slice(0, 8).map((param, index) => (
@@ -166,7 +166,7 @@ export default function PlotAnalysis() {
 
       {/* Key Insights */}
       {plotInsights.length > 0 && (
-        <Card className="p-6">
+        <Card className="glass-premium p-6">
           <SubSectionHeader title="Plot Insights" />
           <div className="space-y-3">
             {plotInsights.map((insight, index) => (
@@ -182,7 +182,7 @@ export default function PlotAnalysis() {
       )}
 
       {/* Recommendations */}
-      <Card className="p-6">
+      <Card className="glass-premium p-6">
         <SubSectionHeader title="Plot Recommendations" />
         <div className="space-y-3">
           {plotScore < 6 && (

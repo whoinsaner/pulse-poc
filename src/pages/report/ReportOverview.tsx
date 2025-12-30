@@ -173,46 +173,46 @@ export default function ReportOverview() {
 
       {/* Quick Stats Cards */}
       <section className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="p-5 bg-card/50 border-border/50">
+        <Card className="glass-premium p-5">
           <div className="flex items-center gap-3">
             <div className="p-3 rounded-xl bg-primary/10">
               <Target className="h-6 w-6 text-primary" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{totalParameters}</p>
+              <p className="text-2xl font-mono font-bold">{totalParameters}</p>
               <p className="text-sm text-muted-foreground">Parameters Analyzed</p>
             </div>
           </div>
         </Card>
-        <Card className="p-5 bg-card/50 border-border/50">
+        <Card className="glass-premium p-5">
           <div className="flex items-center gap-3">
             <div className="p-3 rounded-xl bg-chart-2/10">
               <Zap className="h-6 w-6 text-chart-2" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{totalInsights}</p>
+              <p className="text-2xl font-mono font-bold">{totalInsights}</p>
               <p className="text-sm text-muted-foreground">Key Insights</p>
             </div>
           </div>
         </Card>
-        <Card className="p-5 bg-card/50 border-border/50">
+        <Card className="glass-premium p-5">
           <div className="flex items-center gap-3">
             <div className="p-3 rounded-xl bg-chart-3/10">
               <Brain className="h-6 w-6 text-chart-3" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{Object.keys(reportData.categoryScores || {}).length}</p>
+              <p className="text-2xl font-mono font-bold">{Object.keys(reportData.categoryScores || {}).length}</p>
               <p className="text-sm text-muted-foreground">Analysis Categories</p>
             </div>
           </div>
         </Card>
-        <Card className="p-5 bg-card/50 border-border/50">
+        <Card className="glass-premium p-5">
           <div className="flex items-center gap-3">
             <div className="p-3 rounded-xl bg-chart-4/10">
               <TrendingUp className="h-6 w-6 text-chart-4" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{Object.keys(reportData.lensScores || {}).length}</p>
+              <p className="text-2xl font-mono font-bold">{Object.keys(reportData.lensScores || {}).length}</p>
               <p className="text-sm text-muted-foreground">Stakeholder Views</p>
             </div>
           </div>
@@ -221,16 +221,16 @@ export default function ReportOverview() {
 
       {/* Category Scores Overview */}
       <section>
-        <h2 className="text-2xl font-bold mb-6">Analysis Categories</h2>
+        <h2 className="font-display text-2xl font-bold mb-6">Analysis Categories</h2>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
           {categoryAverages.slice(0, 10).map((category, index) => (
-            <Card key={category.name} className="p-4 bg-card/50 border-border/50 hover:border-primary/50 transition-colors">
+            <Card key={category.name} className="glass-premium p-4 hover:border-primary/50 transition-colors">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   {String.fromCharCode(65 + index)}
                 </span>
                 <span className={cn(
-                  "text-lg font-bold",
+                  "text-lg font-mono font-bold",
                   category.score >= 7 ? "text-success" :
                   category.score >= 5 ? "text-chart-4" :
                   "text-warning"
@@ -270,7 +270,7 @@ export default function ReportOverview() {
       {/* Cached Stakeholder Reports */}
       {report?.id && (
         <section>
-          <h2 className="text-2xl font-bold mb-6">Stakeholder Report History</h2>
+          <h2 className="font-display text-2xl font-bold mb-6">Stakeholder Report History</h2>
           <StakeholderReportCache 
             reportId={report.id}
             onSelectLens={setActiveLens}

@@ -93,7 +93,7 @@ export default function ConceptHook() {
       />
 
       {/* Overall Concept Assessment */}
-      <Card className="p-6">
+      <Card className="glass-premium p-6">
         <SubSectionHeader title="Concept Assessment" />
         <div className="grid md:grid-cols-2 gap-4">
           {assessments.map((item, index) => (
@@ -107,7 +107,7 @@ export default function ConceptHook() {
               )}
             >
               <div className="flex items-center justify-between mb-1">
-                <span className="font-medium">{item.label}</span>
+                <span className="font-display font-medium">{item.label}</span>
                 <span className={cn(
                   "text-xs font-semibold px-2 py-0.5 rounded-full",
                   item.status === 'yes' ? 'bg-success/20 text-success' :

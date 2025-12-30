@@ -74,24 +74,24 @@ export default function SupportingCast() {
 
       {/* Cast Overview */}
       <div className="grid md:grid-cols-4 gap-4">
-        <Card className="p-5 text-center">
+        <Card className="glass-premium p-5 text-center">
           <Users className="h-5 w-5 mx-auto mb-2 text-primary" />
-          <p className="text-2xl font-bold">{characters.length}</p>
+          <p className="text-2xl font-mono font-bold">{characters.length}</p>
           <p className="text-sm text-muted-foreground">Total Characters</p>
         </Card>
-        <Card className="p-5 text-center">
+        <Card className="glass-premium p-5 text-center">
           <Star className="h-5 w-5 mx-auto mb-2 text-chart-4" />
-          <p className="text-2xl font-bold">{supportingCast.length}</p>
+          <p className="text-2xl font-mono font-bold">{supportingCast.length}</p>
           <p className="text-sm text-muted-foreground">Supporting Roles</p>
         </Card>
-        <Card className="p-5 text-center">
+        <Card className="glass-premium p-5 text-center">
           <MessageSquare className="h-5 w-5 mx-auto mb-2 text-chart-2" />
-          <p className="text-2xl font-bold">{castBalance.toFixed(0)}%</p>
+          <p className="text-2xl font-mono font-bold">{castBalance.toFixed(0)}%</p>
           <p className="text-sm text-muted-foreground">Supporting Dialogue</p>
         </Card>
-        <Card className="p-5 text-center">
+        <Card className="glass-premium p-5 text-center">
           <Film className="h-5 w-5 mx-auto mb-2 text-chart-3" />
-          <p className="text-2xl font-bold">{assessedCast.filter(c => c.hasArc).length}</p>
+          <p className="text-2xl font-mono font-bold">{assessedCast.filter(c => c.hasArc).length}</p>
           <p className="text-sm text-muted-foreground">With Character Arcs</p>
         </Card>
       </div>
@@ -117,22 +117,22 @@ export default function SupportingCast() {
 
       {/* Character Table */}
       {assessedCast.length > 0 && (
-        <Card className="p-6">
+        <Card className="glass-premium p-6">
           <SubSectionHeader title="Supporting Character Analysis" />
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-border">
-                  <th className="text-left py-3 px-4 font-semibold">Character</th>
-                  <th className="text-center py-3 px-4 font-semibold">Dialogue</th>
-                  <th className="text-center py-3 px-4 font-semibold">Scenes</th>
-                  <th className="text-center py-3 px-4 font-semibold">Has Arc</th>
-                  <th className="text-center py-3 px-4 font-semibold">Utility</th>
+                <tr className="border-b border-border/50">
+                  <th className="text-left py-3 px-4 font-display font-semibold">Character</th>
+                  <th className="text-center py-3 px-4 font-display font-semibold">Dialogue</th>
+                  <th className="text-center py-3 px-4 font-display font-semibold">Scenes</th>
+                  <th className="text-center py-3 px-4 font-display font-semibold">Has Arc</th>
+                  <th className="text-center py-3 px-4 font-display font-semibold">Utility</th>
                 </tr>
               </thead>
               <tbody>
                 {assessedCast.map((char, index) => (
-                  <tr key={index} className="border-b border-border/50 hover:bg-muted/30">
+                  <tr key={index} className="border-b border-border/30 hover:bg-muted/30">
                     <td className="py-3 px-4">
                       <div>
                         <p className="font-medium">{char.name}</p>
@@ -142,11 +142,11 @@ export default function SupportingCast() {
                       </div>
                     </td>
                     <td className="text-center py-3 px-4">
-                      <span className="text-sm">{char.dialogueCount}</span>
+                      <span className="text-sm font-mono">{char.dialogueCount}</span>
                       <span className="text-xs text-muted-foreground ml-1">({char.dialogueShare}%)</span>
                     </td>
                     <td className="text-center py-3 px-4">
-                      <span className="text-sm">{char.sceneCount}</span>
+                      <span className="text-sm font-mono">{char.sceneCount}</span>
                     </td>
                     <td className="text-center py-3 px-4">
                       <span className={cn(
@@ -168,12 +168,12 @@ export default function SupportingCast() {
       )}
 
       {/* Relationship Map Summary */}
-      <Card className="p-6">
+      <Card className="glass-premium p-6">
         <SubSectionHeader title="Key Relationships" />
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
           {assessedCast.slice(0, 6).map((char, index) => (
-            <div key={index} className="p-4 rounded-lg bg-muted/30 border border-border">
-              <p className="font-medium mb-2">{char.name}</p>
+            <div key={index} className="p-4 rounded-lg bg-muted/30 border border-border/50">
+              <p className="font-display font-medium mb-2">{char.name}</p>
               {char.relationships && char.relationships.length > 0 ? (
                 <div className="space-y-1">
                   {char.relationships.slice(0, 2).map((rel, idx) => (
@@ -191,7 +191,7 @@ export default function SupportingCast() {
       </Card>
 
       {/* Recommendations */}
-      <Card className="p-6">
+      <Card className="glass-premium p-6">
         <SubSectionHeader title="Cast Recommendations" />
         <div className="space-y-3">
           {assessedCast.filter(c => !c.hasArc).length > 3 && (
