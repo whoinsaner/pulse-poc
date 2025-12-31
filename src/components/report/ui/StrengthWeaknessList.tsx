@@ -25,19 +25,25 @@ export function StrengthWeaknessList({
       className
     )}>
       {strengths.length > 0 && (
-        <div className="rounded-xl border border-success/30 bg-success/5 p-4">
-          <div className="flex items-center gap-2 mb-4">
-            <TrendingUp className="h-5 w-5 text-success" />
-            <h4 className="font-semibold text-success">What Works</h4>
+        <div className="glass-premium rounded-xl border-l-4 border-l-success p-5 transition-all duration-300 hover:shadow-lg hover:shadow-success/10">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="p-2 rounded-lg bg-success/10">
+              <TrendingUp className="h-5 w-5 text-success" />
+            </div>
+            <h4 className="font-display font-semibold text-success tracking-tight">What Works</h4>
           </div>
-          <ul className="space-y-3">
+          <ul className="space-y-4">
             {strengths.map((item, index) => (
-              <li key={index} className="flex gap-3">
+              <li 
+                key={index} 
+                className="flex gap-3 animate-fade-in"
+                style={{ animationDelay: `${index * 50}ms` }}
+              >
                 <CheckCircle2 className="h-5 w-5 text-success shrink-0 mt-0.5" />
                 <div>
                   <p className="text-sm font-medium">{item.text}</p>
                   {item.detail && (
-                    <p className="text-xs text-muted-foreground mt-0.5">{item.detail}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{item.detail}</p>
                   )}
                 </div>
               </li>
@@ -47,19 +53,25 @@ export function StrengthWeaknessList({
       )}
       
       {weaknesses.length > 0 && (
-        <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4">
-          <div className="flex items-center gap-2 mb-4">
-            <TrendingDown className="h-5 w-5 text-destructive" />
-            <h4 className="font-semibold text-destructive">Needs Improvement</h4>
+        <div className="glass-premium rounded-xl border-l-4 border-l-destructive p-5 transition-all duration-300 hover:shadow-lg hover:shadow-destructive/10">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="p-2 rounded-lg bg-destructive/10">
+              <TrendingDown className="h-5 w-5 text-destructive" />
+            </div>
+            <h4 className="font-display font-semibold text-destructive tracking-tight">Needs Improvement</h4>
           </div>
-          <ul className="space-y-3">
+          <ul className="space-y-4">
             {weaknesses.map((item, index) => (
-              <li key={index} className="flex gap-3">
+              <li 
+                key={index} 
+                className="flex gap-3 animate-fade-in"
+                style={{ animationDelay: `${index * 50}ms` }}
+              >
                 <XCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
                 <div>
                   <p className="text-sm font-medium">{item.text}</p>
                   {item.detail && (
-                    <p className="text-xs text-muted-foreground mt-0.5">{item.detail}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{item.detail}</p>
                   )}
                 </div>
               </li>
@@ -87,11 +99,12 @@ export function StrengthWeaknessTags({ items, type, className }: TagListProps) {
         <span 
           key={index}
           className={cn(
-            "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium",
+            "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium backdrop-blur-sm transition-all duration-200 hover:scale-105",
             isStrength 
-              ? "bg-success/10 text-success" 
-              : "bg-destructive/10 text-destructive"
+              ? "bg-success/10 text-success hover:bg-success/15" 
+              : "bg-destructive/10 text-destructive hover:bg-destructive/15"
           )}
+          style={{ animationDelay: `${index * 30}ms` }}
         >
           {isStrength ? (
             <CheckCircle2 className="h-3.5 w-3.5" />

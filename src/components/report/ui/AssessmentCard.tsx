@@ -13,6 +13,7 @@ interface AssessmentCardProps {
   title?: string;
   items: AssessmentItem[];
   className?: string;
+  style?: React.CSSProperties;
 }
 
 const statusConfig: Record<AssessmentStatus, { icon: typeof CheckCircle2; color: string; bgColor: string; label: string }> = {
@@ -37,16 +38,22 @@ const statusConfig: Record<AssessmentStatus, { icon: typeof CheckCircle2; color:
   na: { 
     icon: MinusCircle, 
     color: 'text-muted-foreground', 
-    bgColor: 'bg-muted/50',
+    bgColor: 'bg-muted/30',
     label: 'N/A'
   },
 };
 
-export function AssessmentCard({ title, items, className }: AssessmentCardProps) {
+export function AssessmentCard({ title, items, className, style }: AssessmentCardProps) {
   return (
-    <div className={cn("rounded-xl border border-border bg-card p-4", className)}>
+    <div 
+      className={cn(
+        "glass-premium rounded-xl p-5 transition-all duration-300 hover:shadow-lg",
+        className
+      )}
+      style={style}
+    >
       {title && (
-        <h4 className="font-semibold text-lg mb-4">{title}</h4>
+        <h4 className="font-display font-semibold text-lg mb-5 tracking-tight">{title}</h4>
       )}
       <div className="space-y-3">
         {items.map((item, index) => {
@@ -57,17 +64,20 @@ export function AssessmentCard({ title, items, className }: AssessmentCardProps)
             <div 
               key={index} 
               className={cn(
-                "flex items-center justify-between p-3 rounded-lg",
+                "flex items-center justify-between p-4 rounded-xl transition-all duration-200 hover:scale-[1.01] group",
                 config.bgColor
               )}
             >
               <div className="flex-1">
                 <p className="font-medium">{item.label}</p>
                 {item.description && (
-                  <p className="text-sm text-muted-foreground mt-0.5">{item.description}</p>
+                  <p className="text-sm text-muted-foreground mt-1">{item.description}</p>
                 )}
               </div>
-              <div className={cn("flex items-center gap-2", config.color)}>
+              <div className={cn(
+                "flex items-center gap-2 transition-transform duration-200 group-hover:scale-110",
+                config.color
+              )}>
                 <Icon className="h-5 w-5" />
                 <span className="text-sm font-medium">{config.label}</span>
               </div>
@@ -97,9 +107,15 @@ export function AssessmentGrid({ groups, columns = 3, className }: AssessmentGri
   };
 
   return (
-    <div className={cn("grid gap-4", gridCols[columns], className)}>
+    <div className={cn("grid gap-5", gridCols[columns], className)}>
       {groups.map((group, index) => (
-        <AssessmentCard key={index} title={group.title} items={group.items} />
+        <AssessmentCard 
+          key={index} 
+          title={group.title} 
+          items={group.items}
+          className="animate-fade-in"
+          style={{ animationDelay: `${index * 50}ms` } as React.CSSProperties}
+        />
       ))}
     </div>
   );

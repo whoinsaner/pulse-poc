@@ -26,62 +26,71 @@ const verdictConfig: Record<VerdictType, {
   borderColor: string;
   iconColor: string;
   titleColor: string;
+  glowColor: string;
 }> = {
   info: { 
     icon: Info, 
     bgColor: 'bg-info/5',
-    borderColor: 'border-info/30',
+    borderColor: 'border-l-info',
     iconColor: 'text-info',
     titleColor: 'text-info',
+    glowColor: 'hover:shadow-info/10',
   },
   success: { 
     icon: CheckCircle2, 
     bgColor: 'bg-success/5',
-    borderColor: 'border-success/30',
+    borderColor: 'border-l-success',
     iconColor: 'text-success',
     titleColor: 'text-success',
+    glowColor: 'hover:shadow-success/10',
   },
   warning: { 
     icon: AlertTriangle, 
     bgColor: 'bg-warning/5',
-    borderColor: 'border-warning/30',
+    borderColor: 'border-l-warning',
     iconColor: 'text-warning',
     titleColor: 'text-warning',
+    glowColor: 'hover:shadow-warning/10',
   },
   error: { 
     icon: XCircle, 
     bgColor: 'bg-destructive/5',
-    borderColor: 'border-destructive/30',
+    borderColor: 'border-l-destructive',
     iconColor: 'text-destructive',
     titleColor: 'text-destructive',
+    glowColor: 'hover:shadow-destructive/10',
   },
   insight: { 
     icon: Lightbulb, 
     bgColor: 'bg-primary/5',
-    borderColor: 'border-primary/30',
+    borderColor: 'border-l-primary',
     iconColor: 'text-primary',
     titleColor: 'text-primary',
+    glowColor: 'hover:shadow-primary/10',
   },
   finding: { 
     icon: Target, 
     bgColor: 'bg-chart-2/5',
-    borderColor: 'border-chart-2/30',
+    borderColor: 'border-l-chart-2',
     iconColor: 'text-chart-2',
     titleColor: 'text-chart-2',
+    glowColor: 'hover:shadow-chart-2/10',
   },
   opportunity: { 
     icon: TrendingUp, 
     bgColor: 'bg-success/5',
-    borderColor: 'border-success/30',
+    borderColor: 'border-l-success',
     iconColor: 'text-success',
     titleColor: 'text-success',
+    glowColor: 'hover:shadow-success/10',
   },
   issue: { 
     icon: AlertCircle, 
     bgColor: 'bg-destructive/5',
-    borderColor: 'border-destructive/30',
+    borderColor: 'border-l-destructive',
     iconColor: 'text-destructive',
     titleColor: 'text-destructive',
+    glowColor: 'hover:shadow-destructive/10',
   },
 };
 
@@ -91,16 +100,22 @@ export function VerdictBox({ type, title, content, className, icon }: VerdictBox
 
   return (
     <div className={cn(
-      "rounded-xl border-l-4 p-4",
+      "glass-premium rounded-xl border-l-4 p-5 transition-all duration-300 hover:shadow-lg group",
       config.bgColor,
       config.borderColor,
+      config.glowColor,
       className
     )}>
-      <div className="flex items-start gap-3">
-        {icon || <IconComponent className={cn("h-5 w-5 mt-0.5 shrink-0", config.iconColor)} />}
+      <div className="flex items-start gap-4">
+        <div className={cn(
+          "p-2 rounded-lg transition-transform duration-300 group-hover:scale-110",
+          config.bgColor
+        )}>
+          {icon || <IconComponent className={cn("h-5 w-5", config.iconColor)} />}
+        </div>
         <div className="flex-1 min-w-0">
-          <h4 className={cn("font-semibold", config.titleColor)}>{title}</h4>
-          <p className="mt-1 text-sm text-muted-foreground leading-relaxed">{content}</p>
+          <h4 className={cn("font-display font-semibold tracking-tight", config.titleColor)}>{title}</h4>
+          <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{content}</p>
         </div>
       </div>
     </div>
@@ -120,7 +135,7 @@ export function InlineVerdict({ type, label, className }: InlineVerdictProps) {
 
   return (
     <span className={cn(
-      "inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium",
+      "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium backdrop-blur-sm transition-all duration-200 hover:scale-105",
       config.bgColor,
       config.iconColor,
       className
