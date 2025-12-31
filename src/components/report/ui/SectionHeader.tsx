@@ -20,17 +20,20 @@ export function SectionHeader({
   children 
 }: SectionHeaderProps) {
   return (
-    <div className={cn("flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6", className)}>
-      <div className="flex items-center gap-3">
+    <div className={cn(
+      "flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8 pb-6 border-b border-border/50",
+      className
+    )}>
+      <div className="flex items-center gap-4">
         {Icon && (
-          <div className="flex items-center justify-center h-12 w-12 rounded-xl bg-primary/10">
-            <Icon className="h-6 w-6 text-primary" />
+          <div className="flex items-center justify-center h-14 w-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 backdrop-blur-sm">
+            <Icon className="h-7 w-7 text-primary" />
           </div>
         )}
         <div>
-          <h2 className="text-2xl font-bold">{title}</h2>
+          <h2 className="font-display text-2xl font-bold tracking-tight">{title}</h2>
           {subtitle && (
-            <p className="text-muted-foreground mt-0.5">{subtitle}</p>
+            <p className="text-muted-foreground mt-1">{subtitle}</p>
           )}
         </div>
       </div>
@@ -54,9 +57,12 @@ interface SubSectionHeaderProps {
 
 export function SubSectionHeader({ title, subtitle, score, className }: SubSectionHeaderProps) {
   return (
-    <div className={cn("flex items-center justify-between pb-3 border-b border-border mb-4", className)}>
+    <div className={cn(
+      "flex items-center justify-between pb-4 border-b border-border/30 mb-5",
+      className
+    )}>
       <div>
-        <h3 className="text-lg font-semibold">{title}</h3>
+        <h3 className="font-display text-lg font-semibold tracking-tight">{title}</h3>
         {subtitle && (
           <p className="text-sm text-muted-foreground mt-0.5">{subtitle}</p>
         )}

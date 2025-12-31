@@ -37,25 +37,25 @@ function getScoreLabel(score: number): string {
 
 const sizeConfig = {
   sm: {
-    container: 'px-2 py-1',
+    container: 'px-3 py-2',
     score: 'text-lg',
     max: 'text-xs',
     label: 'text-xs',
   },
   md: {
-    container: 'px-3 py-2',
+    container: 'px-4 py-3',
     score: 'text-2xl',
     max: 'text-sm',
     label: 'text-xs',
   },
   lg: {
-    container: 'px-4 py-3',
+    container: 'px-5 py-4',
     score: 'text-4xl',
     max: 'text-base',
     label: 'text-sm',
   },
   xl: {
-    container: 'px-6 py-4',
+    container: 'px-8 py-6',
     score: 'text-6xl',
     max: 'text-lg',
     label: 'text-base',
@@ -70,21 +70,21 @@ export function ScoreDisplay({ score, maxScore = 10, size = 'md', showLabel = tr
 
   return (
     <div className={cn(
-      "inline-flex flex-col items-center rounded-xl",
+      "inline-flex flex-col items-center rounded-2xl backdrop-blur-sm transition-all duration-300 hover:scale-105",
       bgColorClass,
       config.container,
       className
     )}>
       <div className="flex items-baseline gap-1">
-        <span className={cn("font-bold", colorClass, config.score)}>
+        <span className={cn("font-mono font-bold tracking-tight", colorClass, config.score)}>
           {score.toFixed(1)}
         </span>
-        <span className={cn("text-muted-foreground", config.max)}>
+        <span className={cn("text-muted-foreground font-mono", config.max)}>
           / {maxScore}
         </span>
       </div>
       {showLabel && (
-        <span className={cn("font-medium mt-1", colorClass, config.label)}>
+        <span className={cn("font-display font-medium mt-1.5 tracking-tight", colorClass, config.label)}>
           {label}
         </span>
       )}
@@ -106,21 +106,21 @@ export function ScoreBar({ score, maxScore = 10, label, showValue = true, classN
   const colorClass = getScoreColor(score);
 
   return (
-    <div className={cn("space-y-1.5", className)}>
+    <div className={cn("space-y-2", className)}>
       {(label || showValue) && (
         <div className="flex items-center justify-between text-sm">
-          {label && <span className="font-medium">{label}</span>}
+          {label && <span className="font-display font-medium tracking-tight">{label}</span>}
           {showValue && (
-            <span className={cn("font-semibold", colorClass)}>
+            <span className={cn("font-mono font-semibold tabular-nums", colorClass)}>
               {score.toFixed(1)} / {maxScore}
             </span>
           )}
         </div>
       )}
-      <div className="h-2 bg-muted rounded-full overflow-hidden">
+      <div className="h-2.5 bg-muted/50 rounded-full overflow-hidden backdrop-blur-sm">
         <div 
           className={cn(
-            "h-full rounded-full transition-all duration-500",
+            "h-full rounded-full transition-all duration-700 ease-out relative overflow-hidden",
             score >= 8 ? 'bg-[hsl(var(--score-excellent))]' :
             score >= 6.5 ? 'bg-[hsl(var(--score-good))]' :
             score >= 5 ? 'bg-[hsl(var(--score-average))]' :
@@ -128,7 +128,9 @@ export function ScoreBar({ score, maxScore = 10, label, showValue = true, classN
             'bg-[hsl(var(--score-critical))]'
           )}
           style={{ width: `${percentage}%` }}
-        />
+        >
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+        </div>
       </div>
     </div>
   );
@@ -148,10 +150,10 @@ export function ScoreBadge({ score, maxScore = 10, size = 'md', className }: Sco
 
   return (
     <span className={cn(
-      "inline-flex items-center justify-center rounded-full font-bold",
+      "inline-flex items-center justify-center rounded-full font-mono font-bold tabular-nums backdrop-blur-sm transition-all duration-200 hover:scale-110",
       bgColorClass,
       colorClass,
-      size === 'sm' ? 'h-6 w-12 text-xs' : 'h-8 w-16 text-sm',
+      size === 'sm' ? 'h-7 w-14 text-xs' : 'h-9 w-18 text-sm',
       className
     )}>
       {score.toFixed(1)}
