@@ -53,9 +53,7 @@ export default function ReportOverview() {
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
       {/* Hero Section */}
-      <section className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-primary/5 via-transparent to-chart-6/5 p-8 lg:p-12">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-primary/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-        
+      <section className="relative rounded-2xl overflow-hidden bg-card border border-border p-8 lg:p-12">
         <div className="relative grid lg:grid-cols-2 gap-8 items-center">
           {/* Left: Title and Metadata */}
           <div className="space-y-6">
@@ -74,7 +72,7 @@ export default function ReportOverview() {
 
             {/* Title */}
             <div>
-              <h1 className="text-4xl lg:text-5xl font-bold tracking-tight mb-3">
+              <h1 className="text-3xl lg:text-4xl font-bold tracking-tight mb-3">
                 {metadata?.title || 'Untitled Script'}
               </h1>
               {metadata?.logline && (
@@ -88,7 +86,7 @@ export default function ReportOverview() {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               {metadata?.genre && (
                 <div className="flex items-center gap-2">
-                  <div className="p-2 rounded-lg bg-card border border-border">
+                  <div className="p-2 rounded-lg bg-muted">
                     <Sparkles className="h-4 w-4 text-primary" />
                   </div>
                   <div>
@@ -99,8 +97,8 @@ export default function ReportOverview() {
               )}
               {metadata?.pageCount && (
                 <div className="flex items-center gap-2">
-                  <div className="p-2 rounded-lg bg-card border border-border">
-                    <FileText className="h-4 w-4 text-chart-2" />
+                  <div className="p-2 rounded-lg bg-muted">
+                    <FileText className="h-4 w-4 text-success" />
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Pages</p>
@@ -109,8 +107,8 @@ export default function ReportOverview() {
                 </div>
               )}
               <div className="flex items-center gap-2">
-                <div className="p-2 rounded-lg bg-card border border-border">
-                  <Film className="h-4 w-4 text-chart-3" />
+                <div className="p-2 rounded-lg bg-muted">
+                  <Film className="h-4 w-4 text-info" />
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Scenes</p>
@@ -118,7 +116,7 @@ export default function ReportOverview() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <div className="p-2 rounded-lg bg-card border border-border">
+                <div className="p-2 rounded-lg bg-muted">
                   <Users className="h-4 w-4 text-chart-4" />
                 </div>
                 <div>
@@ -129,7 +127,7 @@ export default function ReportOverview() {
             </div>
 
             {/* Lens indicator */}
-            <div className="flex items-center gap-3 p-4 rounded-xl bg-card/50 border border-border/50 backdrop-blur w-fit">
+            <div className="flex items-center gap-3 p-4 rounded-xl bg-muted border border-border w-fit">
               <div className="p-2 rounded-lg bg-primary/10">
                 <TrendingUp className="h-5 w-5 text-primary" />
               </div>
@@ -143,26 +141,23 @@ export default function ReportOverview() {
           {/* Right: Score visualization */}
           <div className="flex flex-col items-center justify-center">
             <div className="relative">
-              <div className="absolute inset-0 scale-110 blur-3xl opacity-30">
-                <ScoreRing score={currentScore} size="lg" />
-              </div>
               <ScoreRing score={currentScore} size="lg" showLabel />
             </div>
             
             <div className="mt-6 text-center">
-              <p className="text-5xl font-bold gradient-text">{currentScore.toFixed(1)}</p>
+              <p className="text-5xl font-bold text-primary">{currentScore.toFixed(1)}</p>
               <p className="text-lg text-muted-foreground mt-1">Overall Readiness Score</p>
             </div>
 
             {/* Confidence indicator */}
-            <div className="mt-6 p-4 rounded-xl bg-card/50 border border-border/50 w-full max-w-xs">
+            <div className="mt-6 p-4 rounded-xl bg-muted border border-border w-full max-w-xs">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm text-muted-foreground">Analysis Confidence</span>
                 <span className="font-semibold">{(avgConfidence * 100).toFixed(0)}%</span>
               </div>
-              <div className="h-2 rounded-full bg-muted overflow-hidden">
+              <div className="h-2 rounded-full bg-background overflow-hidden">
                 <div 
-                  className="h-full rounded-full bg-gradient-to-r from-primary to-chart-6 transition-all duration-1000"
+                  className="h-full rounded-full bg-primary transition-all duration-1000"
                   style={{ width: `${avgConfidence * 100}%` }}
                 />
               </div>
@@ -173,7 +168,7 @@ export default function ReportOverview() {
 
       {/* Quick Stats Cards */}
       <section className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="glass-premium p-5">
+        <Card className="p-5">
           <div className="flex items-center gap-3">
             <div className="p-3 rounded-xl bg-primary/10">
               <Target className="h-6 w-6 text-primary" />
@@ -184,10 +179,10 @@ export default function ReportOverview() {
             </div>
           </div>
         </Card>
-        <Card className="glass-premium p-5">
+        <Card className="p-5">
           <div className="flex items-center gap-3">
-            <div className="p-3 rounded-xl bg-chart-2/10">
-              <Zap className="h-6 w-6 text-chart-2" />
+            <div className="p-3 rounded-xl bg-success/10">
+              <Zap className="h-6 w-6 text-success" />
             </div>
             <div>
               <p className="text-2xl font-mono font-bold">{totalInsights}</p>
@@ -195,10 +190,10 @@ export default function ReportOverview() {
             </div>
           </div>
         </Card>
-        <Card className="glass-premium p-5">
+        <Card className="p-5">
           <div className="flex items-center gap-3">
-            <div className="p-3 rounded-xl bg-chart-3/10">
-              <Brain className="h-6 w-6 text-chart-3" />
+            <div className="p-3 rounded-xl bg-info/10">
+              <Brain className="h-6 w-6 text-info" />
             </div>
             <div>
               <p className="text-2xl font-mono font-bold">{Object.keys(reportData.categoryScores || {}).length}</p>
@@ -206,7 +201,7 @@ export default function ReportOverview() {
             </div>
           </div>
         </Card>
-        <Card className="glass-premium p-5">
+        <Card className="p-5">
           <div className="flex items-center gap-3">
             <div className="p-3 rounded-xl bg-chart-4/10">
               <TrendingUp className="h-6 w-6 text-chart-4" />
@@ -221,10 +216,10 @@ export default function ReportOverview() {
 
       {/* Category Scores Overview */}
       <section>
-        <h2 className="font-display text-2xl font-bold mb-6">Analysis Categories</h2>
+        <h2 className="text-2xl font-bold mb-6">Analysis Categories</h2>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
           {categoryAverages.slice(0, 10).map((category, index) => (
-            <Card key={category.name} className="glass-premium p-4 hover:border-primary/50 transition-colors">
+            <Card key={category.name} className="p-4">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   {String.fromCharCode(65 + index)}
@@ -270,7 +265,7 @@ export default function ReportOverview() {
       {/* Cached Stakeholder Reports */}
       {report?.id && (
         <section>
-          <h2 className="font-display text-2xl font-bold mb-6">Stakeholder Report History</h2>
+          <h2 className="text-2xl font-bold mb-6">Stakeholder Report History</h2>
           <StakeholderReportCache 
             reportId={report.id}
             onSelectLens={setActiveLens}

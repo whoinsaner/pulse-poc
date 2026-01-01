@@ -2,12 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Pulse v4 Design System - Studio Noir Aesthetic */
+/* Pulse Design System - Shipfaster UI Clean Aesthetic */
 
 @layer base {
   :root {
-    /* Light mode */
-    --background: 220 20% 97%;
+    /* Light mode - Shipfaster Clean Theme */
+    --background: 0 0% 98%;
     --foreground: 222 47% 11%;
 
     --card: 0 0% 100%;
@@ -16,21 +16,21 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
 
-    --primary: 239 84% 67%;
+    --primary: 239 84% 60%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 14% 92%;
+    --secondary: 220 14% 96%;
     --secondary-foreground: 222 47% 11%;
 
     --muted: 220 14% 96%;
     --muted-foreground: 220 9% 46%;
 
-    --accent: 239 84% 67%;
+    --accent: 239 84% 60%;
     --accent-foreground: 0 0% 100%;
 
-    /* Premium Gold Accent */
-    --accent-gold: 38 92% 50%;
-    --accent-gold-foreground: 0 0% 0%;
+    /* Premium Accent */
+    --accent-gold: 239 84% 60%;
+    --accent-gold-foreground: 0 0% 100%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
@@ -44,20 +44,20 @@
     --info: 199 89% 48%;
     --info-foreground: 0 0% 100%;
 
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 239 84% 67%;
+    --border: 220 14% 91%;
+    --input: 220 14% 91%;
+    --ring: 239 84% 60%;
 
-    --radius: 0.75rem;
+    --radius: 0.875rem;
 
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 222 47% 11%;
-    --sidebar-primary: 239 84% 67%;
+    --sidebar-primary: 239 84% 60%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 220 14% 96%;
     --sidebar-accent-foreground: 222 47% 11%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 239 84% 67%;
+    --sidebar-border: 220 14% 91%;
+    --sidebar-ring: 239 84% 60%;
 
     /* Score colors */
     --score-excellent: 160 84% 39%;
@@ -66,22 +66,22 @@
     --score-poor: 25 95% 53%;
     --score-critical: 0 84% 60%;
 
-    /* Chart colors - Cinematic palette */
-    --chart-1: 239 84% 67%;
-    --chart-2: 38 92% 50%;
-    --chart-3: 160 84% 39%;
+    /* Chart colors - Clean palette */
+    --chart-1: 239 84% 60%;
+    --chart-2: 160 84% 39%;
+    --chart-3: 199 89% 48%;
     --chart-4: 280 65% 60%;
-    --chart-5: 199 89% 48%;
+    --chart-5: 38 92% 50%;
     --chart-6: 0 84% 60%;
 
     /* Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(239, 84%, 67%) 0%, hsl(280, 65%, 60%) 100%);
-    --gradient-gold: linear-gradient(135deg, hsl(38, 92%, 50%) 0%, hsl(25, 95%, 53%) 100%);
+    --gradient-primary: linear-gradient(135deg, hsl(239, 84%, 60%) 0%, hsl(239, 84%, 50%) 100%);
+    --gradient-gold: linear-gradient(135deg, hsl(239, 84%, 60%) 0%, hsl(239, 84%, 50%) 100%);
     --gradient-surface: linear-gradient(180deg, hsl(0, 0%, 100%) 0%, hsl(220, 14%, 98%) 100%);
   }
 
   .dark {
-    /* Studio Noir - Deep cinematic palette */
+    /* Dark mode - Optional */
     --background: 222 47% 5%;
     --foreground: 210 40% 96%;
 
@@ -91,7 +91,7 @@
     --popover: 222 47% 8%;
     --popover-foreground: 210 40% 96%;
 
-    --primary: 239 84% 67%;
+    --primary: 239 84% 65%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 222 47% 12%;
@@ -100,12 +100,12 @@
     --muted: 222 47% 15%;
     --muted-foreground: 215 20% 55%;
 
-    --accent: 239 84% 67%;
+    --accent: 239 84% 65%;
     --accent-foreground: 0 0% 100%;
 
-    /* Premium Gold Accent */
-    --accent-gold: 38 92% 50%;
-    --accent-gold-foreground: 0 0% 0%;
+    /* Premium Accent */
+    --accent-gold: 239 84% 65%;
+    --accent-gold-foreground: 0 0% 100%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
@@ -121,16 +121,16 @@
 
     --border: 222 47% 18%;
     --input: 222 47% 18%;
-    --ring: 239 84% 67%;
+    --ring: 239 84% 65%;
 
     --sidebar-background: 222 47% 6%;
     --sidebar-foreground: 210 40% 96%;
-    --sidebar-primary: 239 84% 67%;
+    --sidebar-primary: 239 84% 65%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 222 47% 12%;
     --sidebar-accent-foreground: 210 40% 96%;
     --sidebar-border: 222 47% 18%;
-    --sidebar-ring: 239 84% 67%;
+    --sidebar-ring: 239 84% 65%;
 
     /* Score colors - Vibrant for dark mode */
     --score-excellent: 160 84% 45%;
@@ -139,17 +139,17 @@
     --score-poor: 25 95% 58%;
     --score-critical: 0 72% 55%;
 
-    /* Chart colors - Cinematic */
+    /* Chart colors */
     --chart-1: 239 84% 70%;
-    --chart-2: 38 92% 55%;
-    --chart-3: 160 84% 45%;
+    --chart-2: 160 84% 45%;
+    --chart-3: 199 89% 55%;
     --chart-4: 280 65% 65%;
-    --chart-5: 199 89% 55%;
+    --chart-5: 38 92% 55%;
     --chart-6: 0 72% 58%;
 
     /* Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(239, 84%, 67%) 0%, hsl(280, 65%, 60%) 100%);
-    --gradient-gold: linear-gradient(135deg, hsl(38, 92%, 50%) 0%, hsl(25, 95%, 53%) 100%);
+    --gradient-primary: linear-gradient(135deg, hsl(239, 84%, 65%) 0%, hsl(239, 84%, 55%) 100%);
+    --gradient-gold: linear-gradient(135deg, hsl(239, 84%, 65%) 0%, hsl(239, 84%, 55%) 100%);
     --gradient-surface: linear-gradient(180deg, hsl(222, 47%, 8%) 0%, hsl(222, 47%, 5%) 100%);
   }
 }
@@ -160,48 +160,43 @@
   }
 
   html {
-    @apply dark;
     scroll-behavior: smooth;
   }
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: 'DM Sans', system-ui, sans-serif;
+    font-family: 'Inter', system-ui, sans-serif;
   }
 
-  /* Premium Typography - Fraunces for headlines */
-  h1, h2, h3 {
-    font-family: 'Fraunces', Georgia, serif;
-    font-optical-sizing: auto;
+  /* Clean Typography - Inter for everything */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Inter', system-ui, sans-serif;
   }
 
   h1 {
-    @apply text-4xl md:text-5xl lg:text-6xl font-semibold tracking-tight;
+    @apply text-3xl md:text-4xl lg:text-5xl font-semibold tracking-tight;
     letter-spacing: -0.02em;
   }
 
   h2 {
-    @apply text-3xl md:text-4xl font-semibold tracking-tight;
+    @apply text-2xl md:text-3xl font-semibold tracking-tight;
     letter-spacing: -0.01em;
   }
 
   h3 {
-    @apply text-2xl md:text-3xl font-medium;
+    @apply text-xl md:text-2xl font-semibold;
   }
 
   h4 {
-    @apply text-xl md:text-2xl font-semibold;
-    font-family: 'DM Sans', system-ui, sans-serif;
+    @apply text-lg md:text-xl font-semibold;
   }
 
   h5 {
-    @apply text-lg font-medium;
-    font-family: 'DM Sans', system-ui, sans-serif;
+    @apply text-base font-medium;
   }
 
   h6 {
-    @apply text-base font-medium;
-    font-family: 'DM Sans', system-ui, sans-serif;
+    @apply text-sm font-medium;
   }
 
   /* Monospace for data/scores */
@@ -213,37 +208,33 @@
 @layer components {
   /* Gradient text utilities */
   .gradient-text {
-    @apply bg-clip-text text-transparent;
-    background-image: var(--gradient-primary);
+    @apply text-primary font-semibold;
   }
 
   .gradient-gold {
-    @apply bg-clip-text text-transparent;
-    background-image: var(--gradient-gold);
+    @apply text-primary font-semibold;
   }
 
-  /* Premium glass effects */
+  /* Clean card effects - Shipfaster style */
   .glass {
-    @apply bg-card/60 backdrop-blur-xl border border-white/5;
-    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+    @apply bg-card border border-border shadow-sm;
   }
 
   .glass-premium {
-    @apply bg-card/80 backdrop-blur-2xl border border-white/10;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    @apply bg-card border border-border shadow-sm hover:shadow-md transition-shadow;
   }
 
   .glass-strong {
-    @apply bg-card/95 backdrop-blur-2xl border border-border/50;
+    @apply bg-card border border-border;
   }
 
-  /* Gold glow effect */
+  /* Subtle glow effects */
   .glow-gold {
-    box-shadow: 0 0 30px hsl(var(--accent-gold) / 0.3);
+    box-shadow: 0 0 0 1px hsl(var(--primary) / 0.1);
   }
 
   .glow-primary {
-    box-shadow: 0 0 30px hsl(var(--primary) / 0.3);
+    box-shadow: 0 0 0 1px hsl(var(--primary) / 0.1);
   }
 
   /* Score indicator colors */
@@ -253,35 +244,26 @@
   .score-poor { color: hsl(var(--score-poor)); }
   .score-critical { color: hsl(var(--score-critical)); }
 
-  .score-bg-excellent { background-color: hsl(var(--score-excellent) / 0.15); }
-  .score-bg-good { background-color: hsl(var(--score-good) / 0.15); }
-  .score-bg-average { background-color: hsl(var(--score-average) / 0.15); }
-  .score-bg-poor { background-color: hsl(var(--score-poor) / 0.15); }
-  .score-bg-critical { background-color: hsl(var(--score-critical) / 0.15); }
+  .score-bg-excellent { background-color: hsl(var(--score-excellent) / 0.1); }
+  .score-bg-good { background-color: hsl(var(--score-good) / 0.1); }
+  .score-bg-average { background-color: hsl(var(--score-average) / 0.1); }
+  .score-bg-poor { background-color: hsl(var(--score-poor) / 0.1); }
+  .score-bg-critical { background-color: hsl(var(--score-critical) / 0.1); }
 
-  /* Gradient border */
+  /* Gradient border - subtle */
   .gradient-border {
     position: relative;
     background: hsl(var(--card));
     border-radius: var(--radius);
+    border: 1px solid hsl(var(--border));
   }
 
   .gradient-border::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: var(--radius);
-    padding: 1px;
-    background: var(--gradient-primary);
-    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
-    pointer-events: none;
+    display: none;
   }
 
   .gradient-border-gold::before {
-    background: var(--gradient-gold);
+    display: none;
   }
 
   /* Animated underline */
@@ -296,7 +278,7 @@
     left: 0;
     width: 0;
     height: 2px;
-    background: var(--gradient-gold);
+    background: hsl(var(--primary));
     transition: width 0.3s ease;
   }
 
@@ -304,29 +286,22 @@
     width: 100%;
   }
 
-  /* Premium card hover */
+  /* Clean card hover */
   .card-hover {
-    @apply transition-all duration-300 ease-out;
+    @apply transition-all duration-200 ease-out;
   }
 
   .card-hover:hover {
-    @apply -translate-y-1;
-    box-shadow: 0 20px 40px -15px hsl(var(--primary) / 0.2);
+    @apply -translate-y-0.5 shadow-md;
   }
 
-  /* Pulse glow effect */
+  /* Subtle pulse effect */
   .pulse-glow {
     @apply relative;
   }
 
   .pulse-glow::before {
-    content: '';
-    @apply absolute -inset-1 rounded-lg opacity-0 blur-xl transition-opacity duration-500;
-    background: var(--gradient-primary);
-  }
-
-  .pulse-glow:hover::before {
-    @apply opacity-30;
+    display: none;
   }
 
   /* Scroll sections */
@@ -334,15 +309,15 @@
     @apply scroll-mt-20;
   }
 
-  /* Display font utility */
+  /* Font utilities - all Inter */
   .font-display {
-    font-family: 'Fraunces', Georgia, serif;
-    font-optical-sizing: auto;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-weight: 600;
   }
 
   /* Body font utility */
   .font-body {
-    font-family: 'DM Sans', system-ui, sans-serif;
+    font-family: 'Inter', system-ui, sans-serif;
   }
 
   /* Data font utility for scores */

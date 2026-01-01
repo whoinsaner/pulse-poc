@@ -148,7 +148,7 @@ export function CommandHeader({
   const { group: currentGroup, item: currentItem } = findCurrentNav();
 
   return (
-    <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-xl border-b border-border">
+    <header className="sticky top-0 z-40 bg-card border-b border-border">
       {/* Top row: Back, title, lens, actions */}
       <div className="h-14 flex items-center justify-between px-4 lg:px-6 gap-4">
         {/* Left: Back + Title */}
@@ -163,23 +163,23 @@ export function CommandHeader({
           </Button>
           
           <div className="min-w-0">
-            <h1 className="font-display font-semibold text-lg truncate">
+            <h1 className="font-semibold text-lg truncate">
               {reportData.scriptMetadata?.title || report.title}
             </h1>
           </div>
         </div>
 
         {/* Center: Score badge */}
-        <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full glass-premium">
+        <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20">
           <span className="text-xs text-muted-foreground">Score</span>
-          <span className="font-mono font-bold text-sm gradient-text">{currentScore.toFixed(1)}</span>
+          <span className="font-mono font-bold text-sm text-primary">{currentScore.toFixed(1)}</span>
         </div>
 
         {/* Right: Lens + Actions */}
         <div className="flex items-center gap-2">
           {stakeholderLens && (
-            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent-gold/10 border border-accent-gold/20">
-              <span className="text-xs font-medium text-accent-gold">
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20">
+              <span className="text-xs font-medium text-primary">
                 {LENS_CONFIG[stakeholderLens].label}
               </span>
             </div>
@@ -208,23 +208,23 @@ export function CommandHeader({
                   const isActive = item.path === currentPath;
                   const Icon = item.icon;
                   
-                  return (
-                    <button
-                      key={item.id}
-                      onClick={() => navigate(`/report/${runId}${item.path}`)}
-                      className={cn(
-                        "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all",
-                        isActive 
-                          ? "bg-primary text-primary-foreground shadow-glow" 
-                          : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                      )}
-                    >
-                      <Icon className="h-3.5 w-3.5" />
-                      <span className="hidden sm:inline">{item.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={() => navigate(`/report/${runId}${item.path}`)}
+                        className={cn(
+                          "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all",
+                          isActive 
+                            ? "bg-primary text-primary-foreground shadow-sm" 
+                            : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                        )}
+                      >
+                        <Icon className="h-3.5 w-3.5" />
+                        <span className="hidden sm:inline">{item.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               
               {/* Separator */}
               {group.id !== 'reference' && (
