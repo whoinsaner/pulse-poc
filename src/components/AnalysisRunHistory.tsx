@@ -21,6 +21,14 @@ import { cn } from '@/lib/utils';
 import { formatDistanceToNow, format } from 'date-fns';
 import type { AnalysisStatus, StakeholderLens, LENS_CONFIG } from '@/types/database';
 
+interface AgentProgress {
+  status: 'pending' | 'running' | 'completed' | 'failed';
+  error?: string;
+  startedAt?: string;
+  completedAt?: string;
+  model?: string;
+}
+
 interface AnalysisRun {
   id: string;
   status: AnalysisStatus;
@@ -30,6 +38,7 @@ interface AnalysisRun {
   started_at: string | null;
   completed_at: string | null;
   error_message: string | null;
+  agent_progress: Record<string, AgentProgress> | null;
   report?: {
     id: string;
     overall_score: number | null;
@@ -64,6 +73,7 @@ export function AnalysisRunHistory({ scriptId, scriptTitle }: AnalysisRunHistory
           started_at,
           completed_at,
           error_message,
+          agent_progress,
           reports (
             id,
             overall_score
@@ -76,6 +86,7 @@ export function AnalysisRunHistory({ scriptId, scriptTitle }: AnalysisRunHistory
 
       const formattedRuns = (data || []).map(run => ({
         ...run,
+        agent_progress: run.agent_progress as unknown as Record<string, AgentProgress> | null,
         report: Array.isArray(run.reports) && run.reports.length > 0 ? run.reports[0] : undefined,
       }));
 
@@ -136,6 +147,30 @@ export function AnalysisRunHistory({ scriptId, scriptTitle }: AnalysisRunHistory
     return null;
   };
 
+  const getAgentStats = (run: AnalysisRun) => {
+    if (!run.agent_progress) return null;
+    
+    let completed = 0, failed = 0, pending = 0, running = 0;
+    const failedAgents: { name: string; error?: string }[] = [];
+    
+    for (const [agentName, progress] of Object.entries(run.agent_progress)) {
+      if (agentName === '_meta') continue;
+      
+      switch (progress.status) {
+        case 'completed': completed++; break;
+        case 'failed': 
+          failed++; 
+          failedAgents.push({ name: agentName, error: progress.error });
+          break;
+        case 'running': running++; break;
+        default: pending++; break;
+      }
+    }
+    
+    const total = completed + failed + pending + running;
+    return { completed, failed, pending, running, total, failedAgents };
+  };
+
   if (loading) {
     return (
       <Card>
@@ -173,71 +208,116 @@ export function AnalysisRunHistory({ scriptId, scriptTitle }: AnalysisRunHistory
             </p>
           </div>
         ) : (
-          <ScrollArea className="h-[300px] pr-4">
+          <ScrollArea className="h-[350px] pr-4">
             <div className="space-y-3">
-              {runs.map((run, index) => (
-                <div
-                  key={run.id}
-                  className={cn(
-                    'p-4 rounded-lg border transition-colors',
-                    index === 0 && run.status === 'completed'
-                      ? 'border-primary/30 bg-primary/5'
-                      : 'border-border hover:bg-muted/50'
-                  )}
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-2">
-                        {getStatusIcon(run.status)}
-                        {getStatusBadge(run.status)}
-                        {run.quality_mode && (
-                          <Badge variant="outline" className="text-xs gap-1">
-                            {getQualityModeIcon(run.quality_mode)}
-                            {run.quality_mode}
-                          </Badge>
-                        )}
-                        {run.stakeholder_lens && (
-                          <Badge variant="secondary" className="text-xs">
-                            {run.stakeholder_lens.replace('_', ' ')}
-                          </Badge>
-                        )}
-                      </div>
+              {runs.map((run, index) => {
+                const agentStats = getAgentStats(run);
+                
+                return (
+                  <div
+                    key={run.id}
+                    className={cn(
+                      'p-4 rounded-lg border transition-colors',
+                      index === 0 && run.status === 'completed'
+                        ? 'border-primary/30 bg-primary/5'
+                        : 'border-border hover:bg-muted/50'
+                    )}
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-2">
+                          {getStatusIcon(run.status)}
+                          {getStatusBadge(run.status)}
+                          {run.quality_mode && (
+                            <Badge variant="outline" className="text-xs gap-1">
+                              {getQualityModeIcon(run.quality_mode)}
+                              {run.quality_mode}
+                            </Badge>
+                          )}
+                          {run.stakeholder_lens && (
+                            <Badge variant="secondary" className="text-xs">
+                              {run.stakeholder_lens.replace('_', ' ')}
+                            </Badge>
+                          )}
+                        </div>
 
-                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          {formatDistanceToNow(new Date(run.created_at), { addSuffix: true })}
-                        </span>
-                        {getDuration(run) && (
-                          <span>Duration: {getDuration(run)}</span>
-                        )}
-                        {run.report?.overall_score && (
-                          <span className="text-primary font-medium">
-                            Score: {run.report.overall_score.toFixed(1)}
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {formatDistanceToNow(new Date(run.created_at), { addSuffix: true })}
                           </span>
+                          {getDuration(run) && (
+                            <span>Duration: {getDuration(run)}</span>
+                          )}
+                          {run.report?.overall_score && (
+                            <span className="text-primary font-medium">
+                              Score: {run.report.overall_score.toFixed(1)}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Agent stats */}
+                        {agentStats && (
+                          <div className="flex flex-wrap items-center gap-2 mt-2 text-xs">
+                            {agentStats.completed > 0 && (
+                              <span className="text-emerald-600 dark:text-emerald-400">
+                                ✓ {agentStats.completed} completed
+                              </span>
+                            )}
+                            {agentStats.failed > 0 && (
+                              <span className="text-destructive">
+                                ✕ {agentStats.failed} failed
+                              </span>
+                            )}
+                            {agentStats.running > 0 && (
+                              <span className="text-blue-500">
+                                ● {agentStats.running} running
+                              </span>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Failed agents details */}
+                        {agentStats && agentStats.failedAgents.length > 0 && (
+                          <div className="mt-2 p-2 rounded bg-destructive/10 border border-destructive/20">
+                            <p className="text-xs font-medium text-destructive mb-1">Failed Agents:</p>
+                            <ul className="text-xs text-destructive/80 space-y-0.5">
+                              {agentStats.failedAgents.slice(0, 4).map((agent) => (
+                                <li key={agent.name} className="truncate">
+                                  • {agent.name.replace('Agent', '')}: {agent.error?.slice(0, 50) || 'Unknown error'}
+                                  {agent.error && agent.error.length > 50 && '...'}
+                                </li>
+                              ))}
+                              {agentStats.failedAgents.length > 4 && (
+                                <li className="text-muted-foreground">
+                                  + {agentStats.failedAgents.length - 4} more...
+                                </li>
+                              )}
+                            </ul>
+                          </div>
+                        )}
+
+                        {run.error_message && !agentStats?.failedAgents.length && (
+                          <p className="text-xs text-destructive mt-2 truncate">
+                            Error: {run.error_message}
+                          </p>
                         )}
                       </div>
 
-                      {run.error_message && (
-                        <p className="text-xs text-destructive mt-2 truncate">
-                          Error: {run.error_message}
-                        </p>
+                      {run.status === 'completed' && run.report && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => navigate(`/report/${run.id}`)}
+                        >
+                          <Eye className="h-4 w-4 mr-1" />
+                          View
+                        </Button>
                       )}
                     </div>
-
-                    {run.status === 'completed' && run.report && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => navigate(`/report/${run.id}`)}
-                      >
-                        <Eye className="h-4 w-4 mr-1" />
-                        View
-                      </Button>
-                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </ScrollArea>
         )}
