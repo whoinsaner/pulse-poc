@@ -1025,6 +1025,51 @@ function sanitizeJsonString(str: string): string {
 }
 
 /**
+ * Extract balanced JSON object starting from a given position
+ */
+function extractBalancedJson(content: string, startIndex: number): string | null {
+  let depth = 0;
+  let jsonEnd = -1;
+  let inString = false;
+  let escaped = false;
+  
+  for (let i = startIndex; i < content.length; i++) {
+    const char = content[i];
+    
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    
+    if (char === '\\') {
+      escaped = true;
+      continue;
+    }
+    
+    if (char === '"' && !escaped) {
+      inString = !inString;
+      continue;
+    }
+    
+    if (!inString) {
+      if (char === '{') depth++;
+      else if (char === '}') {
+        depth--;
+        if (depth === 0) {
+          jsonEnd = i + 1;
+          break;
+        }
+      }
+    }
+  }
+  
+  if (jsonEnd > startIndex) {
+    return content.slice(startIndex, jsonEnd);
+  }
+  return null;
+}
+
+/**
  * Extract JSON from AI response with multiple fallback strategies
  * Handles: markdown blocks, explanatory text, malformed JSON, control characters
  */
@@ -1043,11 +1088,26 @@ function extractJsonFromResponse(content: string, agentName: string): any {
   // Strategy 1: Check for markdown code blocks (```json ... ``` or ``` ... ```)
   const codeBlockMatch = sanitizedContent.match(/```(?:json)?\s*([\s\S]*?)```/);
   if (codeBlockMatch) {
+    const codeBlockContent = codeBlockMatch[1].trim();
     try {
-      const result = JSON.parse(codeBlockMatch[1].trim());
+      const result = JSON.parse(codeBlockContent);
       console.log(`[${agentName}] Parsed via code block strategy`);
       return result;
     } catch (e) {
+      // Try to extract valid JSON from code block using balanced brace strategy
+      const jsonStart = codeBlockContent.indexOf('{');
+      if (jsonStart !== -1) {
+        const extracted = extractBalancedJson(codeBlockContent, jsonStart);
+        if (extracted) {
+          try {
+            const result = JSON.parse(extracted);
+            console.log(`[${agentName}] Parsed via code block + balanced-brace strategy`);
+            return result;
+          } catch {
+            // Continue to other strategies
+          }
+        }
+      }
       console.log(`[${agentName}] Code block JSON parse failed, trying other strategies`);
     }
   }
