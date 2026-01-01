@@ -64,18 +64,29 @@ const QUALITY_MODE_PRESETS: Record<QualityMode, Record<string, { model: ModelId;
     default: { model: 'google/gemini-2.5-flash-lite', maxRetries: 3, retryDelayMs: 1500 },
     complex: { model: 'google/gemini-2.5-flash', maxRetries: 3, retryDelayMs: 2000 },
     synthesis: { model: 'google/gemini-2.5-flash', maxRetries: 3, retryDelayMs: 2000 },
+    system: { model: 'google/gemini-2.5-flash', maxRetries: 3, retryDelayMs: 2000 }, // System agents need reliable JSON
   },
   balanced: {
     default: { model: 'google/gemini-2.5-flash-lite', maxRetries: 3, retryDelayMs: 1500 },
     complex: { model: 'google/gemini-2.5-flash', maxRetries: 3, retryDelayMs: 2000 },
     synthesis: { model: 'google/gemini-2.5-pro', maxRetries: 3, retryDelayMs: 3000 },
+    system: { model: 'google/gemini-2.5-flash', maxRetries: 3, retryDelayMs: 2000 }, // Upgraded from flash-lite for better JSON reliability
   },
   quality: {
     default: { model: 'google/gemini-2.5-flash', maxRetries: 3, retryDelayMs: 2000 },
     complex: { model: 'google/gemini-2.5-pro', maxRetries: 3, retryDelayMs: 3000 },
     synthesis: { model: 'google/gemini-2.5-pro', maxRetries: 3, retryDelayMs: 3000 },
+    system: { model: 'google/gemini-2.5-flash', maxRetries: 3, retryDelayMs: 2000 },
   },
 };
+
+// System agents that require reliable JSON output - use upgraded models
+const SYSTEM_AGENTS = new Set([
+  'IntakeNormalizerAgent',
+  'ScriptTypeClassifierAgent', 
+  'ClassifierArbitrationAgent',
+  'MultiTypeBlendingAgent',
+]);
 
 // Agents that require deeper reasoning (complex tier)
 const COMPLEX_AGENTS = new Set([
@@ -138,8 +149,10 @@ async function getAgentModelConfig(
   const preset = QUALITY_MODE_PRESETS[qualityMode];
   const isSynthesis = SYNTHESIS_AGENTS.has(agentName);
   const isComplex = COMPLEX_AGENTS.has(agentName);
+  const isSystem = SYSTEM_AGENTS.has(agentName);
   
-  const config = isSynthesis ? preset.synthesis : (isComplex ? preset.complex : preset.default);
+  // System agents get upgraded models for better JSON reliability
+  const config = isSynthesis ? preset.synthesis : (isSystem ? preset.system : (isComplex ? preset.complex : preset.default));
   console.log(`[ModelConfig] Using preset for ${agentName} (${qualityMode}): ${config.model}`);
   
   return config;
@@ -982,8 +995,38 @@ async function extractTextFromFile(
 // ============= ROBUST JSON EXTRACTION =============
 
 /**
+ * Sanitize control characters in JSON string that can cause parse failures
+ * Handles: unescaped newlines, tabs, and other control chars within string values
+ */
+function sanitizeJsonString(str: string): string {
+  // First pass: escape unescaped control characters within what looks like JSON strings
+  // This regex finds content between quotes and escapes control chars
+  let result = str;
+  
+  // Remove literal control characters that aren't valid in JSON strings
+  // Keep valid JSON escape sequences like \n, \t, \r, etc.
+  result = result.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+  
+  // Fix common issues: unescaped newlines/tabs in string literals
+  // Match strings and escape internal newlines/tabs properly
+  try {
+    result = result.replace(/"([^"\\]|\\.)*"/g, (match) => {
+      return match
+        .replace(/(?<!\\)\n/g, '\\n')
+        .replace(/(?<!\\)\r/g, '\\r')
+        .replace(/(?<!\\)\t/g, '\\t');
+    });
+  } catch {
+    // If lookbehind not supported, do simpler replacement
+    result = result.replace(/\n(?=[^"]*"(?:[^"\\]|\\.)*$)/g, '\\n');
+  }
+  
+  return result;
+}
+
+/**
  * Extract JSON from AI response with multiple fallback strategies
- * Handles: markdown blocks, explanatory text, malformed JSON
+ * Handles: markdown blocks, explanatory text, malformed JSON, control characters
  */
 function extractJsonFromResponse(content: string, agentName: string): any {
   if (!content || content.trim().length === 0) {
@@ -991,8 +1034,14 @@ function extractJsonFromResponse(content: string, agentName: string): any {
     throw new Error(`Failed to parse AI response as JSON: ${agentName} returned empty response`);
   }
 
+  // Log raw content for debugging (first/last 200 chars)
+  console.log(`[${agentName}] Raw response preview: "${content.slice(0, 150).replace(/\n/g, '\\n')}..."`);
+
+  // Pre-process: sanitize control characters
+  const sanitizedContent = sanitizeJsonString(content);
+
   // Strategy 1: Check for markdown code blocks (```json ... ``` or ``` ... ```)
-  const codeBlockMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
+  const codeBlockMatch = sanitizedContent.match(/```(?:json)?\s*([\s\S]*?)```/);
   if (codeBlockMatch) {
     try {
       const result = JSON.parse(codeBlockMatch[1].trim());
@@ -1004,7 +1053,7 @@ function extractJsonFromResponse(content: string, agentName: string): any {
   }
 
   // Strategy 2: Find JSON object that starts with {"scores" (expected format)
-  const scoresMatch = content.match(/\{"scores"\s*:\s*\[[\s\S]*?\](?:\s*,\s*"insights"\s*:\s*\[[\s\S]*?\])?\s*\}/);
+  const scoresMatch = sanitizedContent.match(/\{"scores"\s*:\s*\[[\s\S]*?\](?:\s*,\s*"insights"\s*:\s*\[[\s\S]*?\])?\s*\}/);
   if (scoresMatch) {
     try {
       const result = JSON.parse(scoresMatch[0]);
@@ -1015,16 +1064,30 @@ function extractJsonFromResponse(content: string, agentName: string): any {
     }
   }
 
-  // Strategy 3: Find outermost balanced JSON object
-  const jsonStart = content.indexOf('{');
+  // Strategy 3: Find JSON array (for InsightSynthesisAgent)
+  if (agentName === 'InsightSynthesisAgent') {
+    const arrayMatch = sanitizedContent.match(/\[[\s\S]*\]/);
+    if (arrayMatch) {
+      try {
+        const result = JSON.parse(arrayMatch[0]);
+        console.log(`[${agentName}] Parsed via array strategy (InsightSynthesis)`);
+        return result;
+      } catch (e) {
+        console.log(`[${agentName}] Array JSON parse failed`);
+      }
+    }
+  }
+
+  // Strategy 4: Find outermost balanced JSON object
+  const jsonStart = sanitizedContent.indexOf('{');
   if (jsonStart !== -1) {
     let depth = 0;
     let jsonEnd = -1;
     let inString = false;
     let escaped = false;
     
-    for (let i = jsonStart; i < content.length; i++) {
-      const char = content[i];
+    for (let i = jsonStart; i < sanitizedContent.length; i++) {
+      const char = sanitizedContent[i];
       
       if (escaped) {
         escaped = false;
@@ -1055,7 +1118,7 @@ function extractJsonFromResponse(content: string, agentName: string): any {
     
     if (jsonEnd > jsonStart) {
       try {
-        const result = JSON.parse(content.slice(jsonStart, jsonEnd));
+        const result = JSON.parse(sanitizedContent.slice(jsonStart, jsonEnd));
         console.log(`[${agentName}] Parsed via balanced-brace strategy`);
         return result;
       } catch (e) {
@@ -1064,13 +1127,14 @@ function extractJsonFromResponse(content: string, agentName: string): any {
     }
   }
 
-  // Strategy 4: Try to fix common issues and parse
-  const cleanedContent = content
+  // Strategy 5: Try to fix common issues and parse
+  const cleanedContent = sanitizedContent
     .replace(/,\s*}/g, '}')  // Remove trailing commas
     .replace(/,\s*]/g, ']')  // Remove trailing commas in arrays
     .replace(/'/g, '"')      // Replace single quotes
     .replace(/\n/g, ' ')     // Remove newlines
-    .replace(/\t/g, ' ');    // Remove tabs
+    .replace(/\t/g, ' ')     // Remove tabs
+    .replace(/\s+/g, ' ');   // Normalize whitespace
   
   const lastResortMatch = cleanedContent.match(/\{[\s\S]*\}/);
   if (lastResortMatch) {
@@ -1081,8 +1145,8 @@ function extractJsonFromResponse(content: string, agentName: string): any {
     } catch (e) {
       // Log detailed info for debugging
       console.error(`[${agentName}] All JSON parse strategies failed.`);
-      console.error(`[${agentName}] Content starts: "${content.slice(0, 200).replace(/\n/g, '\\n')}"`);
-      console.error(`[${agentName}] Content ends: "${content.slice(-200).replace(/\n/g, '\\n')}"`);
+      console.error(`[${agentName}] Sanitized content starts: "${sanitizedContent.slice(0, 300).replace(/\n/g, '\\n')}"`);
+      console.error(`[${agentName}] Sanitized content ends: "${sanitizedContent.slice(-300).replace(/\n/g, '\\n')}"`);
     }
   }
 
@@ -2228,34 +2292,51 @@ Return JSON array:
       }),
     });
 
-    if (!response.ok) return;
+    if (!response.ok) {
+      console.error('[InsightSynthesisAgent] API error:', response.status);
+      await updateAgentProgress(supabase, analysisRunId, 'InsightSynthesisAgent', 'failed', `API error: ${response.status}`);
+      return;
+    }
 
     const result = await response.json();
     const content = result.choices?.[0]?.message?.content || '';
-    const jsonMatch = content.match(/\[[\s\S]*\]/);
     
-    if (jsonMatch) {
-      const insights = JSON.parse(jsonMatch[0]);
-      for (const insight of insights) {
-        await supabase.from('insights').insert({
-          analysis_run_id: analysisRunId,
-          category: insight.category || 'Synthesis',
-          title: insight.title,
-          description: insight.description,
-          priority: insight.priority || 1,
-          actionable: insight.actionable !== false,
-          supporting_evidence: {
-            evidence: insight.supportingEvidence || [],
-            affectedStakeholders: insight.affectedStakeholders || [],
-            minimalFix: insight.minimalFix || '',
-            maximalFix: insight.maximalFix || '',
-          },
-        });
+    // Use the robust JSON extraction with control character handling
+    try {
+      const sanitized = sanitizeJsonString(content);
+      const jsonMatch = sanitized.match(/\[[\s\S]*\]/);
+      
+      if (jsonMatch) {
+        const insights = JSON.parse(jsonMatch[0]);
+        for (const insight of insights) {
+          await supabase.from('insights').insert({
+            analysis_run_id: analysisRunId,
+            category: insight.category || 'Synthesis',
+            title: insight.title,
+            description: insight.description,
+            priority: insight.priority || 1,
+            actionable: insight.actionable !== false,
+            supporting_evidence: {
+              evidence: insight.supportingEvidence || [],
+              affectedStakeholders: insight.affectedStakeholders || [],
+              minimalFix: insight.minimalFix || '',
+              maximalFix: insight.maximalFix || '',
+            },
+          });
+        }
+        
+        // Update agent progress
+        await updateAgentProgress(supabase, analysisRunId, 'InsightSynthesisAgent', 'completed');
+        console.log('[InsightSynthesisAgent] Completed successfully');
+      } else {
+        console.error('[InsightSynthesisAgent] No JSON array found in response');
+        await updateAgentProgress(supabase, analysisRunId, 'InsightSynthesisAgent', 'failed', 'No JSON array in response');
       }
+    } catch (parseError) {
+      console.error('[InsightSynthesisAgent] JSON parse error:', parseError);
+      console.error('[InsightSynthesisAgent] Raw content:', content.slice(0, 500));
+      await updateAgentProgress(supabase, analysisRunId, 'InsightSynthesisAgent', 'failed', `JSON parse error: ${parseError}`);
     }
-    
-    // Update agent progress
-    await updateAgentProgress(supabase, analysisRunId, 'InsightSynthesisAgent', 'completed');
   } catch (error) {
     console.error('[analyze-script] InsightSynthesis error:', error);
     await updateAgentProgress(supabase, analysisRunId, 'InsightSynthesisAgent', 'failed', String(error));
