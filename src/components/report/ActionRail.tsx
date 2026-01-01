@@ -53,16 +53,12 @@ export function ActionRail({
   const readiness = getReadinessLabel(currentScore);
 
   return (
-    <aside className="w-72 shrink-0 border-l border-border bg-card/50 backdrop-blur-xl hidden lg:flex flex-col h-[calc(100vh-6.5rem)] sticky top-[6.5rem]">
+    <aside className="w-72 shrink-0 border-l border-border bg-card hidden lg:flex flex-col h-[calc(100vh-6.5rem)] sticky top-[6.5rem]">
       <ScrollArea className="flex-1">
         <div className="p-4 space-y-6">
           {/* Hero Score */}
           <div className="text-center space-y-4">
             <div className="relative inline-block">
-              {/* Glow effect */}
-              <div className="absolute inset-0 scale-125 blur-2xl opacity-30">
-                <ScoreRing score={currentScore} size="lg" showLabel={false} animated={false} />
-              </div>
               <ScoreRing 
                 score={currentScore} 
                 size="lg" 
@@ -86,10 +82,10 @@ export function ActionRail({
           </div>
 
           {/* Quick Stats */}
-          <div className="glass-premium rounded-xl overflow-hidden">
+          <div className="bg-muted/50 rounded-xl border border-border overflow-hidden">
             <button
               onClick={() => setStatsExpanded(!statsExpanded)}
-              className="w-full flex items-center justify-between p-3 hover:bg-muted/30 transition-colors"
+              className="w-full flex items-center justify-between p-3 hover:bg-muted transition-colors"
             >
               <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Quick Stats
@@ -155,7 +151,7 @@ export function ActionRail({
               <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1">
                 Stakeholder Report
               </h3>
-              <div className="glass-premium rounded-xl p-3">
+              <div className="bg-muted/50 rounded-xl border border-border p-3">
                 <StakeholderBadge lens={stakeholderLens} size="md" showLabel />
                 <p className="text-xs text-muted-foreground mt-2">
                   Analysis tailored for {LENS_CONFIG[stakeholderLens].label.toLowerCase()} priorities
@@ -189,7 +185,7 @@ export function ActionRail({
       </ScrollArea>
 
       {/* Bottom Actions */}
-      <div className="p-4 border-t border-border bg-card/80">
+      <div className="p-4 border-t border-border bg-card">
         <ExportDialog reportId={reportId} reportTitle={reportTitle} />
       </div>
     </aside>
