@@ -10,6 +10,7 @@ import {
   Tv, 
   Film,
   Users,
+  TrendingUp,
   LucideIcon
 } from 'lucide-react';
 
@@ -23,6 +24,7 @@ const STAKEHOLDER_ICONS: Record<StakeholderLens, LucideIcon> = {
   financier: DollarSign,
   ott_platform: Tv,
   theatrical: Film,
+  investor: TrendingUp,
 };
 
 // Color themes for each stakeholder
@@ -66,6 +68,11 @@ const STAKEHOLDER_COLORS: Record<StakeholderLens, { bg: string; border: string; 
     bg: 'bg-orange-500/10',
     border: 'border-orange-500/30',
     text: 'text-orange-500',
+  },
+  investor: {
+    bg: 'bg-teal-500/10',
+    border: 'border-teal-500/30',
+    text: 'text-teal-500',
   },
 };
 

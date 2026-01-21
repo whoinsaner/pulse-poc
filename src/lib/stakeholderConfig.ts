@@ -21,10 +21,13 @@ export const STAKEHOLDER_NAV_SECTIONS: Record<StakeholderLens, string[]> = {
     'snapshot', 'concept', 'market', 'production', 'audience', 'scorecard'
   ],
   ott_platform: [
-    'snapshot', 'concept', 'plot', 'supporting', 'emotional', 'audience', 'market'
+    'snapshot', 'concept', 'plot', 'supporting', 'emotional', 'audience', 'market', 'web-series'
   ],
   theatrical: [
     'snapshot', 'concept', 'visual', 'emotional', 'market', 'production', 'audience'
+  ],
+  investor: [
+    'snapshot', 'concept', 'market', 'production', 'audience', 'web-series', 'scorecard'
   ],
 };
 
@@ -49,10 +52,13 @@ export const STAKEHOLDER_CATEGORIES: Record<StakeholderLens, string[]> = {
     'Concept & Hook', 'Market', 'Execution'
   ],
   ott_platform: [
-    'Concept & Hook', 'Character', 'Emotional Arc', 'Market'
+    'Concept & Hook', 'Character', 'Emotional Arc', 'Market', 'Web Series'
   ],
   theatrical: [
     'Concept & Hook', 'Emotional Arc', 'Market', 'Execution'
+  ],
+  investor: [
+    'Market', 'Execution', 'Concept & Hook', 'Web Series'
   ],
 };
 
@@ -84,10 +90,14 @@ export const STAKEHOLDER_AGENTS: Record<StakeholderLens, string[]> = {
   ],
   ott_platform: [
     'ConceptAgent', 'CharacterAgent', 'EmotionalArcAgent', 'MarketAgent',
-    'StakeholderLensAgent', 'InsightSynthesisAgent'
+    'WebSeriesAgent', 'StakeholderLensAgent', 'InsightSynthesisAgent'
   ],
   theatrical: [
     'ConceptAgent', 'EmotionalArcAgent', 'MarketAgent', 'ExecutionAgent',
+    'StakeholderLensAgent', 'InsightSynthesisAgent'
+  ],
+  investor: [
+    'ConceptAgent', 'MarketAgent', 'ExecutionAgent', 'WebSeriesAgent',
     'StakeholderLensAgent', 'InsightSynthesisAgent'
   ],
 };
@@ -223,5 +233,10 @@ export const STAKEHOLDER_DESCRIPTIONS: Record<StakeholderLens, {
     title: 'Theatrical',
     focus: 'Big-screen spectacle, event appeal, and theatrical experience',
     keyMetrics: ['Visual Scale', 'Emotional Impact', 'Event Potential']
+  },
+  investor: {
+    title: 'Investor',
+    focus: 'ROI metrics, monetization readiness, and market positioning',
+    keyMetrics: ['Monetization Readiness', 'Retention Design', 'Commercial Viability']
   },
 };

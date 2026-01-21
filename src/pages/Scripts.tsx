@@ -71,6 +71,7 @@ const TYPE_LABELS: Record<ScriptType, string> = {
   short: 'Short Film',
   documentary: 'Documentary',
   comic: 'Comic Script',
+  web_series: 'Web Series',
 };
 
 export default function Scripts() {

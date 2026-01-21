@@ -36,6 +36,7 @@ const SCRIPT_TYPE_ICONS: Record<ScriptType, typeof Film> = {
   short: FileVideo,
   documentary: FileText,
   comic: Palette,
+  web_series: Tv,
 };
 
 // Script type badge colors
@@ -46,6 +47,7 @@ const SCRIPT_TYPE_COLORS: Record<ScriptType, string> = {
   short: 'bg-chart-4/15 text-chart-4 border-chart-4/30',
   documentary: 'bg-chart-5/15 text-chart-5 border-chart-5/30',
   comic: 'bg-chart-6/15 text-chart-6 border-chart-6/30',
+  web_series: 'bg-primary/15 text-primary border-primary/30',
 };
 
 export function CommandHeader({

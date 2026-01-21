@@ -58,6 +58,10 @@ const STAKEHOLDER_RELEVANCE: Record<StakeholderLens, { categories: string[]; wei
   theatrical: {
     categories: ['Concept & Hook', 'Emotional Arc', 'World & Logic', 'Theme'],
     weights: { 'spectacle_potential': 2.0, 'catharsis_strength': 1.5, 'world_immersion': 1.5 }
+  },
+  investor: {
+    categories: ['Market', 'Execution', 'Concept & Hook', 'Web Series'],
+    weights: { 'monetization_readiness': 2.5, 'commercial_viability': 2.0, 'retention_curve_design': 1.5 }
   }
 };
 
