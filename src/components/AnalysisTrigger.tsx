@@ -26,8 +26,8 @@ interface AnalysisTriggerProps {
   onAnalysisComplete?: (analysisRunId: string) => void;
 }
 
-// UASF Agent definitions with modules
-const UASF_AGENTS = [
+// USAF Agent definitions with modules
+const USAF_AGENTS = [
   { name: 'ConceptAgent', label: 'Concept & Hook', module: 'A', icon: Lightbulb },
   { name: 'StructureAgent', label: 'Structure', module: 'B', icon: Layers },
   { name: 'CharacterAgent', label: 'Character', module: 'C', icon: Users },
@@ -79,7 +79,7 @@ export function AnalysisTrigger({
   // Get agents based on selected stakeholder
   const getActiveAgents = () => {
     const agentNames = getAgentsForStakeholder(selectedStakeholder, isComic);
-    const allAgents = [...UASF_AGENTS, ...COMIC_AGENTS, ...SYNTHESIS_AGENTS];
+    const allAgents = [...USAF_AGENTS, ...COMIC_AGENTS, ...SYNTHESIS_AGENTS];
     return allAgents.filter(a => agentNames.includes(a.name));
   };
   
@@ -322,7 +322,7 @@ export function AnalysisTrigger({
     }
   };
 
-  const getAgentIcon = (agent: typeof UASF_AGENTS[0], agentStatus?: string) => {
+  const getAgentIcon = (agent: typeof USAF_AGENTS[0], agentStatus?: string) => {
     const Icon = agent.icon;
     if (agentStatus === 'running') {
       return <Loader2 className="h-4 w-4 animate-spin" />;
@@ -442,7 +442,7 @@ export function AnalysisTrigger({
           </div>
           <div>
             <h3 className="font-semibold">
-              {status === 'processing' ? 'UASF Analysis Running' : 
+              {status === 'processing' ? 'USAF Analysis Running' : 
                status === 'completed' ? 'Analysis Complete' : 
                status === 'failed' ? 'Analysis Failed' : 'Initializing...'}
             </h3>
@@ -507,7 +507,7 @@ export function AnalysisTrigger({
           Core Analysis Modules (A-J)
         </p>
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-          {UASF_AGENTS.map((agent) => {
+          {USAF_AGENTS.map((agent) => {
             const progress = agentProgress[agent.name];
             return (
               <div

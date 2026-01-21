@@ -1116,7 +1116,7 @@ Strong positioning for both direct market and digital platforms. High adaptation
 Content IP with multiple revenue streams: single issues, collected editions, digital subscriptions, and media adaptation rights. The cyberpunk genre maintains consistent market interest with proven international appeal.
 
 **Overall Recommendation:**
-Highly recommend for development. This is a visually compelling, commercially viable project with strong creative fundamentals. Analysis powered by 10-agent UASF scoring system.`,
+Highly recommend for development. This is a visually compelling, commercially viable project with strong creative fundamentals. Analysis powered by 10-agent USAF scoring system.`,
   full_report_data: SAMPLE_COMIC_REPORT_DATA,
   pdf_url: null,
   created_at: new Date().toISOString(),

@@ -147,7 +147,7 @@ export default function TestAnalysisPipeline() {
 
     toast({
       title: 'Pipeline test complete!',
-      description: 'The full UASF analysis pipeline has run successfully.',
+      description: 'The full USAF analysis pipeline has run successfully.',
     });
   };
 
@@ -168,7 +168,7 @@ export default function TestAnalysisPipeline() {
           Test Analysis Pipeline
         </h1>
         <p className="text-muted-foreground">
-          Run a full UASF analysis on a sample script to verify all 10 agents are working correctly.
+          Run a full USAF analysis on a sample script to verify all 10 agents are working correctly.
         </p>
       </div>
 
@@ -245,7 +245,7 @@ export default function TestAnalysisPipeline() {
               {step === 'complete' ? <CheckCircle className="h-4 w-4" /> : '2'}
             </div>
             <div>
-              <CardTitle className="text-lg">Run UASF Analysis</CardTitle>
+              <CardTitle className="text-lg">Run USAF Analysis</CardTitle>
               <CardDescription>
                 Execute all 10 core agents + synthesis agents
               </CardDescription>
@@ -289,7 +289,7 @@ export default function TestAnalysisPipeline() {
             <div>
               <CardTitle className="text-lg">View Generated Report</CardTitle>
               <CardDescription>
-                Review the full UASF analysis report
+                Review the full USAF analysis report
               </CardDescription>
             </div>
           </div>
@@ -335,7 +335,7 @@ export default function TestAnalysisPipeline() {
           <CardContent className="text-sm text-muted-foreground space-y-2">
             <p>✓ Script upload & storage</p>
             <p>✓ Scene & character extraction</p>
-            <p>✓ All 10 UASF analysis agents</p>
+            <p>✓ All 10 USAF analysis agents</p>
             <p>✓ Parameter scoring (50+ parameters)</p>
             <p>✓ Insight synthesis</p>
             <p>✓ Stakeholder lens weighting</p>
