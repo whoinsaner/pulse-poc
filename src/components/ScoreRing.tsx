@@ -1,8 +1,9 @@
 import { cn } from '@/lib/utils';
 import { useEffect, useState } from 'react';
+import { getScoreColor } from '@/lib/scoreUtils';
 
 interface ScoreRingProps {
-  score: number; // Expected 0-10 scale
+  score: number; // Expected 0-100 scale
   maxScore?: number;
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
   showLabel?: boolean;
@@ -16,17 +17,18 @@ interface ScoreRingProps {
 /**
  * ScoreRing - Premium circular score visualization
  * Features: Gradient arcs, glow effects, animated reveals, benchmark overlay
+ * STANDARDIZED 100-POINT SCALE
  */
 export function ScoreRing({
   score,
-  maxScore = 10,
+  maxScore = 100,
   size = 'md',
   showLabel = true,
   label,
   className,
   animated = true,
   showBenchmark = false,
-  benchmarkScore = 7,
+  benchmarkScore = 70,
 }: ScoreRingProps) {
   const [displayScore, setDisplayScore] = useState(animated ? 0 : score);
   const [isVisible, setIsVisible] = useState(!animated);
@@ -76,21 +78,17 @@ export function ScoreRing({
   const progress = (percentage / 100) * circumference;
   const benchmarkProgress = (benchmarkScore / maxScore) * circumference;
 
-  // Score-based colors with gradients
+  // Score-based colors with gradients (0-100 scale)
   const getScoreGradient = (s: number) => {
-    if (s >= 8) return { start: '#10B981', end: '#34D399', glow: 'var(--score-excellent)' };
-    if (s >= 6.5) return { start: '#22C55E', end: '#4ADE80', glow: 'var(--score-good)' };
-    if (s >= 5) return { start: '#F59E0B', end: '#FBBF24', glow: 'var(--score-average)' };
-    if (s >= 3) return { start: '#F97316', end: '#FB923C', glow: 'var(--score-poor)' };
+    if (s >= 80) return { start: '#10B981', end: '#34D399', glow: 'var(--score-excellent)' };
+    if (s >= 65) return { start: '#22C55E', end: '#4ADE80', glow: 'var(--score-good)' };
+    if (s >= 50) return { start: '#F59E0B', end: '#FBBF24', glow: 'var(--score-average)' };
+    if (s >= 30) return { start: '#F97316', end: '#FB923C', glow: 'var(--score-poor)' };
     return { start: '#EF4444', end: '#F87171', glow: 'var(--score-critical)' };
   };
 
   const getScoreClass = (s: number) => {
-    if (s >= 8) return 'score-excellent';
-    if (s >= 6.5) return 'score-good';
-    if (s >= 5) return 'score-average';
-    if (s >= 3) return 'score-poor';
-    return 'score-critical';
+    return getScoreColor(s);
   };
 
   const colors = getScoreGradient(score);
@@ -131,10 +129,10 @@ export function ScoreRing({
           strokeWidth={stroke}
         />
 
-        {/* Tick marks for scale reference */}
+        {/* Tick marks for scale reference (0-100 scale) */}
         {size !== 'xs' && size !== 'sm' && (
           <>
-            {[0, 2.5, 5, 7.5, 10].map((tick, i) => {
+            {[0, 25, 50, 75, 100].map((tick, i) => {
               const tickAngle = (tick / maxScore) * 360 - 90;
               const tickRadians = (tickAngle * Math.PI) / 180;
               const innerRadius = radius - stroke - gap;
@@ -203,7 +201,7 @@ export function ScoreRing({
         />
       </svg>
 
-      {/* Score display */}
+      {/* Score display - now shows integer for 0-100 scale */}
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <span 
           className={cn(
@@ -213,7 +211,7 @@ export function ScoreRing({
             animated && isVisible && 'animate-count-up'
           )}
         >
-          {displayScore.toFixed(1)}
+          {Math.round(displayScore)}
         </span>
         {showLabel && label && (
           <span className={cn('text-muted-foreground mt-0.5 font-medium', labelSize)}>

@@ -33,6 +33,7 @@ interface ReportContextValue {
   currentScore: number;
   isComic: boolean;
   stakeholderLens: StakeholderLens | null;
+  scriptType: import('@/types/database').ScriptType;
 }
 
 import { createContext, useContext } from 'react';
@@ -183,6 +184,8 @@ export default function ReportLayout() {
     );
   }
 
+  const scriptType = reportData?.scriptMetadata?.scriptType || 'feature';
+
   const contextValue: ReportContextValue = {
     report,
     reportData,
@@ -191,6 +194,7 @@ export default function ReportLayout() {
     currentScore: getCurrentScore(),
     isComic,
     stakeholderLens,
+    scriptType,
   };
 
   return (
