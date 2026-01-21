@@ -43,6 +43,7 @@ import SampleReportLayout from "./pages/SampleReport";
 import SampleScript from "./pages/SampleScript";
 import SampleComicReportLayout from "./pages/SampleComicReport";
 import SampleComicScript from "./pages/SampleComicScript";
+import ComicGallery from "./pages/ComicGallery";
 import Reports from "./pages/Reports";
 import Team from "./pages/Team";
 import ParametersAgents from "./pages/ParametersAgents";
@@ -166,6 +167,7 @@ const App = () => (
               <Route path="platform" element={<ReportPlatform />} />
             </Route>
             <Route path="/sample-comic-script" element={<SampleComicScript />} />
+            <Route path="/comic-gallery" element={<ComicGallery />} />
             <Route path="/team" element={<Team />} />
             <Route path="/parameters" element={<ParametersAgents />} />
             <Route path="/test-pipeline" element={<TestAnalysisPipeline />} />
