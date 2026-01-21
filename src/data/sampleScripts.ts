@@ -7,7 +7,8 @@ export interface SampleScriptData {
   id: string;
   title: string;
   genre: string;
-  scriptType: 'feature' | 'pilot' | 'episode' | 'short' | 'documentary' | 'comic';
+  scriptType: 'feature' | 'pilot' | 'episode' | 'short' | 'documentary' | 'comic' | 'web_series';
+  episodeLengthClass?: 'short_form_web' | 'mid_form_web' | 'long_form_web';
   logline: string;
   pageCount: number;
   content: string;
@@ -3738,6 +3739,258 @@ ALICE (caption): "The Rabbit runs on."
 CAPTION (bottom): "RUN RABBIT RUN will continue in Issue #2: 'The Second Chance'"
 
 END OF ISSUE ONE`
+  },
+  // ============= WEB SERIES SAMPLES =============
+  {
+    id: 'webseries-short-comedy',
+    title: 'Desk Job Diaries',
+    genre: 'Comedy',
+    scriptType: 'web_series',
+    episodeLengthClass: 'short_form_web',
+    logline: 'A hapless tech support worker documents the absurd daily chaos of a dysfunctional startup through deadpan confessionals.',
+    pageCount: 6,
+    content: `COLD OPEN - 45 SECONDS
+
+INT. NEXUS TECH - TECH SUPPORT CUBICLE - DAY
+
+DEREK (28), tired eyes, ironic t-shirt, speaks directly to camera.
+
+DEREK
+Today marks my 500th day at Nexus Tech. HR sent me a cake. It said "Happy Birthday Derek." My birthday's in March. This is November.
+
+TITLE CARD: "DESK JOB DIARIES - Episode 127: The Cake is a Lie"
+
+ACT ONE - 3 MINUTES
+
+Derek at desk, headset on.
+
+CALLER (V.O.)
+My screen is black.
+
+DEREK
+Is your computer turned on?
+
+CALLER (V.O.)
+...I should check that.
+
+CEO CHAD (35) bursts in.
+
+CHAD
+I accidentally replied-all with a meme about our competitor. How do I un-send?
+
+DEREK
+You're the CEO.
+
+CHAD
+So I can't get fired! Perfect.
+
+He leaves. Derek stares at camera.
+
+ACT TWO - 2 MINUTES
+
+All-hands meeting. MARKETING EXEC presents.
+
+MARKETING EXEC
+Our new campaign: "Nexus Tech: We're Not the Worst."
+
+Derek raises hand.
+
+DEREK
+That's the actual tagline?
+
+MARKETING EXEC
+Focus groups loved it.
+
+TAG - 30 SECONDS
+
+Derek at home with cat KERNEL.
+
+DEREK
+Kernel, should I stay at Nexus?
+
+Kernel steps on keyboard.
+
+DEREK (CONT'D)
+You just applied me to our competitor.
+(beat)
+Not the worst idea today.
+
+TEXT: "Subscribe for new episodes Tuesday!"
+
+END OF EPISODE`
+  },
+  {
+    id: 'webseries-mid-thriller',
+    title: 'The Algorithm',
+    genre: 'Sci-Fi Thriller',
+    scriptType: 'web_series',
+    episodeLengthClass: 'mid_form_web',
+    logline: 'A content creator discovers the platform algorithm is predicting real-world deaths, and she might be next.',
+    pageCount: 18,
+    content: `COLD OPEN - 90 SECONDS
+
+INT. MAYA'S APARTMENT - STREAMING SETUP - NIGHT
+
+MAYA CHEN (25), lifestyle influencer, reviews analytics. Her ring light casts harsh shadows.
+
+She gets a notification from @PredictorX - "You have 72 hours."
+
+She clicks the profile. Empty. But it follows exactly 47 people.
+
+She recognizes a face: JAMES VARMA, creator, 450K followers.
+
+NEWS INSERT: "Influencer James Varma Found Dead in Apparent Accident"
+
+MAYA
+He was followed by PredictorX. So am I.
+
+TITLE CARD: "THE ALGORITHM - Episode 1: The List"
+
+ACT ONE - 8 MINUTES
+
+Maya researches. 47 accounts followed by PredictorX. 12 are dead. All "accidents."
+
+Her roommate HARPER enters.
+
+HARPER
+Correlation isn't causation.
+
+MAYA
+James was healthy. Twenty-eight. Just signed a brand deal.
+
+HARPER
+What are you saying?
+
+MAYA
+The algorithm is killing people. I have 72 hours.
+
+ACT TWO - 6 MINUTES
+
+Maya meets DEVON PARK (30), ex-platform engineer.
+
+DEVON
+We trained the algorithm on engagement data. It learned to predict when someone will die.
+
+MAYA
+The platform knows who's going to die?
+
+DEVON
+Not just knows. Optimizes for it. Last chance to convert before churn.
+
+Maya's phone buzzes: "60 hours."
+
+MID-EPISODE HOOK - 30 SECONDS
+
+Maya walks home. Unknown caller.
+
+VOICE (V.O.)
+The algorithm doesn't kill people. It tells people when you're vulnerable.
+
+A car rounds the corner—headlights blinding—
+
+HARD CUT TO BLACK.
+
+TEXT: "The Algorithm continues next week."
+
+END OF EPISODE`
+  },
+  {
+    id: 'webseries-long-drama',
+    title: 'Flatline',
+    genre: 'Medical Drama',
+    scriptType: 'web_series',
+    episodeLengthClass: 'long_form_web',
+    logline: 'A burned-out ER doctor fighting addiction must save the hospital from a corrupt administration while hiding her own deadly secret.',
+    pageCount: 52,
+    content: `TEASER
+
+INT. MERCY GENERAL - EMERGENCY ROOM - DAWN
+
+DR. SARAH KOVAC (40), dark circles under sharp eyes, moves through controlled chaos.
+
+She works on a coding patient. Defib. Nothing. Again. Nothing.
+
+SARAH
+Time of death... 6:47 AM.
+
+INT. SUPPLY CLOSET - CONTINUOUS
+
+Sarah locks the door. Behind gauze: a prescription bottle. She stares at it. Her pager beeps. She pockets the pills—unopened—and exits.
+
+TITLE CARD: "FLATLINE"
+
+ACT ONE - 18 MINUTES
+
+DR. JAMES OKONKWO, Chief of Emergency Medicine, approaches.
+
+JAMES
+Board meeting today. New CEO Malcolm Pierce. "Restructuring."
+
+INT. HOSPITAL BOARDROOM - NOON
+
+MALCOLM PIERCE (50), expensive suit, addresses doctors.
+
+PIERCE
+Every position will be evaluated on performance metrics. Those who deliver stay.
+
+He singles out Sarah.
+
+PIERCE (CONT'D)
+Your colleagues aren't performing at your level.
+
+SARAH
+My colleagues save lives.
+
+PIERCE
+Everything can be measured, Dr. Kovac.
+
+INT. ER - LATER
+
+Sarah saves TOMMY (19), overdose victim. A moment of connection.
+
+INT. LOCKER ROOM - NIGHT
+
+Sarah stares at her pill bottle. Her sponsor texts. She lies: "Working late."
+
+MID-EPISODE RE-HOOK - 60 SECONDS
+
+Sarah works on a gunshot victim. Recognizes his face.
+
+FLASH: Years ago. A party. This man.
+
+Her hands shake. She forces herself to focus.
+
+SARAH (V.O.)
+The past doesn't stay buried. It waits.
+
+ACT TWO - 16 MINUTES
+
+The patient, ERIC DALTON, was present the night her addiction began. He holds information that could destroy her career.
+
+Pierce implements new monitoring. Sarah discovers evidence of fraud.
+
+ACT THREE - 14 MINUTES
+
+Sarah confronts Pierce with evidence: falsified outcomes, insurance fraud.
+
+PIERCE
+Walk away. Keep your secrets. Or watch everything disappear.
+
+SARAH
+I know what it takes to come back. I don't scare easy.
+
+END OF EPISODE HOOK
+
+Sarah types: "Statement Regarding Mercy General..."
+
+Text from unknown number: Photo of Sarah at her lowest. "Delete the files. Or this goes public. 24 hours."
+
+SARAH (V.O.)
+They say the truth will set you free. But first, it has to break you.
+
+TEXT: "Flatline returns next Wednesday."
+
+END OF EPISODE`
   }
 ];
 
