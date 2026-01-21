@@ -1,8 +1,9 @@
 import { cn } from '@/lib/utils';
 import { useEffect, useState } from 'react';
+import { getScoreColor } from '@/lib/scoreUtils';
 
 interface ScoreGaugeProps {
-  score: number;
+  score: number; // Expected 0-100 scale
   maxScore?: number;
   size?: 'sm' | 'md' | 'lg';
   label?: string;
@@ -14,10 +15,11 @@ interface ScoreGaugeProps {
 /**
  * ScoreGauge - Semicircular gauge dial visualization
  * Features: Needle indicator, colored segments, spring animation
+ * STANDARDIZED 100-POINT SCALE
  */
 export function ScoreGauge({
   score,
-  maxScore = 10,
+  maxScore = 100,
   size = 'md',
   label,
   showMinMax = true,
@@ -73,21 +75,17 @@ export function ScoreGauge({
   const needleAngle = startAngle - (displayScore / maxScore) * angleRange;
   const needleRadians = (needleAngle * Math.PI) / 180;
 
-  // Segment colors
+  // Segment colors (0-100 scale)
   const segments = [
-    { start: 0, end: 3, color: 'hsl(var(--score-critical))' },
-    { start: 3, end: 5, color: 'hsl(var(--score-poor))' },
-    { start: 5, end: 6.5, color: 'hsl(var(--score-average))' },
-    { start: 6.5, end: 8, color: 'hsl(var(--score-good))' },
-    { start: 8, end: 10, color: 'hsl(var(--score-excellent))' },
+    { start: 0, end: 30, color: 'hsl(var(--score-critical))' },
+    { start: 30, end: 50, color: 'hsl(var(--score-poor))' },
+    { start: 50, end: 65, color: 'hsl(var(--score-average))' },
+    { start: 65, end: 80, color: 'hsl(var(--score-good))' },
+    { start: 80, end: 100, color: 'hsl(var(--score-excellent))' },
   ];
 
   const getScoreClass = (s: number) => {
-    if (s >= 8) return 'score-excellent';
-    if (s >= 6.5) return 'score-good';
-    if (s >= 5) return 'score-average';
-    if (s >= 3) return 'score-poor';
-    return 'score-critical';
+    return getScoreColor(s);
   };
 
   return (
@@ -168,20 +166,20 @@ export function ScoreGauge({
               0
             </text>
             <text
-              x={width - strokeWidth - 10}
+              x={width - strokeWidth - 15}
               y={height - 5}
               className="text-[10px] fill-muted-foreground font-mono"
             >
-              10
+              100
             </text>
           </>
         )}
       </svg>
 
-      {/* Score display */}
+      {/* Score display - now shows integer for 0-100 scale */}
       <div className="absolute bottom-0 left-1/2 -translate-x-1/2 text-center">
         <span className={cn('font-mono font-bold', fontSize, getScoreClass(score))}>
-          {displayScore.toFixed(1)}
+          {Math.round(displayScore)}
         </span>
         {label && (
           <p className="text-xs text-muted-foreground mt-1">{label}</p>

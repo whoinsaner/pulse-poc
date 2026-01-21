@@ -1,41 +1,25 @@
 import { Info } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
+import { getScoreColor, getScoreBgColor } from '@/lib/scoreUtils';
 
 import { ParameterScoreData } from '@/types/database';
 
 interface ParameterScoringProps {
-  categoryScores: Record<string, number>; // Expected 0-10 scale
+  categoryScores: Record<string, number>; // Expected 0-100 scale
   parameterScores?: ParameterScoreData[];
 }
 
 /**
  * ParameterScoring - Displays category scores
- * STANDARDIZED 10-POINT SCALE: All scores should be 0-10
+ * STANDARDIZED 100-POINT SCALE: All scores should be 0-100
  */
 export function ParameterScoring({ categoryScores, parameterScores }: ParameterScoringProps) {
-  // 10-point scale thresholds
-  const getScoreColor = (score: number) => {
-    if (score >= 8) return 'score-excellent';
-    if (score >= 6.5) return 'score-good';
-    if (score >= 5) return 'score-average';
-    if (score >= 3) return 'score-poor';
-    return 'score-critical';
-  };
-
-  const getScoreBg = (score: number) => {
-    if (score >= 8) return 'score-bg-excellent';
-    if (score >= 6.5) return 'score-bg-good';
-    if (score >= 5) return 'score-bg-average';
-    if (score >= 3) return 'score-bg-poor';
-    return 'score-bg-critical';
-  };
-
-  // Use category scores as the primary display (already 0-10)
+  // Use category scores as the primary display (already 0-100)
   const parameters = Object.entries(categoryScores).map(([category, score]) => ({
     name: category,
     displayName: category,
-    score: score, // Already 0-10 scale
+    score: score, // Already 0-100 scale
     description: `Analysis of ${category.toLowerCase()} aspects of the script`,
     category,
   }));
@@ -71,10 +55,10 @@ export function ParameterScoring({ categoryScores, parameterScores }: ParameterS
                 </div>
                 <div className={cn(
                   'px-3 py-1.5 rounded-lg font-bold text-lg',
-                  getScoreBg(param.score),
+                  getScoreBgColor(param.score),
                   getScoreColor(param.score)
                 )}>
-                  {param.score.toFixed(1)}
+                  {Math.round(param.score)}
                 </div>
               </div>
             </div>

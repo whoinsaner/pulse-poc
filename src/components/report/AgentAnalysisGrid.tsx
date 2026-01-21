@@ -16,6 +16,8 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ParameterScoreData, ScriptType } from '@/types/database';
+import { getScoreTailwindColor, getScoreTailwindBg, getScoreBarColor } from '@/lib/scoreUtils';
+import { isComicType, getAgentCountForScriptType } from '@/lib/reportNavigation';
 
 interface AgentAnalysisGridProps {
   parameterScores: ParameterScoreData[];
@@ -46,31 +48,17 @@ const COMIC_AGENTS = [
 ];
 
 export function AgentAnalysisGrid({ parameterScores, categoryScores, scriptType }: AgentAnalysisGridProps) {
-  const isComic = scriptType === 'comic';
+  const isComic = isComicType(scriptType);
   const agents = isComic ? [...UASF_AGENTS, ...COMIC_AGENTS] : UASF_AGENTS;
+  const agentCounts = getAgentCountForScriptType(scriptType);
 
+  // Get score from categoryScores (already 0-100 scale)
   const getAgentScore = (category: string): number => {
     return categoryScores[category] || 0;
   };
 
   const getAgentParameters = (category: string): ParameterScoreData[] => {
     return parameterScores.filter(p => p.category === category);
-  };
-
-  const getScoreColor = (score: number) => {
-    if (score >= 8) return 'text-success';
-    if (score >= 6) return 'text-chart-3';
-    if (score >= 5) return 'text-chart-4';
-    if (score >= 4) return 'text-warning';
-    return 'text-destructive';
-  };
-
-  const getScoreBg = (score: number) => {
-    if (score >= 8) return 'bg-success/10 border-success/30';
-    if (score >= 6) return 'bg-chart-3/10 border-chart-3/30';
-    if (score >= 5) return 'bg-chart-4/10 border-chart-4/30';
-    if (score >= 4) return 'bg-warning/10 border-warning/30';
-    return 'bg-destructive/10 border-destructive/30';
   };
 
   return (
@@ -85,14 +73,17 @@ export function AgentAnalysisGrid({ parameterScores, categoryScores, scriptType 
             Agent Analysis Breakdown
           </h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            {agents.length} specialized AI agents analyzed your script across {Object.keys(categoryScores).length} categories
+            {isComic 
+              ? `${agentCounts.total} specialized AI agents (${agentCounts.core} core + ${agentCounts.specialized} comic) analyzed your script`
+              : `${agentCounts.core} specialized AI agents analyzed your script across ${Object.keys(categoryScores).length} categories`
+            }
           </p>
         </div>
 
         {/* Agent grid */}
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {agents.map((agent, index) => {
-            const score = getAgentScore(agent.category) / 10; // Convert to 0-10 scale
+            const score = getAgentScore(agent.category); // Already 0-100
             const parameters = getAgentParameters(agent.category);
             const Icon = agent.icon;
             
@@ -102,7 +93,7 @@ export function AgentAnalysisGrid({ parameterScores, categoryScores, scriptType 
                 className={cn(
                   'group relative p-6 rounded-2xl border bg-card transition-all duration-300',
                   'hover:shadow-lg hover:-translate-y-1',
-                  getScoreBg(score),
+                  getScoreTailwindBg(score),
                   'animate-fade-up'
                 )}
                 style={{ animationDelay: `${index * 50}ms` }}
@@ -128,12 +119,12 @@ export function AgentAnalysisGrid({ parameterScores, categoryScores, scriptType 
                 {/* Agent name */}
                 <h3 className="font-semibold text-lg mb-2">{agent.name}</h3>
 
-                {/* Score */}
+                {/* Score - now 0-100 scale */}
                 <div className="flex items-baseline gap-2 mb-4">
-                  <span className={cn('text-3xl font-bold', getScoreColor(score))}>
-                    {score.toFixed(1)}
+                  <span className={cn('text-3xl font-bold', getScoreTailwindColor(score))}>
+                    {Math.round(score)}
                   </span>
-                  <span className="text-muted-foreground text-sm">/ 10</span>
+                  <span className="text-muted-foreground text-sm">/ 100</span>
                 </div>
 
                 {/* Score bar */}
@@ -141,12 +132,9 @@ export function AgentAnalysisGrid({ parameterScores, categoryScores, scriptType 
                   <div 
                     className={cn(
                       'h-full rounded-full transition-all duration-1000',
-                      score >= 8 ? 'bg-success' :
-                      score >= 6 ? 'bg-chart-3' :
-                      score >= 5 ? 'bg-chart-4' :
-                      score >= 4 ? 'bg-warning' : 'bg-destructive'
+                      getScoreBarColor(score)
                     )}
-                    style={{ width: `${score * 10}%` }}
+                    style={{ width: `${score}%` }}
                   />
                 </div>
 
@@ -161,8 +149,8 @@ export function AgentAnalysisGrid({ parameterScores, categoryScores, scriptType 
                     {parameters.slice(0, 3).map((param, i) => (
                       <div key={i} className="flex items-center justify-between text-xs">
                         <span className="truncate text-muted-foreground">{param.displayName}</span>
-                        <span className={cn('font-medium', getScoreColor(param.score / 10))}>
-                          {(param.score / 10).toFixed(1)}
+                        <span className={cn('font-medium', getScoreTailwindColor(param.score))}>
+                          {Math.round(param.score)}
                         </span>
                       </div>
                     ))}
@@ -178,11 +166,11 @@ export function AgentAnalysisGrid({ parameterScores, categoryScores, scriptType 
           })}
         </div>
 
-        {/* Summary stats */}
+        {/* Summary stats - now 0-100 scale */}
         <div className="mt-16 grid sm:grid-cols-3 gap-6">
           <div className="p-6 rounded-2xl bg-card border border-border text-center">
             <p className="text-4xl font-bold gradient-text mb-2">
-              {(Object.values(categoryScores).reduce((a, b) => a + b, 0) / Object.values(categoryScores).length / 10).toFixed(1)}
+              {Math.round(Object.values(categoryScores).reduce((a, b) => a + b, 0) / Object.values(categoryScores).length)}
             </p>
             <p className="text-muted-foreground">Average Score</p>
           </div>

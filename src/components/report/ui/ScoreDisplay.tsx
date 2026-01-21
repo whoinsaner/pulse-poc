@@ -1,4 +1,10 @@
 import { cn } from '@/lib/utils';
+import { 
+  getScoreColor as getScoreColorUtil, 
+  getScoreBgColor as getScoreBgColorUtil, 
+  getScoreLabel as getScoreLabelUtil,
+  normalizeScore
+} from '@/lib/scoreUtils';
 
 interface ScoreDisplayProps {
   score: number;
@@ -8,31 +14,17 @@ interface ScoreDisplayProps {
   className?: string;
 }
 
+// Re-export from scoreUtils for backwards compatibility (0-100 scale)
 function getScoreColor(score: number): string {
-  if (score >= 8) return 'score-excellent';
-  if (score >= 6.5) return 'score-good';
-  if (score >= 5) return 'score-average';
-  if (score >= 3) return 'score-poor';
-  return 'score-critical';
+  return getScoreColorUtil(score);
 }
 
 function getScoreBgColor(score: number): string {
-  if (score >= 8) return 'score-bg-excellent';
-  if (score >= 6.5) return 'score-bg-good';
-  if (score >= 5) return 'score-bg-average';
-  if (score >= 3) return 'score-bg-poor';
-  return 'score-bg-critical';
+  return getScoreBgColorUtil(score);
 }
 
 function getScoreLabel(score: number): string {
-  if (score >= 9) return 'Exceptional';
-  if (score >= 8) return 'Excellent';
-  if (score >= 7) return 'Very Good';
-  if (score >= 6) return 'Good';
-  if (score >= 5) return 'Average';
-  if (score >= 4) return 'Below Average';
-  if (score >= 3) return 'Needs Work';
-  return 'Critical';
+  return getScoreLabelUtil(score);
 }
 
 const sizeConfig = {
@@ -62,7 +54,7 @@ const sizeConfig = {
   },
 };
 
-export function ScoreDisplay({ score, maxScore = 10, size = 'md', showLabel = true, className }: ScoreDisplayProps) {
+export function ScoreDisplay({ score, maxScore = 100, size = 'md', showLabel = true, className }: ScoreDisplayProps) {
   const colorClass = getScoreColor(score);
   const bgColorClass = getScoreBgColor(score);
   const label = getScoreLabel(score);
@@ -77,7 +69,7 @@ export function ScoreDisplay({ score, maxScore = 10, size = 'md', showLabel = tr
     )}>
       <div className="flex items-baseline gap-1">
         <span className={cn("font-mono font-bold tracking-tight", colorClass, config.score)}>
-          {score.toFixed(1)}
+          {Math.round(score)}
         </span>
         <span className={cn("text-muted-foreground font-mono", config.max)}>
           / {maxScore}
@@ -101,7 +93,7 @@ interface ScoreBarProps {
   className?: string;
 }
 
-export function ScoreBar({ score, maxScore = 10, label, showValue = true, className }: ScoreBarProps) {
+export function ScoreBar({ score, maxScore = 100, label, showValue = true, className }: ScoreBarProps) {
   const percentage = (score / maxScore) * 100;
   const colorClass = getScoreColor(score);
 
@@ -112,7 +104,7 @@ export function ScoreBar({ score, maxScore = 10, label, showValue = true, classN
           {label && <span className="font-display font-medium tracking-tight">{label}</span>}
           {showValue && (
             <span className={cn("font-mono font-semibold tabular-nums", colorClass)}>
-              {score.toFixed(1)} / {maxScore}
+              {Math.round(score)} / {maxScore}
             </span>
           )}
         </div>
@@ -121,10 +113,10 @@ export function ScoreBar({ score, maxScore = 10, label, showValue = true, classN
         <div 
           className={cn(
             "h-full rounded-full transition-all duration-700 ease-out relative overflow-hidden",
-            score >= 8 ? 'bg-[hsl(var(--score-excellent))]' :
-            score >= 6.5 ? 'bg-[hsl(var(--score-good))]' :
-            score >= 5 ? 'bg-[hsl(var(--score-average))]' :
-            score >= 3 ? 'bg-[hsl(var(--score-poor))]' :
+            score >= 80 ? 'bg-[hsl(var(--score-excellent))]' :
+            score >= 65 ? 'bg-[hsl(var(--score-good))]' :
+            score >= 50 ? 'bg-[hsl(var(--score-average))]' :
+            score >= 30 ? 'bg-[hsl(var(--score-poor))]' :
             'bg-[hsl(var(--score-critical))]'
           )}
           style={{ width: `${percentage}%` }}
@@ -144,7 +136,7 @@ interface ScoreBadgeProps {
   className?: string;
 }
 
-export function ScoreBadge({ score, maxScore = 10, size = 'md', className }: ScoreBadgeProps) {
+export function ScoreBadge({ score, maxScore = 100, size = 'md', className }: ScoreBadgeProps) {
   const colorClass = getScoreColor(score);
   const bgColorClass = getScoreBgColor(score);
 
@@ -156,7 +148,7 @@ export function ScoreBadge({ score, maxScore = 10, size = 'md', className }: Sco
       size === 'sm' ? 'h-7 w-14 text-xs' : 'h-9 w-18 text-sm',
       className
     )}>
-      {score.toFixed(1)}
+      {Math.round(score)}
     </span>
   );
 }

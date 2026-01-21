@@ -4,42 +4,9 @@ import { Button } from '@/components/ui/button';
 import { 
   ArrowLeft, 
   Share2, 
-  Download,
-  LayoutDashboard, 
-  Lightbulb, 
-  TrendingUp,
-  Building,
-  User,
-  UserX,
-  Users,
-  Brain,
-  MessageSquare,
-  Heart,
-  Eye,
-  Sparkles,
-  Target,
-  Film,
-  ListTodo,
-  Layers,
-  BarChart3,
-  FileText,
-  Palette,
-  LucideIcon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-interface NavItem {
-  id: string;
-  label: string;
-  icon: LucideIcon;
-  path: string;
-}
-
-interface NavGroup {
-  id: string;
-  label: string;
-  items: NavItem[];
-}
+import { getNavGroupsForScriptType, NavGroup } from '@/lib/reportNavigation';
 
 interface CommandHeaderProps {
   report: Report;
@@ -53,75 +20,6 @@ interface CommandHeaderProps {
   onShare: () => void;
 }
 
-const getNavGroups = (isComic: boolean): NavGroup[] => {
-  const groups: NavGroup[] = [
-    {
-      id: 'overview',
-      label: 'Overview',
-      items: [
-        { id: 'snapshot', label: 'Snapshot', icon: LayoutDashboard, path: '' },
-      ],
-    },
-    {
-      id: 'story',
-      label: 'Story',
-      items: [
-        { id: 'concept', label: 'Concept', icon: Lightbulb, path: '/concept' },
-        { id: 'plot', label: 'Plot', icon: TrendingUp, path: '/plot' },
-        { id: 'structure', label: 'Structure', icon: Building, path: '/structure' },
-      ],
-    },
-    {
-      id: 'characters',
-      label: 'Characters',
-      items: [
-        { id: 'protagonist', label: 'Protagonist', icon: User, path: '/protagonist' },
-        { id: 'antagonist', label: 'Antagonist', icon: UserX, path: '/antagonist' },
-        { id: 'supporting', label: 'Cast', icon: Users, path: '/supporting' },
-        { id: 'psychology', label: 'Psychology', icon: Brain, path: '/psychology' },
-      ],
-    },
-    {
-      id: 'craft',
-      label: 'Craft',
-      items: [
-        { id: 'dialogue', label: 'Dialogue', icon: MessageSquare, path: '/dialogue' },
-        { id: 'theme', label: 'Theme', icon: Heart, path: '/theme' },
-        { id: 'visual', label: 'Visual', icon: Eye, path: '/visual' },
-        { id: 'emotional', label: 'Emotion', icon: Sparkles, path: '/emotional' },
-        ...(isComic ? [{ id: 'comic', label: 'Comic', icon: Palette, path: '/comic' }] : []),
-      ],
-    },
-    {
-      id: 'market',
-      label: 'Market',
-      items: [
-        { id: 'market', label: 'Marketability', icon: TrendingUp, path: '/market' },
-        { id: 'production', label: 'Production', icon: Film, path: '/production' },
-        { id: 'audience', label: 'Audience', icon: Target, path: '/audience' },
-      ],
-    },
-    {
-      id: 'actions',
-      label: 'Actions',
-      items: [
-        { id: 'rewrite', label: 'Rewrites', icon: ListTodo, path: '/rewrite' },
-        { id: 'scenes', label: 'Scenes', icon: Layers, path: '/scenes' },
-      ],
-    },
-    {
-      id: 'reference',
-      label: 'Reference',
-      items: [
-        { id: 'scorecard', label: 'Scorecard', icon: BarChart3, path: '/scorecard' },
-        { id: 'script', label: 'Script', icon: FileText, path: '/script' },
-      ],
-    },
-  ];
-
-  return groups;
-};
-
 export function CommandHeader({
   report,
   reportData,
@@ -134,7 +32,10 @@ export function CommandHeader({
   onShare,
 }: CommandHeaderProps) {
   const navigate = useNavigate();
-  const navGroups = getNavGroups(isComic);
+  
+  // Get dynamic navigation based on script type and available categories
+  const scriptType = reportData.scriptMetadata?.scriptType;
+  const navGroups = getNavGroupsForScriptType(scriptType, reportData.categoryScores);
   
   // Find current group and item
   const findCurrentNav = () => {
@@ -142,7 +43,7 @@ export function CommandHeader({
       const item = group.items.find(item => item.path === currentPath);
       if (item) return { group, item };
     }
-    return { group: navGroups[0], item: navGroups[0].items[0] };
+    return { group: navGroups[0], item: navGroups[0]?.items[0] };
   };
   
   const { group: currentGroup, item: currentItem } = findCurrentNav();
@@ -169,10 +70,10 @@ export function CommandHeader({
           </div>
         </div>
 
-        {/* Center: Score badge */}
+        {/* Center: Score badge - now displays 0-100 scale */}
         <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20">
           <span className="text-xs text-muted-foreground">Score</span>
-          <span className="font-mono font-bold text-sm text-primary">{currentScore.toFixed(1)}</span>
+          <span className="font-mono font-bold text-sm text-primary">{Math.round(currentScore)}</span>
         </div>
 
         {/* Right: Lens + Actions */}
@@ -192,10 +93,10 @@ export function CommandHeader({
         </div>
       </div>
 
-      {/* Bottom row: Tab navigation */}
+      {/* Bottom row: Dynamic tab navigation based on script type */}
       <div className="h-12 flex items-center px-2 lg:px-4 overflow-x-auto scrollbar-hide">
         <nav className="flex items-center gap-1">
-          {navGroups.map((group) => (
+          {navGroups.map((group, groupIndex) => (
             <div key={group.id} className="flex items-center">
               {/* Group label */}
               <span className="px-2 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider hidden lg:block">
@@ -227,7 +128,7 @@ export function CommandHeader({
                 </div>
               
               {/* Separator */}
-              {group.id !== 'reference' && (
+              {groupIndex < navGroups.length - 1 && (
                 <div className="w-px h-6 bg-border mx-2 hidden lg:block" />
               )}
             </div>
