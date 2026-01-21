@@ -319,7 +319,7 @@ export function ScriptUpload({ onUploadComplete, onClose }: ScriptUploadProps) {
           <div className="space-y-2">
             <label className="text-sm font-medium">Script Type</label>
             <div className="flex flex-wrap gap-2">
-              {(['feature', 'pilot', 'episode', 'short', 'documentary', 'comic'] as ScriptType[]).map(
+              {(['feature', 'pilot', 'episode', 'short', 'documentary', 'comic', 'web_series'] as ScriptType[]).map(
                 (type) => (
                   <button
                     key={type}
@@ -331,7 +331,7 @@ export function ScriptUpload({ onUploadComplete, onClose }: ScriptUploadProps) {
                         : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
                     )}
                   >
-                    {type}
+                    {type === 'web_series' ? 'Web Series' : type}
                   </button>
                 )
               )}

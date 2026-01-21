@@ -887,23 +887,269 @@ export const CORE_PARAMETERS: ParameterDefinition[] = [
   },
 ];
 
+// ============= WEB SERIES PARAMETERS =============
+// Based on Pulse Web Series Framework document
+// These parameters are specifically designed for web series analysis
+
+export const WEB_SERIES_PARAMETERS: ParameterDefinition[] = [
+  // Core Web Series Parameters (10 - always active for web series)
+  {
+    id: 'hook_efficiency',
+    name: 'hook_efficiency',
+    displayName: 'Hook Efficiency',
+    category: 'Web Series',
+    agentSource: 'WebSeriesAgent',
+    description: 'First 30 seconds viewer capture and retention triggers. Critical for algorithmic discovery and preventing scroll-past.',
+    scoringGuide: '9-10: Immediate hook within 10 seconds, irresistible scroll-stop. 7-8: Strong hook by 30 seconds. 5-6: Hook present but delayed. 3-4: Weak or generic opening. 1-2: No clear hook, viewers leave.',
+    applicableScriptTypes: ['web_series'],
+    weight: 1.6,
+  },
+  {
+    id: 'episode_self_containment',
+    name: 'episode_self_containment',
+    displayName: 'Episode Self-Containment',
+    category: 'Web Series',
+    agentSource: 'WebSeriesAgent',
+    description: 'Balance between standalone value and serialized dependency. Each episode must work as an entry point while contributing to series arc.',
+    scoringGuide: '9-10: Episode works perfectly standalone, new viewers welcomed. 7-8: Strong standalone with series enhancement. 5-6: Somewhat accessible to new viewers. 3-4: Requires prior episode knowledge. 1-2: Completely dependent on prior viewing.',
+    applicableScriptTypes: ['web_series'],
+    weight: 1.0,
+  },
+  {
+    id: 'serial_momentum',
+    name: 'serial_momentum',
+    displayName: 'Serial Momentum',
+    category: 'Web Series',
+    agentSource: 'WebSeriesAgent',
+    description: 'Narrative thrust driving next-episode clicks. The "one more episode" factor that drives binge behavior and return viewing.',
+    scoringGuide: '9-10: Irresistible cliffhangers, urgent next-click drive. 7-8: Strong momentum, compelling continuity. 5-6: Adequate forward motion. 3-4: Weak momentum, easy to stop. 1-2: No reason to continue.',
+    applicableScriptTypes: ['web_series'],
+    weight: 1.2,
+  },
+  {
+    id: 'retention_curve_design',
+    name: 'retention_curve_design',
+    displayName: 'Retention Curve Design',
+    category: 'Web Series',
+    agentSource: 'WebSeriesAgent',
+    description: 'Viewer engagement maintenance throughout episode runtime. Strategic pacing to prevent drop-off at known abandon points.',
+    scoringGuide: '9-10: Retention hooks every 2-3 minutes, minimal drop-off predicted. 7-8: Strong mid-episode engagement. 5-6: Standard retention pattern. 3-4: Predicted significant drop-off. 1-2: No retention design visible.',
+    applicableScriptTypes: ['web_series'],
+    weight: 1.4,
+  },
+  {
+    id: 'character_stickiness',
+    name: 'character_stickiness',
+    displayName: 'Character Stickiness',
+    category: 'Web Series',
+    agentSource: 'WebSeriesAgent',
+    description: 'Audience attachment to recurring characters that drives return viewing. Characters worth following across multiple episodes.',
+    scoringGuide: '9-10: Iconic characters, audience investment guaranteed. 7-8: Strong attachment, memorable ensemble. 5-6: Likeable but generic characters. 3-4: Forgettable characters. 1-2: No character differentiation.',
+    applicableScriptTypes: ['web_series'],
+    weight: 1.0,
+  },
+  {
+    id: 'platform_native_storytelling',
+    name: 'platform_native_storytelling',
+    displayName: 'Platform-Native Storytelling',
+    category: 'Web Series',
+    agentSource: 'WebSeriesAgent',
+    description: 'Awareness of digital platform grammar and viewing context. Mobile-first formatting, comment-bait moments, shareable segments.',
+    scoringGuide: '9-10: Perfect platform fit, leverages digital-native behavior. 7-8: Strong platform awareness. 5-6: Adequate digital adaptation. 3-4: Feels like traditional TV on digital. 1-2: Ignores platform context entirely.',
+    applicableScriptTypes: ['web_series'],
+    weight: 0.9,
+  },
+  {
+    id: 'tonality_format_consistency',
+    name: 'tonality_format_consistency',
+    displayName: 'Tonality & Format Consistency',
+    category: 'Web Series',
+    agentSource: 'WebSeriesAgent',
+    description: 'Episode-to-episode tonal coherence. Audience knows what to expect while still being surprised.',
+    scoringGuide: '9-10: Perfect tonal consistency with satisfying variations. 7-8: Strong brand identity. 5-6: Generally consistent. 3-4: Tonal whiplash between episodes. 1-2: No consistent identity.',
+    applicableScriptTypes: ['web_series'],
+    weight: 0.7,
+  },
+  {
+    id: 'production_simplicity_velocity',
+    name: 'production_simplicity_velocity',
+    displayName: 'Production Simplicity & Velocity',
+    category: 'Web Series',
+    agentSource: 'WebSeriesAgent',
+    description: 'Sustainable production cadence balance. Can the series be produced at the pace platform algorithms reward?',
+    scoringGuide: '9-10: Minimal locations/cast, rapid production possible. 7-8: Efficient production design. 5-6: Standard production requirements. 3-4: Complex production, slow cadence. 1-2: Feature-film complexity, unsustainable.',
+    applicableScriptTypes: ['web_series'],
+    weight: 0.6,
+  },
+  {
+    id: 'shareability_meme_potential',
+    name: 'shareability_meme_potential',
+    displayName: 'Shareability & Meme Potential',
+    category: 'Web Series',
+    agentSource: 'WebSeriesAgent',
+    description: 'Social media amplification hooks. Moments designed for clips, quotes, reaction GIFs, and organic sharing.',
+    scoringGuide: '9-10: Built for virality, multiple clip-worthy moments per episode. 7-8: Strong share potential. 5-6: Some shareable moments. 3-4: Limited social appeal. 1-2: Nothing share-worthy.',
+    applicableScriptTypes: ['web_series'],
+    weight: 0.8,
+  },
+  {
+    id: 'monetization_readiness',
+    name: 'monetization_readiness',
+    displayName: 'Monetization Readiness',
+    category: 'Web Series',
+    agentSource: 'WebSeriesAgent',
+    description: 'Ad-supported or hybrid revenue model fit. Natural ad break points, brand-safe content, sponsorship integration potential.',
+    scoringGuide: '9-10: Perfect for multiple revenue streams, natural ad breaks. 7-8: Strong monetization potential. 5-6: Adequate revenue model fit. 3-4: Limited monetization options. 1-2: Monetization-hostile content.',
+    applicableScriptTypes: ['web_series'],
+    weight: 0.8,
+  },
+
+  // Long-Form Only Parameters (3 - activated when episode_length_class = 'long_form_web')
+  {
+    id: 'mid_episode_rehooking',
+    name: 'mid_episode_rehooking',
+    displayName: 'Mid-Episode Re-Hooking',
+    category: 'Web Series',
+    agentSource: 'WebSeriesAgent',
+    description: 'Attention reset points every 12-15 minutes for long-form episodes. Required when runtime exceeds 45 minutes.',
+    scoringGuide: '9-10: Strategic re-hooks at 12-15 minute intervals, prevents attention decay. 7-8: Strong mid-episode engagement points. 5-6: Some attention resets. 3-4: Long stretches without re-engagement. 1-2: No mid-episode hooks.',
+    applicableScriptTypes: ['web_series'],
+    weight: 0.6,
+  },
+  {
+    id: 'soft_act_integrity',
+    name: 'soft_act_integrity',
+    displayName: 'Soft Act Integrity',
+    category: 'Web Series',
+    agentSource: 'WebSeriesAgent',
+    description: 'Internal act-like pivots without broadcast rigidity. Natural story breathing points that feel organic, not commercial-break forced.',
+    scoringGuide: '9-10: Organic act-like structure, natural story rhythm. 7-8: Good soft act design. 5-6: Basic structural pivots. 3-4: Rigid or absent act structure. 1-2: No discernible structure.',
+    applicableScriptTypes: ['web_series'],
+    weight: 0.7,
+  },
+  {
+    id: 'binge_continuity_pressure',
+    name: 'binge_continuity_pressure',
+    displayName: 'Binge Continuity Pressure',
+    category: 'Web Series',
+    agentSource: 'WebSeriesAgent',
+    description: 'Episode endings that drive next-click behavior in binge-watch context. Different from weekly release hooks.',
+    scoringGuide: '9-10: Endings designed for immediate next-episode consumption. 7-8: Strong binge pressure. 5-6: Adequate continuity. 3-4: Satisfying endings that reduce urgency. 1-2: No binge consideration.',
+    applicableScriptTypes: ['web_series'],
+    weight: 0.6,
+  },
+];
+
+// ============= EPISODE LENGTH WEIGHT MODIFIERS =============
+// These modifiers adjust parameter weights based on episode length class
+
+export type EpisodeLengthClass = 'short_form_web' | 'mid_form_web' | 'long_form_web';
+
+export const EPISODE_LENGTH_WEIGHT_MODIFIERS: Record<EpisodeLengthClass, Record<string, number>> = {
+  short_form_web: {
+    hook_efficiency: 1.3,           // Higher priority for short form
+    retention_curve_design: 1.2,    // Critical in short form
+    shareability_meme_potential: 1.4, // Most important for short form
+    character_stickiness: 0.7,      // Less time for character development
+    platform_native_storytelling: 1.3,
+    episode_self_containment: 1.2,  // Must be more standalone
+  },
+  mid_form_web: {
+    // Default weights (1.0 multiplier for all) - balanced evaluation
+  },
+  long_form_web: {
+    character_stickiness: 1.3,      // More time for character work
+    serial_momentum: 1.2,           // More important in long form
+    platform_native_storytelling: 0.8, // Less critical in long form
+    mid_episode_rehooking: 1.5,     // Activate and prioritize
+    soft_act_integrity: 1.4,        // Important for long runtime
+    binge_continuity_pressure: 1.3, // More relevant in binge context
+  },
+};
+
+// ============= WEB SERIES FAILURE PATTERNS =============
+// Auto-detected failure modes from the framework document
+
+export const WEB_SERIES_FAILURE_PATTERNS = [
+  { id: 'tv_pacing_no_rehooks', name: 'TV Pacing Without Re-Hooks', description: 'Long-form content with traditional TV pacing but no mid-episode attention resets.' },
+  { id: 'over_serialization', name: 'Over-Serialization', description: 'Too much serialized dependency killing discoverability and new viewer entry.' },
+  { id: 'film_cold_opens', name: 'Film-Style Cold Opens', description: 'Using cinematic slow-burn openings instead of immediate digital hooks.' },
+  { id: 'unsustainable_scope', name: 'Unsustainable Production Scope', description: 'Production complexity exceeding sustainable release cadence.' },
+  { id: 'no_clip_moments', name: 'Missing Clip Moments', description: 'Episodes without any obviously shareable or meme-worthy segments.' },
+  { id: 'weak_episode_endings', name: 'Weak Episode Endings', description: 'Satisfying resolutions that reduce next-episode urgency.' },
+];
+
+// ============= OTT VS WEB SERIES DISAMBIGUATION =============
+// Rules from framework document for classifying projects
+
+export const CLASSIFICATION_RULES = {
+  webSeries: {
+    primaryDiscovery: 'algorithmic',
+    episodeFunction: 'can function as entry points',
+    monetization: 'creator-led, hybrid, or ad-supported',
+    releaseCadence: 'flexible',
+    examples: ['YouTube Originals', 'Creator-led episodic content', 'Platform algorithm-discovered shows'],
+  },
+  ottSeries: {
+    primaryDiscovery: 'platform homepage curation',
+    episodeFunction: 'strict episode-to-episode continuity assumed',
+    monetization: 'subscription-first',
+    releasePattern: 'designed for binge blocks',
+    examples: ['Netflix Originals', 'Premium streaming series', 'Prestige limited series'],
+  },
+  disambiguationRule: 'If runtime > 45 min AND episodic AND platform-curated-first → OTT Series. If runtime > 45 min AND episodic AND algorithmic discovery → Long-Form Web Series.',
+};
+
 // ============= COMBINED PARAMETER LIST =============
 
 export const ALL_PARAMETERS: ParameterDefinition[] = [
   ...CORE_PARAMETERS,
   ...COMIC_PARAMETERS,
+  ...WEB_SERIES_PARAMETERS,
 ];
 
 // ============= UTILITY FUNCTIONS =============
 
 export function getParametersForScriptType(scriptType: string): ParameterDefinition[] {
   const isComic = ['comic', 'comic_series', 'graphic_novel', 'limited_comic_series', 'anthology_comic'].includes(scriptType);
+  const isWebSeries = scriptType === 'web_series';
   
   const params = ALL_PARAMETERS.filter(p => {
     if (p.applicableScriptTypes === 'all') return true;
     return p.applicableScriptTypes.includes(scriptType);
   });
   
+  return params;
+}
+
+export function getParametersForWebSeries(episodeLengthClass?: EpisodeLengthClass): ParameterDefinition[] {
+  // Get base web series parameters
+  let params = WEB_SERIES_PARAMETERS.filter(p => {
+    // Always include core web series parameters
+    if (['hook_efficiency', 'episode_self_containment', 'serial_momentum', 'retention_curve_design',
+         'character_stickiness', 'platform_native_storytelling', 'tonality_format_consistency',
+         'production_simplicity_velocity', 'shareability_meme_potential', 'monetization_readiness'].includes(p.id)) {
+      return true;
+    }
+    // Only include long-form parameters if applicable
+    if (['mid_episode_rehooking', 'soft_act_integrity', 'binge_continuity_pressure'].includes(p.id)) {
+      return episodeLengthClass === 'long_form_web';
+    }
+    return false;
+  });
+
+  // Apply weight modifiers based on episode length class
+  if (episodeLengthClass && EPISODE_LENGTH_WEIGHT_MODIFIERS[episodeLengthClass]) {
+    const modifiers = EPISODE_LENGTH_WEIGHT_MODIFIERS[episodeLengthClass];
+    params = params.map(p => {
+      const modifier = modifiers[p.id];
+      if (modifier) {
+        return { ...p, weight: p.weight * modifier };
+      }
+      return p;
+    });
+  }
+
   return params;
 }
 
@@ -928,6 +1174,15 @@ export const COMICS_MATURITY_SCALE = {
   '1-2': 'Underdeveloped',
 };
 
+// Web Series maturity scale
+export const WEB_SERIES_MATURITY_SCALE = {
+  '9-10': 'Platform-ready',
+  '7-8': 'Strong potential',
+  '5-6': 'Developing',
+  '3-4': 'Needs work',
+  '1-2': 'Not viable',
+};
+
 // Auto-detected failure patterns for comics
 export const COMIC_FAILURE_PATTERNS = [
   { id: 'prose_in_panels', name: 'Prose-in-Panels Syndrome', description: 'Treating comic pages as prose pages with illustrations instead of visual storytelling.' },
@@ -949,12 +1204,17 @@ export const COMIC_SECONDARY_TAGS = [
 // Export format for downloadable parameter file
 export function exportParametersToJSON(): string {
   return JSON.stringify({
-    version: '2.0.0',
+    version: '3.0.0',
     exportDate: new Date().toISOString(),
     coreParameters: CORE_PARAMETERS,
     comicParameters: COMIC_PARAMETERS,
+    webSeriesParameters: WEB_SERIES_PARAMETERS,
+    episodeLengthWeightModifiers: EPISODE_LENGTH_WEIGHT_MODIFIERS,
     comicsMaturityScale: COMICS_MATURITY_SCALE,
+    webSeriesMaturityScale: WEB_SERIES_MATURITY_SCALE,
     comicFailurePatterns: COMIC_FAILURE_PATTERNS,
+    webSeriesFailurePatterns: WEB_SERIES_FAILURE_PATTERNS,
     comicSecondaryTags: COMIC_SECONDARY_TAGS,
+    classificationRules: CLASSIFICATION_RULES,
   }, null, 2);
 }

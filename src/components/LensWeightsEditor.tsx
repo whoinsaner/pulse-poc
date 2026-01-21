@@ -48,11 +48,12 @@ const LENS_CONFIG: Record<StakeholderLens, { label: string; icon: React.ElementT
   financier: { label: 'Financier', icon: Wallet, color: 'text-yellow-500' },
   ott_platform: { label: 'OTT Platform', icon: Tv, color: 'text-red-500' },
   theatrical: { label: 'Theatrical', icon: Theater, color: 'text-indigo-500' },
+  investor: { label: 'Investor', icon: Briefcase, color: 'text-teal-500' },
 };
 
 const ALL_LENSES: StakeholderLens[] = [
   'studio_executive', 'producer', 'actor', 'director', 'writer',
-  'financier', 'ott_platform', 'theatrical'
+  'financier', 'ott_platform', 'theatrical', 'investor'
 ];
 
 export function LensWeightsEditor() {

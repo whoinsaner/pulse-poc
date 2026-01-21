@@ -34,6 +34,7 @@ const LENS_ICONS: Record<StakeholderLens, React.ComponentType<{ className?: stri
   financier: DollarSign,
   ott_platform: Tv,
   theatrical: Film,
+  investor: DollarSign,
 };
 
 const LENS_ORDER: StakeholderLens[] = [
@@ -45,6 +46,7 @@ const LENS_ORDER: StakeholderLens[] = [
   'actor',
   'ott_platform',
   'theatrical',
+  'investor',
 ];
 
 export function FullLensComparison({ 

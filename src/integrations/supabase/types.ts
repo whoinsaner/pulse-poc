@@ -661,6 +661,7 @@ export type Database = {
       scripts: {
         Row: {
           created_at: string
+          episode_length_class: string | null
           file_size_bytes: number | null
           file_url: string
           format: Database["public"]["Enums"]["script_format"]
@@ -676,6 +677,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          episode_length_class?: string | null
           file_size_bytes?: number | null
           file_url: string
           format: Database["public"]["Enums"]["script_format"]
@@ -691,6 +693,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          episode_length_class?: string | null
           file_size_bytes?: number | null
           file_url?: string
           format?: Database["public"]["Enums"]["script_format"]
@@ -827,6 +830,7 @@ export type Database = {
         | "short"
         | "documentary"
         | "comic"
+        | "web_series"
       stakeholder_lens:
         | "studio_executive"
         | "producer"
@@ -974,6 +978,7 @@ export const Constants = {
         "short",
         "documentary",
         "comic",
+        "web_series",
       ],
       stakeholder_lens: [
         "studio_executive",

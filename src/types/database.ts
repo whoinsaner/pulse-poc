@@ -3,7 +3,7 @@
 
 export type AppRole = 'admin' | 'analyst' | 'viewer';
 export type ScriptFormat = 'pdf' | 'fdx' | 'fountain' | 'highland' | 'txt' | 'docx';
-export type ScriptType = 'feature' | 'pilot' | 'episode' | 'short' | 'documentary' | 'comic';
+export type ScriptType = 'feature' | 'pilot' | 'episode' | 'short' | 'documentary' | 'comic' | 'web_series';
 export type AnalysisStatus = 'pending' | 'processing' | 'completed' | 'failed';
 export type StakeholderLens = 
   | 'studio_executive' 
@@ -13,7 +13,11 @@ export type StakeholderLens =
   | 'writer' 
   | 'financier' 
   | 'ott_platform' 
-  | 'theatrical';
+  | 'theatrical'
+  | 'investor';
+
+// Episode length class for web series
+export type EpisodeLengthClass = 'short_form_web' | 'mid_form_web' | 'long_form_web';
 
 export interface Organization {
   id: string;
@@ -55,6 +59,7 @@ export interface Script {
   file_url: string;
   file_size_bytes: number | null;
   page_count: number | null;
+  episode_length_class: EpisodeLengthClass | null;
   created_at: string;
   updated_at: string;
 }
@@ -304,6 +309,11 @@ export const LENS_CONFIG: Record<StakeholderLens, { label: string; description: 
     label: 'Theatrical',
     description: 'Big-screen spectacle and event appeal',
     icon: 'Film',
+  },
+  investor: {
+    label: 'Investor',
+    description: 'ROI metrics, monetization readiness, and market positioning',
+    icon: 'TrendingUp',
   },
 };
 

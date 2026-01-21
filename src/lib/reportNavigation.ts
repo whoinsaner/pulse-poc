@@ -50,6 +50,9 @@ export const COMIC_SCRIPT_TYPES: ScriptType[] = ['comic'];
 // All script types that are considered "screenplay"
 export const SCREENPLAY_SCRIPT_TYPES: ScriptType[] = ['feature', 'pilot', 'episode', 'short', 'documentary'];
 
+// All script types that are considered "web series"
+export const WEB_SERIES_SCRIPT_TYPES: ScriptType[] = ['web_series'];
+
 /**
  * Check if a script type is a comic type
  */
@@ -122,6 +125,16 @@ const ALL_NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
+    id: 'web-series-craft',
+    label: 'Web Series',
+    applicableTypes: ['web_series'],
+    items: [
+      { id: 'web-series', label: 'Series Analysis', icon: Monitor, path: '/web-series', requiredCategories: ['Web Series'] },
+      { id: 'retention', label: 'Retention', icon: TrendingUp, path: '/retention', requiredCategories: ['Web Series'] },
+      { id: 'hooks', label: 'Hooks', icon: Sparkles, path: '/hooks', requiredCategories: ['Web Series'] },
+    ],
+  },
+  {
     id: 'market',
     label: 'Market',
     applicableTypes: 'all',
@@ -134,7 +147,7 @@ const ALL_NAV_GROUPS: NavGroup[] = [
   {
     id: 'platform',
     label: 'Platform',
-    applicableTypes: ['feature', 'pilot', 'episode', 'short', 'documentary'],
+    applicableTypes: ['feature', 'pilot', 'episode', 'short', 'documentary', 'web_series'],
     items: [
       { id: 'platform', label: 'Platform Fit', icon: Monitor, path: '/platform' },
     ],
@@ -220,6 +233,13 @@ export function getCategoriesForScriptType(scriptType: ScriptType | undefined): 
     ];
   }
 
+  if (isWebSeriesType(scriptType)) {
+    return [
+      ...baseCategories,
+      'Web Series',
+    ];
+  }
+
   return baseCategories;
 }
 
@@ -234,8 +254,17 @@ export function getScriptTypeLabel(scriptType: ScriptType | undefined): string {
     short: 'Short Film',
     documentary: 'Documentary',
     comic: 'Comic / Graphic Novel',
+    web_series: 'Web Series',
   };
   return labels[scriptType || 'feature'] || 'Script';
+}
+
+/**
+ * Check if a script type is a web series type
+ */
+export function isWebSeriesType(scriptType: ScriptType | undefined): boolean {
+  if (!scriptType) return false;
+  return WEB_SERIES_SCRIPT_TYPES.includes(scriptType);
 }
 
 /**

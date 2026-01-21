@@ -11,6 +11,7 @@ import {
   Film,
   ChevronDown,
   Check,
+  TrendingUp,
 } from 'lucide-react';
 import {
   Tooltip,
@@ -40,6 +41,7 @@ const LENS_ICONS: Record<StakeholderLens, React.ComponentType<{ className?: stri
   financier: DollarSign,
   ott_platform: Tv,
   theatrical: Film,
+  investor: TrendingUp,
 };
 
 const LENS_ORDER: StakeholderLens[] = [
@@ -51,6 +53,7 @@ const LENS_ORDER: StakeholderLens[] = [
   'financier',
   'ott_platform',
   'theatrical',
+  'investor',
 ];
 
 export function LensToggle({
