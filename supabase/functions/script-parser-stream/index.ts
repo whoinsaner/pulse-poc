@@ -155,9 +155,6 @@ async function extractPDFText(arrayBuffer: ArrayBuffer): Promise<{ text: string;
   try {
     const uint8Array = new Uint8Array(arrayBuffer);
     const fileSize = uint8Array.length;
-    const isLargeFile = fileSize > 500 * 1024; // 500KB threshold
-    
-    console.log(`[script-parser-stream] PDF extraction starting: ${(fileSize / 1024).toFixed(0)}KB, large file mode: ${isLargeFile}`);
     
     // Decode PDF content as text (lossy for binary, but we extract readable parts)
     const decoder = new TextDecoder('latin1', { fatal: false });
@@ -165,15 +162,32 @@ async function extractPDFText(arrayBuffer: ArrayBuffer): Promise<{ text: string;
     
     await cpuYield(); // Yield after decode
     
-    // Count pages from PDF structure
+    // Count pages from PDF structure FIRST - this determines processing mode
     const pageMatches = rawContent.match(/\/Type\s*\/Page[^s]/g);
     const pageCount = pageMatches ? pageMatches.length : 1;
+    
+    // Use page count AND file size for large file detection
+    // 30+ pages OR 500KB+ → use fast path to avoid CPU timeout
+    const isLargeFile = fileSize > 500 * 1024 || pageCount > 30;
+    
+    console.log(`[script-parser-stream] PDF extraction: ${(fileSize / 1024).toFixed(0)}KB, ${pageCount} pages, fast mode: ${isLargeFile}`);
+    
+    // Early bailout for very large scripts - go straight to AI extraction
+    if (pageCount > 60) {
+      console.log(`[script-parser-stream] Very large PDF (${pageCount} pages) - skipping regex, recommending AI`);
+      return {
+        text: '',
+        pageCount,
+        success: false,
+        error: 'Large PDF - AI extraction recommended',
+      };
+    }
     
     // Extract text from PDF streams
     const textParts: string[] = [];
     
-    // For large files, use simplified extraction with iteration limits
-    const maxIterations = isLargeFile ? 500 : 2000;
+    // Reduced iteration limits to prevent CPU timeout
+    const maxIterations = isLargeFile ? 300 : 1000;
     let iterations = 0;
     
     // Method 1: Extract from BT...ET text blocks (PDF text operators)
@@ -281,8 +295,8 @@ async function extractPDFText(arrayBuffer: ArrayBuffer): Promise<{ text: string;
           }
         }
         
-        // Yield periodically
-        if (iterations % 50 === 0) await cpuYield();
+        // Yield more frequently to prevent CPU timeout
+        if (iterations % 25 === 0) await cpuYield();
       }
     }
     
@@ -294,7 +308,8 @@ async function extractPDFText(arrayBuffer: ArrayBuffer): Promise<{ text: string;
       let streamMatch;
       let streamIterations = 0;
       
-      while ((streamMatch = streamRegex.exec(rawContent)) !== null && streamIterations < 100) {
+      // Reduced from 100 to 50 iterations to prevent timeout
+      while ((streamMatch = streamRegex.exec(rawContent)) !== null && streamIterations < 50) {
         streamIterations++;
         const streamContent = streamMatch[1];
         
