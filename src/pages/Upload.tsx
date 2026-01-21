@@ -60,7 +60,8 @@ export default function Upload() {
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold mb-2">Upload a Script</h1>
             <p className="text-muted-foreground">
-              Upload your screenplay for AI-powered analysis across 12 specialized agents
+              Upload your screenplay for AI-powered analysis across 12+ specialized agents.
+              Web series scripts will prompt for episode length classification.
             </p>
           </div>
 

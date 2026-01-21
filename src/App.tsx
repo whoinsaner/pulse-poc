@@ -36,6 +36,9 @@ import ReportNarrative from "./pages/report/ReportNarrative";
 import ReportCharacters from "./pages/report/ReportCharacters";
 import ReportPlatform from "./pages/report/ReportPlatform";
 import ReportComic from "./pages/report/ReportComic";
+import WebSeriesAnalysis from "./pages/report/WebSeriesAnalysis";
+import RetentionAnalysis from "./pages/report/RetentionAnalysis";
+import HooksAnalysis from "./pages/report/HooksAnalysis";
 import CompleteScorecard from "./pages/report/CompleteScorecard";
 import RewritePriorities from "./pages/report/RewritePriorities";
 import StakeholderReport from "./pages/report/StakeholderReport";
@@ -110,6 +113,9 @@ const App = () => (
               <Route path="characters" element={<ReportCharacters />} />
               <Route path="platform" element={<ReportPlatform />} />
               <Route path="comic" element={<ReportComic />} />
+              <Route path="web-series" element={<WebSeriesAnalysis />} />
+              <Route path="retention" element={<RetentionAnalysis />} />
+              <Route path="hooks" element={<HooksAnalysis />} />
               <Route path="stakeholder/:stakeholder" element={<StakeholderReport />} />
             </Route>
             <Route path="/sample-report" element={<SampleReportLayout />}>
