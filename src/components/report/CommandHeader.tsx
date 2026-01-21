@@ -1,12 +1,20 @@
 import { useNavigate } from 'react-router-dom';
 import { Report, ReportData, StakeholderLens, LENS_CONFIG } from '@/types/database';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { 
   ArrowLeft, 
-  Share2, 
+  Share2,
+  Film,
+  Tv,
+  Clapperboard,
+  FileVideo,
+  FileText,
+  Palette,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { getNavGroupsForScriptType, NavGroup } from '@/lib/reportNavigation';
+import { getNavGroupsForScriptType, getScriptTypeLabel } from '@/lib/reportNavigation';
+import type { ScriptType } from '@/types/database';
 
 interface CommandHeaderProps {
   report: Report;
@@ -19,6 +27,26 @@ interface CommandHeaderProps {
   isComic: boolean;
   onShare: () => void;
 }
+
+// Script type icons mapping
+const SCRIPT_TYPE_ICONS: Record<ScriptType, typeof Film> = {
+  feature: Film,
+  pilot: Tv,
+  episode: Clapperboard,
+  short: FileVideo,
+  documentary: FileText,
+  comic: Palette,
+};
+
+// Script type badge colors
+const SCRIPT_TYPE_COLORS: Record<ScriptType, string> = {
+  feature: 'bg-chart-1/15 text-chart-1 border-chart-1/30',
+  pilot: 'bg-chart-2/15 text-chart-2 border-chart-2/30',
+  episode: 'bg-chart-3/15 text-chart-3 border-chart-3/30',
+  short: 'bg-chart-4/15 text-chart-4 border-chart-4/30',
+  documentary: 'bg-chart-5/15 text-chart-5 border-chart-5/30',
+  comic: 'bg-chart-6/15 text-chart-6 border-chart-6/30',
+};
 
 export function CommandHeader({
   report,
@@ -34,8 +62,13 @@ export function CommandHeader({
   const navigate = useNavigate();
   
   // Get dynamic navigation based on script type and available categories
-  const scriptType = reportData.scriptMetadata?.scriptType;
+  const scriptType = reportData.scriptMetadata?.scriptType || 'feature';
   const navGroups = getNavGroupsForScriptType(scriptType, reportData.categoryScores);
+  
+  // Get script type display info
+  const ScriptTypeIcon = SCRIPT_TYPE_ICONS[scriptType];
+  const scriptTypeLabel = getScriptTypeLabel(scriptType);
+  const scriptTypeColor = SCRIPT_TYPE_COLORS[scriptType];
   
   // Find current group and item
   const findCurrentNav = () => {
@@ -50,9 +83,9 @@ export function CommandHeader({
 
   return (
     <header className="sticky top-0 z-40 bg-card border-b border-border">
-      {/* Top row: Back, title, lens, actions */}
+      {/* Top row: Back, title, script type, lens, actions */}
       <div className="h-14 flex items-center justify-between px-4 lg:px-6 gap-4">
-        {/* Left: Back + Title */}
+        {/* Left: Back + Title + Script Type Badge */}
         <div className="flex items-center gap-3 min-w-0">
           <Button 
             variant="ghost" 
@@ -63,10 +96,22 @@ export function CommandHeader({
             <ArrowLeft className="h-4 w-4" />
           </Button>
           
-          <div className="min-w-0">
+          <div className="flex items-center gap-3 min-w-0">
             <h1 className="font-semibold text-lg truncate">
               {reportData.scriptMetadata?.title || report.title}
             </h1>
+            
+            {/* Script Type Badge */}
+            <Badge 
+              variant="outline" 
+              className={cn(
+                "hidden sm:inline-flex items-center gap-1.5 shrink-0 border",
+                scriptTypeColor
+              )}
+            >
+              <ScriptTypeIcon className="h-3 w-3" />
+              <span className="text-xs font-medium">{scriptTypeLabel}</span>
+            </Badge>
           </div>
         </div>
 
