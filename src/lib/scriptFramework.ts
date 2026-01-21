@@ -46,8 +46,12 @@ export const SCRIPT_TYPES: ScriptType[] = [
   { value: 'documentary', label: 'Documentary', description: 'Non-fiction film/series', category: 'documentary', formatTags: ['linear', 'theme_driven'], distributionTags: ['theatrical', 'ott'] },
   { value: 'experimental', label: 'Experimental', description: 'Non-traditional narrative form', category: 'experimental', formatTags: ['non_linear', 'experimental'], distributionTags: ['festival', 'streaming'] },
   
-  // Comic/Sequential Art
+  // Comic/Sequential Art - Extended Types
   { value: 'comic', label: 'Comic/Graphic Novel', description: 'Sequential art storytelling', category: 'film', formatTags: ['linear', 'episodic'], distributionTags: ['print', 'digital'] },
+  { value: 'comic_series', label: 'Comic Series', description: 'Ongoing comic book series', category: 'film', formatTags: ['episodic', 'serialized'], distributionTags: ['print', 'digital'] },
+  { value: 'graphic_novel', label: 'Graphic Novel', description: 'Complete graphic novel story', category: 'film', formatTags: ['linear', 'long_form'], distributionTags: ['print', 'digital'] },
+  { value: 'limited_comic_series', label: 'Limited Series', description: 'Finite comic series (4-12 issues)', category: 'film', formatTags: ['serialized'], distributionTags: ['print', 'digital'] },
+  { value: 'anthology_comic', label: 'Comic Anthology', description: 'Collection of short comic stories', category: 'film', formatTags: ['anthology', 'short_form'], distributionTags: ['print', 'digital'] },
 ];
 
 // Legacy script type mapping for database compatibility
@@ -317,49 +321,49 @@ export const CORE_AGENTS: AgentDefinition[] = [
   },
 ];
 
-// Comic-Specific Agents
+// Comic-Specific Agents (Updated per Comics & Graphic Novels Framework)
 export const COMIC_AGENTS: AgentDefinition[] = [
   {
-    id: 'ComicVisualAgent',
-    name: 'Comic Visual',
+    id: 'PanelFlowAgent',
+    name: 'Panel Flow',
     category: 'comic',
-    description: 'Analyzes visual storytelling specific to comics',
-    parameters: ['visual_storytelling', 'panel_composition', 'page_layout', 'action_clarity'],
-    reportSections: ['Visual Storytelling', 'Art Direction'],
-    applicableScriptTypes: ['comic'],
+    description: 'Analyzes sequential storytelling integrity, cause-effect clarity across panels, and reader eye movement',
+    parameters: ['sequential_storytelling_integrity', 'panel_economy', 'page_architecture'],
+    reportSections: ['Visual Storytelling', 'Panel Flow', 'Sequential Art'],
+    applicableScriptTypes: ['comic', 'comic_series', 'graphic_novel', 'limited_comic_series', 'anthology_comic'],
     color: 'bg-indigo-500/10 text-indigo-500 border-indigo-500/30',
-    icon: 'Eye'
+    icon: 'Layers'
   },
   {
-    id: 'ComicDialogueAgent',
-    name: 'Comic Dialogue',
+    id: 'LetteringBalloonAgent',
+    name: 'Lettering & Balloon',
     category: 'comic',
-    description: 'Analyzes text elements specific to comics',
-    parameters: ['balloon_efficiency', 'caption_voice', 'sound_effects'],
-    reportSections: ['Dialogue & Subtext', 'Balloon Efficiency'],
-    applicableScriptTypes: ['comic'],
+    description: 'Evaluates dialogue load, balloon engineering, stacking, and reading flow optimization',
+    parameters: ['dialogue_load', 'balloon_engineering', 'reading_flow'],
+    reportSections: ['Dialogue & Subtext', 'Lettering', 'Balloon Efficiency'],
+    applicableScriptTypes: ['comic', 'comic_series', 'graphic_novel', 'limited_comic_series', 'anthology_comic'],
     color: 'bg-teal-500/10 text-teal-500 border-teal-500/30',
     icon: 'MessageCircle'
   },
   {
-    id: 'ComicPacingAgent',
-    name: 'Comic Pacing',
+    id: 'PageTurnImpactAgent',
+    name: 'Page-Turn Impact',
     category: 'comic',
-    description: 'Evaluates comic-specific pacing and structure',
-    parameters: ['panel_to_panel_flow', 'issue_structure', 'cliffhangers'],
-    reportSections: ['Scene Economy', 'Panel Flow'],
-    applicableScriptTypes: ['comic'],
+    description: 'Evaluates page-turn reveals, emotional payload per page, structural modularity, and cliffhangers',
+    parameters: ['emotional_payload_per_page', 'structural_modularity', 'page_turn_reveals'],
+    reportSections: ['Scene Economy', 'Pacing', 'Issue Structure'],
+    applicableScriptTypes: ['comic', 'comic_series', 'graphic_novel', 'limited_comic_series', 'anthology_comic'],
     color: 'bg-lime-500/10 text-lime-500 border-lime-500/30',
-    icon: 'Timer'
+    icon: 'BookOpen'
   },
   {
-    id: 'ComicArtDirectionAgent',
-    name: 'Comic Art Direction',
+    id: 'ArtScriptSynergyAgent',
+    name: 'Art-Script Synergy',
     category: 'comic',
-    description: 'Evaluates artist-facing guidance and visual consistency',
-    parameters: ['artist_guidance', 'reference_clarity', 'style_consistency'],
-    reportSections: ['Visual Storytelling', 'Artist Guidance'],
-    applicableScriptTypes: ['comic'],
+    description: 'Evaluates art-writing synergy, character visual identity, collaboration readiness, and production pipeline awareness',
+    parameters: ['art_writing_synergy', 'character_visual_identity', 'collaboration_readiness', 'production_pipeline_awareness', 'market_publishing_alignment'],
+    reportSections: ['Visual Storytelling', 'Art Direction', 'Collaboration', 'Market Fit'],
+    applicableScriptTypes: ['comic', 'comic_series', 'graphic_novel', 'limited_comic_series', 'anthology_comic'],
     color: 'bg-fuchsia-500/10 text-fuchsia-500 border-fuchsia-500/30',
     icon: 'Palette'
   },
