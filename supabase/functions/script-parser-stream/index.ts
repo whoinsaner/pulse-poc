@@ -1053,8 +1053,11 @@ serve(async (req) => {
               });
               
               // Convert PDF to base64 for AI vision (chunked to avoid stack overflow)
+              console.log(`[script-parser-stream] Converting ${bytes.byteLength} bytes to base64...`);
               const base64 = arrayBufferToBase64(bytes);
+              console.log(`[script-parser-stream] Base64 conversion complete: ${base64.length} chars`);
               
+              console.log('[script-parser-stream] Starting AI vision extraction...');
               const aiExtractResult = await extractTextWithAI(
                 lovableApiKey, 
                 base64, 
