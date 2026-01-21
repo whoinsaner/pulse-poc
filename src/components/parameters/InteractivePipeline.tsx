@@ -25,6 +25,7 @@ import {
   COMIC_AGENTS, 
   INTERACTIVE_AGENTS, 
   AUDIO_AGENTS, 
+  WEB_SERIES_AGENTS,
   META_AGENTS,
   getAgentsForScriptType,
   AgentDefinition
@@ -50,6 +51,7 @@ function AgentNode({ agent, isActive, isHighlighted, showParameters }: AgentNode
         if (agent.id.includes('Comic')) return 'border-fuchsia-500';
         if (agent.id.includes('Interactivity') || agent.id.includes('WorldBuilding')) return 'border-sky-500';
         if (agent.id.includes('Audio')) return 'border-violet-500';
+        if (agent.id.includes('WebSeries')) return 'border-pink-500';
         return 'border-emerald-500';
       default: return 'border-muted';
     }
@@ -66,6 +68,7 @@ function AgentNode({ agent, isActive, isHighlighted, showParameters }: AgentNode
           if (agent.id.includes('Comic')) return 'bg-fuchsia-500/20 ring-2 ring-fuchsia-500';
           if (agent.id.includes('Interactivity') || agent.id.includes('WorldBuilding')) return 'bg-sky-500/20 ring-2 ring-sky-500';
           if (agent.id.includes('Audio')) return 'bg-violet-500/20 ring-2 ring-violet-500';
+          if (agent.id.includes('WebSeries')) return 'bg-pink-500/20 ring-2 ring-pink-500';
           return 'bg-emerald-500/20 ring-2 ring-emerald-500';
         default: return 'bg-muted/50';
       }
@@ -250,7 +253,7 @@ export function InteractivePipeline() {
   const totalParams = activeAgents.reduce((sum, a) => sum + a.parameters.length, 0);
   
   // Categorize agents for display
-  const analysisAgents = [...CORE_AGENTS, ...COMIC_AGENTS, ...INTERACTIVE_AGENTS, ...AUDIO_AGENTS];
+  const analysisAgents = [...CORE_AGENTS, ...COMIC_AGENTS, ...INTERACTIVE_AGENTS, ...AUDIO_AGENTS, ...WEB_SERIES_AGENTS];
 
   return (
     <Card>
@@ -391,6 +394,10 @@ export function InteractivePipeline() {
           <div className="flex items-center gap-1.5">
             <div className="w-3 h-3 rounded border-2 border-violet-500 bg-violet-500/20" />
             <span className="text-xs text-muted-foreground">Audio</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-3 rounded border-2 border-pink-500 bg-pink-500/20" />
+            <span className="text-xs text-muted-foreground">Web Series</span>
           </div>
           <div className="flex items-center gap-1.5">
             <div className="w-3 h-3 rounded border-2 border-amber-500 bg-amber-500/20" />

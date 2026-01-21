@@ -29,6 +29,7 @@ import {
   Timer,
   MessageCircle,
   Blend,
+  Play,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -38,6 +39,7 @@ import {
   META_AGENTS,
   INTERACTIVE_AGENTS,
   AUDIO_AGENTS,
+  WEB_SERIES_AGENTS,
   type AgentDefinition,
 } from "@/lib/scriptFramework";
 
@@ -66,6 +68,7 @@ const ICON_MAP: Record<string, React.ReactNode> = {
   Gamepad2: <Gamepad2 className="h-4 w-4" />,
   Map: <Map className="h-4 w-4" />,
   Mic: <Mic className="h-4 w-4" />,
+  Play: <Play className="h-4 w-4" />,
 };
 
 const SECTION_ICONS: Record<string, React.ReactNode> = {
@@ -94,6 +97,10 @@ const SECTION_ICONS: Record<string, React.ReactNode> = {
   "Interactivity Analysis": <Gamepad2 className="h-3 w-3" />,
   "World Building": <Map className="h-3 w-3" />,
   "Audio Production": <Mic className="h-3 w-3" />,
+  "Web Series Analysis": <Play className="h-3 w-3" />,
+  "Retention Analysis": <Timer className="h-3 w-3" />,
+  "Hooks Analysis": <Lightbulb className="h-3 w-3" />,
+  "Platform Strategy": <TrendingUp className="h-3 w-3" />,
 };
 
 function AgentCard({ agent }: { agent: AgentDefinition }) {
@@ -222,6 +229,13 @@ export function AgentSectionMapping() {
               icon={<Mic className="h-4 w-4" />}
               agents={AUDIO_AGENTS}
               description="Agents for audio dramas and podcast fiction"
+            />
+            
+            <AgentSection
+              title="Web Series Agents"
+              icon={<Play className="h-4 w-4" />}
+              agents={WEB_SERIES_AGENTS}
+              description="Agents for digital-first web series with algorithmic discovery optimization"
             />
           </TabsContent>
 

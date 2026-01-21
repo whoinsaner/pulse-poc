@@ -145,6 +145,21 @@ const PARAMETER_RELATIONSHIPS: Record<string, string[]> = {
   'sound_design_cues': ['audio_scene_setting', 'technical_dependency', 'rhythm_and_silence'],
   'listener_engagement': ['drop_off_risk', 'hook_clarity', 'emotional_progression'],
   
+  // Web Series clusters
+  'hook_efficiency': ['retention_curve_design', 'serial_momentum', 'shareability_meme_potential', 'hook_clarity'],
+  'episode_self_containment': ['serial_momentum', 'character_stickiness', 'platform_native_storytelling'],
+  'serial_momentum': ['hook_efficiency', 'episode_self_containment', 'binge_continuity_pressure'],
+  'retention_curve_design': ['hook_efficiency', 'mid_episode_rehooking', 'character_stickiness', 'drop_off_risk'],
+  'character_stickiness': ['episode_self_containment', 'retention_curve_design', 'tonality_format_consistency', 'character_balance'],
+  'platform_native_storytelling': ['shareability_meme_potential', 'monetization_readiness', 'production_simplicity_velocity', 'platform_fit'],
+  'tonality_format_consistency': ['character_stickiness', 'episode_self_containment', 'platform_native_storytelling', 'style_consistency'],
+  'production_simplicity_velocity': ['platform_native_storytelling', 'monetization_readiness', 'episode_self_containment', 'production_complexity'],
+  'shareability_meme_potential': ['hook_efficiency', 'platform_native_storytelling', 'monetization_readiness', 'marketing_hook_density'],
+  'monetization_readiness': ['production_simplicity_velocity', 'platform_native_storytelling', 'shareability_meme_potential', 'readiness_score'],
+  'mid_episode_rehooking': ['retention_curve_design', 'soft_act_integrity', 'binge_continuity_pressure', 'hook_clarity'],
+  'soft_act_integrity': ['mid_episode_rehooking', 'binge_continuity_pressure', 'serial_momentum', 'structural_symmetry'],
+  'binge_continuity_pressure': ['serial_momentum', 'soft_act_integrity', 'mid_episode_rehooking', 'cliffhangers'],
+  
   // Meta clusters
   'readiness_score': ['platform_fit', 'market_clarity', 'budget_realism'],
   'market_clarity': ['readiness_score', 'audience_fit', 'concept_compressibility'],

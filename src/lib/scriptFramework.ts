@@ -72,6 +72,7 @@ export const SIMPLE_SCRIPT_TYPES = [
   { value: 'short', label: 'Short Film', description: 'Short-form narrative' },
   { value: 'documentary', label: 'Documentary', description: 'Non-fiction film' },
   { value: 'comic', label: 'Comic/Graphic Novel', description: 'Sequential art storytelling' },
+  { value: 'web_series', label: 'Web Series', description: 'Digital-first episodic content' },
 ];
 
 // ============= FORMAT, DISTRIBUTION, NARRATIVE, INTERACTION TAGS =============
