@@ -43,6 +43,20 @@ function sendSSE(controller: ReadableStreamDefaultController, event: string, dat
   controller.enqueue(new TextEncoder().encode(message));
 }
 
+// Safe base64 encoding for large ArrayBuffers (avoids stack overflow)
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  const chunkSize = 8192; // Process 8KB at a time to avoid stack overflow
+  let binary = '';
+  
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.subarray(i, Math.min(i + chunkSize, bytes.length));
+    binary += String.fromCharCode(...chunk);
+  }
+  
+  return btoa(binary);
+}
+
 // ============= TEXT EXTRACTION =============
 
 // CPU yield helper - prevents CPU time exceeded errors by yielding control
@@ -173,7 +187,7 @@ async function extractPDFText(arrayBuffer: ArrayBuffer): Promise<{ text: string;
     console.log(`[script-parser-stream] PDF extraction: ${(fileSize / 1024).toFixed(0)}KB, ${pageCount} pages, fast mode: ${isLargeFile}`);
     
     // Early bailout for very large scripts - go straight to AI extraction
-    if (pageCount > 60) {
+    if (pageCount > 50) {
       console.log(`[script-parser-stream] Very large PDF (${pageCount} pages) - skipping regex, recommending AI`);
       return {
         text: '',
@@ -1016,14 +1030,30 @@ serve(async (req) => {
             console.log('[script-parser-stream] Regex extraction failed, trying AI fallback...');
             
             if (lovableApiKey && format === 'pdf') {
+              // Check file size limit for AI vision extraction (5MB max)
+              const maxSizeForVision = 5 * 1024 * 1024;
+              if (bytes.byteLength > maxSizeForVision) {
+                sendSSE(controller, 'error', {
+                  code: 'FILE_TOO_LARGE',
+                  message: 'PDF is too large for AI vision extraction (>5MB).',
+                  recommendations: [
+                    'Export as plain text (.txt) or Fountain format for best results',
+                    'Split the script into smaller sections',
+                    'Use DOCX format which handles large files better'
+                  ]
+                });
+                controller.close();
+                return;
+              }
+              
               sendSSE(controller, 'progress', { 
                 stage: 'extract', 
                 percent: 40, 
                 message: 'Using AI vision to extract text from PDF...' 
               });
               
-              // Convert PDF to base64 for AI vision
-              const base64 = btoa(String.fromCharCode(...new Uint8Array(bytes)));
+              // Convert PDF to base64 for AI vision (chunked to avoid stack overflow)
+              const base64 = arrayBufferToBase64(bytes);
               
               const aiExtractResult = await extractTextWithAI(
                 lovableApiKey, 
