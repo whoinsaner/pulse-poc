@@ -47,6 +47,7 @@ import Reports from "./pages/Reports";
 import Team from "./pages/Team";
 import ParametersAgents from "./pages/ParametersAgents";
 import TestAnalysisPipeline from "./pages/TestAnalysisPipeline";
+import TestComicAnalysis from "./pages/TestComicAnalysis";
 import NotFound from "./pages/NotFound";
 
 function ReportsRedirect() {
@@ -168,6 +169,7 @@ const App = () => (
             <Route path="/team" element={<Team />} />
             <Route path="/parameters" element={<ParametersAgents />} />
             <Route path="/test-pipeline" element={<TestAnalysisPipeline />} />
+            <Route path="/test-comic-pipeline" element={<TestComicAnalysis />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
