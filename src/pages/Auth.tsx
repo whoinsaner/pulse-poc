@@ -117,12 +117,11 @@ export default function Auth() {
             tailored to every perspective in the production chain.
           </p>
           
-          <div className="grid grid-cols-2 gap-4 pt-8">
+          <div className="grid grid-cols-3 gap-4 pt-8">
             {[
-              { stat: '12', label: 'AI Agents' },
-              { stat: '8', label: 'Stakeholder Lenses' },
-              { stat: '26', label: 'Analysis Parameters' },
-              { stat: '∞', label: 'Insights' },
+              { stat: '10', label: 'USAF Agents' },
+              { stat: '9', label: 'Stakeholder Lenses' },
+              { stat: '60+', label: 'Parameters' },
             ].map((item, i) => (
               <div
                 key={i}
