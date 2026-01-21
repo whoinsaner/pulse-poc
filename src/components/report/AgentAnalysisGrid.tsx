@@ -37,11 +37,12 @@ const UASF_AGENTS = [
   { id: 'execution', module: 'J', name: 'Execution & Feasibility', icon: Cog, category: 'Execution', color: 'chart-4' },
 ];
 
+// Comic-specific specialized agents (New Framework)
 const COMIC_AGENTS = [
-  { id: 'comic_visual', module: 'V', name: 'Visual Storytelling', icon: BookOpen, category: 'Comic Visuals', color: 'chart-5' },
-  { id: 'comic_dialogue', module: 'D', name: 'Comic Dialogue', icon: Layers, category: 'Comic Dialogue', color: 'chart-6' },
-  { id: 'comic_pacing', module: 'P', name: 'Panel Pacing', icon: Sparkles, category: 'Comic Pacing', color: 'chart-1' },
-  { id: 'comic_art', module: 'R', name: 'Art Direction', icon: Frame, category: 'Comic Art Direction', color: 'chart-2' },
+  { id: 'panel_flow', module: 'K', name: 'Panel Flow Analysis', icon: Layers, category: 'Comic Visuals', color: 'chart-5' },
+  { id: 'lettering_balloon', module: 'L', name: 'Lettering & Balloons', icon: MessageSquare, category: 'Comic Dialogue', color: 'chart-6' },
+  { id: 'page_turn', module: 'M', name: 'Page-Turn Impact', icon: BookOpen, category: 'Comic Pacing', color: 'chart-1' },
+  { id: 'art_script_synergy', module: 'N', name: 'Art-Script Synergy', icon: Sparkles, category: 'Comic Collaboration', color: 'chart-2' },
 ];
 
 export function AgentAnalysisGrid({ parameterScores, categoryScores, scriptType }: AgentAnalysisGridProps) {

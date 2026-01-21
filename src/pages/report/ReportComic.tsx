@@ -3,7 +3,7 @@ import { ReportData, StakeholderLens } from '@/types/database';
 import { PanelGallery } from '@/components/report/PanelGallery';
 import { ArtReferenceSheet } from '@/components/report/ArtReferenceSheet';
 import { Card } from '@/components/ui/card';
-import { Palette, Layout, Layers, Eye } from 'lucide-react';
+import { Palette, Layout, Layers, Eye, MessageSquare, Users, Cog, TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface ReportContextValue {
@@ -15,12 +15,16 @@ interface ReportContextValue {
 export default function ReportComic() {
   const { reportData } = useOutletContext<ReportContextValue>();
 
-  // Get comic-specific category scores
+  // Comic-specific categories (New Framework - 8 categories)
   const comicCategories = [
-    { key: 'Comic Visuals', label: 'Visual Storytelling', icon: Eye },
-    { key: 'Comic Dialogue', label: 'Dialogue Design', icon: Layout },
-    { key: 'Comic Pacing', label: 'Panel Pacing', icon: Layers },
-    { key: 'Comic Art Direction', label: 'Art Direction', icon: Palette },
+    { key: 'Comic Visuals', label: 'Sequential Storytelling', icon: Eye, description: 'Panel flow, page architecture, visual integrity' },
+    { key: 'Comic Dialogue', label: 'Lettering & Balloons', icon: MessageSquare, description: 'Dialogue load, balloon engineering, reading flow' },
+    { key: 'Comic Pacing', label: 'Page-Turn Impact', icon: Layers, description: 'Emotional payload, structural modularity, reveals' },
+    { key: 'Comic Collaboration', label: 'Art-Script Synergy', icon: Palette, description: 'Art-writing balance, collaboration readiness' },
+    { key: 'Comic Characters', label: 'Character Visual Identity', icon: Users, description: 'Silhouette distinctiveness, emotional readability' },
+    { key: 'Comic Production', label: 'Production Pipeline', icon: Cog, description: 'Pipeline awareness, production feasibility' },
+    { key: 'Comic Market', label: 'Market Positioning', icon: TrendingUp, description: 'Format fit, audience targeting' },
+    { key: 'Comic Structure', label: 'Page Architecture', icon: Layout, description: 'Structural modularity, page turn engineering' },
   ];
 
   return (
@@ -38,20 +42,22 @@ export default function ReportComic() {
         </p>
       </div>
 
-      {/* Comic-Specific Scores */}
+      {/* Comic-Specific Scores - 8 Categories */}
       <section className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {comicCategories.map((category) => {
-          const score = reportData.categoryScores?.[category.key] || 0;
+          // Handle both 0-10 and 0-100 scale scores
+          const rawScore = reportData.categoryScores?.[category.key] || 0;
+          const score = rawScore > 10 ? rawScore / 10 : rawScore;
           const Icon = category.icon;
           
           return (
-            <Card key={category.key} className="p-6 bg-card/50">
-              <div className="flex items-center gap-3 mb-4">
+            <Card key={category.key} className="p-6 bg-card/50 hover:shadow-md transition-shadow">
+              <div className="flex items-center gap-3 mb-3">
                 <div className="p-3 rounded-xl bg-chart-5/10">
-                  <Icon className="h-6 w-6 text-chart-5" />
+                  <Icon className="h-5 w-5 text-chart-5" />
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">{category.label}</p>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{category.label}</p>
                   <p className={cn(
                     "text-2xl font-bold",
                     score >= 7 ? "text-success" :
@@ -62,6 +68,9 @@ export default function ReportComic() {
                   </p>
                 </div>
               </div>
+              <p className="text-xs text-muted-foreground mb-3 line-clamp-2">
+                {category.description}
+              </p>
               <div className="h-2 rounded-full bg-muted overflow-hidden">
                 <div 
                   className={cn(

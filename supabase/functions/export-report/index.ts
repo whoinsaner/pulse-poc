@@ -180,6 +180,25 @@ ${insight.description}
 `.trim();
 }
 
+function formatParameterWithGuide(param: any): string {
+  const displayName = param.parameters?.display_name || param.parameter_id;
+  const description = param.parameters?.description || '';
+  const scoringGuide = param.parameters?.scoring_guide || '';
+  const maturity = param.maturity || 'Not assessed';
+  const riskLevel = param.risk_level || 'Not assessed';
+  
+  return `
+#### ${displayName}
+${description ? `*${description}*\n` : ''}
+- **Score**: ${Math.round(param.score)}/100
+- **Confidence**: ${Math.round((param.confidence || 0) * 100)}%
+- **Maturity**: ${maturity}
+- **Risk Level**: ${riskLevel}
+- **Analysis**: ${param.rationale || 'No rationale provided.'}
+${scoringGuide ? `\n> **Scoring Guide**: ${scoringGuide}` : ''}
+`;
+}
+
 function generateFullReport(
   report: any,
   data: any,
@@ -188,12 +207,21 @@ function generateFullReport(
   characters: any[]
 ): string {
   const categoryScores = groupScoresByCategory(scores);
+  const isComic = data.scriptMetadata?.scriptType === 'comic';
+  
+  // Separate comic-specific parameters
+  const comicCategories = ['Comic Visuals', 'Comic Dialogue', 'Comic Pacing', 'Comic Collaboration', 
+                          'Comic Characters', 'Comic Production', 'Comic Market', 'Comic Structure'];
+  const comicParams = scores.filter(s => comicCategories.includes(s.parameters?.category || ''));
+  const coreParams = scores.filter(s => !comicCategories.includes(s.parameters?.category || ''));
+  const coreCategories = groupScoresByCategory(coreParams);
   
   return `
 # ${report.title}
 ## Full Analysis Report
 
 **Overall Readiness Score: ${Math.round(report.overall_score || 0)}/100**
+${isComic ? '\n*Comic Script Analysis - 14 Agents (10 Core + 4 Comic-Specialized)*\n' : ''}
 
 ---
 
@@ -223,22 +251,36 @@ ${Object.entries(report.lens_scores || {}).map(([lens, score]) => `
 
 ---
 
-## 4. Detailed Score Breakdown
+## 4. Core Parameter Analysis
 
-${Object.entries(categoryScores).map(([category, params]: [string, any]) => `
+${Object.entries(coreCategories).map(([category, params]: [string, any]) => `
 ### ${category}
 
-${params.map((p: any) => `
-#### ${p.parameters?.display_name || p.parameter_id}
-- **Score**: ${Math.round(p.score)}/100
-- **Confidence**: ${Math.round(p.confidence * 100)}%
-- **Analysis**: ${p.rationale || 'No rationale provided.'}
-`).join('\n')}
+${params.map((p: any) => formatParameterWithGuide(p)).join('\n')}
 `).join('\n')}
 
 ---
 
+${isComic ? `
+## 5. Comic-Specific Analysis
+
+### Specialized Comic Agents
+This analysis includes evaluation from 4 specialized comic agents:
+- **PanelFlowAgent** - Sequential storytelling, panel economy, page architecture
+- **LetteringBalloonAgent** - Dialogue load, balloon engineering, reading flow
+- **PageTurnImpactAgent** - Emotional payload, structural modularity, reveals
+- **ArtScriptSynergyAgent** - Art-writing balance, collaboration readiness
+
+### Comic Parameters
+
+${comicParams.map((p: any) => formatParameterWithGuide(p)).join('\n')}
+
+---
+
+## 6. Key Insights & Recommendations
+` : `
 ## 5. Key Insights & Recommendations
+`}
 
 ${insights
   .sort((a, b) => a.priority - b.priority)
@@ -251,7 +293,7 @@ ${insight.description}
 
 ---
 
-## 6. Character Analysis
+## ${isComic ? '7' : '6'}. Character Analysis
 
 | Character | Dialogue Lines | Scene Count | Description |
 |-----------|----------------|-------------|-------------|
