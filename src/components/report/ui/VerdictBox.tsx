@@ -100,10 +100,8 @@ export function VerdictBox({ type, title, content, className, icon }: VerdictBox
 
   return (
     <div className={cn(
-      "glass-premium rounded-xl border-l-4 p-5 transition-all duration-300 hover:shadow-lg group",
-      config.bgColor,
+      "bg-white shadow-sm border border-border rounded-xl border-l-4 p-5 transition-all duration-300 hover:shadow-md group",
       config.borderColor,
-      config.glowColor,
       className
     )}>
       <div className="flex items-start gap-4">
@@ -135,7 +133,7 @@ export function InlineVerdict({ type, label, className }: InlineVerdictProps) {
 
   return (
     <span className={cn(
-      "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium backdrop-blur-sm transition-all duration-200 hover:scale-105",
+      "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 hover:scale-105",
       config.bgColor,
       config.iconColor,
       className

@@ -70,7 +70,7 @@ export function ScoreDisplay({ score, maxScore = 10, size = 'md', showLabel = tr
 
   return (
     <div className={cn(
-      "inline-flex flex-col items-center rounded-2xl backdrop-blur-sm transition-all duration-300 hover:scale-105",
+      "inline-flex flex-col items-center rounded-2xl transition-all duration-300 hover:scale-105",
       bgColorClass,
       config.container,
       className
@@ -117,7 +117,7 @@ export function ScoreBar({ score, maxScore = 10, label, showValue = true, classN
           )}
         </div>
       )}
-      <div className="h-2.5 bg-muted/50 rounded-full overflow-hidden backdrop-blur-sm">
+      <div className="h-2.5 bg-muted/50 rounded-full overflow-hidden">
         <div 
           className={cn(
             "h-full rounded-full transition-all duration-700 ease-out relative overflow-hidden",
@@ -150,7 +150,7 @@ export function ScoreBadge({ score, maxScore = 10, size = 'md', className }: Sco
 
   return (
     <span className={cn(
-      "inline-flex items-center justify-center rounded-full font-mono font-bold tabular-nums backdrop-blur-sm transition-all duration-200 hover:scale-110",
+      "inline-flex items-center justify-center rounded-full font-mono font-bold tabular-nums transition-all duration-200 hover:scale-110",
       bgColorClass,
       colorClass,
       size === 'sm' ? 'h-7 w-14 text-xs' : 'h-9 w-18 text-sm',

@@ -70,8 +70,7 @@ export function RecommendationCard({
 
   return (
     <div className={cn(
-      "glass-premium rounded-xl p-5 transition-all duration-300 hover:shadow-lg group",
-      pConfig.borderGlow,
+      "bg-white shadow-sm border border-border rounded-xl p-5 transition-all duration-300 hover:shadow-md group",
       className
     )}>
       <div className="flex items-start gap-4">
@@ -85,7 +84,7 @@ export function RecommendationCard({
           <div className="flex items-center gap-2 mb-2">
             <h4 className="font-display font-semibold tracking-tight">{title}</h4>
             <span className={cn(
-              "px-2.5 py-0.5 rounded-full text-xs font-medium backdrop-blur-sm",
+              "px-2.5 py-0.5 rounded-full text-xs font-medium",
               pConfig.bgColor,
               pConfig.color
             )}>
