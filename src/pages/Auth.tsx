@@ -105,7 +105,7 @@ export default function Auth() {
   return (
     <div className="min-h-screen flex">
       {/* Left side - Branding */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary/20 via-background to-background p-12 flex-col justify-between">
+      <div className="hidden lg:flex lg:w-1/2 bg-muted/30 p-12 flex-col justify-between">
         <Logo size="lg" />
         
         <div className="space-y-6">
@@ -126,9 +126,9 @@ export default function Auth() {
             ].map((item, i) => (
               <div
                 key={i}
-                className="p-4 rounded-lg bg-card/50 border border-border"
+                className="p-4 rounded-lg bg-white shadow-sm border border-border"
               >
-                <p className="text-3xl font-bold gradient-text">{item.stat}</p>
+                <p className="text-3xl font-bold text-primary">{item.stat}</p>
                 <p className="text-sm text-muted-foreground">{item.label}</p>
               </div>
             ))}
