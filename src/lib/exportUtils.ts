@@ -16,6 +16,14 @@ import {
   type AgentDefinition,
 } from './scriptFramework';
 
+import {
+  ALL_PARAMETERS,
+  COMIC_PARAMETERS,
+  CORE_PARAMETERS,
+  exportParametersToJSON,
+  type ParameterDefinition,
+} from './parameterDefinitions';
+
 interface Parameter {
   id: string;
   name: string;
@@ -295,4 +303,35 @@ export function exportParametersToCSV(
   ].join('\n');
   
   downloadCSV(combinedContent, `pulse-framework-${timestamp}.csv`);
+}
+
+/**
+ * Exports the full parameter definitions with descriptions to JSON
+ */
+export function exportParameterDefinitionsJSON(): void {
+  const timestamp = new Date().toISOString().split('T')[0];
+  const content = exportParametersToJSON();
+  
+  const blob = new Blob([content], { type: 'application/json;charset=utf-8;' });
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  link.setAttribute('href', url);
+  link.setAttribute('download', `pulse-parameters-${timestamp}.json`);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * Get all parameter definitions for a script type
+ */
+export function getParameterDefinitionsForExport(scriptType: string): ParameterDefinition[] {
+  const isComic = ['comic', 'comic_series', 'graphic_novel', 'limited_comic_series', 'anthology_comic'].includes(scriptType);
+  
+  if (isComic) {
+    return [...CORE_PARAMETERS, ...COMIC_PARAMETERS];
+  }
+  return CORE_PARAMETERS;
 }

@@ -40,7 +40,7 @@ export const STAKEHOLDER_CATEGORIES: Record<StakeholderLens, string[]> = {
     'Character', 'Dialogue', 'Emotional Arc', 'Conflict'
   ],
   director: [
-    'Structure', 'Theme', 'Emotional Arc', 'World & Logic', 'Comic Visuals'
+    'Structure', 'Theme', 'Emotional Arc', 'World & Logic', 'Comic Visuals', 'Comic Collaboration'
   ],
   writer: [
     'Concept & Hook', 'Structure', 'Character', 'Dialogue', 'Theme', 'Conflict'
@@ -72,7 +72,7 @@ export const STAKEHOLDER_AGENTS: Record<StakeholderLens, string[]> = {
   ],
   director: [
     'StructureAgent', 'ThemeAgent', 'EmotionalArcAgent', 'WorldLogicAgent',
-    'ComicVisualAgent', 'StakeholderLensAgent', 'InsightSynthesisAgent'
+    'PanelFlowAgent', 'ArtScriptSynergyAgent', 'StakeholderLensAgent', 'InsightSynthesisAgent'
   ],
   writer: [
     'ConceptAgent', 'StructureAgent', 'CharacterAgent', 'DialogueAgent', 
@@ -123,7 +123,7 @@ export function getAgentsForStakeholder(
       'MarketAgent', 'ExecutionAgent', 'StakeholderLensAgent', 'InsightSynthesisAgent'
     ];
     if (isComic) {
-      allAgents.push('ComicVisualAgent', 'ComicDialogueAgent', 'ComicPacingAgent', 'ComicArtDirectionAgent');
+      allAgents.push('PanelFlowAgent', 'LetteringBalloonAgent', 'PageTurnImpactAgent', 'ArtScriptSynergyAgent');
     }
     return allAgents;
   }
@@ -132,8 +132,8 @@ export function getAgentsForStakeholder(
   
   // Add comic agents if relevant
   if (isComic && (stakeholderLens === 'director' || stakeholderLens === 'writer')) {
-    if (!agents.includes('ComicVisualAgent')) {
-      agents.push('ComicVisualAgent', 'ComicDialogueAgent', 'ComicPacingAgent', 'ComicArtDirectionAgent');
+    if (!agents.includes('PanelFlowAgent')) {
+      agents.push('PanelFlowAgent', 'LetteringBalloonAgent', 'PageTurnImpactAgent', 'ArtScriptSynergyAgent');
     }
   }
   

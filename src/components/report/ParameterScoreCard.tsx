@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { ParameterScoreData, CATEGORY_COLORS, MaturityLevel, RiskLevel } from '@/types/database';
 import { ScoreRing } from '@/components/ScoreRing';
 import { cn } from '@/lib/utils';
-import { ChevronDown, ChevronUp, Quote, TrendingUp, AlertTriangle, Wrench, Zap } from 'lucide-react';
+import { ChevronDown, ChevronUp, Quote, TrendingUp, AlertTriangle, Wrench, Zap, Info } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { ParameterDescription, ParameterScoringGuide } from './ParameterDescriptionDisplay';
 
 interface ParameterScoreCardProps {
   parameter: ParameterScoreData;
@@ -85,7 +86,10 @@ export function ParameterScoreCard({ parameter, index, compact = false }: Parame
                 </Badge>
               )}
             </div>
-            <h4 className="font-medium">{parameter.displayName}</h4>
+            <div className="flex items-center gap-1.5">
+              <h4 className="font-medium">{parameter.displayName}</h4>
+              <ParameterDescription parameterId={parameter.parameterName} />
+            </div>
             {parameter.confidence && (
               <p className="text-xs text-muted-foreground mt-1">
                 {Math.round(parameter.confidence * 100)}% confidence
@@ -163,6 +167,9 @@ export function ParameterScoreCard({ parameter, index, compact = false }: Parame
               <p className="text-sm text-muted-foreground">{parameter.rationale}</p>
             </div>
           )}
+
+          {/* Scoring Guide */}
+          <ParameterScoringGuide parameterId={parameter.parameterName} />
 
           {/* Evidence */}
           {hasEvidence && (
