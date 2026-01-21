@@ -13,6 +13,7 @@ export interface ParameterDefinition {
   scoringGuide: string;
   applicableScriptTypes: string[] | 'all';
   weight: number; // Default weight (1.0 = neutral)
+  longFormOnly?: boolean; // For web series long-form parameters
 }
 
 // ============= COMICS-SPECIFIC PARAMETERS (10 Core Parameters) =============
@@ -1015,6 +1016,7 @@ export const WEB_SERIES_PARAMETERS: ParameterDefinition[] = [
     scoringGuide: '9-10: Strategic re-hooks at 12-15 minute intervals, prevents attention decay. 7-8: Strong mid-episode engagement points. 5-6: Some attention resets. 3-4: Long stretches without re-engagement. 1-2: No mid-episode hooks.',
     applicableScriptTypes: ['web_series'],
     weight: 0.6,
+    longFormOnly: true,
   },
   {
     id: 'soft_act_integrity',
@@ -1026,6 +1028,7 @@ export const WEB_SERIES_PARAMETERS: ParameterDefinition[] = [
     scoringGuide: '9-10: Organic act-like structure, natural story rhythm. 7-8: Good soft act design. 5-6: Basic structural pivots. 3-4: Rigid or absent act structure. 1-2: No discernible structure.',
     applicableScriptTypes: ['web_series'],
     weight: 0.7,
+    longFormOnly: true,
   },
   {
     id: 'binge_continuity_pressure',
@@ -1037,6 +1040,7 @@ export const WEB_SERIES_PARAMETERS: ParameterDefinition[] = [
     scoringGuide: '9-10: Endings designed for immediate next-episode consumption. 7-8: Strong binge pressure. 5-6: Adequate continuity. 3-4: Satisfying endings that reduce urgency. 1-2: No binge consideration.',
     applicableScriptTypes: ['web_series'],
     weight: 0.6,
+    longFormOnly: true,
   },
 ];
 
@@ -1071,12 +1075,12 @@ export const EPISODE_LENGTH_WEIGHT_MODIFIERS: Record<EpisodeLengthClass, Record<
 // Auto-detected failure modes from the framework document
 
 export const WEB_SERIES_FAILURE_PATTERNS = [
-  { id: 'tv_pacing_no_rehooks', name: 'TV Pacing Without Re-Hooks', description: 'Long-form content with traditional TV pacing but no mid-episode attention resets.' },
-  { id: 'over_serialization', name: 'Over-Serialization', description: 'Too much serialized dependency killing discoverability and new viewer entry.' },
-  { id: 'film_cold_opens', name: 'Film-Style Cold Opens', description: 'Using cinematic slow-burn openings instead of immediate digital hooks.' },
-  { id: 'unsustainable_scope', name: 'Unsustainable Production Scope', description: 'Production complexity exceeding sustainable release cadence.' },
-  { id: 'no_clip_moments', name: 'Missing Clip Moments', description: 'Episodes without any obviously shareable or meme-worthy segments.' },
-  { id: 'weak_episode_endings', name: 'Weak Episode Endings', description: 'Satisfying resolutions that reduce next-episode urgency.' },
+  { id: 'tv_pacing_no_rehooks', name: 'TV Pacing Without Re-Hooks', description: 'Long-form content with traditional TV pacing but no mid-episode attention resets.', triggerParam: 'mid_episode_rehooking', threshold: 5 },
+  { id: 'over_serialization', name: 'Over-Serialization', description: 'Too much serialized dependency killing discoverability and new viewer entry.', triggerParam: 'episode_self_containment', threshold: 4 },
+  { id: 'film_cold_opens', name: 'Film-Style Cold Opens', description: 'Using cinematic slow-burn openings instead of immediate digital hooks.', triggerParam: 'hook_efficiency', threshold: 5 },
+  { id: 'unsustainable_scope', name: 'Unsustainable Production Scope', description: 'Production complexity exceeding sustainable release cadence.', triggerParam: 'production_simplicity_velocity', threshold: 4 },
+  { id: 'no_clip_moments', name: 'Missing Clip Moments', description: 'Episodes without any obviously shareable or meme-worthy segments.', triggerParam: 'shareability_meme_potential', threshold: 4 },
+  { id: 'weak_episode_endings', name: 'Weak Episode Endings', description: 'Satisfying resolutions that reduce next-episode urgency.', triggerParam: 'serial_momentum', threshold: 5 },
 ];
 
 // ============= OTT VS WEB SERIES DISAMBIGUATION =============

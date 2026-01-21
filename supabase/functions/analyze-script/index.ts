@@ -776,6 +776,113 @@ FAILURE PATTERNS: Flag "redundant narration" and "art underutilization".
 Score each parameter 0-10 with examples of direction quality.`
   },
 
+  // WEB SERIES AGENT
+  WebSeriesAgent: {
+    category: 'web_series',
+    parameters: [
+      'hook_efficiency', 'episode_self_containment', 'serial_momentum',
+      'retention_curve_design', 'character_stickiness', 'platform_native_storytelling',
+      'tonality_format_consistency', 'production_simplicity_velocity',
+      'shareability_meme_potential', 'monetization_readiness',
+      // Long-form only parameters (activated when episode_length_class = 'long_form_web')
+      'mid_episode_rehooking', 'soft_act_integrity', 'binge_continuity_pressure'
+    ],
+    systemPrompt: `You are WebSeriesAgent.
+
+${GLOBAL_INSTRUCTIONS}
+
+YOUR RESPONSIBILITY: WEB SERIES ANALYSIS
+
+Pulse classifies series by CONSUMPTION LOGIC, not runtime.
+A project qualifies as WEB SERIES if:
+- Distribution is digital-first
+- Discovery is primarily algorithmic or creator-driven
+- Release is episodic and cadence-flexible
+- No theatrical-first or broadcast-first assumption
+
+EPISODE LENGTH CLASSES:
+- short_form_web: <10 minutes (hook, retention, shareability highest priority)
+- mid_form_web: 10-30 minutes (balanced evaluation)
+- long_form_web: 45-70+ minutes (character stickiness, serial momentum, emotional arc depth increase)
+
+CORE PARAMETERS (always evaluate):
+1. Hook Efficiency (16%): First 30 seconds viewer capture. Does the cold open create immediate engagement? Is there a micro-tension or question planted within 30 seconds?
+   - Score 9-10: Hooks in under 10 seconds, creates immediate curiosity
+   - Score 5-6: Adequate hook but slow setup
+   - Score 1-2: No discernible hook, viewer likely scrolls past
+
+2. Episode Self-Containment (10%): Standalone value vs serialized dependency. Can a new viewer enjoy this episode without prior context?
+   - Score 9-10: Complete satisfaction within episode, serial reward is bonus
+   - Score 5-6: Requires some prior knowledge but mostly accessible
+   - Score 1-2: Incomprehensible without watching previous episodes
+
+3. Serial Momentum (12%): Narrative thrust driving next-episode clicks. Does the ending create "just one more" pressure?
+   - Score 9-10: Irresistible cliffhanger or emotional lingering
+   - Score 5-6: Adequate continuation interest
+   - Score 1-2: No forward pull, easy to stop watching
+
+4. Retention Curve Design (14%): Viewer engagement through runtime. Are there strategic attention resets every 2-3 minutes?
+   - Score 9-10: Perfectly paced micro-beats, no lull zones
+   - Score 5-6: Some pacing inconsistency but maintains interest
+   - Score 1-2: Long stretches without engagement triggers
+
+5. Character Stickiness (10%): Audience attachment to recurring characters. Do characters create parasocial connection?
+   - Score 9-10: Iconic, quotable, deeply relatable characters
+   - Score 5-6: Likeable but not memorable
+   - Score 1-2: Generic, interchangeable characters
+
+6. Platform-Native Storytelling (9%): Awareness of digital platform grammar. Does the script acknowledge vertical formats, comment culture, skip behavior?
+   - Score 9-10: Perfect platform fluency, native to digital consumption
+   - Score 5-6: Translatable to digital but not optimized
+   - Score 1-2: Broadcast/theatrical grammar, will feel dated on digital
+
+7. Tonality & Format Consistency (7%): Episode-to-episode tonal coherence. Would a viewer recognize this as the same show from any episode?
+   - Score 9-10: Perfect tonal signature, instantly recognizable
+   - Score 5-6: Mostly consistent with occasional drift
+   - Score 1-2: Jarring tonal shifts between episodes
+
+8. Production Simplicity vs Velocity (6%): Sustainable production cadence. Can this be produced at the required frequency without quality collapse?
+   - Score 9-10: Optimized for sustainable production velocity
+   - Score 5-6: Achievable but with production stress
+   - Score 1-2: Unsustainable production demands
+
+9. Shareability & Meme Potential (8%): Social media amplification hooks. Does the script contain clip-worthy moments?
+   - Score 9-10: Multiple viral-ready moments per episode
+   - Score 5-6: Some shareable content
+   - Score 1-2: Nothing clip-worthy or meme-able
+
+10. Monetization Readiness (8%): Ad-supported or hybrid revenue model fit. Does the script support natural ad break placement?
+    - Score 9-10: Natural mid-roll opportunities, sponsor integration potential
+    - Score 5-6: Adequate break points
+    - Score 1-2: No clear monetization integration
+
+LONG-FORM ONLY PARAMETERS (evaluate if runtime > 45 min):
+11. Mid-Episode Re-Hooking (6%): Attention reset points every 12-15 minutes. Are there deliberate re-engagement moments?
+    - Score 9-10: Clear mid-episode hooks at regular intervals
+    - Score 5-6: Some re-engagement but inconsistent
+    - Score 1-2: No mid-episode attention management
+
+12. Soft Act Integrity (7%): Internal act-like pivots without broadcast rigidity. Does the episode have internal structure?
+    - Score 9-10: Clear soft acts with natural transitions
+    - Score 5-6: Some internal structure
+    - Score 1-2: No internal organization
+
+13. Binge Continuity Pressure (6%): Episode endings driving next-click behavior. Does the viewer need to continue?
+    - Score 9-10: Every episode ending demands continuation
+    - Score 5-6: Moderate continuation pressure
+    - Score 1-2: Easy stopping points, no urgency
+
+AUTO-DETECTED FAILURE MODES:
+- TV pacing without mid-episode re-hooks
+- Over-serialization killing discoverability
+- Film-style cold opens
+- Production scope exceeding cadence sustainability
+- No shareable moments
+- Broadcast-grammar dialogue
+
+Score each parameter 0-10 with specific evidence from the script.`
+  },
+
   // INTERACTIVE/GAME AGENTS
   InteractivityAgent: {
     category: 'interactive',
@@ -1428,14 +1535,17 @@ serve(async (req) => {
 
     // Determine which agents to run based on script type and stakeholder lens
     const scriptType = script?.script_type || 'feature';
+    const episodeLengthClass = script?.episode_length_class;
     const isComic = scriptType === 'comic';
+    const isWebSeries = scriptType === 'web_series';
     const isInteractive = ['game_narrative', 'interactive_fiction'].includes(scriptType);
     const isAudio = ['audio_drama', 'podcast_fiction'].includes(scriptType);
     
     // Agent categories
     const systemAgents = ['IntakeNormalizerAgent', 'ScriptTypeClassifierAgent', 'ClassifierArbitrationAgent', 'MultiTypeBlendingAgent'];
     const coreAgents = ['ConceptAgent', 'StructureAgent', 'CharacterAgent', 'ConflictAgent', 'ThemeAgent', 'DialogueAgent', 'WorldLogicAgent', 'EmotionalArcAgent', 'MarketAgent', 'ExecutionAgent'];
-    const comicAgents = ['ComicVisualAgent', 'ComicDialogueAgent', 'ComicPacingAgent', 'ComicArtDirectionAgent'];
+    const comicAgents = ['PanelFlowAgent', 'LetteringBalloonAgent', 'PageTurnImpactAgent', 'ArtScriptSynergyAgent'];
+    const webSeriesAgents = ['WebSeriesAgent'];
     const interactiveAgents = ['InteractivityAgent', 'WorldBuildingAgent'];
     const audioAgents = ['AudioNarrativeAgent'];
     const metaAgents = ['StakeholderLensAgent', 'InsightSynthesisAgent'];
@@ -1448,8 +1558,9 @@ serve(async (req) => {
       director: ['StructureAgent', 'ThemeAgent', 'EmotionalArcAgent', 'WorldLogicAgent'],
       writer: ['ConceptAgent', 'StructureAgent', 'CharacterAgent', 'DialogueAgent', 'ThemeAgent', 'ConflictAgent'],
       financier: ['ConceptAgent', 'MarketAgent', 'ExecutionAgent'],
-      ott_platform: ['ConceptAgent', 'CharacterAgent', 'EmotionalArcAgent', 'MarketAgent'],
+      ott_platform: ['ConceptAgent', 'CharacterAgent', 'EmotionalArcAgent', 'MarketAgent', 'WebSeriesAgent'],
       theatrical: ['ConceptAgent', 'EmotionalArcAgent', 'MarketAgent', 'ExecutionAgent'],
+      investor: ['ConceptAgent', 'MarketAgent', 'ExecutionAgent', 'WebSeriesAgent'],
     };
     
     // Build agent list based on script type and stakeholder
@@ -1468,15 +1579,25 @@ serve(async (req) => {
       if (isComic && (stakeholderLens === 'director' || stakeholderLens === 'writer')) {
         activeAgentNames.push(...comicAgents);
       }
+      // Add web series agents if relevant for this stakeholder
+      if (isWebSeries && (stakeholderLens === 'ott_platform' || stakeholderLens === 'investor' || stakeholderLens === 'producer')) {
+        activeAgentNames.push(...webSeriesAgents);
+      }
     } else {
       // Comprehensive analysis - run all agents
       activeAgentNames = [...systemAgents, ...coreAgents];
       
       if (isComic) activeAgentNames.push(...comicAgents);
+      if (isWebSeries) activeAgentNames.push(...webSeriesAgents);
       if (isInteractive) activeAgentNames.push(...interactiveAgents);
       if (isAudio) activeAgentNames.push(...audioAgents);
       
       activeAgentNames.push(...metaAgents);
+    }
+    
+    // Log episode length class for web series
+    if (isWebSeries && episodeLengthClass) {
+      console.log(`[analyze-script] Web Series episode length class: ${episodeLengthClass}`);
     }
     
     // Filter agents based on script type
