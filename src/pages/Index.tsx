@@ -1,8 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { Logo } from '@/components/Logo';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Sparkles, BarChart3, Users, Zap, Play } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { ArrowRight, Sparkles, BarChart3, Users, Zap } from 'lucide-react';
 
 export default function Index() {
   const navigate = useNavigate();
@@ -63,23 +62,14 @@ export default function Index() {
               Start Analyzing
               <ArrowRight className="h-5 w-5 ml-2" />
             </Button>
-            <Button 
-              size="lg" 
-              variant="outline" 
-              className="h-14 px-8 text-lg"
-              onClick={() => navigate('/sample-report')}
-            >
-              <Play className="h-5 w-5 mr-2" />
-              View Sample Report
-            </Button>
           </div>
 
           {/* Stats row */}
           <div className="mt-20 grid grid-cols-3 gap-8 max-w-2xl mx-auto animate-fade-up animation-delay-300">
             {[
-              { value: '12', label: 'AI Agents' },
-              { value: '8', label: 'Stakeholder Lenses' },
-              { value: '50+', label: 'Parameters' },
+              { value: '10', label: 'USAF Agents' },
+              { value: '9', label: 'Stakeholder Lenses' },
+              { value: '60+', label: 'Parameters' },
             ].map((stat, i) => (
               <div key={i} className="text-center">
                 <p className="text-3xl md:text-4xl font-mono font-bold text-primary">{stat.value}</p>
@@ -97,7 +87,7 @@ export default function Index() {
             Every perspective. <span className="text-primary font-semibold">One platform.</span>
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Switch between 8 stakeholder lenses to instantly see how your script 
+            Switch between 9 stakeholder lenses to instantly see how your script 
             performs for different decision-makers.
           </p>
         </div>
@@ -106,13 +96,13 @@ export default function Index() {
           {[
             {
               icon: Zap,
-              title: '12 AI Agents',
+              title: '10 USAF Agents',
               description: 'Specialized agents analyze structure, character, dialogue, theme, market fit, and more.',
             },
             {
               icon: Users,
-              title: '8 Stakeholder Lenses',
-              description: 'Toggle between Studio, Producer, Actor, Director, Writer, Financier, OTT, and Theatrical views.',
+              title: '9 Stakeholder Lenses',
+              description: 'Toggle between Studio, Producer, Actor, Director, Writer, Financier, Investor, OTT, and Theatrical views.',
             },
             {
               icon: BarChart3,
@@ -154,6 +144,7 @@ export default function Index() {
               'Actor',
               'Writer',
               'Financier',
+              'Investor',
               'OTT Platform',
               'Theatrical',
             ].map((lens, i) => (
