@@ -36,7 +36,8 @@ serve(async (req) => {
           genre,
           script_type,
           logline,
-          page_count
+          page_count,
+          episode_length_class
         )
       `)
       .eq('id', reportId)
@@ -208,13 +209,25 @@ function generateFullReport(
 ): string {
   const categoryScores = groupScoresByCategory(scores);
   const isComic = data.scriptMetadata?.scriptType === 'comic';
+  const isWebSeries = data.scriptMetadata?.scriptType === 'web_series';
+  const episodeLengthClass = report.scripts?.episode_length_class;
   
   // Separate comic-specific parameters
   const comicCategories = ['Comic Visuals', 'Comic Dialogue', 'Comic Pacing', 'Comic Collaboration', 
                           'Comic Characters', 'Comic Production', 'Comic Market', 'Comic Structure'];
+  const webSeriesCategories = ['Web Series'];
+  
   const comicParams = scores.filter(s => comicCategories.includes(s.parameters?.category || ''));
-  const coreParams = scores.filter(s => !comicCategories.includes(s.parameters?.category || ''));
+  const webSeriesParams = scores.filter(s => webSeriesCategories.includes(s.parameters?.category || ''));
+  const coreParams = scores.filter(s => 
+    !comicCategories.includes(s.parameters?.category || '') && 
+    !webSeriesCategories.includes(s.parameters?.category || '')
+  );
   const coreCategories = groupScoresByCategory(coreParams);
+
+  const episodeLengthLabel = episodeLengthClass === 'short_form_web' ? 'Short-Form (<10 min)' :
+                             episodeLengthClass === 'mid_form_web' ? 'Mid-Form (10-30 min)' :
+                             episodeLengthClass === 'long_form_web' ? 'Long-Form (45-70+ min)' : null;
   
   return `
 # ${report.title}
@@ -222,6 +235,7 @@ function generateFullReport(
 
 **Overall Readiness Score: ${Math.round(report.overall_score || 0)}/100**
 ${isComic ? '\n*Comic Script Analysis - 14 Agents (10 Core + 4 Comic-Specialized)*\n' : ''}
+${isWebSeries ? `\n*Web Series Analysis - WebSeriesAgent with 13 Parameters*\n${episodeLengthLabel ? `*Episode Length Class: ${episodeLengthLabel}*\n` : ''}` : ''}
 
 ---
 
@@ -239,6 +253,7 @@ ${data.scriptMetadata?.logline ? `*${data.scriptMetadata.logline}*\n` : ''}
 | Genre | ${data.scriptMetadata?.genre || 'Not specified'} |
 | Type | ${data.scriptMetadata?.scriptType || 'Feature'} |
 | Page Count | ${data.scriptMetadata?.pageCount || 'Unknown'} |
+${isWebSeries && episodeLengthLabel ? `| Episode Length | ${episodeLengthLabel} |` : ''}
 
 ---
 
@@ -261,7 +276,28 @@ ${params.map((p: any) => formatParameterWithGuide(p)).join('\n')}
 
 ---
 
-${isComic ? `
+${isWebSeries ? `
+## 5. Web Series Analysis
+
+### Digital-First Series Parameters
+This analysis includes evaluation from the WebSeriesAgent covering ${webSeriesParams.length} parameters optimized for algorithmic discovery, retention, and platform-native consumption.
+
+${episodeLengthClass === 'long_form_web' ? `
+### Long-Form Parameters (Activated)
+The following bonus parameters are evaluated for episodes exceeding 45 minutes:
+- Mid-Episode Re-Hooking (attention reset points every 12-15 minutes)
+- Soft Act Integrity (internal act-like pivots)
+- Binge Continuity Pressure (next-click behavior optimization)
+` : ''}
+
+### Web Series Parameters
+
+${webSeriesParams.map((p: any) => formatParameterWithGuide(p)).join('\n')}
+
+---
+
+## 6. Key Insights & Recommendations
+` : isComic ? `
 ## 5. Comic-Specific Analysis
 
 ### Specialized Comic Agents
@@ -293,7 +329,7 @@ ${insight.description}
 
 ---
 
-## ${isComic ? '7' : '6'}. Character Analysis
+## ${isComic || isWebSeries ? '7' : '6'}. Character Analysis
 
 | Character | Dialogue Lines | Scene Count | Description |
 |-----------|----------------|-------------|-------------|

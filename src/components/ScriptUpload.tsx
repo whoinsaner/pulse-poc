@@ -1,16 +1,18 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDropzone } from 'react-dropzone';
-import { Upload, FileText, X, Loader2, Check, AlertTriangle, PlayCircle, Eye, RefreshCw } from 'lucide-react';
+import { Upload, FileText, X, Loader2, Check, AlertTriangle, PlayCircle, Eye, RefreshCw, Clock, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
-import { ScriptFormat, ScriptType } from '@/types/database';
+import { ScriptFormat, ScriptType, EpisodeLengthClass } from '@/types/database';
 import { ScriptPreview } from '@/components/ScriptPreview';
 import { StreamingParsingStatus } from '@/components/StreamingParsingStatus';
 import { useStreamingParser } from '@/hooks/useStreamingParser';
@@ -65,6 +67,7 @@ export function ScriptUpload({ onUploadComplete, onClose }: ScriptUploadProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [detectedFormat, setDetectedFormat] = useState<ScriptFormat | null>(null);
   const [scriptType, setScriptType] = useState<ScriptType>('feature');
+  const [episodeLengthClass, setEpisodeLengthClass] = useState<EpisodeLengthClass>('mid_form_web');
   const [title, setTitle] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [parseResult, setParseResult] = useState<ParseResult | null>(null);
@@ -72,6 +75,14 @@ export function ScriptUpload({ onUploadComplete, onClose }: ScriptUploadProps) {
   const [currentFilePath, setCurrentFilePath] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [fileSizeWarning, setFileSizeWarning] = useState<string | null>(null);
+
+  const isWebSeries = scriptType === 'web_series';
+
+  const EPISODE_LENGTH_OPTIONS: { value: EpisodeLengthClass; label: string; description: string }[] = [
+    { value: 'short_form_web', label: 'Short-Form', description: '<10 min' },
+    { value: 'mid_form_web', label: 'Mid-Form', description: '10-30 min' },
+    { value: 'long_form_web', label: 'Long-Form', description: '45-70+ min' },
+  ];
 
   // Streaming parser hook
   const streamingParser = useStreamingParser({
@@ -177,6 +188,7 @@ export function ScriptUpload({ onUploadComplete, onClose }: ScriptUploadProps) {
           organization_id: currentOrganization.id,
           uploaded_by: user.id,
           file_size_bytes: selectedFile.size,
+          episode_length_class: isWebSeries ? episodeLengthClass : null,
         })
         .select()
         .single();
@@ -231,6 +243,7 @@ export function ScriptUpload({ onUploadComplete, onClose }: ScriptUploadProps) {
     setCurrentScriptId(null);
     setCurrentFilePath(null);
     setShowPreview(false);
+    setEpisodeLengthClass('mid_form_web');
   };
 
   return (
@@ -337,6 +350,76 @@ export function ScriptUpload({ onUploadComplete, onClose }: ScriptUploadProps) {
               )}
             </div>
           </div>
+
+          {/* Episode Length Class - Only shown for Web Series */}
+          {isWebSeries && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-medium">Episode Length Class</label>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <p className="text-sm">
+                      Episode length affects which parameters are evaluated and their weights. 
+                      Long-form (45+ min) activates additional mid-episode re-hooking parameters.
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+              
+              <div className="grid grid-cols-3 gap-3">
+                {EPISODE_LENGTH_OPTIONS.map((option) => (
+                  <button
+                    key={option.value}
+                    onClick={() => setEpisodeLengthClass(option.value)}
+                    className={cn(
+                      'flex flex-col items-center p-4 rounded-xl border-2 transition-all',
+                      episodeLengthClass === option.value
+                        ? 'border-primary bg-primary/5'
+                        : 'border-border hover:border-primary/50 bg-card'
+                    )}
+                  >
+                    <Clock className={cn(
+                      "h-5 w-5 mb-2",
+                      episodeLengthClass === option.value ? "text-primary" : "text-muted-foreground"
+                    )} />
+                    <span className={cn(
+                      "font-medium text-sm",
+                      episodeLengthClass === option.value ? "text-primary" : "text-foreground"
+                    )}>
+                      {option.label}
+                    </span>
+                    <span className="text-xs text-muted-foreground mt-0.5">
+                      {option.description}
+                    </span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Info badge about what this selection means */}
+              <div className="p-3 rounded-lg bg-muted/50 border border-border">
+                <p className="text-xs text-muted-foreground">
+                  {episodeLengthClass === 'short_form_web' && (
+                    <>
+                      <strong>Short-form optimization:</strong> Hook efficiency (+30%), shareability (+40%), and retention curve weights are increased. Character stickiness weight is reduced.
+                    </>
+                  )}
+                  {episodeLengthClass === 'mid_form_web' && (
+                    <>
+                      <strong>Balanced evaluation:</strong> All 10 core web series parameters are evaluated with default weights.
+                    </>
+                  )}
+                  {episodeLengthClass === 'long_form_web' && (
+                    <>
+                      <strong>Long-form activation:</strong> 3 additional parameters unlocked (Mid-Episode Re-Hooking, Soft Act Integrity, Binge Continuity). Character stickiness and serial momentum weights increased.
+                    </>
+                  )}
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Upload button */}
           <Button onClick={handleUpload} className="w-full h-12" size="lg">
