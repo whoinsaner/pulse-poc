@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DashboardStats } from '@/components/DashboardStats';
-import { Upload, FileText, BarChart3, Users, LogOut, Plus, Layers, FlaskConical, Settings, Cpu } from 'lucide-react';
+import { Upload, FileText, BarChart3, Users, LogOut, Plus, Layers, FlaskConical, Settings, Cpu, Palette } from 'lucide-react';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -195,6 +195,10 @@ export default function Dashboard() {
             <Button variant="outline" onClick={() => navigate('/sample-comic-report')}>
               <FileText className="h-4 w-4 mr-2" />
               View Comic Sample
+            </Button>
+            <Button variant="outline" onClick={() => navigate('/comic-gallery')}>
+              <Palette className="h-4 w-4 mr-2" />
+              Comic Gallery
             </Button>
           </CardContent>
         </Card>
