@@ -46,6 +46,7 @@ import SampleReportLayout from "./pages/SampleReport";
 import SampleScript from "./pages/SampleScript";
 import SampleComicReportLayout from "./pages/SampleComicReport";
 import SampleComicScript from "./pages/SampleComicScript";
+import SampleWebSeriesReportLayout from "./pages/SampleWebSeriesReport";
 import ComicGallery from "./pages/ComicGallery";
 import Reports from "./pages/Reports";
 import Team from "./pages/Team";
@@ -173,6 +174,34 @@ const App = () => (
               <Route path="platform" element={<ReportPlatform />} />
             </Route>
             <Route path="/sample-comic-script" element={<SampleComicScript />} />
+            <Route path="/sample-web-series-report" element={<SampleWebSeriesReportLayout />}>
+              <Route index element={<ProjectSnapshot />} />
+              <Route path="concept" element={<ConceptHook />} />
+              <Route path="plot" element={<PlotAnalysis />} />
+              <Route path="structure" element={<StructuralEngineering />} />
+              <Route path="protagonist" element={<ProtagonistAnalysis />} />
+              <Route path="antagonist" element={<AntagonistAnalysis />} />
+              <Route path="supporting" element={<SupportingCast />} />
+              <Route path="psychology" element={<CharacterPsychology />} />
+              <Route path="dialogue" element={<DialogueSubtext />} />
+              <Route path="theme" element={<ThemeMoral />} />
+              <Route path="visual" element={<VisualStorytelling />} />
+              <Route path="emotional" element={<EmotionalResonance />} />
+              <Route path="web-series" element={<WebSeriesAnalysis />} />
+              <Route path="retention" element={<RetentionAnalysis />} />
+              <Route path="hooks" element={<HooksAnalysis />} />
+              <Route path="market" element={<Marketability />} />
+              <Route path="production" element={<Production />} />
+              <Route path="audience" element={<AudienceStrategy />} />
+              <Route path="rewrite" element={<RewritePriorities />} />
+              <Route path="scenes" element={<SceneEconomy />} />
+              <Route path="scorecard" element={<CompleteScorecard />} />
+              <Route path="script" element={<SampleScript />} />
+              <Route path="analysis" element={<ReportAnalysis />} />
+              <Route path="insights" element={<ReportInsights />} />
+              <Route path="narrative" element={<ReportNarrative />} />
+              <Route path="characters" element={<ReportCharacters />} />
+            </Route>
             <Route path="/comic-gallery" element={<ComicGallery />} />
             <Route path="/team" element={<Team />} />
             <Route path="/parameters" element={<ParametersAgents />} />
