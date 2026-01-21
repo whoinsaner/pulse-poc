@@ -501,5 +501,5 @@ export interface PromptVersion {
 export const CURRENT_PROMPT_VERSION = '2.0.0';
 export const PROMPT_VERSION_HISTORY: PromptVersion[] = [
   { version: '2.0.0', changeDate: '2024-12-29', changeSummary: 'Universal Script Analysis Framework - expanded script types, system agents, meta agents' },
-  { version: '1.0.0', changeDate: '2024-12-01', changeSummary: 'Initial UASF implementation with 10 core agents + 4 comic agents' },
+  { version: '1.0.0', changeDate: '2024-12-01', changeSummary: 'Initial USAF implementation with 10 core agents + 4 comic agents' },
 ];

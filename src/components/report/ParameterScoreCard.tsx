@@ -34,7 +34,7 @@ export function ParameterScoreCard({ parameter, index, compact = false }: Parame
   const [expanded, setExpanded] = useState(false);
 
   const hasEvidence = parameter.evidence && parameter.evidence.length > 0;
-  const hasUASFFields = parameter.maturity || parameter.riskLevel || parameter.fixCost || parameter.upsideImpact;
+  const hasUSAFFields = parameter.maturity || parameter.riskLevel || parameter.fixCost || parameter.upsideImpact;
 
   if (compact) {
     return (
@@ -98,7 +98,7 @@ export function ParameterScoreCard({ parameter, index, compact = false }: Parame
           </div>
           <div className="flex items-center gap-2">
             <ScoreRing score={parameter.score} size="sm" showLabel={false} />
-            {(hasEvidence || hasUASFFields) && (
+            {(hasEvidence || hasUSAFFields) && (
               expanded ? (
                 <ChevronUp className="h-4 w-4 text-muted-foreground" />
               ) : (
@@ -111,8 +111,8 @@ export function ParameterScoreCard({ parameter, index, compact = false }: Parame
 
       {expanded && (
         <div className="px-4 pb-4 space-y-4 animate-fade-up">
-          {/* UASF Metrics */}
-          {hasUASFFields && (
+          {/* USAF Metrics */}
+          {hasUSAFFields && (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {parameter.riskLevel && (
                 <div className="flex items-center gap-1.5 p-2 rounded-lg bg-muted/50">

@@ -368,7 +368,7 @@ export default function TestComicAnalysis() {
           <CardContent className="text-sm text-muted-foreground space-y-2">
             <p>✓ Comic script upload & storage</p>
             <p>✓ Page & panel extraction</p>
-            <p>✓ All 10 core UASF agents</p>
+            <p>✓ All 10 core USAF agents</p>
             <p>✓ 4 comic-specific agents</p>
             <p>✓ 10 comic parameters (new framework)</p>
             <p>✓ Visual storytelling scoring</p>

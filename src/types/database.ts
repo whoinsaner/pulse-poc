@@ -318,7 +318,7 @@ export const LENS_CONFIG: Record<StakeholderLens, { label: string; description: 
   },
 };
 
-// UASF Module category colors for charts
+// USAF Module category colors for charts
 export const CATEGORY_COLORS: Record<string, string> = {
   // Module A: Concept & Hook
   'Concept & Hook': 'hsl(var(--chart-1))',

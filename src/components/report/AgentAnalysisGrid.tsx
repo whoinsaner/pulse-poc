@@ -25,8 +25,8 @@ interface AgentAnalysisGridProps {
   scriptType?: ScriptType;
 }
 
-// UASF Agent definitions
-const UASF_AGENTS = [
+// USAF Agent definitions
+const USAF_AGENTS = [
   { id: 'concept', module: 'A', name: 'Concept & Hook', icon: Lightbulb, category: 'Concept & Hook', color: 'chart-1' },
   { id: 'structure', module: 'B', name: 'Structural Intelligence', icon: LayoutGrid, category: 'Structure', color: 'chart-2' },
   { id: 'character', module: 'C', name: 'Character & Agency', icon: Users, category: 'Character', color: 'chart-3' },
@@ -49,7 +49,7 @@ const COMIC_AGENTS = [
 
 export function AgentAnalysisGrid({ parameterScores, categoryScores, scriptType }: AgentAnalysisGridProps) {
   const isComic = isComicType(scriptType);
-  const agents = isComic ? [...UASF_AGENTS, ...COMIC_AGENTS] : UASF_AGENTS;
+  const agents = isComic ? [...USAF_AGENTS, ...COMIC_AGENTS] : USAF_AGENTS;
   const agentCounts = getAgentCountForScriptType(scriptType);
 
   // Get score from categoryScores (already 0-100 scale)

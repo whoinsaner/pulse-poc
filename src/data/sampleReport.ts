@@ -1545,7 +1545,7 @@ The script positions well for the $80-120M budget range with clear audience targ
 **Investment Readiness: 79/100**
 Strong creative fundamentals with moderate execution risks. Recommend development with focus on thematic deepening, exposition pacing, and production optimization.
 
-**UASF Analysis:** 55 parameters scored across 10 core agents + meta analysis. All agents completed successfully.`,
+**USAF Analysis:** 55 parameters scored across 10 core agents + meta analysis. All agents completed successfully.`,
   full_report_data: SAMPLE_REPORT_DATA,
   pdf_url: null,
   created_at: new Date().toISOString(),
