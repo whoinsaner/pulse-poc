@@ -189,6 +189,7 @@ export interface ReportData {
     genre?: string;
     scriptType: ScriptType;
     pageCount?: number;
+    episodeLengthClass?: EpisodeLengthClass;
   };
   overallScore: number;
   lensScores: Record<StakeholderLens, number>;
