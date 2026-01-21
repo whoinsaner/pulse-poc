@@ -212,8 +212,10 @@ export function AnalysisPipelineVisualization({
             agentProgress={agentProgress}
             stageColor="bg-emerald-500/20 text-emerald-500"
             stageIcon={<Lightbulb className="h-4 w-4" />}
+            isLast
           />
           
+          {/* Meta stage hidden - agents not yet implemented in edge function
           <PipelineStage
             title="Meta"
             agents={META_AGENTS}
@@ -223,6 +225,7 @@ export function AnalysisPipelineVisualization({
             stageIcon={<Briefcase className="h-4 w-4" />}
             isLast
           />
+          */}
         </div>
         
         {/* Status summary */}

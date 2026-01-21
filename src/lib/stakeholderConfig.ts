@@ -146,9 +146,9 @@ export function getExpectedAgentsForAnalysis(
   scriptType: string,
   stakeholderLens: StakeholderLens | null
 ): string[] {
-  const isComic = scriptType === 'comic';
+  const isComic = scriptType === 'comic' || scriptType.includes('comic');
   
-  // System agents always run
+  // System agents always run (4 agents)
   const systemAgentIds = [
     'IntakeNormalizerAgent',
     'ScriptTypeClassifierAgent', 
@@ -156,21 +156,25 @@ export function getExpectedAgentsForAnalysis(
     'MultiTypeBlendingAgent'
   ];
   
-  // Meta agents always run
-  const metaAgentIds = [
-    'ScriptEvolutionAgent',
-    'CreatorFeedbackLoopAgent',
-    'ExplainabilityTraceAgent',
-    'InvestorReadinessAgent'
-  ];
-  
-  // Get stakeholder-filtered analysis agents
+  // Get stakeholder-filtered analysis agents (includes StakeholderLensAgent, InsightSynthesisAgent)
   const analysisAgentIds = getAgentsForStakeholder(stakeholderLens, isComic);
   
-  // Combine all agents (stakeholder agents already include StakeholderLensAgent and InsightSynthesisAgent)
-  const allAgents = [...systemAgentIds, ...analysisAgentIds, ...metaAgentIds];
+  // NOTE: Meta agents (ScriptEvolutionAgent, CreatorFeedbackLoopAgent, 
+  // ExplainabilityTraceAgent, InvestorReadinessAgent) are defined in scriptFramework.ts
+  // but are NOT currently implemented in the analyze-script edge function.
+  // They should NOT be included in expected count until actually implemented.
+  // When implemented, uncomment the following:
+  // const metaAgentIds = [
+  //   'ScriptEvolutionAgent',
+  //   'CreatorFeedbackLoopAgent',
+  //   'ExplainabilityTraceAgent',
+  //   'InvestorReadinessAgent'
+  // ];
   
-  // Deduplicate
+  // Combine only agents that are actually run by the edge function
+  const allAgents = [...systemAgentIds, ...analysisAgentIds];
+  
+  // Deduplicate (in case of overlap)
   return [...new Set(allAgents)];
 }
 
