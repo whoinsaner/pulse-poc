@@ -60,11 +60,18 @@ interface AgentMapping {
 }
 
 const AVAILABLE_MODELS = [
-  { id: 'gpt-4o', name: 'GPT-4o', tier: 'premium', description: 'Most capable, slower' },
-  { id: 'gpt-4o-mini', name: 'GPT-4o Mini', tier: 'standard', description: 'Fast and capable' },
-  { id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo', tier: 'economy', description: 'Fastest, economical' },
-  { id: 'claude-3-5-sonnet', name: 'Claude 3.5 Sonnet', tier: 'premium', description: 'Excellent reasoning' },
-  { id: 'claude-3-haiku', name: 'Claude 3 Haiku', tier: 'economy', description: 'Quick responses' },
+  // Premium tier - best reasoning and capability
+  { id: 'google/gemini-2.5-pro', name: 'Gemini 2.5 Pro', tier: 'premium', description: 'Top-tier reasoning, multimodal' },
+  { id: 'google/gemini-3-pro-preview', name: 'Gemini 3 Pro Preview', tier: 'premium', description: 'Next-gen Pro model' },
+  { id: 'openai/gpt-5', name: 'GPT-5', tier: 'premium', description: 'Powerful reasoning, multimodal' },
+  { id: 'openai/gpt-5.2', name: 'GPT-5.2', tier: 'premium', description: 'Latest OpenAI model' },
+  // Standard tier - balanced speed and capability
+  { id: 'google/gemini-2.5-flash', name: 'Gemini 2.5 Flash', tier: 'standard', description: 'Balanced speed and quality' },
+  { id: 'google/gemini-3-flash-preview', name: 'Gemini 3 Flash Preview', tier: 'standard', description: 'Fast next-gen model' },
+  { id: 'openai/gpt-5-mini', name: 'GPT-5 Mini', tier: 'standard', description: 'Fast with strong reasoning' },
+  // Economy tier - fastest and cheapest
+  { id: 'google/gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash Lite', tier: 'economy', description: 'Fastest, most economical' },
+  { id: 'openai/gpt-5-nano', name: 'GPT-5 Nano', tier: 'economy', description: 'Speed optimized' },
 ];
 
 const AGENT_NAMES = [
@@ -162,7 +169,7 @@ export default function ModelConfiguration() {
       AGENT_NAMES.forEach(agent => {
         const existing = data?.find(m => m.agent_name === agent);
         edited[agent] = {
-          model: existing?.model || 'gpt-4o-mini',
+          model: existing?.model || 'google/gemini-3-flash-preview',
           temperature: existing?.temperature ?? 0.7,
         };
       });
@@ -202,10 +209,10 @@ export default function ModelConfiguration() {
       setNewConfigName('');
       setNewConfigDescription('');
 
-      // Initialize with default mappings
+      // Initialize with default mappings using Gemini 3 Flash Preview
       const defaultMappings = AGENT_NAMES.map(agent => ({
         agent_name: agent,
-        model: 'gpt-4o-mini',
+        model: 'google/gemini-3-flash-preview',
         temperature: 0.7,
         config_id: data.id,
       }));
@@ -483,7 +490,7 @@ export default function ModelConfiguration() {
               <ScrollArea className="h-[500px] pr-4">
                 <div className="space-y-3">
                   {AGENT_NAMES.map((agent) => {
-                    const mapping = editedMappings[agent] || { model: 'gpt-4o-mini', temperature: 0.7 };
+                    const mapping = editedMappings[agent] || { model: 'google/gemini-3-flash-preview', temperature: 0.7 };
                     const modelInfo = AVAILABLE_MODELS.find(m => m.id === mapping.model);
 
                     return (
