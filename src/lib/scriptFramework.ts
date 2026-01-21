@@ -410,6 +410,27 @@ export const AUDIO_AGENTS: AgentDefinition[] = [
   },
 ];
 
+// Web Series Agents
+export const WEB_SERIES_AGENTS: AgentDefinition[] = [
+  {
+    id: 'WebSeriesAgent',
+    name: 'Web Series',
+    category: 'analysis',
+    description: 'Analyzes digital-first episodic content with algorithmic discovery optimization. Evaluates hook efficiency, retention curves, and platform-native storytelling for web-native formats.',
+    parameters: [
+      'hook_efficiency', 'episode_self_containment', 'serial_momentum',
+      'retention_curve_design', 'character_stickiness', 'platform_native_storytelling',
+      'tonality_format_consistency', 'production_simplicity_velocity',
+      'shareability_meme_potential', 'monetization_readiness',
+      'mid_episode_rehooking', 'soft_act_integrity', 'binge_continuity_pressure'
+    ],
+    reportSections: ['Web Series Analysis', 'Retention Analysis', 'Hooks Analysis', 'Platform Strategy'],
+    applicableScriptTypes: ['web_series'],
+    color: 'bg-pink-500/10 text-pink-500 border-pink-500/30',
+    icon: 'Play'
+  },
+];
+
 // All agents combined
 export const ALL_AGENTS: AgentDefinition[] = [
   ...SYSTEM_AGENTS,
@@ -417,6 +438,7 @@ export const ALL_AGENTS: AgentDefinition[] = [
   ...COMIC_AGENTS,
   ...INTERACTIVE_AGENTS,
   ...AUDIO_AGENTS,
+  ...WEB_SERIES_AGENTS,
   ...META_AGENTS,
 ];
 
