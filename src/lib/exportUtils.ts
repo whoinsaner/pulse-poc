@@ -11,6 +11,7 @@ import {
   META_AGENTS,
   INTERACTIVE_AGENTS,
   AUDIO_AGENTS,
+  WEB_SERIES_AGENTS,
   ALL_AGENTS,
   getAnalysisAgentsForScriptType,
   type AgentDefinition,
@@ -48,6 +49,7 @@ const LENS_ORDER = [
   'director',
   'writer',
   'financier',
+  'investor',
   'ott_platform',
   'theatrical',
 ];
@@ -59,6 +61,7 @@ const LENS_DISPLAY_NAMES: Record<string, string> = {
   director: 'Director',
   writer: 'Writer',
   financier: 'Financier',
+  investor: 'Investor',
   ott_platform: 'OTT Platform',
   theatrical: 'Theatrical',
 };
@@ -160,6 +163,7 @@ export function generateScriptTypeMatrixCSV(parameters: Parameter[]): string {
     { label: 'Comic Agents', agents: COMIC_AGENTS },
     { label: 'Interactive Agents', agents: INTERACTIVE_AGENTS },
     { label: 'Audio Agents', agents: AUDIO_AGENTS },
+    { label: 'Web Series Agents', agents: WEB_SERIES_AGENTS },
     { label: 'Meta Agents', agents: META_AGENTS },
   ];
 
