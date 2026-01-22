@@ -13,11 +13,12 @@ interface ReportHeroProps {
 export function ReportHero({ reportData, reportTitle, currentScore, activeLens }: ReportHeroProps) {
   const metadata = reportData.scriptMetadata;
   
+  // 0-100 scale thresholds
   const getReadinessLabel = (score: number) => {
-    if (score >= 8) return { label: 'Production-Ready', color: 'text-success', bg: 'bg-success/10' };
-    if (score >= 6.5) return { label: 'High-Potential', color: 'text-chart-3', bg: 'bg-chart-3/10' };
-    if (score >= 5) return { label: 'Development Stage', color: 'text-chart-4', bg: 'bg-chart-4/10' };
-    if (score >= 3.5) return { label: 'Needs Work', color: 'text-warning', bg: 'bg-warning/10' };
+    if (score >= 80) return { label: 'Production-Ready', color: 'text-success', bg: 'bg-success/10' };
+    if (score >= 65) return { label: 'High-Potential', color: 'text-chart-3', bg: 'bg-chart-3/10' };
+    if (score >= 50) return { label: 'Development Stage', color: 'text-chart-4', bg: 'bg-chart-4/10' };
+    if (score >= 30) return { label: 'Needs Work', color: 'text-warning', bg: 'bg-warning/10' };
     return { label: 'Early Stage', color: 'text-destructive', bg: 'bg-destructive/10' };
   };
 
@@ -131,7 +132,7 @@ export function ReportHero({ reportData, reportTitle, currentScore, activeLens }
             </div>
             
             <div className="mt-8 text-center">
-              <p className="text-6xl font-bold gradient-text">{currentScore.toFixed(1)}</p>
+              <p className="text-6xl font-bold gradient-text">{Math.round(currentScore)}</p>
               <p className="text-xl text-muted-foreground mt-2">Overall Readiness Score</p>
             </div>
 

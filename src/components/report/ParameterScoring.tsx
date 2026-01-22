@@ -2,6 +2,7 @@ import { Info } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { getScoreColor, getScoreBgColor } from '@/lib/scoreUtils';
+import { filterVisibleCategories } from '@/lib/reportUtils';
 
 import { ParameterScoreData } from '@/types/database';
 
@@ -13,10 +14,12 @@ interface ParameterScoringProps {
 /**
  * ParameterScoring - Displays category scores
  * STANDARDIZED 100-POINT SCALE: All scores should be 0-100
+ * Filters out system/internal categories
  */
 export function ParameterScoring({ categoryScores, parameterScores }: ParameterScoringProps) {
-  // Use category scores as the primary display (already 0-100)
-  const parameters = Object.entries(categoryScores).map(([category, score]) => ({
+  // Filter out system category and use remaining as primary display
+  const visibleCategoryScores = filterVisibleCategories(categoryScores);
+  const parameters = Object.entries(visibleCategoryScores).map(([category, score]) => ({
     name: category,
     displayName: category,
     score: score, // Already 0-100 scale

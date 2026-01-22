@@ -2430,15 +2430,16 @@ CRITICAL: You MUST respond with ONLY the JSON object. No text before or after. N
   // Robust JSON extraction with multiple strategies
   const parsed = extractJsonFromResponse(content, agentName);
 
-  // STANDARDIZED 10-POINT SCORING: Store scores as 0-10 directly
+  // STANDARDIZED 100-POINT SCORING: Convert AI's 0-10 output to 0-100 scale
   const scores = (parsed.scores || []).map((s: any) => {
     const param = parameterMap.get(s.parameter);
-    // Clamp score to 0-10 range (AI outputs 0-10)
-    const normalizedScore = Math.min(10, Math.max(0, s.score || 0));
+    // AI outputs 0-10, we store as 0-100 for UI consistency
+    const rawScore = Math.min(10, Math.max(0, s.score || 0));
+    const normalizedScore = rawScore * 10; // Convert to 0-100 scale
     return {
       parameterId: param?.id,
       parameterName: s.parameter,
-      score: normalizedScore, // Store as 0-10
+      score: normalizedScore, // Store as 0-100
       confidence: 0.85,
       maturity: s.maturity || 'Developing',
       riskLevel: s.riskLevel || 'Medium',
