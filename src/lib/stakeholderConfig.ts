@@ -240,3 +240,66 @@ export const STAKEHOLDER_DESCRIPTIONS: Record<StakeholderLens, {
     keyMetrics: ['Monetization Readiness', 'Retention Design', 'Commercial Viability']
   },
 };
+
+// Approximate parameter counts per agent (based on agent definitions in analyze-script)
+const AGENT_PARAMETER_COUNTS: Record<string, number> = {
+  ConceptAgent: 8,
+  StructureAgent: 10,
+  CharacterAgent: 12,
+  ConflictAgent: 8,
+  ThemeAgent: 6,
+  DialogueAgent: 8,
+  WorldLogicAgent: 7,
+  EmotionalArcAgent: 9,
+  MarketAgent: 10,
+  ExecutionAgent: 8,
+  PanelFlowAgent: 4,
+  LetteringBalloonAgent: 3,
+  PageTurnImpactAgent: 3,
+  ArtScriptSynergyAgent: 3,
+  WebSeriesAgent: 13,
+  StakeholderLensAgent: 0, // Meta agent, no direct parameters
+  InsightSynthesisAgent: 0, // Meta agent, no direct parameters
+};
+
+// Get total parameter count for a set of agents
+export function getParameterCountForAgents(agentNames: string[]): number {
+  return agentNames.reduce((total, name) => {
+    return total + (AGENT_PARAMETER_COUNTS[name] || 0);
+  }, 0);
+}
+
+// Get parameter count for a specific stakeholder/script combination
+export function getParameterCountForAnalysis(
+  stakeholderLens: StakeholderLens | null,
+  scriptType: string
+): number {
+  const isComic = scriptType === 'comic' || scriptType.includes('comic');
+  const isWebSeries = scriptType === 'web_series' || scriptType.includes('web_series');
+  
+  const agents = getAgentsForStakeholder(stakeholderLens, isComic);
+  
+  // Add web series agent if applicable and not already included
+  if (isWebSeries && !agents.includes('WebSeriesAgent')) {
+    agents.push('WebSeriesAgent');
+  }
+  
+  return getParameterCountForAgents(agents);
+}
+
+// Check if an agent is active for a given stakeholder
+export function isAgentActiveForStakeholder(
+  agentName: string,
+  stakeholderLens: StakeholderLens | null,
+  isComic: boolean = false,
+  isWebSeries: boolean = false
+): boolean {
+  const activeAgents = getAgentsForStakeholder(stakeholderLens, isComic);
+  
+  // WebSeriesAgent is always active for web series
+  if (isWebSeries && agentName === 'WebSeriesAgent') {
+    return true;
+  }
+  
+  return activeAgents.includes(agentName);
+}
