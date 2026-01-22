@@ -1051,7 +1051,47 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Authentication check
+  const authHeader = req.headers.get('Authorization');
+  if (!authHeader?.startsWith('Bearer ')) {
+    return new Response(
+      JSON.stringify({ error: 'Unauthorized - No auth token provided' }),
+      { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+  
+  // Create client with user's token to verify auth and check access
+  const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: authHeader } }
+  });
+
+  // Verify user is authenticated
+  const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+  if (authError || !user) {
+    return new Response(
+      JSON.stringify({ error: 'Unauthorized - Invalid token' }),
+      { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
   const { scriptId, format, filePath, scriptType } = await req.json() as ParseRequest;
+
+  // Verify user has access to the script via RLS
+  const { data: scriptAccess, error: accessError } = await supabaseAuth
+    .from('scripts')
+    .select('id, organization_id')
+    .eq('id', scriptId)
+    .single();
+
+  if (accessError || !scriptAccess) {
+    return new Response(
+      JSON.stringify({ error: 'Not found or unauthorized' }),
+      { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
   
   console.log(`[script-parser-stream] === STARTING SSE PARSE ===`);
   console.log(`[script-parser-stream] scriptId: ${scriptId}`);
@@ -1064,7 +1104,6 @@ serve(async (req) => {
     async start(controller) {
       try {
         console.log(`[script-parser-stream] Step 1: Initializing Supabase client`);
-        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
         const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
         const supabase = createClient(supabaseUrl, supabaseServiceKey);
         const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');

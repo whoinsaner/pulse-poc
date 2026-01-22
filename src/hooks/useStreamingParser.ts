@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface ParsingEvent {
   type: 'stage' | 'progress' | 'chunk' | 'warning' | 'complete' | 'error';
@@ -146,12 +147,19 @@ export function useStreamingParser(options: UseStreamingParserOptions = {}) {
     abortControllerRef.current = new AbortController();
 
     try {
+      // Get auth session for authenticated request
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('Not authenticated - please sign in to parse scripts');
+      }
+
       const response = await fetch(
         `https://mrdgivlozwhujmyifbaj.supabase.co/functions/v1/script-parser-stream`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
           },
           body: JSON.stringify({
             scriptId,
