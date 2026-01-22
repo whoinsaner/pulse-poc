@@ -40,7 +40,7 @@ export function StakeholderSelector({
   };
 
   return (
-    <Card className="border-primary/20 bg-card/95">
+    <Card className="border-primary/20 bg-card/95 w-full max-w-3xl">
       <CardHeader className="pb-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
@@ -72,7 +72,7 @@ export function StakeholderSelector({
                 key={option}
                 htmlFor={option}
                 className={cn(
-                  'relative flex flex-col p-3 rounded-xl border cursor-pointer transition-all min-h-[120px]',
+                  'relative flex flex-col p-3 rounded-xl border cursor-pointer transition-all min-h-[130px] min-w-[180px]',
                   isSelected 
                     ? 'border-primary bg-primary/5 ring-2 ring-primary shadow-sm' 
                     : 'border-border hover:border-primary/50 hover:bg-muted/30'
@@ -81,7 +81,7 @@ export function StakeholderSelector({
                 <div className="flex items-center gap-2 mb-2">
                   <RadioGroupItem value={option} id={option} className="shrink-0" />
                   <Icon className="h-4 w-4 text-primary shrink-0" />
-                  <span className="font-semibold text-sm truncate">
+                  <span className="font-semibold text-sm">
                     {isAll ? 'All Stakeholders' : config?.label}
                   </span>
                 </div>
