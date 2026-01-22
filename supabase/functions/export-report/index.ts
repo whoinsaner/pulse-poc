@@ -228,6 +228,17 @@ function generateFullReport(
   const episodeLengthLabel = episodeLengthClass === 'short_form_web' ? 'Short-Form (<10 min)' :
                              episodeLengthClass === 'mid_form_web' ? 'Mid-Form (10-30 min)' :
                              episodeLengthClass === 'long_form_web' ? 'Long-Form (45-70+ min)' : null;
+
+  // Extract cliffhanger-related parameters across formats
+  const cliffhangerParamNames = [
+    'cliffhangers', 'structural_modularity', 'serial_momentum', 
+    'episode_end_hooks', 'binge_continuity_pressure', 'mid_episode_rehooking'
+  ];
+  const cliffhangerParams = scores.filter(s => 
+    cliffhangerParamNames.includes(s.parameters?.name || '') ||
+    cliffhangerParamNames.includes(s.parameter_id || '')
+  );
+  const hasCliffhangerAnalysis = cliffhangerParams.length > 0 && (isComic || isWebSeries);
   
   return `
 # ${report.title}
@@ -317,6 +328,34 @@ ${comicParams.map((p: any) => formatParameterWithGuide(p)).join('\n')}
 ` : `
 ## 5. Key Insights & Recommendations
 `}
+
+${hasCliffhangerAnalysis ? `
+---
+
+## Cliffhanger & Serialization Analysis
+
+${isComic ? `
+### Comic Page-Turn Impact
+Cliffhangers in comics are evaluated through the **PageTurnImpactAgent**, focusing on how page turns create suspense, reveals, and reader momentum.
+` : ''}
+${isWebSeries ? `
+### Web Series Episode Hooks
+For web series, cliffhangers are critical for algorithmic promotion and viewer retention. The **WebSeriesAgent** evaluates serial momentum and episode-end hooks.
+${episodeLengthClass === 'long_form_web' ? '\n*Long-form episodes (45+ min) receive additional weighting (1.2x) for serial_momentum to ensure strong episode conclusions.*' : ''}
+` : ''}
+
+| Parameter | Score | Risk | Maturity | Analysis |
+|-----------|-------|------|----------|----------|
+${cliffhangerParams.map(p => {
+  const name = p.parameters?.display_name || p.parameter_id || 'Unknown';
+  const score = Math.round(p.score || 0);
+  const risk = p.risk_level || 'N/A';
+  const maturity = p.maturity || 'N/A';
+  const rationale = (p.rationale || 'No analysis').slice(0, 80) + (p.rationale?.length > 80 ? '...' : '');
+  return `| ${name} | ${score}/100 | ${risk} | ${maturity} | ${rationale} |`;
+}).join('\n')}
+
+` : ''}
 
 ${insights
   .sort((a, b) => a.priority - b.priority)
