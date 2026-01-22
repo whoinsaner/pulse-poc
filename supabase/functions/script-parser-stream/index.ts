@@ -456,8 +456,8 @@ async function extractDOCXText(arrayBuffer: ArrayBuffer): Promise<{ text: string
 
 // ============= FOUNTAIN NORMALIZATION =============
 
-// Normalize extracted text to Fountain format for better parsing
-function normalizeToFountain(rawText: string, isComic: boolean): { 
+// Normalize extracted text to Fountain format for better parsing (SCREENPLAYS ONLY)
+function normalizeToFountain(rawText: string): { 
   fountainText: string; 
   quality: 'good' | 'fair' | 'poor';
   scenesDetected: number;
@@ -473,34 +473,27 @@ function normalizeToFountain(rawText: string, isComic: boolean): {
   // Scene heading patterns - includes Hindi transliterated terms
   const sceneHeadingPattern = /^(INT\.|EXT\.|INT\/EXT\.|I\/E\.)\s*.+/i;
   const looseScenePattern = /^(INTERIOR|EXTERIOR|INT|EXT|ANDAR|BAHAR|अंदर|बाहर)[\s\.\/:-]+(.+)/i;
+  // Additional scene patterns for unusual formats
+  const numberedScenePattern = /^(SCENE|SC\.?|SEQ\.?)\s*#?\s*(\d+)/i;
+  const markerPattern = /^(FADE IN|FADE OUT|SMASH CUT|JUMP CUT|TIME CUT):/i;
+  const locationOnlyPattern = /^([A-Z][A-Z\s]+)\s*-\s*(DAY|NIGHT|DAWN|DUSK|MORNING|EVENING|CONTINUOUS|LATER|SAME)/i;
   
   // Character patterns - Unicode-aware for multilingual names (Hinglish, Hindi, etc.)
-  // Matches: ALL CAPS Latin, Mixed case names (Raj, Simran), Devanagari names
   const characterCuePattern = /^([\p{Lu}][\p{L}\s\.']{1,}|[\u0900-\u097F][\u0900-\u097F\s]+)(\s*\(.*\))?$/u;
-  const dialogueFollowsPattern = /^[\p{Ll}\p{Lo}]/u; // Dialogue starts lowercase or other letters (Hindi)
-  
-  // Comic patterns
-  const pagePattern = /^(PAGE|PG)[\s#.:]*(\d+)/i;
-  const panelPattern = /^(PANEL|PNL)[\s#.:]*(\d+)/i;
   
   // Non-character words to filter - includes Hindi/Hinglish terms
   const nonCharacterWords = new Set([
-    // English screenplay terms
     'INT', 'EXT', 'INTERIOR', 'EXTERIOR', 'FADE', 'CUT', 'DISSOLVE',
     'THE', 'CONTINUED', 'CONTINUOUS', 'LATER', 'DAY', 'NIGHT', 'MORNING',
     'EVENING', 'DUSK', 'DAWN', 'SAME', 'TRANSITION', 'TITLE', 'SUPER',
     'INSERT', 'ANGLE', 'CLOSE', 'WIDE', 'MEDIUM', 'POV', 'BACK', 'SMASH',
     'MATCH', 'JUMP', 'TIME', 'CUT TO', 'FADE TO', 'FADE IN', 'FADE OUT',
-    // Hindi transliterated screenplay terms
     'ANDAR', 'BAHAR', 'DIN', 'RAAT', 'SUBAH', 'SHAAM', 'DOPAHAR',
-    // Hindi screenplay terms (Devanagari)
     'अंदर', 'बाहर', 'दिन', 'रात', 'सुबह', 'शाम', 'दोपहर',
-    // Common Bollywood script terms
     'SCENE', 'SHOT', 'FLASHBACK', 'MONTAGE', 'INTERCUT',
   ]);
   
   let lastWasCharacter = false;
-  let lastCharacterName = '';
   let inDialogue = false;
   
   for (let i = 0; i < lines.length; i++) {
@@ -508,7 +501,6 @@ function normalizeToFountain(rawText: string, isComic: boolean): {
     const trimmed = line.trim();
     const nextLine = lines[i + 1]?.trim() || '';
     
-    // Skip empty lines but preserve them
     if (!trimmed) {
       normalizedLines.push('');
       lastWasCharacter = false;
@@ -516,37 +508,8 @@ function normalizeToFountain(rawText: string, isComic: boolean): {
       continue;
     }
     
-    // Handle comic format
-    if (isComic) {
-      const pageMatch = trimmed.match(pagePattern);
-      if (pageMatch) {
-        normalizedLines.push(`\nPAGE ${pageMatch[2]}\n`);
-        scenesDetected++;
-        continue;
-      }
-      
-      const panelMatch = trimmed.match(panelPattern);
-      if (panelMatch) {
-        normalizedLines.push(`\nPANEL ${panelMatch[2]}`);
-        continue;
-      }
-      
-      // Comic dialogue format: CHARACTER: dialogue
-      const comicDialogueMatch = trimmed.match(/^([A-Z][A-Z\s\.']+):\s*(.+)/);
-      if (comicDialogueMatch) {
-        const name = comicDialogueMatch[1].trim();
-        if (!nonCharacterWords.has(name)) {
-          characterNames.add(name);
-          normalizedLines.push(`\n${name}`);
-          normalizedLines.push(comicDialogueMatch[2]);
-        }
-        continue;
-      }
-    }
-    
-    // Check for scene heading
+    // Check for standard scene heading
     if (sceneHeadingPattern.test(trimmed)) {
-      // Already properly formatted
       normalizedLines.push('');
       normalizedLines.push(trimmed.toUpperCase());
       normalizedLines.push('');
@@ -570,18 +533,48 @@ function normalizeToFountain(rawText: string, isComic: boolean): {
       continue;
     }
     
-    // Check for character cue (ALL CAPS, followed by text on next line)
+    // Check for numbered scene (SCENE 1:, SC. 2, etc.)
+    const numberedMatch = trimmed.match(numberedScenePattern);
+    if (numberedMatch) {
+      normalizedLines.push('');
+      normalizedLines.push(trimmed.toUpperCase());
+      normalizedLines.push('');
+      scenesDetected++;
+      lastWasCharacter = false;
+      inDialogue = false;
+      continue;
+    }
+    
+    // Check for location-only pattern (OFFICE - DAY)
+    const locationMatch = trimmed.match(locationOnlyPattern);
+    if (locationMatch) {
+      normalizedLines.push('');
+      normalizedLines.push(`INT. ${trimmed.toUpperCase()}`);
+      normalizedLines.push('');
+      scenesDetected++;
+      lastWasCharacter = false;
+      inDialogue = false;
+      continue;
+    }
+    
+    // Check for transition markers that indicate scene breaks
+    if (markerPattern.test(trimmed)) {
+      normalizedLines.push('');
+      normalizedLines.push(trimmed.toUpperCase());
+      normalizedLines.push('');
+      continue;
+    }
+    
+    // Check for character cue
     if (characterCuePattern.test(trimmed) && trimmed.length < 40) {
       const potentialName = trimmed.replace(/\s*\(.*\)$/, '').trim();
       
       if (!nonCharacterWords.has(potentialName) && potentialName.length > 1) {
-        // Check if next line looks like dialogue
         if (nextLine && !sceneHeadingPattern.test(nextLine) && !characterCuePattern.test(nextLine)) {
           characterNames.add(potentialName);
           normalizedLines.push('');
-          normalizedLines.push(trimmed); // Character name as-is
+          normalizedLines.push(trimmed);
           lastWasCharacter = true;
-          lastCharacterName = potentialName;
           inDialogue = false;
           continue;
         }
@@ -596,15 +589,12 @@ function normalizeToFountain(rawText: string, isComic: boolean): {
     
     // Regular line - could be action or dialogue
     if (lastWasCharacter) {
-      // This is dialogue
       normalizedLines.push(trimmed);
       inDialogue = true;
       lastWasCharacter = false;
     } else if (inDialogue && trimmed.length < 60 && !trimmed.includes('  ')) {
-      // Continuation of dialogue (no double space, reasonable length)
       normalizedLines.push(trimmed);
     } else {
-      // Action line
       normalizedLines.push(trimmed);
       inDialogue = false;
     }
@@ -630,6 +620,146 @@ function normalizeToFountain(rawText: string, isComic: boolean): {
     quality,
     scenesDetected,
     charactersDetected,
+  };
+}
+
+// ============= COMIC SCRIPT NORMALIZATION =============
+
+// Normalize comic script directly without Fountain conversion (COMICS ONLY)
+function normalizeComicScript(rawText: string): {
+  normalizedText: string;
+  quality: 'good' | 'fair' | 'poor';
+  pagesDetected: number;
+  panelsDetected: number;
+  charactersDetected: number;
+} {
+  const lines = rawText.split('\n');
+  const normalizedLines: string[] = [];
+  let pagesDetected = 0;
+  let panelsDetected = 0;
+  const characterNames = new Set<string>();
+  
+  // Comic page patterns - handle various formats
+  const pagePatterns = [
+    /^PAGE\s*#?\s*(\d+)/i,           // PAGE 1, PAGE #1
+    /^PG\.?\s*#?\s*(\d+)/i,          // PG 1, PG. 1
+    /^P(\d+)\b/i,                     // P1, P2
+    /^\[PAGE\s*(\d+)\]/i,            // [PAGE 1]
+    /^-+\s*PAGE\s*(\d+)\s*-+/i,      // --- PAGE 1 ---
+  ];
+  
+  // Comic panel patterns
+  const panelPatterns = [
+    /^PANEL\s*#?\s*(\d+)/i,          // PANEL 1
+    /^PNL\.?\s*#?\s*(\d+)/i,         // PNL 1
+    /^P\d+\s*[-:]\s*PANEL\s*(\d+)/i, // P1 - PANEL 1
+    /^\[PANEL\s*(\d+)\]/i,           // [PANEL 1]
+    /^PANEL\s+([A-Z])\b/i,           // PANEL A, PANEL B
+  ];
+  
+  // Character dialogue patterns for comics
+  const comicDialoguePatterns = [
+    /^([A-Z][A-Z\s\.']+):\s*(.+)/,           // CHARACTER: dialogue
+    /^([A-Z][A-Z\s\.']+)\s*\(.*?\):\s*(.+)/, // CHARACTER (CAPTION): dialogue
+    /^([A-Z][A-Z\s\.']+)\s*\[.*?\]:\s*(.+)/, // CHARACTER [V.O.]: dialogue
+  ];
+  
+  // Non-character words specific to comics
+  const nonCharacterWords = new Set([
+    'PAGE', 'PANEL', 'PG', 'PNL', 'CAPTION', 'SFX', 'SOUND', 'EFFECT',
+    'CONTINUED', 'CONT', 'OFF', 'OP', 'BURST', 'BALLOON', 'BUBBLE',
+    'TITLE', 'CREDITS', 'SPLASH', 'SPREAD', 'BLEED', 'GUTTER',
+    'INSET', 'CLOSE', 'WIDE', 'ESTABLISHING', 'INSERT', 'TIER',
+  ]);
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmed = line.trim();
+    
+    if (!trimmed) {
+      normalizedLines.push('');
+      continue;
+    }
+    
+    // Check for page markers
+    let foundPage = false;
+    for (const pattern of pagePatterns) {
+      const match = trimmed.match(pattern);
+      if (match) {
+        normalizedLines.push('');
+        normalizedLines.push(`PAGE ${match[1]}`);
+        normalizedLines.push('');
+        pagesDetected++;
+        foundPage = true;
+        break;
+      }
+    }
+    if (foundPage) continue;
+    
+    // Check for panel markers
+    let foundPanel = false;
+    for (const pattern of panelPatterns) {
+      const match = trimmed.match(pattern);
+      if (match) {
+        normalizedLines.push('');
+        normalizedLines.push(`PANEL ${match[1]}`);
+        panelsDetected++;
+        foundPanel = true;
+        break;
+      }
+    }
+    if (foundPanel) continue;
+    
+    // Check for character dialogue
+    let foundDialogue = false;
+    for (const pattern of comicDialoguePatterns) {
+      const match = trimmed.match(pattern);
+      if (match) {
+        const name = match[1].trim();
+        if (!nonCharacterWords.has(name)) {
+          characterNames.add(name);
+          normalizedLines.push('');
+          normalizedLines.push(name);
+          normalizedLines.push(match[2]);
+        }
+        foundDialogue = true;
+        break;
+      }
+    }
+    if (foundDialogue) continue;
+    
+    // Check for standalone character name (ALL CAPS, followed by text)
+    const nextLine = lines[i + 1]?.trim() || '';
+    if (/^[A-Z][A-Z\s\.']{1,30}$/.test(trimmed) && nextLine && !nonCharacterWords.has(trimmed)) {
+      // Looks like a character name followed by dialogue
+      characterNames.add(trimmed);
+      normalizedLines.push('');
+      normalizedLines.push(trimmed);
+      continue;
+    }
+    
+    // Regular line (action, description)
+    normalizedLines.push(trimmed);
+  }
+  
+  // Determine quality
+  let quality: 'good' | 'fair' | 'poor' = 'fair';
+  if (pagesDetected >= 5 && panelsDetected >= 10) {
+    quality = 'good';
+  } else if (pagesDetected >= 2 || panelsDetected >= 5) {
+    quality = 'fair';
+  } else {
+    quality = 'poor';
+  }
+  
+  console.log(`[script-parser-stream] Comic normalization: ${pagesDetected} pages, ${panelsDetected} panels, ${characterNames.size} characters, quality: ${quality}`);
+  
+  return {
+    normalizedText: normalizedLines.join('\n'),
+    quality,
+    pagesDetected,
+    panelsDetected,
+    charactersDetected: characterNames.size,
   };
 }
 
@@ -985,45 +1115,114 @@ serve(async (req) => {
             }
           }
           
-          // If text extraction succeeded, normalize to Fountain and parse
+          // If text extraction succeeded, use BIFURCATED parsing based on script type
           if (extractionSuccess && extractedText.length > 0) {
-            sendSSE(controller, 'progress', { stage: 'extract', percent: 40, message: 'Normalizing to Fountain format...' });
+            // Log sample text for debugging
+            console.log(`[script-parser-stream] Sample text (first 500 chars): ${extractedText.substring(0, 500).replace(/\n/g, '\\n')}`);
             
-            const normalized = normalizeToFountain(extractedText, isComic);
-            rawText = normalized.fountainText;
-            
-            sendSSE(controller, 'progress', { 
-              stage: 'extract', 
-              percent: 50, 
-              message: `Normalized: detected ${normalized.scenesDetected} scenes, ${normalized.charactersDetected} characters` 
-            });
-            
-            // Parse the normalized Fountain text
-            sendSSE(controller, 'progress', { stage: 'extract', percent: 60, message: 'Parsing screenplay elements...' });
-            
-            const parsed = isComic ? parseComicFormat(normalized.fountainText) : parseTextFormat(normalized.fountainText);
-            allScenes = parsed.scenes;
-            parsed.characters.forEach(c => allCharacters.set(c.name, c));
-            extractionMethod = 'text-extraction';
-            
-            // If parsing quality is poor, use AI to enhance
-            if (normalized.quality === 'poor' && lovableApiKey) {
-              sendSSE(controller, 'progress', { stage: 'extract', percent: 70, message: 'Using AI to improve extraction...' });
+            if (isComic) {
+              // COMIC PATH: Direct comic normalization (skip Fountain)
+              sendSSE(controller, 'progress', { stage: 'extract', percent: 40, message: 'Detecting comic script structure...' });
               
-              // Use extracted text (not base64!) for AI enhancement
-              const aiResult = await parseWithAI(lovableApiKey, extractedText, isComic, expectedPages, (progress, message) => {
-                sendSSE(controller, 'progress', { stage: 'extract', percent: 70 + (progress * 0.2), message });
+              const comicNorm = normalizeComicScript(extractedText);
+              rawText = comicNorm.normalizedText;
+              
+              sendSSE(controller, 'progress', { 
+                stage: 'extract', 
+                percent: 50, 
+                message: `Detected ${comicNorm.pagesDetected} pages, ${comicNorm.panelsDetected} panels, ${comicNorm.charactersDetected} characters` 
               });
               
-              if (aiResult.scenes.length > allScenes.length) {
-                allScenes = aiResult.scenes;
-                allCharacters = new Map(aiResult.characters.map(c => [c.name, c]));
-                usedAIRescue = true;
-                extractionMethod = 'text-extraction+ai';
+              sendSSE(controller, 'progress', { stage: 'extract', percent: 60, message: 'Parsing comic elements...' });
+              
+              const parsed = parseComicFormat(comicNorm.normalizedText);
+              allScenes = parsed.scenes;
+              parsed.characters.forEach(c => allCharacters.set(c.name, c));
+              extractionMethod = 'comic-text-extraction';
+              
+              // AI fallback if comic parsing found 0 panels/pages
+              if (allScenes.length === 0 && extractedText.length > 1000 && lovableApiKey) {
+                console.log(`[script-parser-stream] Comic parsing found 0 scenes - using AI fallback`);
+                sendSSE(controller, 'progress', { stage: 'extract', percent: 70, message: 'Format unusual - using AI to detect comic structure...' });
+                
+                const aiResult = await parseWithAI(lovableApiKey, extractedText, true, expectedPages, (progress, message) => {
+                  sendSSE(controller, 'progress', { stage: 'extract', percent: 70 + (progress * 0.2), message });
+                });
+                
+                if (aiResult.scenes.length > 0) {
+                  allScenes = aiResult.scenes;
+                  allCharacters = new Map(aiResult.characters.map(c => [c.name, c]));
+                  usedAIRescue = true;
+                  extractionMethod = 'comic-text-extraction+ai';
+                }
+              } else if (comicNorm.quality === 'poor' && lovableApiKey) {
+                sendSSE(controller, 'progress', { stage: 'extract', percent: 70, message: 'Using AI to improve extraction...' });
+                
+                const aiResult = await parseWithAI(lovableApiKey, extractedText, true, expectedPages, (progress, message) => {
+                  sendSSE(controller, 'progress', { stage: 'extract', percent: 70 + (progress * 0.2), message });
+                });
+                
+                if (aiResult.scenes.length > allScenes.length) {
+                  allScenes = aiResult.scenes;
+                  allCharacters = new Map(aiResult.characters.map(c => [c.name, c]));
+                  usedAIRescue = true;
+                  extractionMethod = 'comic-text-extraction+ai';
+                }
+              }
+              
+            } else {
+              // SCREENPLAY PATH: Fountain normalization
+              sendSSE(controller, 'progress', { stage: 'extract', percent: 40, message: 'Normalizing to Fountain format...' });
+              
+              const normalized = normalizeToFountain(extractedText);
+              rawText = normalized.fountainText;
+              
+              sendSSE(controller, 'progress', { 
+                stage: 'extract', 
+                percent: 50, 
+                message: `Normalized: detected ${normalized.scenesDetected} scenes, ${normalized.charactersDetected} characters` 
+              });
+              
+              sendSSE(controller, 'progress', { stage: 'extract', percent: 60, message: 'Parsing screenplay elements...' });
+              
+              const parsed = parseTextFormat(normalized.fountainText);
+              allScenes = parsed.scenes;
+              parsed.characters.forEach(c => allCharacters.set(c.name, c));
+              extractionMethod = 'text-extraction';
+              
+              // AI fallback if screenplay parsing found 0 scenes
+              if (allScenes.length === 0 && extractedText.length > 1000 && lovableApiKey) {
+                console.log(`[script-parser-stream] Screenplay parsing found 0 scenes - using AI fallback`);
+                console.log(`[script-parser-stream] Patterns tried: standard scene, loose scene, numbered scene, location-only`);
+                sendSSE(controller, 'progress', { stage: 'extract', percent: 70, message: 'Format unusual - using AI to detect scenes...' });
+                
+                const aiResult = await parseWithAI(lovableApiKey, extractedText, false, expectedPages, (progress, message) => {
+                  sendSSE(controller, 'progress', { stage: 'extract', percent: 70 + (progress * 0.2), message });
+                });
+                
+                if (aiResult.scenes.length > 0) {
+                  allScenes = aiResult.scenes;
+                  allCharacters = new Map(aiResult.characters.map(c => [c.name, c]));
+                  usedAIRescue = true;
+                  extractionMethod = 'text-extraction+ai';
+                }
+              } else if (normalized.quality === 'poor' && lovableApiKey) {
+                sendSSE(controller, 'progress', { stage: 'extract', percent: 70, message: 'Using AI to improve extraction...' });
+                
+                const aiResult = await parseWithAI(lovableApiKey, extractedText, false, expectedPages, (progress, message) => {
+                  sendSSE(controller, 'progress', { stage: 'extract', percent: 70 + (progress * 0.2), message });
+                });
+                
+                if (aiResult.scenes.length > allScenes.length) {
+                  allScenes = aiResult.scenes;
+                  allCharacters = new Map(aiResult.characters.map(c => [c.name, c]));
+                  usedAIRescue = true;
+                  extractionMethod = 'text-extraction+ai';
+                }
               }
             }
             
-            sendSSE(controller, 'progress', { stage: 'extract', percent: 90, message: `Extracted ${allScenes.length} scenes` });
+            sendSSE(controller, 'progress', { stage: 'extract', percent: 90, message: `Extracted ${allScenes.length} ${isComic ? 'panels' : 'scenes'}` });
             
           } else {
             // Text extraction failed - try AI-powered extraction as fallback
@@ -1079,18 +1278,51 @@ serve(async (req) => {
                   message: `AI extracted ${aiExtractResult.text.length} characters` 
                 });
                 
-                // Now normalize and parse the AI-extracted text
-                const normalized = normalizeToFountain(extractedText, isComic);
-                rawText = normalized.fountainText;
-                
-                const parsed = isComic ? parseComicFormat(normalized.fountainText) : parseTextFormat(normalized.fountainText);
-                allScenes = parsed.scenes;
-                parsed.characters.forEach(c => allCharacters.set(c.name, c));
+                // Now use BIFURCATED parsing on AI-extracted text
+                if (isComic) {
+                  const comicNorm = normalizeComicScript(extractedText);
+                  rawText = comicNorm.normalizedText;
+                  const parsed = parseComicFormat(comicNorm.normalizedText);
+                  allScenes = parsed.scenes;
+                  parsed.characters.forEach(c => allCharacters.set(c.name, c));
+                  
+                  // If regex parsing returned 0 scenes, use AI structure detection
+                  if (allScenes.length === 0 && lovableApiKey) {
+                    console.log(`[script-parser-stream] AI vision comic: 0 panels after regex - using AI structure detection`);
+                    const aiParsed = await parseWithAI(lovableApiKey, extractedText, true, expectedPages, (p, m) => {
+                      sendSSE(controller, 'progress', { stage: 'extract', percent: 80 + (p * 0.05), message: m });
+                    });
+                    if (aiParsed.scenes.length > 0) {
+                      allScenes = aiParsed.scenes;
+                      allCharacters = new Map(aiParsed.characters.map(c => [c.name, c]));
+                      extractionMethod = 'ai-vision+ai-structure';
+                    }
+                  }
+                } else {
+                  const normalized = normalizeToFountain(extractedText);
+                  rawText = normalized.fountainText;
+                  const parsed = parseTextFormat(normalized.fountainText);
+                  allScenes = parsed.scenes;
+                  parsed.characters.forEach(c => allCharacters.set(c.name, c));
+                  
+                  // If regex parsing returned 0 scenes, use AI structure detection
+                  if (allScenes.length === 0 && lovableApiKey) {
+                    console.log(`[script-parser-stream] AI vision screenplay: 0 scenes after regex - using AI structure detection`);
+                    const aiParsed = await parseWithAI(lovableApiKey, extractedText, false, expectedPages, (p, m) => {
+                      sendSSE(controller, 'progress', { stage: 'extract', percent: 80 + (p * 0.05), message: m });
+                    });
+                    if (aiParsed.scenes.length > 0) {
+                      allScenes = aiParsed.scenes;
+                      allCharacters = new Map(aiParsed.characters.map(c => [c.name, c]));
+                      extractionMethod = 'ai-vision+ai-structure';
+                    }
+                  }
+                }
                 
                 sendSSE(controller, 'progress', { 
                   stage: 'extract', 
                   percent: 85, 
-                  message: `AI extraction found ${allScenes.length} scenes, ${allCharacters.size} characters` 
+                  message: `AI extraction found ${allScenes.length} ${isComic ? 'panels' : 'scenes'}, ${allCharacters.size} characters` 
                 });
                 
               } else {
@@ -1316,7 +1548,7 @@ serve(async (req) => {
 
 // ============= PARSING FUNCTIONS =============
 
-// Parse text formats
+// Parse text formats with expanded scene detection
 function parseTextFormat(content: string): { scenes: Scene[]; characters: Character[]; rawText: string } {
   const scenes: Scene[] = [];
   const characterMap = new Map<string, Character>();
@@ -1326,22 +1558,22 @@ function parseTextFormat(content: string): { scenes: Scene[]; characters: Charac
   let currentScene: Scene | null = null;
   let currentPage = 1;
   
-  // Scene heading patterns - includes Hindi transliterated terms
+  // Scene heading patterns - standard + expanded
   const sceneHeadingPattern = /^(INT\.|EXT\.|INT\/EXT\.|I\/E\.)\s*(.+?)(?:\s*-\s*(.+))?$/i;
   const hindiScenePattern = /^(ANDAR|BAHAR|अंदर|बाहर)[\s\.\/:-]+(.+?)(?:\s*-\s*(.+))?$/i;
+  // Additional scene patterns for unusual formats
+  const numberedScenePattern = /^(SCENE|SC\.?|SEQ\.?)\s*#?\s*(\d+)/i;
+  const locationOnlyPattern = /^([A-Z][A-Z\s]+)\s*-\s*(DAY|NIGHT|DAWN|DUSK|MORNING|EVENING|CONTINUOUS|LATER|SAME)/i;
   
   // Character pattern - Unicode-aware for multilingual names (Hinglish, Hindi, etc.)
   const characterPattern = /^([\p{Lu}][\p{L}\s\.']+|[\u0900-\u097F][\u0900-\u097F\s]+)(\s*\(.*\))?$/u;
   
   // Non-character words - includes Hindi/Hinglish terms
   const nonCharacterWords = new Set([
-    // English screenplay terms
     'INT', 'EXT', 'INTERIOR', 'EXTERIOR', 'FADE', 'CUT', 'DISSOLVE',
     'THE', 'CONTINUED', 'CONTINUOUS', 'LATER', 'DAY', 'NIGHT',
     'MORNING', 'EVENING', 'DUSK', 'DAWN', 'SCENE', 'SHOT',
-    // Hindi transliterated terms
     'ANDAR', 'BAHAR', 'DIN', 'RAAT', 'SUBAH', 'SHAAM', 'DOPAHAR',
-    // Hindi screenplay terms (Devanagari)
     'अंदर', 'बाहर', 'दिन', 'रात', 'सुबह', 'शाम', 'दोपहर',
   ]);
 
@@ -1351,7 +1583,7 @@ function parseTextFormat(content: string): { scenes: Scene[]; characters: Charac
     // Estimate page
     currentPage = Math.max(currentPage, Math.ceil((i + 1) / 55));
     
-    // Scene heading
+    // Standard scene heading (INT./EXT.)
     const sceneMatch = line.match(sceneHeadingPattern);
     if (sceneMatch) {
       if (currentScene) currentScene.page_end = currentPage;
@@ -1373,7 +1605,71 @@ function parseTextFormat(content: string): { scenes: Scene[]; characters: Charac
       continue;
     }
     
-    // Character
+    // Hindi scene pattern
+    const hindiMatch = line.match(hindiScenePattern);
+    if (hindiMatch) {
+      if (currentScene) currentScene.page_end = currentPage;
+      
+      currentSceneNumber++;
+      const intExt = hindiMatch[1].toUpperCase().includes('ANDAR') || hindiMatch[1].includes('अंदर') ? 'INT' : 'EXT';
+      
+      currentScene = {
+        scene_number: currentSceneNumber,
+        heading: line,
+        int_ext: intExt,
+        location: hindiMatch[2]?.trim() || null,
+        time_of_day: hindiMatch[3]?.trim() || null,
+        description: null,
+        page_start: currentPage,
+        page_end: null,
+      };
+      scenes.push(currentScene);
+      continue;
+    }
+    
+    // Numbered scene pattern (SCENE 1:, SC. 2)
+    const numberedMatch = line.match(numberedScenePattern);
+    if (numberedMatch) {
+      if (currentScene) currentScene.page_end = currentPage;
+      
+      currentSceneNumber++;
+      
+      currentScene = {
+        scene_number: currentSceneNumber,
+        heading: line,
+        int_ext: null,
+        location: null,
+        time_of_day: null,
+        description: null,
+        page_start: currentPage,
+        page_end: null,
+      };
+      scenes.push(currentScene);
+      continue;
+    }
+    
+    // Location-only pattern (OFFICE - DAY)
+    const locationMatch = line.match(locationOnlyPattern);
+    if (locationMatch) {
+      if (currentScene) currentScene.page_end = currentPage;
+      
+      currentSceneNumber++;
+      
+      currentScene = {
+        scene_number: currentSceneNumber,
+        heading: `INT. ${line}`,
+        int_ext: 'INT',
+        location: locationMatch[1]?.trim() || null,
+        time_of_day: locationMatch[2]?.trim() || null,
+        description: null,
+        page_start: currentPage,
+        page_end: null,
+      };
+      scenes.push(currentScene);
+      continue;
+    }
+    
+    // Character detection
     if (line.length > 0 && line.length < 50) {
       const charMatch = line.match(characterPattern);
       if (charMatch && !line.includes(':') && lines[i + 1]?.trim()) {
@@ -1397,6 +1693,8 @@ function parseTextFormat(content: string): { scenes: Scene[]; characters: Charac
   
   if (currentScene) currentScene.page_end = currentPage;
   
+  console.log(`[script-parser-stream] parseTextFormat: ${scenes.length} scenes, ${characterMap.size} characters from ${lines.length} lines`);
+  
   return {
     scenes,
     characters: Array.from(characterMap.values()),
@@ -1404,7 +1702,7 @@ function parseTextFormat(content: string): { scenes: Scene[]; characters: Charac
   };
 }
 
-// Parse comic format
+// Parse comic format with expanded pattern detection
 function parseComicFormat(content: string): { scenes: Scene[]; characters: Character[]; rawText: string } {
   const scenes: Scene[] = [];
   const characterMap = new Map<string, Character>();
@@ -1413,53 +1711,99 @@ function parseComicFormat(content: string): { scenes: Scene[]; characters: Chara
   let panelNumber = 0;
   let pageNumber = 0;
   
-  const pagePattern = /^PAGE\s*(\d+)/i;
-  const panelPattern = /^PANEL\s*(\d+)/i;
-  const dialoguePattern = /^([A-Z][A-Z\s\.']+)(?:\s*\(.*\))?:\s*(.+)/;
+  // Expanded page patterns
+  const pagePatterns = [
+    /^PAGE\s*#?\s*(\d+)/i,           // PAGE 1, PAGE #1
+    /^PG\.?\s*#?\s*(\d+)/i,          // PG 1, PG. 1
+    /^P(\d+)\b/i,                     // P1, P2
+    /^\[PAGE\s*(\d+)\]/i,            // [PAGE 1]
+    /^-+\s*PAGE\s*(\d+)\s*-+/i,      // --- PAGE 1 ---
+  ];
+  
+  // Expanded panel patterns
+  const panelPatterns = [
+    /^PANEL\s*#?\s*(\d+)/i,          // PANEL 1
+    /^PNL\.?\s*#?\s*(\d+)/i,         // PNL 1
+    /^P\d+\s*[-:]\s*PANEL\s*(\d+)/i, // P1 - PANEL 1
+    /^\[PANEL\s*(\d+)\]/i,           // [PANEL 1]
+    /^PANEL\s+([A-Z])\b/i,           // PANEL A, PANEL B
+  ];
+  
+  // Expanded dialogue patterns
+  const dialoguePatterns = [
+    /^([A-Z][A-Z\s\.']+)(?:\s*\(.*\))?:\s*(.+)/,  // CHARACTER: dialogue
+    /^([A-Z][A-Z\s\.']+)\s*\[.*?\]:\s*(.+)/,      // CHARACTER [V.O.]: dialogue
+  ];
+  
+  // Non-character words for comics
+  const nonCharacterWords = new Set([
+    'CAPTION', 'SFX', 'NARRATOR', 'SOUND', 'EFFECT', 'BURST',
+    'PAGE', 'PANEL', 'PG', 'PNL', 'TITLE', 'CREDITS', 'SPLASH',
+    'CONTINUED', 'CONT', 'OFF', 'OP', 'INSET', 'TIER',
+  ]);
 
   for (const line of lines) {
     const trimmed = line.trim();
     if (!trimmed) continue;
     
-    const pageMatch = trimmed.match(pagePattern);
-    if (pageMatch) {
-      pageNumber = parseInt(pageMatch[1]);
-      continue;
+    // Check for page markers
+    let foundPage = false;
+    for (const pattern of pagePatterns) {
+      const match = trimmed.match(pattern);
+      if (match) {
+        pageNumber = parseInt(match[1]);
+        foundPage = true;
+        break;
+      }
     }
+    if (foundPage) continue;
     
-    const panelMatch = trimmed.match(panelPattern);
-    if (panelMatch) {
-      panelNumber++;
-      scenes.push({
-        scene_number: panelNumber,
-        heading: `PAGE ${pageNumber || 1} - PANEL ${panelMatch[1]}`,
-        int_ext: null,
-        location: null,
-        time_of_day: null,
-        description: null,
-        page_start: pageNumber || 1,
-        page_end: pageNumber || 1,
-      });
-      continue;
+    // Check for panel markers
+    let foundPanel = false;
+    for (const pattern of panelPatterns) {
+      const match = trimmed.match(pattern);
+      if (match) {
+        panelNumber++;
+        const panelId = match[1];
+        scenes.push({
+          scene_number: panelNumber,
+          heading: `PAGE ${pageNumber || 1} - PANEL ${panelId}`,
+          int_ext: null,
+          location: null,
+          time_of_day: null,
+          description: null,
+          page_start: pageNumber || 1,
+          page_end: pageNumber || 1,
+        });
+        foundPanel = true;
+        break;
+      }
     }
+    if (foundPanel) continue;
     
-    const dialogueMatch = trimmed.match(dialoguePattern);
-    if (dialogueMatch) {
-      const name = dialogueMatch[1].trim();
-      if (!['CAPTION', 'SFX', 'NARRATOR'].includes(name.toUpperCase())) {
-        if (!characterMap.has(name)) {
-          characterMap.set(name, {
-            name,
-            dialogue_count: 0,
-            scene_count: 0,
-            first_appearance: panelNumber || 1,
-            description: null,
-          });
+    // Check for dialogue
+    for (const pattern of dialoguePatterns) {
+      const match = trimmed.match(pattern);
+      if (match) {
+        const name = match[1].trim();
+        if (!nonCharacterWords.has(name.toUpperCase())) {
+          if (!characterMap.has(name)) {
+            characterMap.set(name, {
+              name,
+              dialogue_count: 0,
+              scene_count: 0,
+              first_appearance: panelNumber || 1,
+              description: null,
+            });
+          }
+          characterMap.get(name)!.dialogue_count++;
         }
-        characterMap.get(name)!.dialogue_count++;
+        break;
       }
     }
   }
+  
+  console.log(`[script-parser-stream] parseComicFormat: ${scenes.length} panels, ${characterMap.size} characters from ${lines.length} lines`);
   
   return {
     scenes,
