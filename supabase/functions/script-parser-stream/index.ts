@@ -626,12 +626,14 @@ function normalizeToFountain(rawText: string): {
 // ============= COMIC SCRIPT NORMALIZATION =============
 
 // Normalize comic script directly without Fountain conversion (COMICS ONLY)
+// Returns detected character names for propagation to parseComicFormat
 function normalizeComicScript(rawText: string): {
   normalizedText: string;
   quality: 'good' | 'fair' | 'poor';
   pagesDetected: number;
   panelsDetected: number;
   charactersDetected: number;
+  characterNames: string[];  // NEW: Return actual character names for propagation
 } {
   const lines = rawText.split('\n');
   const normalizedLines: string[] = [];
@@ -670,6 +672,7 @@ function normalizeComicScript(rawText: string): {
     'CONTINUED', 'CONT', 'OFF', 'OP', 'BURST', 'BALLOON', 'BUBBLE',
     'TITLE', 'CREDITS', 'SPLASH', 'SPREAD', 'BLEED', 'GUTTER',
     'INSET', 'CLOSE', 'WIDE', 'ESTABLISHING', 'INSERT', 'TIER',
+    'NARRATOR', 'NARRATION', 'SCENE', 'DESCRIPTION', 'ACTION',
   ]);
   
   for (let i = 0; i < lines.length; i++) {
@@ -710,7 +713,7 @@ function normalizeComicScript(rawText: string): {
     }
     if (foundPanel) continue;
     
-    // Check for character dialogue
+    // Check for character dialogue (colon-based)
     let foundDialogue = false;
     for (const pattern of comicDialoguePatterns) {
       const match = trimmed.match(pattern);
@@ -728,14 +731,20 @@ function normalizeComicScript(rawText: string): {
     }
     if (foundDialogue) continue;
     
-    // Check for standalone character name (ALL CAPS, followed by text)
+    // Check for standalone character name (ALL CAPS, followed by text on next line)
     const nextLine = lines[i + 1]?.trim() || '';
-    if (/^[A-Z][A-Z\s\.']{1,30}$/.test(trimmed) && nextLine && !nonCharacterWords.has(trimmed)) {
-      // Looks like a character name followed by dialogue
-      characterNames.add(trimmed);
-      normalizedLines.push('');
-      normalizedLines.push(trimmed);
-      continue;
+    const standaloneCharPattern = /^[A-Z][A-Z\s\.']{1,30}$/;
+    if (standaloneCharPattern.test(trimmed) && nextLine && !nonCharacterWords.has(trimmed)) {
+      // Additional validation: next line should look like dialogue (not a panel/page marker)
+      const nextIsStructure = pagePatterns.some(p => p.test(nextLine)) || 
+                              panelPatterns.some(p => p.test(nextLine)) ||
+                              standaloneCharPattern.test(nextLine);
+      if (!nextIsStructure && nextLine.length > 0) {
+        characterNames.add(trimmed);
+        normalizedLines.push('');
+        normalizedLines.push(trimmed);
+        continue;
+      }
     }
     
     // Regular line (action, description)
@@ -752,14 +761,17 @@ function normalizeComicScript(rawText: string): {
     quality = 'poor';
   }
   
-  console.log(`[script-parser-stream] Comic normalization: ${pagesDetected} pages, ${panelsDetected} panels, ${characterNames.size} characters, quality: ${quality}`);
+  const charNamesArray = Array.from(characterNames);
+  console.log(`[script-parser-stream] Comic normalization: ${pagesDetected} pages, ${panelsDetected} panels, ${charNamesArray.length} characters, quality: ${quality}`);
+  console.log(`[script-parser-stream] Detected characters: ${charNamesArray.slice(0, 10).join(', ')}${charNamesArray.length > 10 ? '...' : ''}`);
   
   return {
     normalizedText: normalizedLines.join('\n'),
     quality,
     pagesDetected,
     panelsDetected,
-    charactersDetected: characterNames.size,
+    charactersDetected: charNamesArray.length,
+    characterNames: charNamesArray,  // Return actual names
   };
 }
 
@@ -1182,9 +1194,17 @@ serve(async (req) => {
           
           sendSSE(controller, 'progress', { stage: 'extract', percent: 50, message: 'Parsing text content...' });
           
-          const parsed = isComic ? parseComicFormat(textContent) : parseTextFormat(textContent);
-          allScenes = parsed.scenes;
-          parsed.characters.forEach(c => allCharacters.set(c.name, c));
+          // For comics, normalize first to get character names, then pass to parseComicFormat
+          if (isComic) {
+            const comicNorm = normalizeComicScript(textContent);
+            const parsed = parseComicFormat(comicNorm.normalizedText, comicNorm.characterNames);
+            allScenes = parsed.scenes;
+            parsed.characters.forEach(c => allCharacters.set(c.name, c));
+          } else {
+            const parsed = parseTextFormat(textContent);
+            allScenes = parsed.scenes;
+            parsed.characters.forEach(c => allCharacters.set(c.name, c));
+          }
           extractionMethod = 'regex';
           console.log(`[script-parser-stream] Regex parse result: ${allScenes.length} scenes, ${allCharacters.size} characters`);
           
@@ -1313,7 +1333,8 @@ serve(async (req) => {
               
               sendSSE(controller, 'progress', { stage: 'extract', percent: 60, message: 'Parsing comic elements...' });
               
-              const parsed = parseComicFormat(comicNorm.normalizedText);
+              // Pass character names from normalization to preserve them through parsing
+              const parsed = parseComicFormat(comicNorm.normalizedText, comicNorm.characterNames);
               allScenes = parsed.scenes;
               parsed.characters.forEach(c => allCharacters.set(c.name, c));
               extractionMethod = 'comic-text-extraction';
@@ -1883,13 +1904,31 @@ function parseTextFormat(content: string): { scenes: Scene[]; characters: Charac
 }
 
 // Parse comic format with expanded pattern detection
-function parseComicFormat(content: string): { scenes: Scene[]; characters: Character[]; rawText: string } {
+// Now accepts pre-detected characters from normalizeComicScript to preserve character data
+function parseComicFormat(
+  content: string, 
+  preDetectedCharacters?: string[]
+): { scenes: Scene[]; characters: Character[]; rawText: string } {
   const scenes: Scene[] = [];
   const characterMap = new Map<string, Character>();
   const lines = content.split('\n');
   
   let panelNumber = 0;
   let pageNumber = 0;
+  
+  // Seed character map with pre-detected characters from normalization stage
+  if (preDetectedCharacters && preDetectedCharacters.length > 0) {
+    console.log(`[script-parser-stream] parseComicFormat: Seeding with ${preDetectedCharacters.length} pre-detected characters`);
+    for (const name of preDetectedCharacters) {
+      characterMap.set(name, {
+        name,
+        dialogue_count: 0,
+        scene_count: 0,
+        first_appearance: 1,
+        description: null,
+      });
+    }
+  }
   
   // Expanded page patterns
   const pagePatterns = [
@@ -1909,20 +1948,26 @@ function parseComicFormat(content: string): { scenes: Scene[]; characters: Chara
     /^PANEL\s+([A-Z])\b/i,           // PANEL A, PANEL B
   ];
   
-  // Expanded dialogue patterns
+  // Expanded dialogue patterns - colon-based
   const dialoguePatterns = [
     /^([A-Z][A-Z\s\.']+)(?:\s*\(.*\))?:\s*(.+)/,  // CHARACTER: dialogue
     /^([A-Z][A-Z\s\.']+)\s*\[.*?\]:\s*(.+)/,      // CHARACTER [V.O.]: dialogue
   ];
+  
+  // Standalone character pattern (name on one line, dialogue on next)
+  const standaloneCharPattern = /^[A-Z][A-Z\s\.']{1,30}$/;
   
   // Non-character words for comics
   const nonCharacterWords = new Set([
     'CAPTION', 'SFX', 'NARRATOR', 'SOUND', 'EFFECT', 'BURST',
     'PAGE', 'PANEL', 'PG', 'PNL', 'TITLE', 'CREDITS', 'SPLASH',
     'CONTINUED', 'CONT', 'OFF', 'OP', 'INSET', 'TIER',
+    'NARRATION', 'SCENE', 'DESCRIPTION', 'ACTION',
+    'SPREAD', 'BLEED', 'GUTTER', 'ESTABLISHING', 'INSERT',
   ]);
 
-  for (const line of lines) {
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
     const trimmed = line.trim();
     if (!trimmed) continue;
     
@@ -1961,24 +2006,50 @@ function parseComicFormat(content: string): { scenes: Scene[]; characters: Chara
     }
     if (foundPanel) continue;
     
-    // Check for dialogue
+    // Check for colon-based dialogue patterns (CHARACTER: dialogue)
+    let foundDialogue = false;
     for (const pattern of dialoguePatterns) {
       const match = trimmed.match(pattern);
       if (match) {
-        const name = match[1].trim();
-        if (!nonCharacterWords.has(name.toUpperCase())) {
-          if (!characterMap.has(name)) {
-            characterMap.set(name, {
-              name,
+        const charName = match[1].trim();
+        if (!nonCharacterWords.has(charName)) {
+          if (!characterMap.has(charName)) {
+            characterMap.set(charName, {
+              name: charName,
               dialogue_count: 0,
               scene_count: 0,
               first_appearance: panelNumber || 1,
               description: null,
             });
           }
-          characterMap.get(name)!.dialogue_count++;
+          characterMap.get(charName)!.dialogue_count++;
         }
+        foundDialogue = true;
         break;
+      }
+    }
+    if (foundDialogue) continue;
+    
+    // Check for standalone character name (name on one line, dialogue on next)
+    const nextLine = lines[i + 1]?.trim() || '';
+    if (standaloneCharPattern.test(trimmed) && !nonCharacterWords.has(trimmed)) {
+      // Verify next line looks like dialogue (not another structure element)
+      const nextIsStructure = pagePatterns.some(p => p.test(nextLine)) || 
+                              panelPatterns.some(p => p.test(nextLine)) ||
+                              (standaloneCharPattern.test(nextLine) && !nonCharacterWords.has(nextLine));
+      
+      if (nextLine && nextLine.length > 0 && !nextIsStructure) {
+        // This is a standalone character name followed by dialogue
+        if (!characterMap.has(trimmed)) {
+          characterMap.set(trimmed, {
+            name: trimmed,
+            dialogue_count: 0,
+            scene_count: 0,
+            first_appearance: panelNumber || 1,
+            description: null,
+          });
+        }
+        characterMap.get(trimmed)!.dialogue_count++;
       }
     }
   }
