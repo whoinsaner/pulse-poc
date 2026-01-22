@@ -7,6 +7,7 @@ import { CategoryBarChart } from '@/components/charts/CategoryBarChart';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { BarChart3, ChevronDown, ChevronUp, Radar } from 'lucide-react';
+import { filterVisibleCategories, filterVisibleParameters } from '@/lib/reportUtils';
 
 interface CategoryScoreSectionProps {
   categoryScores: Record<string, number | { score?: number; highRiskParameters?: string[] }>;
@@ -28,18 +29,22 @@ export function CategoryScoreSection({
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
   const [chartView, setChartView] = useState<'radar' | 'bar'>('radar');
 
+  // Filter out system category
+  const visibleCategoryScores = filterVisibleCategories(categoryScores);
+  const visibleParameterScores = filterVisibleParameters(parameterScores);
+
   // Convert to entries with extracted scores
-  const categories = Object.entries(categoryScores)
+  const categories = Object.entries(visibleCategoryScores)
     .map(([name, value]) => [name, extractScore(value)] as [string, number])
     .sort(([, a], [, b]) => b - a);
 
   // Convert to numeric format for charts
   const numericCategoryScores = Object.fromEntries(
-    Object.entries(categoryScores).map(([k, v]) => [k, extractScore(v)])
+    Object.entries(visibleCategoryScores).map(([k, v]) => [k, extractScore(v)])
   );
 
   const getParametersForCategory = (category: string) => {
-    return parameterScores.filter((p) => p.category === category);
+    return visibleParameterScores.filter((p) => p.category === category);
   };
 
   return (
@@ -140,11 +145,11 @@ export function CategoryScoreSection({
       )}
 
       {/* All parameters view when no category is expanded */}
-      {!expandedCategory && parameterScores.length > 0 && (
+      {!expandedCategory && visibleParameterScores.length > 0 && (
         <div className="mt-8">
           <h3 className="text-lg font-semibold mb-4">Top Scoring Parameters</h3>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {parameterScores
+            {visibleParameterScores
               .sort((a, b) => b.score - a.score)
               .slice(0, 8)
               .map((param, index) => (

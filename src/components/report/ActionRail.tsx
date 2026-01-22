@@ -42,11 +42,12 @@ export function ActionRail({
   const totalScenes = reportData.scenes?.length || 0;
   const totalInsights = reportData.insights?.length || 0;
 
+  // 0-100 scale thresholds
   const getReadinessLabel = (score: number) => {
-    if (score >= 8) return { label: 'Production-Ready', color: 'text-success' };
-    if (score >= 6.5) return { label: 'High-Potential', color: 'text-chart-3' };
-    if (score >= 5) return { label: 'Development', color: 'text-chart-4' };
-    if (score >= 3.5) return { label: 'Needs Work', color: 'text-warning' };
+    if (score >= 80) return { label: 'Production-Ready', color: 'text-success' };
+    if (score >= 65) return { label: 'High-Potential', color: 'text-chart-3' };
+    if (score >= 50) return { label: 'Development', color: 'text-chart-4' };
+    if (score >= 30) return { label: 'Needs Work', color: 'text-warning' };
     return { label: 'Early Stage', color: 'text-destructive' };
   };
 

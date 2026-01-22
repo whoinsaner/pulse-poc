@@ -23,6 +23,7 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { filterVisibleCategories, filterVisibleParameters } from '@/lib/reportUtils';
 
 interface ReportContextValue {
   reportData: ReportData;
@@ -37,49 +38,52 @@ export default function ProjectSnapshot() {
   
   const metadata = reportData.scriptMetadata;
   
+  // 0-100 scale thresholds
   const getReadinessLabel = (score: number) => {
-    if (score >= 8) return { label: 'Production-Ready', sublabel: 'Ready for greenlight consideration', color: 'text-success', bg: 'bg-success/10' };
-    if (score >= 6.5) return { label: 'High-Potential', sublabel: 'Strong foundation, minor revisions needed', color: 'text-chart-3', bg: 'bg-chart-3/10' };
-    if (score >= 5) return { label: 'Development Stage', sublabel: 'Solid concept requiring development', color: 'text-chart-4', bg: 'bg-chart-4/10' };
-    if (score >= 3.5) return { label: 'Needs Work', sublabel: 'Fundamental issues to address', color: 'text-warning', bg: 'bg-warning/10' };
+    if (score >= 80) return { label: 'Production-Ready', sublabel: 'Ready for greenlight consideration', color: 'text-success', bg: 'bg-success/10' };
+    if (score >= 65) return { label: 'High-Potential', sublabel: 'Strong foundation, minor revisions needed', color: 'text-chart-3', bg: 'bg-chart-3/10' };
+    if (score >= 50) return { label: 'Development Stage', sublabel: 'Solid concept requiring development', color: 'text-chart-4', bg: 'bg-chart-4/10' };
+    if (score >= 30) return { label: 'Needs Work', sublabel: 'Fundamental issues to address', color: 'text-warning', bg: 'bg-warning/10' };
     return { label: 'Early Stage', sublabel: 'Significant development required', color: 'text-destructive', bg: 'bg-destructive/10' };
   };
 
   const readiness = getReadinessLabel(currentScore);
 
-  // Calculate stats
-  const totalParameters = reportData.parameterScores?.length || 0;
+  // Calculate stats - filter out system parameters
+  const visibleParameters = filterVisibleParameters(reportData.parameterScores || []);
+  const totalParameters = visibleParameters.length;
   const avgConfidence = totalParameters > 0 
-    ? reportData.parameterScores?.reduce((acc, p) => acc + (p.confidence || 0), 0) / totalParameters 
+    ? visibleParameters.reduce((acc, p) => acc + (p.confidence || 0), 0) / totalParameters 
     : 0;
   const totalInsights = reportData.insights?.length || 0;
   const totalCharacters = reportData.characters?.length || 0;
   const totalScenes = reportData.scenes?.length || 0;
 
-  // Get category scores
-  const categoryAverages = Object.entries(reportData.categoryScores || {})
+  // Get category scores - filter out system category
+  const visibleCategoryScores = filterVisibleCategories(reportData.categoryScores || {});
+  const categoryAverages = Object.entries(visibleCategoryScores)
     .map(([name, value]) => {
       const score = typeof value === 'number' ? value : (value as { score?: number })?.score || 0;
       return { name, score };
     })
     .sort((a, b) => b.score - a.score);
 
-  // Identify strengths and weaknesses from top/bottom categories
-  const strengths = categoryAverages.filter(c => c.score >= 7).slice(0, 5).map(c => ({
+  // Identify strengths and weaknesses from top/bottom categories (0-100 scale)
+  const strengths = categoryAverages.filter(c => c.score >= 70).slice(0, 5).map(c => ({
     text: c.name,
-    detail: `Score: ${c.score.toFixed(1)}/10`
+    detail: `Score: ${Math.round(c.score)}/100`
   }));
   
-  const weaknesses = categoryAverages.filter(c => c.score < 5).slice(0, 5).map(c => ({
+  const weaknesses = categoryAverages.filter(c => c.score < 50).slice(0, 5).map(c => ({
     text: c.name,
-    detail: `Score: ${c.score.toFixed(1)}/10`
+    detail: `Score: ${Math.round(c.score)}/100`
   }));
 
-  // Studio recommendation based on score
+  // Studio recommendation based on score (0-100 scale)
   const getStudioVerdict = () => {
-    if (currentScore >= 8) return { verdict: 'greenlight', title: 'Recommend for Development', content: 'This script demonstrates exceptional quality across key metrics and is ready for production consideration.' };
-    if (currentScore >= 6.5) return { verdict: 'develop', title: 'Strong Development Candidate', content: 'High potential project that warrants investment in development. Address noted areas before proceeding.' };
-    if (currentScore >= 5) return { verdict: 'develop', title: 'Development with Revisions', content: 'Solid foundation with identifiable issues. Recommend a development pass before further consideration.' };
+    if (currentScore >= 80) return { verdict: 'greenlight', title: 'Recommend for Development', content: 'This script demonstrates exceptional quality across key metrics and is ready for production consideration.' };
+    if (currentScore >= 65) return { verdict: 'develop', title: 'Strong Development Candidate', content: 'High potential project that warrants investment in development. Address noted areas before proceeding.' };
+    if (currentScore >= 50) return { verdict: 'develop', title: 'Development with Revisions', content: 'Solid foundation with identifiable issues. Recommend a development pass before further consideration.' };
     return { verdict: 'pass', title: 'Requires Significant Development', content: 'Fundamental elements need attention. Consider substantial rewrites before proceeding.' };
   };
 
@@ -190,7 +194,7 @@ export default function ProjectSnapshot() {
             </div>
             
             <div className="mt-6 text-center">
-              <p className="text-5xl font-bold gradient-text">{currentScore.toFixed(1)}</p>
+              <p className="text-5xl font-bold gradient-text">{Math.round(currentScore)}</p>
               <p className="text-lg text-muted-foreground mt-1">Overall Readiness Score</p>
               <p className={cn("text-sm mt-2", readiness.color)}>{readiness.sublabel}</p>
             </div>
@@ -288,11 +292,11 @@ export default function ProjectSnapshot() {
                 </span>
                 <span className={cn(
                   "text-lg font-bold",
-                  category.score >= 7 ? "text-success" :
-                  category.score >= 5 ? "text-chart-4" :
+                  category.score >= 70 ? "text-success" :
+                  category.score >= 50 ? "text-chart-4" :
                   "text-warning"
                 )}>
-                  {category.score.toFixed(1)}
+                  {Math.round(category.score)}
                 </span>
               </div>
               <p className="font-medium text-sm truncate">{category.name}</p>
@@ -300,11 +304,11 @@ export default function ProjectSnapshot() {
                 <div 
                   className={cn(
                     "h-full rounded-full transition-all",
-                    category.score >= 7 ? "bg-success" :
-                    category.score >= 5 ? "bg-chart-4" :
+                    category.score >= 70 ? "bg-success" :
+                    category.score >= 50 ? "bg-chart-4" :
                     "bg-warning"
                   )}
-                  style={{ width: `${category.score * 10}%` }}
+                  style={{ width: `${category.score}%` }}
                 />
               </div>
             </Card>
