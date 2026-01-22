@@ -58,7 +58,7 @@ export function StakeholderSelector({
         <RadioGroup
           value={selected}
           onValueChange={(value) => setSelected(value as StakeholderLens | 'all')}
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"
+          className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-2"
         >
           {STAKEHOLDER_OPTIONS.map((option) => {
             const isAll = option === 'all';
@@ -72,38 +72,38 @@ export function StakeholderSelector({
                 key={option}
                 htmlFor={option}
                 className={cn(
-                  'relative flex flex-col gap-2 p-4 rounded-lg border cursor-pointer transition-all',
+                  'relative flex flex-col p-3 rounded-xl border cursor-pointer transition-all min-h-[120px]',
                   isSelected 
-                    ? 'border-primary bg-primary/5 ring-2 ring-primary/20' 
-                    : 'border-border hover:border-primary/50 hover:bg-muted/50'
+                    ? 'border-primary bg-primary/5 ring-2 ring-primary shadow-sm' 
+                    : 'border-border hover:border-primary/50 hover:bg-muted/30'
                 )}
               >
-                <div className="flex items-start gap-3">
-                  <RadioGroupItem value={option} id={option} className="mt-1" />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Icon className="h-4 w-4 text-primary" />
-                      <span className="font-medium">
-                        {isAll ? 'All Stakeholders' : config?.label}
-                      </span>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {isAll 
-                        ? 'Comprehensive analysis covering all perspectives' 
-                        : desc?.focus
-                      }
-                    </p>
-                    {!isAll && desc && (
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {desc.keyMetrics.slice(0, 2).map((metric) => (
-                          <Badge key={metric} variant="secondary" className="text-[10px] px-1.5 py-0">
-                            {metric}
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                <div className="flex items-center gap-2 mb-2">
+                  <RadioGroupItem value={option} id={option} className="shrink-0" />
+                  <Icon className="h-4 w-4 text-primary shrink-0" />
+                  <span className="font-semibold text-sm truncate">
+                    {isAll ? 'All Stakeholders' : config?.label}
+                  </span>
                 </div>
+                <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2 mb-auto">
+                  {isAll 
+                    ? 'Comprehensive analysis covering all perspectives' 
+                    : desc?.focus
+                  }
+                </p>
+                {!isAll && desc && (
+                  <div className="flex flex-wrap gap-1 mt-2 pt-2 border-t border-border/50">
+                    {desc.keyMetrics.slice(0, 2).map((metric) => (
+                      <Badge 
+                        key={metric} 
+                        variant="outline" 
+                        className="text-[10px] px-1.5 py-0.5 bg-muted/50 font-medium"
+                      >
+                        {metric}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
               </Label>
             );
           })}
