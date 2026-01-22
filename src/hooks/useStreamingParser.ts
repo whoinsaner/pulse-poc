@@ -6,7 +6,7 @@ export interface ParsingEvent {
 }
 
 export interface ParsingProgress {
-  stage: 'download' | 'validate' | 'extract' | 'characters' | 'finalize';
+  stage: 'download' | 'validate' | 'classify' | 'extract' | 'characters' | 'finalize';
   percent: number;
   message: string;
   totalChunks?: number;
@@ -19,6 +19,14 @@ export interface ChunkStatus {
   scenesFound?: number;
   pageRange?: string;
   error?: string;
+}
+
+export interface ClassificationResult {
+  detected: 'comic' | 'screenplay' | 'unknown';
+  confidence: number;
+  mismatch: boolean;
+  corrected: boolean;
+  userSelected?: string;
 }
 
 export interface ParsingResult {
@@ -34,6 +42,7 @@ export interface ParsingResult {
   errorMessage?: string;
   errorCode?: string;
   recommendations?: string[];
+  classification?: ClassificationResult;
 }
 
 export interface ParsingWarnings {
@@ -274,6 +283,7 @@ export function useStreamingParser(options: UseStreamingParserOptions = {}) {
           readyForAnalysis: data.readyForAnalysis,
           aiAssisted: data.aiAssisted,
           coveragePercent: data.coveragePercent,
+          classification: data.classification,
         };
         setResult(resultData);
         options.onComplete?.(resultData);

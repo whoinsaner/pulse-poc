@@ -1,4 +1,4 @@
-import { Check, Loader2, FileText, ScanSearch, Users, BookOpen, Sparkles, AlertTriangle, X, Clock } from 'lucide-react';
+import { Check, Loader2, FileText, ScanSearch, Users, BookOpen, Sparkles, AlertTriangle, X, Clock, Tag } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
 import type { ParsingProgress, ChunkStatus, ParsingWarnings, ETAInfo } from '@/hooks/useStreamingParser';
@@ -13,6 +13,7 @@ interface ParsingStageInfo {
 const PARSING_STAGES: ParsingStageInfo[] = [
   { id: 'download', label: 'Downloading', description: 'Fetching script from storage', icon: FileText },
   { id: 'validate', label: 'Validating', description: 'Checking format and structure', icon: ScanSearch },
+  { id: 'classify', label: 'Classifying', description: 'Verifying script type', icon: Tag },
   { id: 'extract', label: 'Extracting', description: 'Parsing scenes and dialogue', icon: BookOpen },
   { id: 'characters', label: 'Analyzing', description: 'Identifying characters', icon: Users },
   { id: 'finalize', label: 'Finalizing', description: 'Saving to database', icon: Sparkles },

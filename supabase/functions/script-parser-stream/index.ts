@@ -927,6 +927,88 @@ function validateFile(fileSize: number, format: string): { valid: boolean; warni
   return { valid: true, warnings, recommendations };
 }
 
+// ============= SCRIPT TYPE CLASSIFICATION =============
+
+// Lightweight classifier to verify user-selected script type
+async function classifyScriptType(
+  apiKey: string,
+  textSample: string,
+  userSelectedType: string
+): Promise<{
+  detected: 'comic' | 'screenplay' | 'unknown';
+  confidence: number;
+  mismatch: boolean;
+  indicators: string[];
+  suggestion?: string;
+}> {
+  try {
+    // Quick pattern-based pre-check (no AI needed for obvious cases)
+    const comicIndicators: string[] = [];
+    const screenplayIndicators: string[] = [];
+    
+    // Check for comic patterns
+    if (/\bPAGE\s*\d+/i.test(textSample)) comicIndicators.push('PAGE markers');
+    if (/\bPANEL\s*\d+/i.test(textSample)) comicIndicators.push('PANEL markers');
+    if (/\bSFX[:\s]/i.test(textSample)) comicIndicators.push('SFX notation');
+    if (/\bCAPTION[:\s]/i.test(textSample)) comicIndicators.push('CAPTION blocks');
+    if (/\bSPLASH\s*PAGE/i.test(textSample)) comicIndicators.push('SPLASH PAGE');
+    
+    // Check for screenplay patterns
+    if (/\b(INT\.|EXT\.)\s+[A-Z]/i.test(textSample)) screenplayIndicators.push('INT./EXT. sluglines');
+    if (/\bFADE\s*(IN|OUT)/i.test(textSample)) screenplayIndicators.push('FADE transitions');
+    if (/\bCUT\s*TO:/i.test(textSample)) screenplayIndicators.push('CUT TO transitions');
+    if (/\bCONTINUOUS\b/i.test(textSample)) screenplayIndicators.push('CONTINUOUS marker');
+    if (/^\s*[A-Z]{2,}[A-Z\s]*\n\s*\(/m.test(textSample)) screenplayIndicators.push('Character cues with parentheticals');
+    
+    // Calculate confidence based on pattern matches
+    const comicScore = comicIndicators.length;
+    const screenplayScore = screenplayIndicators.length;
+    const totalScore = comicScore + screenplayScore;
+    
+    let detected: 'comic' | 'screenplay' | 'unknown' = 'unknown';
+    let confidence = 0;
+    
+    if (totalScore > 0) {
+      if (comicScore > screenplayScore) {
+        detected = 'comic';
+        confidence = Math.min(0.95, 0.5 + (comicScore - screenplayScore) * 0.15);
+      } else if (screenplayScore > comicScore) {
+        detected = 'screenplay';
+        confidence = Math.min(0.95, 0.5 + (screenplayScore - comicScore) * 0.15);
+      } else {
+        // Equal scores - need AI to decide
+        confidence = 0.3;
+      }
+    }
+    
+    const userIsComic = userSelectedType === 'comic';
+    const detectedIsComic = detected === 'comic';
+    const mismatch = detected !== 'unknown' && userIsComic !== detectedIsComic;
+    
+    console.log(`[script-parser-stream] Classification: detected=${detected}, confidence=${confidence.toFixed(2)}, mismatch=${mismatch}`);
+    console.log(`[script-parser-stream] Indicators - Comic: [${comicIndicators.join(', ')}], Screenplay: [${screenplayIndicators.join(', ')}]`);
+    
+    return {
+      detected,
+      confidence,
+      mismatch,
+      indicators: detected === 'comic' ? comicIndicators : screenplayIndicators,
+      suggestion: mismatch 
+        ? `Script appears to be a ${detected} based on: ${(detected === 'comic' ? comicIndicators : screenplayIndicators).join(', ')}`
+        : undefined
+    };
+    
+  } catch (error) {
+    console.error('[script-parser-stream] Classification error:', error);
+    return {
+      detected: 'unknown',
+      confidence: 0,
+      mismatch: false,
+      indicators: [],
+    };
+  }
+}
+
 // Retry with backoff
 async function retryWithBackoff<T>(
   fn: () => Promise<T>,
@@ -1015,11 +1097,75 @@ serve(async (req) => {
         
         sendSSE(controller, 'progress', { stage: 'validate', percent: 100, message: 'Format validated' });
 
+        // Stage 2.5: Classify script type (verify user selection)
+        console.log(`[script-parser-stream] Step 3.5: Classifying script type`);
+        sendSSE(controller, 'stage', { stage: 'classify', message: 'Verifying script type...' });
+        
+        let effectiveScriptType = scriptType || 'feature';
+        let classificationResult: {
+          detected: 'comic' | 'screenplay' | 'unknown';
+          confidence: number;
+          mismatch: boolean;
+          corrected: boolean;
+          userSelected?: string;
+        } | null = null;
+        
+        // For text-based formats, we can classify before extraction
+        // For binary formats (PDF/DOCX), we'll classify after extraction
+        const canClassifyEarly = ['fountain', 'highland', 'txt', 'fdx'].includes(format);
+        
+        if (canClassifyEarly) {
+          sendSSE(controller, 'progress', { stage: 'classify', percent: 30, message: 'Reading content for classification...' });
+          
+          // Read text content for classification
+          const textForClassification = await fileData.text();
+          const sampleText = textForClassification.substring(0, 5000);
+          
+          sendSSE(controller, 'progress', { stage: 'classify', percent: 50, message: 'Analyzing script patterns...' });
+          
+          // Run classifier
+          const classifyResult = await classifyScriptType(lovableApiKey || '', sampleText, effectiveScriptType);
+          
+          classificationResult = {
+            detected: classifyResult.detected,
+            confidence: classifyResult.confidence,
+            mismatch: classifyResult.mismatch,
+            corrected: false,
+            userSelected: scriptType,
+          };
+          
+          // Auto-correct if high confidence mismatch
+          if (classifyResult.mismatch && classifyResult.confidence > 0.7) {
+            effectiveScriptType = classifyResult.detected === 'comic' ? 'comic' : scriptType || 'feature';
+            classificationResult.corrected = true;
+            
+            sendSSE(controller, 'warning', {
+              warnings: [`Script type adjusted: ${scriptType} → ${effectiveScriptType}`],
+              recommendations: [classifyResult.suggestion || 'Classification corrected based on content analysis']
+            });
+            
+            sendSSE(controller, 'progress', { 
+              stage: 'classify', 
+              percent: 100, 
+              message: `Corrected to: ${effectiveScriptType} (${Math.round(classifyResult.confidence * 100)}% confidence)` 
+            });
+          } else {
+            sendSSE(controller, 'progress', { 
+              stage: 'classify', 
+              percent: 100, 
+              message: `Verified: ${effectiveScriptType} (${Math.round(classifyResult.confidence * 100)}% confidence)` 
+            });
+          }
+        } else {
+          sendSSE(controller, 'progress', { stage: 'classify', percent: 50, message: 'Will verify after text extraction...' });
+          sendSSE(controller, 'progress', { stage: 'classify', percent: 100, message: `Using type: ${effectiveScriptType}` });
+        }
+
         // Stage 3: Extract content
         console.log(`[script-parser-stream] Step 4: Extracting content for format: ${format}`);
         sendSSE(controller, 'stage', { stage: 'extract', message: 'Extracting script content...' });
         
-        const isComic = scriptType === 'comic';
+        let isComic = effectiveScriptType === 'comic';
         console.log(`[script-parser-stream] Script type: ${isComic ? 'comic' : 'screenplay'}`);
         let allScenes: Scene[] = [];
         let allCharacters: Map<string, Character> = new Map();
@@ -1119,6 +1265,38 @@ serve(async (req) => {
           if (extractionSuccess && extractedText.length > 0) {
             // Log sample text for debugging
             console.log(`[script-parser-stream] Sample text (first 500 chars): ${extractedText.substring(0, 500).replace(/\n/g, '\\n')}`);
+            
+            // For binary formats (PDF/DOCX), classify AFTER extraction
+            if (!classificationResult) {
+              console.log(`[script-parser-stream] Running post-extraction classification`);
+              const sampleText = extractedText.substring(0, 5000);
+              const classifyResult = await classifyScriptType(lovableApiKey || '', sampleText, effectiveScriptType);
+              
+              classificationResult = {
+                detected: classifyResult.detected,
+                confidence: classifyResult.confidence,
+                mismatch: classifyResult.mismatch,
+                corrected: false,
+                userSelected: scriptType,
+              };
+              
+              // Auto-correct if high confidence mismatch
+              if (classifyResult.mismatch && classifyResult.confidence > 0.7) {
+                const newType = classifyResult.detected === 'comic' ? 'comic' : (scriptType || 'feature');
+                if (newType !== effectiveScriptType) {
+                  effectiveScriptType = newType;
+                  isComic = effectiveScriptType === 'comic';
+                  classificationResult.corrected = true;
+                  
+                  sendSSE(controller, 'warning', {
+                    warnings: [`Script type adjusted: ${scriptType} → ${effectiveScriptType}`],
+                    recommendations: [classifyResult.suggestion || 'Classification corrected based on content analysis']
+                  });
+                  
+                  console.log(`[script-parser-stream] Type corrected: ${scriptType} → ${effectiveScriptType}`);
+                }
+              }
+            }
             
             if (isComic) {
               // COMIC PATH: Direct comic normalization (skip Fountain)
@@ -1466,6 +1644,7 @@ serve(async (req) => {
             ai_assisted: usedAIRescue,
             extraction_method: extractionMethod,
             streaming: true,
+            classification: classificationResult,
           },
         });
 
@@ -1510,6 +1689,7 @@ serve(async (req) => {
           aiAssisted: usedAIRescue,
           extractionMethod,
           coveragePercent: Math.round(coveragePercent),
+          classification: classificationResult,
         });
 
         console.log(`[script-parser-stream] === COMPLETE ===`);
