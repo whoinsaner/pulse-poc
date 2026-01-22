@@ -317,11 +317,13 @@ export function AnalysisTrigger({
   const hasRunningAgents = Object.values(agentProgress).some(a => a.status === 'running');
 
   const getProgressStats = () => {
-    const completed = Object.values(agentProgress).filter(a => a.status === 'completed').length;
-    const running = Object.values(agentProgress).filter(a => a.status === 'running').length;
-    const failed = Object.values(agentProgress).filter(a => a.status === 'failed').length;
+    // Only count progress from agents that are active for this stakeholder/script type
+    const activeAgentNames = new Set(activeAgents.map(a => a.name));
+    const completed = Object.entries(agentProgress).filter(([name, a]) => activeAgentNames.has(name) && a.status === 'completed').length;
+    const running = Object.entries(agentProgress).filter(([name, a]) => activeAgentNames.has(name) && a.status === 'running').length;
+    const failed = Object.entries(agentProgress).filter(([name, a]) => activeAgentNames.has(name) && a.status === 'failed').length;
     const total = activeAgents.length;
-    const percentage = Math.round(((completed + running * 0.5) / total) * 100);
+    const percentage = total > 0 ? Math.min(100, Math.round(((completed + running * 0.5) / total) * 100)) : 0;
     return { completed, running, failed, total, percentage };
   };
 
