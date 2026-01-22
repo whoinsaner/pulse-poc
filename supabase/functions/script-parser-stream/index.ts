@@ -1184,6 +1184,7 @@ serve(async (req) => {
         let rawText = '';
         let usedAIRescue = false;
         let extractionMethod = 'regex';
+        let actualPdfPageCount: number | null = null; // Track actual PDF structure page count
         
         if (['fountain', 'highland', 'txt'].includes(format)) {
           // Text-based formats - parse directly
@@ -1249,6 +1250,11 @@ serve(async (req) => {
           
           if (format === 'pdf') {
             const pdfResult = await extractPDFText(bytes);
+            // Always capture actual PDF page count for accurate coverage calculation
+            if (pdfResult.pageCount > 0) {
+              actualPdfPageCount = pdfResult.pageCount;
+              console.log(`[script-parser-stream] Actual PDF page count from structure: ${actualPdfPageCount}`);
+            }
             if (pdfResult.success && pdfResult.text.length > 500) {
               extractedText = pdfResult.text;
               extractionSuccess = true;
@@ -1695,15 +1701,22 @@ serve(async (req) => {
         sendSSE(controller, 'progress', { stage: 'finalize', percent: 100, message: 'All data saved!' });
 
         // Calculate extraction quality
-        const coveragePercent = expectedPages > 0 ? (extractedPages / expectedPages) * 100 : 100;
+        // IMPORTANT: Use actual PDF page count when available, not file-size heuristic
+        // File-size heuristics are unreliable for compressed PDFs
+        const effectiveExpectedPages = actualPdfPageCount || expectedPages;
+        const coveragePercent = effectiveExpectedPages > 0 
+          ? Math.min(100, (extractedPages / effectiveExpectedPages) * 100) // Clamp to 100%
+          : 100;
         const isComplete = coveragePercent >= 85 && allScenes.length > 0;
+        
+        console.log(`[script-parser-stream] Coverage calculation: extractedPages=${extractedPages}, effectiveExpectedPages=${effectiveExpectedPages} (actual PDF: ${actualPdfPageCount}, file-size estimate: ${expectedPages}), coverage=${coveragePercent.toFixed(1)}%`);
 
         // Send final result
         sendSSE(controller, 'complete', {
           success: true,
           scenesCount: allScenes.length,
           charactersCount: characters.length,
-          estimatedPages: expectedPages,
+          estimatedPages: effectiveExpectedPages, // Use the more accurate estimate
           extractedPages,
           isComplete,
           readyForAnalysis: isComplete,
@@ -1711,6 +1724,9 @@ serve(async (req) => {
           extractionMethod,
           coveragePercent: Math.round(coveragePercent),
           classification: classificationResult,
+          // Debug info for transparency
+          pdfPageCount: actualPdfPageCount,
+          fileSizeEstimate: expectedPages,
         });
 
         console.log(`[script-parser-stream] === COMPLETE ===`);
