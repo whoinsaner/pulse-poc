@@ -51,6 +51,7 @@ import ComicGallery from "./pages/ComicGallery";
 import Reports from "./pages/Reports";
 import Team from "./pages/Team";
 import ParametersAgents from "./pages/ParametersAgents";
+import FrameworkDocumentation from "./pages/FrameworkDocumentation";
 import TestAnalysisPipeline from "./pages/TestAnalysisPipeline";
 import TestComicAnalysis from "./pages/TestComicAnalysis";
 import NotFound from "./pages/NotFound";
@@ -205,6 +206,7 @@ const App = () => (
             <Route path="/comic-gallery" element={<ComicGallery />} />
             <Route path="/team" element={<Team />} />
             <Route path="/parameters" element={<ParametersAgents />} />
+            <Route path="/documentation" element={<FrameworkDocumentation />} />
             <Route path="/test-pipeline" element={<TestAnalysisPipeline />} />
             <Route path="/test-comic-pipeline" element={<TestComicAnalysis />} />
             <Route path="*" element={<NotFound />} />
