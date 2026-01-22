@@ -9,7 +9,7 @@ import {
   Loader2, Play, CheckCircle, XCircle, Clock, Zap, 
   Lightbulb, Layers, Users, Swords, Sparkles, MessageSquare,
   Globe, Heart, TrendingUp, Wrench, Palette, LayoutGrid, 
-  BookOpen, PenTool, AlertTriangle
+  BookOpen, PenTool, AlertTriangle, PlayCircle, MonitorPlay
 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
@@ -41,10 +41,14 @@ const USAF_AGENTS = [
 ];
 
 const COMIC_AGENTS = [
-  { name: 'ComicVisualAgent', label: 'Visual Storytelling', module: 'V', icon: Palette },
-  { name: 'ComicDialogueAgent', label: 'Comic Dialogue', module: 'CD', icon: MessageSquare },
-  { name: 'ComicPacingAgent', label: 'Panel Pacing', module: 'P', icon: LayoutGrid },
-  { name: 'ComicArtDirectionAgent', label: 'Art Direction', module: 'AD', icon: PenTool },
+  { name: 'PanelFlowAgent', label: 'Panel Flow', module: 'PF', icon: LayoutGrid },
+  { name: 'LetteringBalloonAgent', label: 'Lettering & Balloon', module: 'LB', icon: MessageSquare },
+  { name: 'PageTurnImpactAgent', label: 'Page-Turn Impact', module: 'PT', icon: BookOpen },
+  { name: 'ArtScriptSynergyAgent', label: 'Art-Script Synergy', module: 'AS', icon: Palette },
+];
+
+const WEB_SERIES_AGENTS = [
+  { name: 'WebSeriesAgent', label: 'Web Series', module: 'WS', icon: MonitorPlay },
 ];
 
 const SYNTHESIS_AGENTS = [
@@ -75,11 +79,21 @@ export function AnalysisTrigger({
   const [qualityMode, setQualityMode] = useState<QualityMode>('balanced');
 
   const isComic = scriptType === 'comic';
+  const isWebSeries = scriptType === 'web_series';
+  
+  // Get format-specific agents based on script type
+  const getFormatSpecificAgents = () => {
+    if (isComic) return COMIC_AGENTS;
+    if (isWebSeries) return WEB_SERIES_AGENTS;
+    return [];
+  };
+  
+  const formatSpecificAgents = getFormatSpecificAgents();
   
   // Get agents based on selected stakeholder
   const getActiveAgents = () => {
     const agentNames = getAgentsForStakeholder(selectedStakeholder, isComic);
-    const allAgents = [...USAF_AGENTS, ...COMIC_AGENTS, ...SYNTHESIS_AGENTS];
+    const allAgents = [...USAF_AGENTS, ...formatSpecificAgents, ...SYNTHESIS_AGENTS];
     return allAgents.filter(a => agentNames.includes(a.name));
   };
   
@@ -526,25 +540,32 @@ export function AnalysisTrigger({
         </div>
       </div>
 
-      {/* Comic-specific agents */}
-      {isComic && (
+      {/* Format-specific agents (Comic/Web Series) */}
+      {formatSpecificAgents.length > 0 && (
         <div className="space-y-3">
           <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-            Comic-Specific Agents
+            {isComic ? 'Comic-Specific Agents' : isWebSeries ? 'Web Series Agents' : 'Format-Specific Agents'}
           </p>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            {COMIC_AGENTS.map((agent) => {
+          <div className={cn(
+            "grid gap-2",
+            formatSpecificAgents.length === 1 ? "grid-cols-1" : 
+            formatSpecificAgents.length <= 2 ? "grid-cols-2" :
+            "grid-cols-2 sm:grid-cols-4"
+          )}>
+            {formatSpecificAgents.map((agent) => {
               const progress = agentProgress[agent.name];
               return (
                 <div
                   key={agent.name}
                   className={cn(
                     'flex flex-col items-center gap-1 p-2 rounded-lg border transition-all duration-300',
-                    getAgentStatusClass(progress?.status)
+                    getAgentStatusClass(progress?.status),
+                    isWebSeries && 'bg-pink-500/5 border-pink-500/20'
                   )}
                 >
                   {getAgentIcon(agent, progress?.status)}
                   <span className="text-[10px] font-medium text-center leading-tight">{agent.label}</span>
+                  <span className="text-[9px] opacity-60">Module {agent.module}</span>
                 </div>
               );
             })}

@@ -1512,7 +1512,7 @@ serve(async (req) => {
   }
 
   try {
-    const { scriptId, analysisRunId, mode = 'deep', qualityMode = 'balanced', forceAnalysis = false, resume = false, stakeholderLens = null } = await req.json() as AnalyzeRequest;
+    let { scriptId, analysisRunId, mode = 'deep', qualityMode = 'balanced', forceAnalysis = false, resume = false, stakeholderLens = null } = await req.json() as AnalyzeRequest;
     
     console.log(`[analyze-script] Starting ${mode.toUpperCase()} analysis for script ${scriptId}, run ${analysisRunId}, quality: ${qualityMode}, stakeholder: ${stakeholderLens || 'all'}, resume: ${resume}`);
 
@@ -1737,9 +1737,10 @@ serve(async (req) => {
       let usingFallbackMode = false;
 
       if (!hasStructuredData) {
-        if (!forceAnalysis) {
-          throw new Error('Script parsing incomplete. Use forceAnalysis=true or mode="quick" to analyze with raw text.');
-        }
+        // Auto-enable fallback mode instead of throwing error
+        // This provides a better user experience - analysis should run with reduced accuracy rather than fail
+        console.log('[analyze-script] Deep mode: No structured data found, auto-enabling fallback to raw text analysis');
+        forceAnalysis = true;
         
         console.log('[analyze-script] Deep mode fallback: using raw text');
         usingFallbackMode = true;
