@@ -217,17 +217,13 @@ export default function Scripts() {
 
       if (uploadError) throw uploadError;
 
-      // Get the public URL
-      const { data: urlData } = supabase.storage
-        .from('scripts')
-        .getPublicUrl(filePath);
-
-      // Create script record
+      // Create script record - store the file path directly
+      // The file_url stores the storage path for later access via signed URLs
       const { data: scriptData, error: scriptError } = await supabase
         .from('scripts')
         .insert({
           title: sample.title,
-          file_url: urlData.publicUrl,
+          file_url: filePath,
           format: 'txt' as ScriptFormat,
           script_type: sample.scriptType as ScriptType,
           organization_id: currentOrganization.id,

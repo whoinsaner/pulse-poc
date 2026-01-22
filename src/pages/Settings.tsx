@@ -106,21 +106,29 @@ export default function Settings() {
 
     setIsUploadingAvatar(true);
     try {
+      if (!currentOrganization?.id) {
+        throw new Error('No organization selected');
+      }
+
       const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
-      const filePath = `avatars/${fileName}`;
+      const fileName = `avatar-${user.id}-${Date.now()}.${fileExt}`;
+      // Use org-scoped path to satisfy RLS policy
+      const filePath = `${currentOrganization.id}/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('scripts')
-        .upload(filePath, file);
+        .upload(filePath, file, { upsert: true });
 
       if (uploadError) throw uploadError;
 
-      const { data: urlData } = supabase.storage
+      // Use signed URL since bucket is private
+      const { data: signedUrlData, error: urlError } = await supabase.storage
         .from('scripts')
-        .getPublicUrl(filePath);
+        .createSignedUrl(filePath, 86400); // 24 hour expiry
 
-      setAvatarUrl(urlData.publicUrl);
+      if (urlError) throw urlError;
+
+      setAvatarUrl(signedUrlData.signedUrl);
       toast({
         title: 'Avatar uploaded',
         description: 'Click Save to apply your new avatar.',
@@ -194,20 +202,24 @@ export default function Settings() {
     setIsUploadingLogo(true);
     try {
       const fileExt = file.name.split('.').pop();
-      const fileName = `org-${currentOrganization.id}-${Date.now()}.${fileExt}`;
-      const filePath = `logos/${fileName}`;
+      const fileName = `logo-${currentOrganization.id}-${Date.now()}.${fileExt}`;
+      // Use org-scoped path to satisfy RLS policy
+      const filePath = `${currentOrganization.id}/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('scripts')
-        .upload(filePath, file);
+        .upload(filePath, file, { upsert: true });
 
       if (uploadError) throw uploadError;
 
-      const { data: urlData } = supabase.storage
+      // Use signed URL since bucket is private
+      const { data: signedUrlData, error: urlError } = await supabase.storage
         .from('scripts')
-        .getPublicUrl(filePath);
+        .createSignedUrl(filePath, 86400); // 24 hour expiry
 
-      setOrgLogoUrl(urlData.publicUrl);
+      if (urlError) throw urlError;
+
+      setOrgLogoUrl(signedUrlData.signedUrl);
       toast({
         title: 'Logo uploaded',
         description: 'Click Save to apply the new logo.',
