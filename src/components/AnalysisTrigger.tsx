@@ -16,7 +16,7 @@ import { cn } from '@/lib/utils';
 import type { AnalysisStatus, AgentProgress, ScriptType, StakeholderLens } from '@/types/database';
 import { StakeholderSelector } from '@/components/StakeholderSelector';
 import { StakeholderBadge } from '@/components/StakeholderBadge';
-import { getAgentsForStakeholder } from '@/lib/stakeholderConfig';
+import { getAgentsForStakeholder, getParameterCountForAnalysis, isAgentActiveForStakeholder } from '@/lib/stakeholderConfig';
 import { QualityModeSelector, type QualityMode } from '@/components/QualityModeSelector';
 
 interface AnalysisTriggerProps {
@@ -98,6 +98,14 @@ export function AnalysisTrigger({
   };
   
   const activeAgents = getActiveAgents();
+  
+  // Get count of active core agents
+  const getActiveAgentCount = (agents: typeof USAF_AGENTS) => {
+    return agents.filter(a => isAgentActiveForStakeholder(a.name, selectedStakeholder, isComic, isWebSeries)).length;
+  };
+  
+  // Get parameter count for current selection
+  const parameterCount = getParameterCountForAnalysis(selectedStakeholder, scriptType);
 
   // Check if script extraction is complete
   useEffect(() => {
@@ -513,27 +521,40 @@ export function AnalysisTrigger({
           <span>{stats.percentage}%</span>
         </div>
         <Progress value={stats.percentage} className="h-2" />
+        <p className="text-xs text-muted-foreground text-center">
+          Running {stats.total} agents evaluating ~{parameterCount} parameters
+        </p>
       </div>
 
       {/* Agent Grid - Core UASF Agents */}
       <div className="space-y-3">
-        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-          Core Analysis Modules (A-J)
-        </p>
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+            Core Analysis Modules ({getActiveAgentCount(USAF_AGENTS)}/{USAF_AGENTS.length} active)
+          </p>
+          {selectedStakeholder && (
+            <StakeholderBadge lens={selectedStakeholder} size="sm" />
+          )}
+        </div>
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
           {USAF_AGENTS.map((agent) => {
             const progress = agentProgress[agent.name];
+            const isActive = isAgentActiveForStakeholder(agent.name, selectedStakeholder, isComic, isWebSeries);
             return (
               <div
                 key={agent.name}
                 className={cn(
                   'flex flex-col items-center gap-1 p-2 rounded-lg border transition-all duration-300',
-                  getAgentStatusClass(progress?.status)
+                  isActive ? getAgentStatusClass(progress?.status) : 'bg-muted/20 border-border/50 opacity-40',
+                  !isActive && 'pointer-events-none'
                 )}
               >
-                {getAgentIcon(agent, progress?.status)}
+                {getAgentIcon(agent, isActive ? progress?.status : undefined)}
                 <span className="text-[10px] font-medium text-center leading-tight">{agent.label}</span>
                 <span className="text-[9px] opacity-60">Module {agent.module}</span>
+                {!isActive && (
+                  <span className="text-[8px] text-muted-foreground">Skipped</span>
+                )}
               </div>
             );
           })}
@@ -544,7 +565,8 @@ export function AnalysisTrigger({
       {formatSpecificAgents.length > 0 && (
         <div className="space-y-3">
           <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-            {isComic ? 'Comic-Specific Agents' : isWebSeries ? 'Web Series Agents' : 'Format-Specific Agents'}
+            {isComic ? `Comic-Specific Agents (${getActiveAgentCount(COMIC_AGENTS)}/${COMIC_AGENTS.length} active)` : 
+             isWebSeries ? 'Web Series Agents (1 active)' : 'Format-Specific Agents'}
           </p>
           <div className={cn(
             "grid gap-2",
@@ -554,18 +576,23 @@ export function AnalysisTrigger({
           )}>
             {formatSpecificAgents.map((agent) => {
               const progress = agentProgress[agent.name];
+              const isActive = isAgentActiveForStakeholder(agent.name, selectedStakeholder, isComic, isWebSeries);
               return (
                 <div
                   key={agent.name}
                   className={cn(
                     'flex flex-col items-center gap-1 p-2 rounded-lg border transition-all duration-300',
-                    getAgentStatusClass(progress?.status),
-                    isWebSeries && 'bg-pink-500/5 border-pink-500/20'
+                    isActive ? getAgentStatusClass(progress?.status) : 'bg-muted/20 border-border/50 opacity-40',
+                    isWebSeries && isActive && 'bg-pink-500/5 border-pink-500/20',
+                    !isActive && 'pointer-events-none'
                   )}
                 >
-                  {getAgentIcon(agent, progress?.status)}
+                  {getAgentIcon(agent, isActive ? progress?.status : undefined)}
                   <span className="text-[10px] font-medium text-center leading-tight">{agent.label}</span>
                   <span className="text-[9px] opacity-60">Module {agent.module}</span>
+                  {!isActive && (
+                    <span className="text-[8px] text-muted-foreground">Skipped</span>
+                  )}
                 </div>
               );
             })}
