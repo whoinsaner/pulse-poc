@@ -17,7 +17,7 @@ import type { AnalysisStatus, AgentProgress, ScriptType, StakeholderLens } from 
 import { StakeholderSelector } from '@/components/StakeholderSelector';
 import { StakeholderBadge } from '@/components/StakeholderBadge';
 import { getAgentsForStakeholder, getParameterCountForAnalysis, isAgentActiveForStakeholder } from '@/lib/stakeholderConfig';
-import { QualityModeSelector, type QualityMode } from '@/components/QualityModeSelector';
+import { QualityModeSelector, type QualityMode, type CustomModelConfig } from '@/components/QualityModeSelector';
 
 interface AnalysisTriggerProps {
   scriptId: string;
@@ -62,7 +62,7 @@ export function AnalysisTrigger({
   scriptType = 'feature',
   onAnalysisComplete 
 }: AnalysisTriggerProps) {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { toast } = useToast();
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisRunId, setAnalysisRunId] = useState<string | null>(null);
@@ -77,6 +77,7 @@ export function AnalysisTrigger({
   const [selectedStakeholder, setSelectedStakeholder] = useState<StakeholderLens | null>(null);
   const [pendingAnalysisMode, setPendingAnalysisMode] = useState<{ force: boolean; mode: 'quick' | 'deep' } | null>(null);
   const [qualityMode, setQualityMode] = useState<QualityMode>('balanced');
+  const [customConfigs, setCustomConfigs] = useState<CustomModelConfig[]>([]);
 
   const isComic = scriptType === 'comic';
   const isWebSeries = scriptType === 'web_series';
@@ -106,6 +107,32 @@ export function AnalysisTrigger({
   
   // Get parameter count for current selection
   const parameterCount = getParameterCountForAnalysis(selectedStakeholder, scriptType);
+
+  // Fetch custom model configurations for the user's organization
+  useEffect(() => {
+    const fetchCustomConfigs = async () => {
+      if (!profile?.current_organization_id) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('model_configurations')
+          .select('id, name, description')
+          .eq('organization_id', profile.current_organization_id)
+          .eq('is_system', false);
+
+        if (error) {
+          console.error('Error fetching custom configs:', error);
+          return;
+        }
+
+        setCustomConfigs(data || []);
+      } catch (err) {
+        console.error('Error fetching custom configs:', err);
+      }
+    };
+
+    fetchCustomConfigs();
+  }, [profile?.current_organization_id]);
 
   // Check if script extraction is complete
   useEffect(() => {
@@ -424,6 +451,7 @@ export function AnalysisTrigger({
           value={qualityMode} 
           onChange={setQualityMode} 
           disabled={false}
+          customConfigs={customConfigs}
         />
         <div className="grid grid-cols-2 gap-2">
           <Button onClick={() => initiateAnalysis(false, 'quick')} variant="outline" className="w-full">

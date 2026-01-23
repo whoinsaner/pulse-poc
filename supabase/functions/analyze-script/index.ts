@@ -56,10 +56,10 @@ const MODEL_REGISTRY = {
 } as const;
 
 type ModelId = keyof typeof MODEL_REGISTRY;
-type QualityMode = 'fast' | 'balanced' | 'quality';
+type QualityMode = 'fast' | 'balanced' | 'quality' | string; // string for custom config UUIDs
 
 // ============= QUALITY MODE PRESETS (Fallback when DB unavailable) =============
-const QUALITY_MODE_PRESETS: Record<QualityMode, Record<string, { model: ModelId; maxRetries: number; retryDelayMs: number }>> = {
+const QUALITY_MODE_PRESETS: Record<'fast' | 'balanced' | 'quality', Record<string, { model: ModelId; maxRetries: number; retryDelayMs: number }>> = {
   fast: {
     default: { model: 'google/gemini-2.5-flash-lite', maxRetries: 3, retryDelayMs: 1500 },
     complex: { model: 'google/gemini-2.5-flash', maxRetries: 3, retryDelayMs: 2000 },
@@ -78,6 +78,13 @@ const QUALITY_MODE_PRESETS: Record<QualityMode, Record<string, { model: ModelId;
     synthesis: { model: 'google/gemini-2.5-pro', maxRetries: 3, retryDelayMs: 3000 },
     system: { model: 'google/gemini-2.5-flash', maxRetries: 3, retryDelayMs: 2000 },
   },
+};
+
+// System presets config IDs
+const SYSTEM_PRESET_CONFIG_IDS: Record<string, string> = {
+  fast: '00000000-0000-0000-0000-000000000001',
+  balanced: '00000000-0000-0000-0000-000000000002',
+  quality: '00000000-0000-0000-0000-000000000003',
 };
 
 // System agents that require reliable JSON output - use upgraded models
@@ -109,6 +116,10 @@ interface ModelConfig {
   temperature?: number;
 }
 
+// Helper to check if a value is a UUID (custom config)
+const isUUID = (value: string): boolean => 
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+
 // Get model configuration for an agent - checks DB first, falls back to presets
 async function getAgentModelConfig(
   supabaseClient: any,
@@ -116,19 +127,21 @@ async function getAgentModelConfig(
   qualityMode: QualityMode,
   organizationId?: string
 ): Promise<ModelConfig> {
-  // Map quality mode to config ID
-  const configIdMap: Record<QualityMode, string> = {
-    fast: '00000000-0000-0000-0000-000000000001',
-    balanced: '00000000-0000-0000-0000-000000000002',
-    quality: '00000000-0000-0000-0000-000000000003',
-  };
+  // Determine the config ID to use
+  // If qualityMode is a UUID, use it directly (custom config)
+  // Otherwise, map the preset name to its system config ID
+  const configId = isUUID(qualityMode) 
+    ? qualityMode 
+    : SYSTEM_PRESET_CONFIG_IDS[qualityMode] || SYSTEM_PRESET_CONFIG_IDS['balanced'];
+
+  console.log(`[ModelConfig] Looking up config for ${agentName}, qualityMode: ${qualityMode}, configId: ${configId}`);
 
   try {
-    // Try to load from database first (system presets or org-specific)
+    // Try to load from database first (system presets or org-specific custom config)
     const { data: mapping, error } = await supabaseClient
       .from('agent_model_mappings')
       .select('model, max_retries, retry_delay_ms, temperature')
-      .eq('config_id', configIdMap[qualityMode])
+      .eq('config_id', configId)
       .eq('agent_name', agentName)
       .maybeSingle();
 
@@ -141,19 +154,25 @@ async function getAgentModelConfig(
         temperature: mapping.temperature,
       };
     }
+    
+    // If this was a custom config UUID and we didn't find a mapping, log it
+    if (isUUID(qualityMode) && !mapping) {
+      console.log(`[ModelConfig] No mapping found for custom config ${qualityMode}, agent ${agentName}, falling back to balanced preset`);
+    }
   } catch (err) {
-    console.log(`[ModelConfig] DB lookup failed for ${agentName}, using preset fallback`);
+    console.log(`[ModelConfig] DB lookup failed for ${agentName}, using preset fallback:`, err);
   }
 
-  // Fallback to presets
-  const preset = QUALITY_MODE_PRESETS[qualityMode];
+  // Fallback to presets - use 'balanced' as default for custom configs without mappings
+  const presetKey = isUUID(qualityMode) ? 'balanced' : (qualityMode as 'fast' | 'balanced' | 'quality');
+  const preset = QUALITY_MODE_PRESETS[presetKey] || QUALITY_MODE_PRESETS['balanced'];
   const isSynthesis = SYNTHESIS_AGENTS.has(agentName);
   const isComplex = COMPLEX_AGENTS.has(agentName);
   const isSystem = SYSTEM_AGENTS.has(agentName);
   
   // System agents get upgraded models for better JSON reliability
   const config = isSynthesis ? preset.synthesis : (isSystem ? preset.system : (isComplex ? preset.complex : preset.default));
-  console.log(`[ModelConfig] Using preset for ${agentName} (${qualityMode}): ${config.model}`);
+  console.log(`[ModelConfig] Using preset for ${agentName} (${presetKey}): ${config.model}`);
   
   return config;
 }
