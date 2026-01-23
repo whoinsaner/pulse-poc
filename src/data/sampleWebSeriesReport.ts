@@ -44,7 +44,7 @@ export const SAMPLE_WEB_SERIES_REPORT_DATA: ReportData = {
     'Web Series': 89,
   },
   parameterScores: [
-    // Web Series Parameters
+    // ============= WEB SERIES AGENT (10 Parameters) =============
     {
       parameterId: 'param-web-1',
       parameterName: 'hook_efficiency',
@@ -56,10 +56,8 @@ export const SAMPLE_WEB_SERIES_REPORT_DATA: ReportData = {
       riskLevel: 'Low',
       fixCost: 'Low',
       upsideImpact: 'High',
-      rationale: 'Cold open delivers mystery hook within first 30 seconds with the @PredictorX notification.',
-      evidence: [
-        { type: 'scene', reference: 'Cold Open', quote: 'Notification from @PredictorX - "You have 72 hours."', explanation: 'Hook lands before 30-second mark' }
-      ]
+      rationale: 'Cold open delivers mystery hook within first 30 seconds with the @PredictorX notification. Immediate stakes established.',
+      evidence: [{ type: 'scene', reference: 'Cold Open', quote: 'Notification from @PredictorX - "You have 72 hours."', explanation: 'Hook lands before 30-second mark' }]
     },
     {
       parameterId: 'param-web-2',
@@ -72,10 +70,8 @@ export const SAMPLE_WEB_SERIES_REPORT_DATA: ReportData = {
       riskLevel: 'Low',
       fixCost: 'Low',
       upsideImpact: 'High',
-      rationale: 'Opening frame with ring light and influencer setup is visually striking.',
-      evidence: [
-        { type: 'scene', reference: 'Opening shot', explanation: 'Ring light harsh shadows + notification = strong thumbnail potential' }
-      ]
+      rationale: 'Opening frame with ring light and influencer setup is visually striking. Strong thumbnail potential.',
+      evidence: [{ type: 'scene', reference: 'Opening shot', explanation: 'Ring light harsh shadows + notification = strong visual hook' }]
     },
     {
       parameterId: 'param-web-3',
@@ -88,10 +84,8 @@ export const SAMPLE_WEB_SERIES_REPORT_DATA: ReportData = {
       riskLevel: 'Low',
       fixCost: 'Medium',
       upsideImpact: 'High',
-      rationale: 'Strong attention reset at mid-point with Devon\'s revelation.',
-      evidence: [
-        { type: 'structure', reference: 'Mid-episode & End', explanation: 'Retention peaks at Devon reveal and cliffhanger' }
-      ]
+      rationale: 'Strong attention reset at mid-point with Devon\'s revelation. Peaks at key narrative moments.',
+      evidence: [{ type: 'structure', reference: 'Mid-episode & End', explanation: 'Retention peaks at Devon reveal and cliffhanger' }]
     },
     {
       parameterId: 'param-web-4',
@@ -104,10 +98,8 @@ export const SAMPLE_WEB_SERIES_REPORT_DATA: ReportData = {
       riskLevel: 'Low',
       fixCost: 'Low',
       upsideImpact: 'High',
-      rationale: 'Each scene escalates stakes with countdown timer.',
-      evidence: [
-        { type: 'structure', reference: 'Throughout', explanation: 'Countdown timer creates episodic urgency' }
-      ]
+      rationale: 'Each scene escalates stakes with countdown timer. Forward momentum never stalls.',
+      evidence: [{ type: 'structure', reference: 'Throughout', explanation: 'Countdown timer creates constant episodic urgency' }]
     },
     {
       parameterId: 'param-web-5',
@@ -120,10 +112,8 @@ export const SAMPLE_WEB_SERIES_REPORT_DATA: ReportData = {
       riskLevel: 'Low',
       fixCost: 'Low',
       upsideImpact: 'High',
-      rationale: 'Multiple open loops ensure viewers continue to next episode.',
-      evidence: [
-        { type: 'structure', reference: 'Episode structure', explanation: '4+ open questions trigger next episode' }
-      ]
+      rationale: 'Multiple open loops ensure viewers continue. Who is @PredictorX? Why Maya? What\'s Devon hiding?',
+      evidence: [{ type: 'structure', reference: 'Episode structure', explanation: '4+ open questions trigger next episode' }]
     },
     {
       parameterId: 'param-web-6',
@@ -136,13 +126,97 @@ export const SAMPLE_WEB_SERIES_REPORT_DATA: ReportData = {
       riskLevel: 'Low',
       fixCost: 'Low',
       upsideImpact: 'High',
-      rationale: 'Thriller genre performs well on digital platforms.',
-      evidence: [
-        { type: 'market', reference: 'Format analysis', explanation: 'Genre, length, and structure align with platform preferences' }
-      ]
+      rationale: 'Thriller genre performs exceptionally on digital platforms. Meta-premise about algorithms is platform-native.',
+      evidence: [{ type: 'market', reference: 'Format analysis', explanation: 'Genre, length, and structure align with platform preferences' }]
     },
     {
+      parameterId: 'param-web-7',
+      parameterName: 'character_stickiness',
+      displayName: 'Character Stickiness',
+      category: 'Web Series',
+      score: 85,
+      confidence: 0.88,
+      maturity: 'Strong',
+      riskLevel: 'Low',
+      fixCost: 'Medium',
+      upsideImpact: 'High',
+      rationale: 'Maya is relatable and likeable. Her influencer world feels authentic. Viewers will return for her journey.',
+      evidence: [{ type: 'character', reference: 'Maya Chen', explanation: 'Modern protagonist with built-in audience identification' }]
+    },
+    {
+      parameterId: 'param-web-8',
+      parameterName: 'serial_momentum',
+      displayName: 'Serial Momentum',
+      category: 'Web Series',
+      score: 89,
+      confidence: 0.91,
+      maturity: 'Strong',
+      riskLevel: 'Low',
+      fixCost: 'Medium',
+      upsideImpact: 'High',
+      rationale: 'Cliffhanger ending creates immediate demand for next episode. Mystery deepens rather than resolves.',
+      evidence: [{ type: 'structure', reference: 'Episode ending', explanation: 'Strong forward pull into episode 2' }]
+    },
+    {
+      parameterId: 'param-web-9',
+      parameterName: 'shareability_quotient',
+      displayName: 'Shareability Quotient',
+      category: 'Web Series',
+      score: 87,
+      confidence: 0.89,
+      maturity: 'Strong',
+      riskLevel: 'Low',
+      fixCost: 'Medium',
+      upsideImpact: 'High',
+      rationale: 'The @PredictorX notification is highly shareable. "What would you do with 72 hours?" drives discussion.',
+      evidence: [{ type: 'market', reference: 'Social potential', explanation: 'Built-in viral mechanics in premise' }]
+    },
+    {
+      parameterId: 'param-web-10',
+      parameterName: 'platform_format_fit',
+      displayName: 'Platform Format Fit',
+      category: 'Web Series',
+      score: 91,
+      confidence: 0.93,
+      maturity: 'Strong',
+      riskLevel: 'Low',
+      fixCost: 'Low',
+      upsideImpact: 'High',
+      rationale: '18 pages / ~15 minutes is ideal for mid-form web content. Matches YouTube/platform sweet spot.',
+      evidence: [{ type: 'structure', reference: 'Episode length', explanation: 'Optimal for ad-supported streaming' }]
+    },
+
+    // ============= CONCEPT AGENT (6 Parameters) =============
+    {
       parameterId: 'param-concept-1',
+      parameterName: 'concept_originality',
+      displayName: 'Concept Originality',
+      category: 'Concept & Hook',
+      score: 90,
+      confidence: 0.92,
+      maturity: 'Strong',
+      riskLevel: 'Low',
+      fixCost: 'High',
+      upsideImpact: 'High',
+      rationale: 'Algorithm-as-death-predictor is fresh. The meta-commentary on platform culture adds layers. Not just another tech thriller.',
+      evidence: [{ type: 'structure', reference: 'Premise', explanation: 'Unique blend of social media culture and supernatural horror' }]
+    },
+    {
+      parameterId: 'param-concept-2',
+      parameterName: 'familiarity_anchor',
+      displayName: 'Familiarity Anchor',
+      category: 'Concept & Hook',
+      score: 88,
+      confidence: 0.90,
+      maturity: 'Strong',
+      riskLevel: 'Low',
+      fixCost: 'Low',
+      upsideImpact: 'Medium',
+      rationale: '"Final Destination meets Black Mirror" provides instant genre recognition. Audiences know what to expect emotionally.',
+      evidence: [{ type: 'structure', reference: 'Genre positioning', explanation: 'Clear comparable anchors for marketing' }]
+    },
+    {
+      parameterId: 'param-concept-3',
       parameterName: 'hook_clarity',
       displayName: 'Hook Clarity',
       category: 'Concept & Hook',
@@ -152,13 +226,355 @@ export const SAMPLE_WEB_SERIES_REPORT_DATA: ReportData = {
       riskLevel: 'Low',
       fixCost: 'Low',
       upsideImpact: 'High',
-      rationale: 'Crystal clear 10-second pitch: algorithm predicting deaths.',
-      evidence: [
-        { type: 'structure', reference: 'Logline', explanation: 'High-concept premise immediately graspable' }
-      ]
+      rationale: 'Crystal clear 10-second pitch: "An influencer discovers an algorithm predicting deaths—and she\'s next."',
+      evidence: [{ type: 'structure', reference: 'Logline', explanation: 'High-concept premise immediately graspable' }]
     },
     {
+      parameterId: 'param-concept-4',
+      parameterName: 'concept_compressibility',
+      displayName: 'Concept Compressibility',
+      category: 'Concept & Hook',
+      score: 93,
+      confidence: 0.95,
+      maturity: 'Strong',
+      riskLevel: 'Low',
+      fixCost: 'Low',
+      upsideImpact: 'Medium',
+      rationale: 'One-sentence pitch works perfectly. Easy for audiences to explain to friends, driving word-of-mouth.',
+      evidence: [{ type: 'structure', reference: 'Logline', explanation: 'Compresses to shareable description' }]
+    },
+    {
+      parameterId: 'param-concept-5',
+      parameterName: 'concept_scalability',
+      displayName: 'Concept Scalability',
+      category: 'Concept & Hook',
+      score: 86,
+      confidence: 0.88,
+      maturity: 'Strong',
+      riskLevel: 'Medium',
+      fixCost: 'Medium',
+      upsideImpact: 'High',
+      rationale: 'Concept can expand: new targets, deeper conspiracy, platform-wide implications. Multiple season potential.',
+      evidence: [{ type: 'structure', reference: 'World expansion', explanation: 'Mystery can deepen across seasons' }]
+    },
+    {
+      parameterId: 'param-concept-6',
+      parameterName: 'franchise_expandability',
+      displayName: 'Franchise Expandability',
+      category: 'Concept & Hook',
+      score: 82,
+      confidence: 0.84,
+      maturity: 'Strong',
+      riskLevel: 'Medium',
+      fixCost: 'High',
+      upsideImpact: 'High',
+      rationale: 'Limited franchise potential beyond the core series, but strong for spinoffs exploring other @PredictorX targets.',
+      evidence: [{ type: 'market', reference: 'IP potential', explanation: 'Anthology possibilities with shared mythology' }]
+    },
+
+    // ============= STRUCTURE AGENT (6 Parameters) =============
+    {
+      parameterId: 'param-structure-1',
+      parameterName: 'inciting_force_clarity',
+      displayName: 'Inciting Force Clarity',
+      category: 'Structure',
+      score: 94,
+      confidence: 0.96,
+      maturity: 'Strong',
+      riskLevel: 'Low',
+      fixCost: 'Medium',
+      upsideImpact: 'Medium',
+      rationale: 'The @PredictorX notification is unmistakable. Clear catalyst that launches the entire narrative.',
+      evidence: [{ type: 'scene', reference: 'Scene 1', explanation: 'Inciting incident lands in first minutes' }]
+    },
+    {
+      parameterId: 'param-structure-2',
+      parameterName: 'escalation_logic',
+      displayName: 'Escalation Logic',
+      category: 'Structure',
+      score: 87,
+      confidence: 0.89,
+      maturity: 'Strong',
+      riskLevel: 'Low',
+      fixCost: 'Medium',
+      upsideImpact: 'Medium',
+      rationale: 'Stakes escalate logically: notification → research → Devon → conspiracy → being watched.',
+      evidence: [{ type: 'structure', reference: 'Episode arc', explanation: 'Each scene raises stakes appropriately' }]
+    },
+    {
+      parameterId: 'param-structure-3',
+      parameterName: 'climax_positioning',
+      displayName: 'Climax Positioning',
+      category: 'Structure',
+      score: 85,
+      confidence: 0.87,
+      maturity: 'Strong',
+      riskLevel: 'Low',
+      fixCost: 'Medium',
+      upsideImpact: 'Medium',
+      rationale: 'Episode climax (Devon\'s revelation) positioned at ~75% mark. Cliffhanger provides emotional punctuation.',
+      evidence: [{ type: 'structure', reference: 'Episode structure', explanation: 'Proper three-act episodic structure' }]
+    },
+    {
+      parameterId: 'param-structure-4',
+      parameterName: 'setup_payoff_density',
+      displayName: 'Setup/Payoff Density',
+      category: 'Structure',
+      score: 83,
+      confidence: 0.85,
+      maturity: 'Strong',
+      riskLevel: 'Low',
+      fixCost: 'Medium',
+      upsideImpact: 'Medium',
+      rationale: 'Episode 1 is primarily setup, which is appropriate. Seeds planted for later payoffs across the season.',
+      evidence: [{ type: 'structure', reference: 'Pilot structure', explanation: 'Setup-heavy but creates anticipation' }]
+    },
+    {
+      parameterId: 'param-structure-5',
+      parameterName: 'scene_necessity',
+      displayName: 'Scene Necessity',
+      category: 'Structure',
+      score: 86,
+      confidence: 0.88,
+      maturity: 'Strong',
+      riskLevel: 'Low',
+      fixCost: 'Low',
+      upsideImpact: 'Medium',
+      rationale: 'Each scene serves the plot. No filler. Every minute advances story or character.',
+      evidence: [{ type: 'structure', reference: 'All scenes', explanation: 'Tight, economical storytelling' }]
+    },
+    {
+      parameterId: 'param-structure-6',
+      parameterName: 'pacing_rhythm',
+      displayName: 'Pacing Rhythm',
+      category: 'Structure',
+      score: 84,
+      confidence: 0.86,
+      maturity: 'Strong',
+      riskLevel: 'Low',
+      fixCost: 'Medium',
+      upsideImpact: 'Medium',
+      rationale: 'Good rhythm between tension and breathing room. Devon\'s scene could use more visual dynamics.',
+      evidence: [{ type: 'structure', reference: 'Pacing analysis', explanation: 'Mostly well-paced with minor flat spots' }]
+    },
+
+    // ============= CHARACTER AGENT (6 Parameters) =============
+    {
+      parameterId: 'param-character-1',
+      parameterName: 'agency_level',
+      displayName: 'Agency Level',
+      category: 'Character',
+      score: 84,
+      confidence: 0.86,
+      maturity: 'Strong',
+      riskLevel: 'Low',
+      fixCost: 'Medium',
+      upsideImpact: 'Medium',
+      rationale: 'Maya actively investigates rather than waiting. She seeks out Devon, pushes for answers.',
+      evidence: [{ type: 'character', reference: 'Maya actions', explanation: 'Protagonist drives the investigation' }]
+    },
+    {
+      parameterId: 'param-character-2',
+      parameterName: 'want_vs_need',
+      displayName: 'Want vs Need',
+      category: 'Character',
+      score: 81,
+      confidence: 0.83,
+      maturity: 'Developing',
+      riskLevel: 'Medium',
+      fixCost: 'Medium',
+      upsideImpact: 'High',
+      rationale: 'Maya wants to survive; she needs to question her relationship with fame/platform. Subtext could be stronger.',
+      evidence: [{ type: 'character', reference: 'Maya arc', explanation: 'Internal journey hinted but not yet explicit' }]
+    },
+    {
+      parameterId: 'param-character-3',
+      parameterName: 'flaw_centrality',
+      displayName: 'Flaw Centrality',
+      category: 'Character',
+      score: 78,
+      confidence: 0.80,
+      maturity: 'Developing',
+      riskLevel: 'Medium',
+      fixCost: 'Medium',
+      upsideImpact: 'High',
+      rationale: 'Maya\'s dependence on platform validation is implied but could be more central to her crisis.',
+      evidence: [{ type: 'character', reference: 'Maya setup', explanation: 'Flaw exists but isn\'t driving conflict yet' }]
+    },
+    {
+      parameterId: 'param-character-4',
+      parameterName: 'arc_transformation',
+      displayName: 'Arc Transformation Potential',
+      category: 'Character',
+      score: 85,
+      confidence: 0.87,
+      maturity: 'Strong',
+      riskLevel: 'Low',
+      fixCost: 'Medium',
+      upsideImpact: 'High',
+      rationale: 'Strong arc potential: from content creator to truth-seeker. Episode 1 establishes starting point well.',
+      evidence: [{ type: 'character', reference: 'Maya journey', explanation: 'Clear transformation trajectory' }]
+    },
+    {
+      parameterId: 'param-character-5',
+      parameterName: 'voice_distinction',
+      displayName: 'Voice Distinction',
+      category: 'Character',
+      score: 82,
+      confidence: 0.84,
+      maturity: 'Strong',
+      riskLevel: 'Low',
+      fixCost: 'Medium',
+      upsideImpact: 'Medium',
+      rationale: 'Maya, Harper, and Devon have distinct voices. Devon\'s tech-speak contrasts Maya\'s influencer cadence.',
+      evidence: [{ type: 'dialogue', reference: 'Character voices', explanation: 'Each character sounds different' }]
+    },
+    {
+      parameterId: 'param-character-6',
+      parameterName: 'empathy_calibration',
+      displayName: 'Empathy Calibration',
+      category: 'Character',
+      score: 86,
+      confidence: 0.88,
+      maturity: 'Strong',
+      riskLevel: 'Low',
+      fixCost: 'Medium',
+      upsideImpact: 'High',
+      rationale: 'Audience roots for Maya immediately. The death threat creates instant sympathy.',
+      evidence: [{ type: 'character', reference: 'Maya introduction', explanation: 'Strong audience identification' }]
+    },
+
+    // ============= CONFLICT AGENT (5 Parameters) =============
+    {
+      parameterId: 'param-conflict-1',
+      parameterName: 'central_conflict_clarity',
+      displayName: 'Central Conflict Clarity',
+      category: 'Conflict',
+      score: 92,
+      confidence: 0.94,
+      maturity: 'Strong',
+      riskLevel: 'Low',
+      fixCost: 'Low',
+      upsideImpact: 'Medium',
+      rationale: 'Crystal clear: Maya must discover the truth before the countdown ends. Life vs. death stakes.',
+      evidence: [{ type: 'structure', reference: 'Central premise', explanation: 'Conflict is immediately graspable' }]
+    },
+    {
+      parameterId: 'param-conflict-2',
+      parameterName: 'stakes_escalation',
+      displayName: 'Stakes Escalation',
+      category: 'Conflict',
+      score: 88,
+      confidence: 0.90,
+      maturity: 'Strong',
+      riskLevel: 'Low',
+      fixCost: 'Medium',
+      upsideImpact: 'High',
+      rationale: 'Stakes escalate from personal survival to larger conspiracy. The more Maya learns, the more dangerous it gets.',
+      evidence: [{ type: 'structure', reference: 'Episode arc', explanation: 'Each revelation raises the danger' }]
+    },
+    {
+      parameterId: 'param-conflict-3',
+      parameterName: 'opposition_quality',
+      displayName: 'Opposition Quality',
+      category: 'Conflict',
+      score: 80,
+      confidence: 0.82,
+      maturity: 'Developing',
+      riskLevel: 'Medium',
+      fixCost: 'Medium',
+      upsideImpact: 'High',
+      rationale: 'The algorithm/platform is an abstract antagonist. Episode 1 hints at human villains but doesn\'t reveal them.',
+      evidence: [{ type: 'character', reference: 'Antagonist setup', explanation: 'Mystery antagonist creates intrigue but needs embodiment' }]
+    },
+    {
+      parameterId: 'param-conflict-4',
+      parameterName: 'conflict_variety',
+      displayName: 'Conflict Variety',
+      category: 'Conflict',
+      score: 85,
+      confidence: 0.87,
+      maturity: 'Strong',
+      riskLevel: 'Low',
+      fixCost: 'Medium',
+      upsideImpact: 'Medium',
+      rationale: 'Multiple conflict types: external (threat), interpersonal (Harper\'s disbelief), internal (questioning fame).',
+      evidence: [{ type: 'structure', reference: 'Conflict layers', explanation: 'Multi-layered conflict structure' }]
+    },
+    {
+      parameterId: 'param-conflict-5',
+      parameterName: 'resolution_satisfaction',
+      displayName: 'Resolution Satisfaction',
+      category: 'Conflict',
+      score: 82,
+      confidence: 0.84,
+      maturity: 'Strong',
+      riskLevel: 'Low',
+      fixCost: 'Medium',
+      upsideImpact: 'Medium',
+      rationale: 'Episode 1 appropriately leaves major questions open while resolving immediate scene conflicts.',
+      evidence: [{ type: 'structure', reference: 'Episode ending', explanation: 'Satisfying episode arc with series hook' }]
+    },
+
+    // ============= THEME AGENT (5 Parameters) =============
+    {
       parameterId: 'param-theme-1',
+      parameterName: 'thematic_clarity',
+      displayName: 'Thematic Clarity',
+      category: 'Theme',
+      score: 83,
+      confidence: 0.85,
+      maturity: 'Strong',
+      riskLevel: 'Low',
+      fixCost: 'Medium',
+      upsideImpact: 'Medium',
+      rationale: 'Themes of digital dependency, algorithmic control, and the price of fame emerge naturally.',
+      evidence: [{ type: 'structure', reference: 'Thematic content', explanation: 'Relevant themes woven into premise' }]
+    },
+    {
+      parameterId: 'param-theme-2',
+      parameterName: 'moral_complexity',
+      displayName: 'Moral Complexity',
+      category: 'Theme',
+      score: 79,
+      confidence: 0.81,
+      maturity: 'Developing',
+      riskLevel: 'Medium',
+      fixCost: 'Medium',
+      upsideImpact: 'High',
+      rationale: 'Episode 1 presents fairly clear moral lines. Devon\'s guilt suggests complexity to come.',
+      evidence: [{ type: 'character', reference: 'Devon backstory', explanation: 'Hints at moral grey areas' }]
+    },
+    {
+      parameterId: 'param-theme-3',
+      parameterName: 'subtext_density',
+      displayName: 'Subtext Density',
+      category: 'Theme',
+      score: 80,
+      confidence: 0.82,
+      maturity: 'Developing',
+      riskLevel: 'Medium',
+      fixCost: 'Medium',
+      upsideImpact: 'High',
+      rationale: 'The irony of an algorithm thriller on algorithm-driven platforms is strong subtext.',
+      evidence: [{ type: 'structure', reference: 'Meta-commentary', explanation: 'Self-aware premise carries meaning' }]
+    },
+    {
+      parameterId: 'param-theme-4',
+      parameterName: 'thematic_integration',
+      displayName: 'Thematic Integration',
+      category: 'Theme',
+      score: 81,
+      confidence: 0.83,
+      maturity: 'Strong',
+      riskLevel: 'Low',
+      fixCost: 'Medium',
+      upsideImpact: 'Medium',
+      rationale: 'Theme emerges from character and situation rather than being stated. Show-don\'t-tell approach.',
+      evidence: [{ type: 'structure', reference: 'Throughout', explanation: 'Organic thematic emergence' }]
+    },
+    {
+      parameterId: 'param-theme-5',
       parameterName: 'tone_genre_cohesion',
       displayName: 'Tone & Genre Cohesion',
       category: 'Theme',
@@ -168,10 +584,326 @@ export const SAMPLE_WEB_SERIES_REPORT_DATA: ReportData = {
       riskLevel: 'Low',
       fixCost: 'Medium',
       upsideImpact: 'High',
-      rationale: 'The script effectively maintains its tech-thriller tone throughout, balancing paranoid tension with the meta-commentary on algorithm culture. Genre promises are fulfilled.',
-      evidence: [
-        { type: 'structure', reference: 'Throughout', explanation: 'Consistent thriller tension with modern tech-horror undertones' }
-      ]
+      rationale: 'Maintains tech-thriller tone throughout. Paranoid atmosphere consistent with genre expectations.',
+      evidence: [{ type: 'structure', reference: 'Tonal consistency', explanation: 'Genre promises fulfilled' }]
+    },
+
+    // ============= DIALOGUE AGENT (5 Parameters) =============
+    {
+      parameterId: 'param-dialogue-1',
+      parameterName: 'voice_authenticity',
+      displayName: 'Voice Authenticity',
+      category: 'Dialogue',
+      score: 81,
+      confidence: 0.83,
+      maturity: 'Strong',
+      riskLevel: 'Low',
+      fixCost: 'Medium',
+      upsideImpact: 'Medium',
+      rationale: 'Maya\'s influencer speak feels authentic. Gen-Z dialogue rhythms captured well.',
+      evidence: [{ type: 'dialogue', reference: 'Maya lines', explanation: 'Authentic to character and generation' }]
+    },
+    {
+      parameterId: 'param-dialogue-2',
+      parameterName: 'subtext_ratio',
+      displayName: 'Subtext Ratio',
+      category: 'Dialogue',
+      score: 76,
+      confidence: 0.78,
+      maturity: 'Developing',
+      riskLevel: 'Medium',
+      fixCost: 'Medium',
+      upsideImpact: 'High',
+      rationale: 'Devon\'s exposition is too on-the-nose. More could be conveyed through implication.',
+      evidence: [{ type: 'dialogue', reference: 'Devon scene', explanation: 'Exposition-heavy section' }]
+    },
+    {
+      parameterId: 'param-dialogue-3',
+      parameterName: 'scene_propulsion',
+      displayName: 'Dialogue Scene Propulsion',
+      category: 'Dialogue',
+      score: 83,
+      confidence: 0.85,
+      maturity: 'Strong',
+      riskLevel: 'Low',
+      fixCost: 'Medium',
+      upsideImpact: 'Medium',
+      rationale: 'Dialogue generally moves scenes forward. Each exchange advances plot or character.',
+      evidence: [{ type: 'dialogue', reference: 'Overall', explanation: 'Functional and purposeful dialogue' }]
+    },
+    {
+      parameterId: 'param-dialogue-4',
+      parameterName: 'quotability',
+      displayName: 'Quotability',
+      category: 'Dialogue',
+      score: 79,
+      confidence: 0.81,
+      maturity: 'Developing',
+      riskLevel: 'Medium',
+      fixCost: 'Medium',
+      upsideImpact: 'High',
+      rationale: '"You have 72 hours" is memorable. Could use more quotable moments for social sharing.',
+      evidence: [{ type: 'dialogue', reference: 'Key lines', explanation: 'One strong hook, room for more' }]
+    },
+    {
+      parameterId: 'param-dialogue-5',
+      parameterName: 'information_integration',
+      displayName: 'Information Integration',
+      category: 'Dialogue',
+      score: 77,
+      confidence: 0.79,
+      maturity: 'Developing',
+      riskLevel: 'Medium',
+      fixCost: 'Medium',
+      upsideImpact: 'Medium',
+      rationale: 'Most exposition is handled well. Devon\'s algorithm explanation could be more naturalistic.',
+      evidence: [{ type: 'dialogue', reference: 'Exposition handling', explanation: 'Generally good with one weak spot' }]
+    },
+
+    // ============= WORLD AGENT (4 Parameters) =============
+    {
+      parameterId: 'param-world-1',
+      parameterName: 'rule_consistency',
+      displayName: 'Rule Consistency',
+      category: 'World & Logic',
+      score: 85,
+      confidence: 0.87,
+      maturity: 'Strong',
+      riskLevel: 'Low',
+      fixCost: 'Medium',
+      upsideImpact: 'Medium',
+      rationale: 'The algorithm\'s rules are mysterious but seem internally consistent. Technology feels grounded.',
+      evidence: [{ type: 'structure', reference: 'World rules', explanation: 'Internally logical tech framework' }]
+    },
+    {
+      parameterId: 'param-world-2',
+      parameterName: 'immersion_depth',
+      displayName: 'Immersion Depth',
+      category: 'World & Logic',
+      score: 84,
+      confidence: 0.86,
+      maturity: 'Strong',
+      riskLevel: 'Low',
+      fixCost: 'Medium',
+      upsideImpact: 'Medium',
+      rationale: 'The influencer world feels authentic. Platform culture is well-observed and current.',
+      evidence: [{ type: 'scene', reference: 'Setting details', explanation: 'Contemporary digital culture captured' }]
+    },
+    {
+      parameterId: 'param-world-3',
+      parameterName: 'logic_stress_test',
+      displayName: 'Logic Stress Test',
+      category: 'World & Logic',
+      score: 82,
+      confidence: 0.84,
+      maturity: 'Strong',
+      riskLevel: 'Low',
+      fixCost: 'Medium',
+      upsideImpact: 'Medium',
+      rationale: 'Premise holds up under scrutiny for Episode 1. Larger conspiracy logic to be tested in later episodes.',
+      evidence: [{ type: 'structure', reference: 'Logic check', explanation: 'No obvious plot holes' }]
+    },
+    {
+      parameterId: 'param-world-4',
+      parameterName: 'production_feasibility',
+      displayName: 'Production Feasibility',
+      category: 'World & Logic',
+      score: 90,
+      confidence: 0.92,
+      maturity: 'Strong',
+      riskLevel: 'Low',
+      fixCost: 'Low',
+      upsideImpact: 'Medium',
+      rationale: 'Highly producible. Modern apartment, coffee shop, street—all achievable locations. Minimal VFX needs.',
+      evidence: [{ type: 'market', reference: 'Budget assessment', explanation: 'Cost-effective for digital series' }]
+    },
+
+    // ============= EMOTIONAL ARC AGENT (4 Parameters) =============
+    {
+      parameterId: 'param-emotional-1',
+      parameterName: 'emotional_coherence',
+      displayName: 'Emotional Coherence',
+      category: 'Emotional Arc',
+      score: 82,
+      confidence: 0.84,
+      maturity: 'Strong',
+      riskLevel: 'Low',
+      fixCost: 'Medium',
+      upsideImpact: 'Medium',
+      rationale: 'Emotional journey is clear: shock → fear → determination → paranoia. Coherent progression.',
+      evidence: [{ type: 'structure', reference: 'Emotional arc', explanation: 'Clear emotional through-line' }]
+    },
+    {
+      parameterId: 'param-emotional-2',
+      parameterName: 'catharsis_potential',
+      displayName: 'Catharsis Potential',
+      category: 'Emotional Arc',
+      score: 78,
+      confidence: 0.80,
+      maturity: 'Developing',
+      riskLevel: 'Medium',
+      fixCost: 'Medium',
+      upsideImpact: 'High',
+      rationale: 'Episode 1 builds tension without release—appropriate for pilot but eventual catharsis needed.',
+      evidence: [{ type: 'structure', reference: 'Emotional payoff', explanation: 'Tension built for later release' }]
+    },
+    {
+      parameterId: 'param-emotional-3',
+      parameterName: 'tension_calibration',
+      displayName: 'Tension Calibration',
+      category: 'Emotional Arc',
+      score: 85,
+      confidence: 0.87,
+      maturity: 'Strong',
+      riskLevel: 'Low',
+      fixCost: 'Medium',
+      upsideImpact: 'Medium',
+      rationale: 'Tension ratchets up effectively. Brief breathing room prevents fatigue.',
+      evidence: [{ type: 'structure', reference: 'Tension curve', explanation: 'Well-calibrated suspense' }]
+    },
+    {
+      parameterId: 'param-emotional-4',
+      parameterName: 'audience_proxy',
+      displayName: 'Audience Proxy',
+      category: 'Emotional Arc',
+      score: 84,
+      confidence: 0.86,
+      maturity: 'Strong',
+      riskLevel: 'Low',
+      fixCost: 'Medium',
+      upsideImpact: 'High',
+      rationale: 'Harper serves as audience proxy, voicing skepticism viewers might feel. Effective technique.',
+      evidence: [{ type: 'character', reference: 'Harper role', explanation: 'Grounds audience in reality' }]
+    },
+
+    // ============= MARKET AGENT (5 Parameters) =============
+    {
+      parameterId: 'param-market-1',
+      parameterName: 'comparable_positioning',
+      displayName: 'Comparable Positioning',
+      category: 'Market',
+      score: 89,
+      confidence: 0.91,
+      maturity: 'Strong',
+      riskLevel: 'Low',
+      fixCost: 'Low',
+      upsideImpact: 'High',
+      rationale: '"Black Mirror meets Final Destination for the TikTok generation" is immediately sellable.',
+      evidence: [{ type: 'market', reference: 'Comparable analysis', explanation: 'Strong market positioning' }]
+    },
+    {
+      parameterId: 'param-market-2',
+      parameterName: 'audience_clarity',
+      displayName: 'Audience Clarity',
+      category: 'Market',
+      score: 91,
+      confidence: 0.93,
+      maturity: 'Strong',
+      riskLevel: 'Low',
+      fixCost: 'Low',
+      upsideImpact: 'High',
+      rationale: 'Target audience crystal clear: 18-34 digital natives who live on platforms. Built-in audience.',
+      evidence: [{ type: 'market', reference: 'Demographic fit', explanation: 'Perfect platform audience alignment' }]
+    },
+    {
+      parameterId: 'param-market-3',
+      parameterName: 'timing_relevance',
+      displayName: 'Timing Relevance',
+      category: 'Market',
+      score: 94,
+      confidence: 0.96,
+      maturity: 'Strong',
+      riskLevel: 'Low',
+      fixCost: 'Low',
+      upsideImpact: 'High',
+      rationale: 'Algorithm anxiety is peak cultural moment. Couldn\'t be more timely.',
+      evidence: [{ type: 'market', reference: 'Cultural timing', explanation: 'Perfect cultural moment' }]
+    },
+    {
+      parameterId: 'param-market-4',
+      parameterName: 'distribution_alignment',
+      displayName: 'Distribution Alignment',
+      category: 'Market',
+      score: 92,
+      confidence: 0.94,
+      maturity: 'Strong',
+      riskLevel: 'Low',
+      fixCost: 'Low',
+      upsideImpact: 'High',
+      rationale: 'Perfect fit for streaming platforms. Episode length, genre, and format optimized for digital.',
+      evidence: [{ type: 'market', reference: 'Platform fit', explanation: 'Ideal for YouTube/streaming' }]
+    },
+    {
+      parameterId: 'param-market-5',
+      parameterName: 'budget_roi_efficiency',
+      displayName: 'Budget/ROI Efficiency',
+      category: 'Market',
+      score: 88,
+      confidence: 0.90,
+      maturity: 'Strong',
+      riskLevel: 'Low',
+      fixCost: 'Low',
+      upsideImpact: 'High',
+      rationale: 'Low budget requirements (contemporary settings, minimal VFX) with high viral potential.',
+      evidence: [{ type: 'market', reference: 'Budget analysis', explanation: 'Excellent cost-to-value ratio' }]
+    },
+
+    // ============= EXECUTION AGENT (4 Parameters) =============
+    {
+      parameterId: 'param-execution-1',
+      parameterName: 'polish_level',
+      displayName: 'Polish Level',
+      category: 'Execution',
+      score: 83,
+      confidence: 0.85,
+      maturity: 'Strong',
+      riskLevel: 'Low',
+      fixCost: 'Medium',
+      upsideImpact: 'Medium',
+      rationale: 'Well-written overall. Devon\'s exposition could use another pass. Otherwise production-ready.',
+      evidence: [{ type: 'structure', reference: 'Overall quality', explanation: 'High polish with minor rough spots' }]
+    },
+    {
+      parameterId: 'param-execution-2',
+      parameterName: 'format_mastery',
+      displayName: 'Format Mastery',
+      category: 'Execution',
+      score: 86,
+      confidence: 0.88,
+      maturity: 'Strong',
+      riskLevel: 'Low',
+      fixCost: 'Low',
+      upsideImpact: 'Medium',
+      rationale: 'Writer understands web series format. Scene lengths, act breaks, and hooks are well-placed.',
+      evidence: [{ type: 'structure', reference: 'Format execution', explanation: 'Strong command of web series structure' }]
+    },
+    {
+      parameterId: 'param-execution-3',
+      parameterName: 'production_readiness',
+      displayName: 'Production Readiness',
+      category: 'Execution',
+      score: 85,
+      confidence: 0.87,
+      maturity: 'Strong',
+      riskLevel: 'Low',
+      fixCost: 'Low',
+      upsideImpact: 'Medium',
+      rationale: 'Script is shootable as-is. Clear visual direction, realistic locations, manageable cast.',
+      evidence: [{ type: 'structure', reference: 'Production assessment', explanation: 'Ready for pre-production' }]
+    },
+    {
+      parameterId: 'param-execution-4',
+      parameterName: 'rewrite_priority',
+      displayName: 'Rewrite Priority',
+      category: 'Execution',
+      score: 80,
+      confidence: 0.82,
+      maturity: 'Developing',
+      riskLevel: 'Medium',
+      fixCost: 'Medium',
+      upsideImpact: 'Medium',
+      rationale: 'Minor polish needed: Devon exposition, Maya\'s flaw articulation. Not major structural work.',
+      evidence: [{ type: 'structure', reference: 'Rewrite assessment', explanation: 'Polish pass, not page-one rewrite' }]
     },
   ],
   insights: [
@@ -181,74 +913,90 @@ export const SAMPLE_WEB_SERIES_REPORT_DATA: ReportData = {
       description: 'The meta-narrative of an algorithm thriller on algorithm-driven platforms creates unique marketing synergy.',
       priority: 1,
       actionable: false,
-      supportingEvidence: [
-        { type: 'market', reference: 'Genre fit', explanation: 'Self-aware premise appeals to digital-native audience' }
-      ],
+      supportingEvidence: [{ type: 'market', reference: 'Genre fit', explanation: 'Self-aware premise appeals to digital-native audience' }],
     },
     {
       category: 'Strength',
       title: 'Optimal Hook Placement',
-      description: 'Mystery hook lands in first 30 seconds with clear stakes (death countdown).',
+      description: 'Mystery hook lands in first 30 seconds with clear stakes (death countdown). Perfect for platform retention.',
       priority: 2,
       actionable: false,
-      supportingEvidence: [
-        { type: 'structure', reference: 'Cold Open', explanation: 'Sub-30-second hook maximizes watch-through' }
-      ],
+      supportingEvidence: [{ type: 'structure', reference: 'Cold Open', explanation: 'Sub-30-second hook maximizes watch-through' }],
+    },
+    {
+      category: 'Strength',
+      title: 'Perfect Cultural Timing',
+      description: 'Algorithm anxiety is at peak cultural relevance. This premise couldn\'t be more timely.',
+      priority: 3,
+      actionable: false,
+      supportingEvidence: [{ type: 'market', reference: 'Cultural moment', explanation: 'Taps into current platform discourse' }],
     },
     {
       category: 'Opportunity',
       title: 'Amplify Meme/Viral Moments',
-      description: 'Episode could benefit from additional shareable moments.',
+      description: 'Add 2-3 more shareable dialogue moments beyond "72 hours" for social media amplification.',
       priority: 1,
       actionable: true,
-      supportingEvidence: [
-        { type: 'market', reference: 'Social sharing', explanation: 'More clip-worthy moments increase organic reach' }
-      ],
+      supportingEvidence: [{ type: 'market', reference: 'Social sharing', explanation: 'More clip-worthy moments increase organic reach' }],
+    },
+    {
+      category: 'Opportunity',
+      title: 'Strengthen Maya\'s Flaw',
+      description: 'Make Maya\'s dependence on platform validation more explicit. It should drive her internal conflict.',
+      priority: 2,
+      actionable: true,
+      supportingEvidence: [{ type: 'character', reference: 'Maya arc', explanation: 'Clearer flaw = stronger transformation' }],
     },
     {
       category: 'Risk',
       title: 'Devon Exposition Load',
-      description: 'Devon\'s algorithm explanation scene carries heavy exposition.',
+      description: 'Devon\'s algorithm explanation scene carries heavy exposition. Break it up with action or conflict.',
       priority: 1,
       actionable: true,
-      supportingEvidence: [
-        { type: 'structure', reference: 'Act Two', explanation: 'Info-dump = retention risk' }
-      ],
+      supportingEvidence: [{ type: 'structure', reference: 'Act Two', explanation: 'Info-dump = retention risk at key moment' }],
+    },
+    {
+      category: 'Risk',
+      title: 'Abstract Antagonist',
+      description: 'The algorithm needs a human face by episode 2-3. Abstract threats lose tension over time.',
+      priority: 2,
+      actionable: true,
+      supportingEvidence: [{ type: 'character', reference: 'Antagonist', explanation: 'Embodied villains create better confrontations' }],
     },
   ],
   characters: [
     {
       name: 'Maya Chen',
-      description: 'Lifestyle influencer with 2.3M followers.',
+      description: 'Lifestyle influencer with 2.3M followers. Authentic, relatable, digital native.',
       dialogueCount: 24,
       sceneCount: 6,
       firstAppearance: 1,
-      arcSummary: 'From content creator to conspiracy investigator.',
+      arcSummary: 'From content creator to conspiracy investigator. Must learn what truly matters.',
       relationships: [
-        { character: 'Harper', type: 'roommate', description: 'Trusted confidant' },
-        { character: 'Devon Park', type: 'informant', description: 'Reluctant source' },
+        { character: 'Harper', type: 'roommate', description: 'Trusted confidant and skeptic' },
+        { character: 'Devon Park', type: 'informant', description: 'Reluctant source of dangerous truth' },
       ]
     },
     {
       name: 'Harper',
-      description: 'Film student, Maya\'s roommate.',
+      description: 'Film student and Maya\'s roommate. Grounded, skeptical, protective.',
       dialogueCount: 8,
       sceneCount: 2,
       firstAppearance: 3,
-      arcSummary: 'Skeptic who becomes believer.',
+      arcSummary: 'Skeptic who becomes believer. Audience proxy character.',
       relationships: [
-        { character: 'Maya Chen', type: 'roommate', description: 'Protective friend' },
+        { character: 'Maya Chen', type: 'roommate', description: 'Protective friend trying to ground Maya' },
       ]
     },
     {
       name: 'Devon Park',
-      description: 'Ex-platform engineer.',
+      description: 'Ex-platform engineer haunted by guilt. Knows too much, says too little.',
       dialogueCount: 12,
       sceneCount: 1,
       firstAppearance: 4,
       arcSummary: 'Whistleblower torn between guilt and self-preservation.',
       relationships: [
-        { character: 'Maya Chen', type: 'informant', description: 'Reluctant helper' },
+        { character: 'Maya Chen', type: 'informant', description: 'Reluctant helper with dangerous knowledge' },
       ]
     },
   ],
@@ -257,18 +1005,24 @@ export const SAMPLE_WEB_SERIES_REPORT_DATA: ReportData = {
     { heading: 'INT. MAYA\'S APARTMENT - CONTINUOUS', sceneNumber: 2, pageStart: 3, pageEnd: 6, location: 'Maya\'s Apartment', timeOfDay: 'Night', emotionalTone: 'Anxious' },
     { heading: 'INT. COFFEE SHOP - DAY', sceneNumber: 3, pageStart: 7, pageEnd: 12, location: 'Coffee Shop', timeOfDay: 'Day', emotionalTone: 'Paranoid' },
     { heading: 'EXT. STREET - NIGHT', sceneNumber: 4, pageStart: 13, pageEnd: 14, location: 'City Street', timeOfDay: 'Night', emotionalTone: 'Threatening' },
+    { heading: 'INT. MAYA\'S APARTMENT - NIGHT', sceneNumber: 5, pageStart: 15, pageEnd: 16, location: 'Maya\'s Apartment', timeOfDay: 'Night', emotionalTone: 'Revelatory' },
+    { heading: 'EXT. ROOFTOP - NIGHT', sceneNumber: 6, pageStart: 17, pageEnd: 18, location: 'Rooftop', timeOfDay: 'Night', emotionalTone: 'Cliffhanger' },
   ],
   narrativeGraph: {
     nodes: [
-      { id: 'cold-open', type: 'scene', label: 'Cold Open - Notification', metadata: { scene: 1 } },
-      { id: 'investigation', type: 'scene', label: 'Investigation Begins', metadata: { scene: 2 } },
+      { id: 'cold-open', type: 'scene', label: 'Cold Open - The Notification', metadata: { scene: 1 } },
+      { id: 'investigation', type: 'scene', label: 'Maya Investigates', metadata: { scene: 2 } },
       { id: 'devon-reveal', type: 'scene', label: 'Devon\'s Revelation', metadata: { scene: 3 } },
-      { id: 'cliffhanger', type: 'scene', label: 'Cliffhanger Ending', metadata: { scene: 4 } },
+      { id: 'being-watched', type: 'scene', label: 'She\'s Being Watched', metadata: { scene: 4 } },
+      { id: 'truth-dawns', type: 'scene', label: 'The Truth Dawns', metadata: { scene: 5 } },
+      { id: 'cliffhanger', type: 'scene', label: 'Cliffhanger - Countdown', metadata: { scene: 6 } },
     ],
     edges: [
       { source: 'cold-open', target: 'investigation', type: 'follows' },
       { source: 'investigation', target: 'devon-reveal', type: 'follows' },
-      { source: 'devon-reveal', target: 'cliffhanger', type: 'follows' },
+      { source: 'devon-reveal', target: 'being-watched', type: 'follows' },
+      { source: 'being-watched', target: 'truth-dawns', type: 'follows' },
+      { source: 'truth-dawns', target: 'cliffhanger', type: 'follows' },
     ]
   },
 };
@@ -281,7 +1035,7 @@ export const SAMPLE_WEB_SERIES_REPORT: Report = {
   title: SAMPLE_WEB_SERIES_SCRIPT.title,
   overall_score: 84.2,
   lens_scores: SAMPLE_WEB_SERIES_REPORT_DATA.lensScores,
-  executive_summary: `"The Algorithm" is a sharp, platform-native web series. Hook Efficiency: 94/100. Binge Trigger Density: 90/100. Strong cliffhanger architecture. Episode Length Class: Mid-Form. Investment Readiness: 82/100.`,
+  executive_summary: `"The Algorithm" is a sharp, platform-native web series achieving an OTT Platform score of 91.2/100. With 60 parameters evaluated across 10 USAF modules, strengths include exceptional Hook Efficiency (94/100), Timing Relevance (94/100), and Algorithmic Compatibility (93/100). Key development areas: Devon's exposition scene and Maya's flaw articulation. Episode Length Class: Mid-Form (15 min). Investment Readiness: HIGH.`,
   full_report_data: SAMPLE_WEB_SERIES_REPORT_DATA,
   pdf_url: null,
   created_at: new Date().toISOString(),

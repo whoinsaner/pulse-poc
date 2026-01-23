@@ -12,15 +12,19 @@ import {
   ChevronUp,
   Sparkles,
   Download,
+  Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
+import { downloadSampleReportPDF } from '@/lib/sampleReportPdfGenerator';
+import { useToast } from '@/hooks/use-toast';
 
 interface SampleActionRailProps {
   reportData: ReportData;
   activeLens: StakeholderLens;
   setActiveLens: (lens: StakeholderLens) => void;
   currentScore: number;
+  reportTitle?: string;
 }
 
 export function SampleActionRail({
@@ -28,8 +32,11 @@ export function SampleActionRail({
   activeLens,
   setActiveLens,
   currentScore,
+  reportTitle = 'Sample Report',
 }: SampleActionRailProps) {
+  const { toast } = useToast();
   const [statsExpanded, setStatsExpanded] = useState(true);
+  const [isExporting, setIsExporting] = useState(false);
   
   const metadata = reportData.scriptMetadata;
   const totalCharacters = reportData.characters?.length || 0;
@@ -161,9 +168,35 @@ export function SampleActionRail({
 
       {/* Bottom Actions */}
       <div className="p-4 border-t border-border bg-card">
-        <Button variant="outline" className="w-full" disabled>
-          <Download className="h-4 w-4 mr-2" />
-          Export (Demo)
+        <Button 
+          variant="outline" 
+          className="w-full" 
+          disabled={isExporting}
+          onClick={() => {
+            setIsExporting(true);
+            try {
+              downloadSampleReportPDF(reportData, reportTitle, activeLens);
+              toast({
+                title: 'Report Downloaded',
+                description: 'Your USAF analysis report has been saved.',
+              });
+            } catch (error) {
+              toast({
+                title: 'Export Failed',
+                description: 'Could not generate PDF.',
+                variant: 'destructive',
+              });
+            } finally {
+              setIsExporting(false);
+            }
+          }}
+        >
+          {isExporting ? (
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          ) : (
+            <Download className="h-4 w-4 mr-2" />
+          )}
+          {isExporting ? 'Generating...' : 'Export PDF'}
         </Button>
       </div>
     </aside>
