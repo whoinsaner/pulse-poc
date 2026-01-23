@@ -1113,24 +1113,80 @@ serve(async (req) => {
         console.log(`[script-parser-stream] Step 2: Downloading file from storage`);
         sendSSE(controller, 'stage', { stage: 'download', message: 'Downloading script from storage...' });
         
-        const { data: fileData, error: downloadError } = await supabase.storage
-          .from('scripts')
-          .download(filePath);
-
-        if (downloadError) {
-          console.error(`[script-parser-stream] Download error:`, downloadError);
-          throw new Error(`Failed to download: ${downloadError.message}`);
+        // Normalize filePath - handle both full URLs and relative paths
+        let normalizedFilePath = filePath;
+        if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
+          // Extract the relative path from the full URL
+          // URL format: https://<project>.supabase.co/storage/v1/object/public/scripts/<path>
+          // or: https://<project>.supabase.co/storage/v1/object/scripts/<path>
+          const urlMatch = filePath.match(/\/storage\/v1\/object(?:\/public)?\/scripts\/(.+)$/);
+          if (urlMatch) {
+            normalizedFilePath = urlMatch[1];
+            console.log(`[script-parser-stream] Extracted relative path from URL: ${normalizedFilePath}`);
+          } else {
+            console.log(`[script-parser-stream] Could not extract path from URL, attempting direct fetch`);
+            // Try to fetch directly from the URL as a fallback
+            try {
+              const response = await fetch(filePath);
+              if (!response.ok) {
+                throw new Error(`Direct fetch failed: ${response.status} ${response.statusText}`);
+              }
+              const fileData = await response.blob();
+              const fileSize = fileData.size;
+              const expectedPages = estimatePageCount(fileSize, format);
+              console.log(`[script-parser-stream] Direct fetch succeeded: ${fileSize} bytes, ~${expectedPages} pages`);
+              
+              sendSSE(controller, 'progress', { 
+                stage: 'download', 
+                percent: 100, 
+                message: `Downloaded ${(fileSize / 1024).toFixed(0)}KB, ~${expectedPages} pages` 
+              });
+              
+              // Continue with the rest of the parsing using fileData
+              // Set up variables for the rest of the flow
+              (globalThis as any).__directFetchData = fileData;
+              (globalThis as any).__directFetchSize = fileSize;
+              (globalThis as any).__directFetchPages = expectedPages;
+            } catch (fetchError) {
+              console.error(`[script-parser-stream] Direct fetch error:`, fetchError);
+              throw new Error(`Failed to download from URL: ${fetchError instanceof Error ? fetchError.message : 'Unknown error'}`);
+            }
+          }
         }
         
-        const fileSize = fileData.size;
-        const expectedPages = estimatePageCount(fileSize, format);
-        console.log(`[script-parser-stream] Downloaded: ${fileSize} bytes, ~${expectedPages} pages`);
+        // If we didn't do a direct fetch, download from storage
+        let fileData: Blob;
+        let fileSize: number;
+        let expectedPages: number;
         
-        sendSSE(controller, 'progress', { 
-          stage: 'download', 
-          percent: 100, 
-          message: `Downloaded ${(fileSize / 1024).toFixed(0)}KB, ~${expectedPages} pages` 
-        });
+        if ((globalThis as any).__directFetchData) {
+          fileData = (globalThis as any).__directFetchData;
+          fileSize = (globalThis as any).__directFetchSize;
+          expectedPages = (globalThis as any).__directFetchPages;
+          delete (globalThis as any).__directFetchData;
+          delete (globalThis as any).__directFetchSize;
+          delete (globalThis as any).__directFetchPages;
+        } else {
+          const { data: downloadedData, error: downloadError } = await supabase.storage
+            .from('scripts')
+            .download(normalizedFilePath);
+
+          if (downloadError) {
+            console.error(`[script-parser-stream] Download error:`, downloadError);
+            throw new Error(`Failed to download: ${downloadError.message}`);
+          }
+          
+          fileData = downloadedData;
+          fileSize = fileData.size;
+          expectedPages = estimatePageCount(fileSize, format);
+          console.log(`[script-parser-stream] Downloaded: ${fileSize} bytes, ~${expectedPages} pages`);
+          
+          sendSSE(controller, 'progress', { 
+            stage: 'download', 
+            percent: 100, 
+            message: `Downloaded ${(fileSize / 1024).toFixed(0)}KB, ~${expectedPages} pages` 
+          });
+        }
 
         // Stage 2: Validate
         console.log(`[script-parser-stream] Step 3: Validating file`);
