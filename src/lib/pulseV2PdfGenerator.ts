@@ -1,11 +1,11 @@
 /**
- * Pulse V2 PDF Generator
- * Generates a professional PDF matching the Pulse V2 specification structure
+ * USAF Framework PDF Generator
+ * Generates a professional PDF matching the USAF specification structure
  */
 
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { PULSE_V2_METADATA, PULSE_V2_SECTIONS, DECISION_SIGNALS } from './pulseV2Documentation';
+import { USAF_METADATA, USAF_SECTIONS, DECISION_SIGNALS } from './pulseV2Documentation';
 
 // ============= CONSTANTS =============
 
@@ -50,7 +50,7 @@ function addHeader(doc: jsPDF, pageNumber: number) {
   
   doc.setFontSize(FONTS.tiny);
   doc.setTextColor(...COLORS.textLight);
-  doc.text('Pulse V2 • Universal Script Analysis Framework', MARGINS.left, 12);
+  doc.text('USAF • Universal Script Analysis Framework', MARGINS.left, 12);
   doc.text(`Page ${pageNumber}`, pageWidth - MARGINS.right, 12, { align: 'right' });
 }
 
@@ -64,7 +64,7 @@ function addFooter(doc: jsPDF) {
   
   doc.setFontSize(FONTS.tiny);
   doc.setTextColor(...COLORS.textLight);
-  doc.text('Pulse V2 Framework Documentation', MARGINS.left, pageHeight - 10);
+  doc.text('USAF Framework Documentation', MARGINS.left, pageHeight - 10);
   doc.text(new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }), pageWidth - MARGINS.right, pageHeight - 10, { align: 'right' });
 }
 
@@ -104,19 +104,6 @@ function addParagraph(doc: jsPDF, text: string, y: number, maxWidth?: number): n
   return y + (lines.length * 5) + 4;
 }
 
-function addBulletList(doc: jsPDF, items: string[], y: number): number {
-  doc.setFontSize(FONTS.body);
-  doc.setTextColor(...COLORS.text);
-  doc.setFont('helvetica', 'normal');
-  
-  items.forEach(item => {
-    doc.text('•  ' + item, MARGINS.left + 5, y);
-    y += 6;
-  });
-  
-  return y + 2;
-}
-
 function checkPageBreak(doc: jsPDF, currentY: number, neededHeight: number, pageNumber: { value: number }): number {
   const pageHeight = doc.internal.pageSize.getHeight();
   
@@ -145,14 +132,14 @@ function addCoverPage(doc: jsPDF) {
   doc.setFontSize(36);
   doc.setTextColor(...COLORS.white);
   doc.setFont('helvetica', 'bold');
-  doc.text('PULSE V2', pageWidth / 2, 50, { align: 'center' });
+  doc.text('USAF v3.0', pageWidth / 2, 50, { align: 'center' });
   
   doc.setFontSize(14);
-  doc.text(PULSE_V2_METADATA.fullName, pageWidth / 2, 68, { align: 'center' });
+  doc.text(USAF_METADATA.fullName, pageWidth / 2, 68, { align: 'center' });
   
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
-  const taglineLines = doc.splitTextToSize(PULSE_V2_METADATA.tagline, pageWidth - 60);
+  const taglineLines = doc.splitTextToSize(USAF_METADATA.tagline, pageWidth - 60);
   doc.text(taglineLines, pageWidth / 2, 85, { align: 'center' });
   
   // Decision Signal boxes
@@ -227,12 +214,13 @@ function addTableOfContents(doc: jsPDF, pageNumber: { value: number }) {
   y = addSectionTitle(doc, 'Table of Contents', y);
   y += 8;
   
-  const sections = Object.values(PULSE_V2_SECTIONS);
+  const sections = Object.values(USAF_SECTIONS);
   const pageWidth = doc.internal.pageSize.getWidth();
   
   sections.forEach((section, index) => {
-    const title = `${section.number}. ${section.title}`;
-    const page = index + 3; // Approximate page numbers
+    const sectionData = section as { number: number; title: string; subsections?: Array<{ number?: string; id?: string; title: string }> };
+    const title = `${sectionData.number}. ${sectionData.title}`;
+    const page = index + 3;
     
     doc.setFontSize(FONTS.body);
     doc.setTextColor(...COLORS.text);
@@ -245,8 +233,8 @@ function addTableOfContents(doc: jsPDF, pageNumber: { value: number }) {
     y += 8;
     
     // Add subsections for philosophy and advantages
-    if ('subsections' in section) {
-      section.subsections.forEach((sub: any) => {
+    if (sectionData.subsections) {
+      sectionData.subsections.forEach((sub) => {
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(...COLORS.textLight);
         doc.text(`   ${sub.number || sub.id} ${sub.title}`, MARGINS.left + 10, y);
@@ -265,7 +253,7 @@ function addSection1(doc: jsPDF, pageNumber: { value: number }) {
   addFooter(doc);
   
   let y = MARGINS.top + 10;
-  const section = PULSE_V2_SECTIONS.whatIsPulse;
+  const section = USAF_SECTIONS.whatIsUSAF;
   y = addSectionTitle(doc, `${section.number}. ${section.title}`, y);
   y += 5;
   y = addParagraph(doc, section.content, y);
@@ -274,7 +262,7 @@ function addSection1(doc: jsPDF, pageNumber: { value: number }) {
 function addSection2(doc: jsPDF, pageNumber: { value: number }) {
   let y = checkPageBreak(doc, (doc as any).lastAutoTable?.finalY || 100, 80, pageNumber);
   
-  const section = PULSE_V2_SECTIONS.whyNeeded;
+  const section = USAF_SECTIONS.whyNeeded;
   y = addSectionTitle(doc, `${section.number}. ${section.title}`, y);
   y += 5;
   y = addParagraph(doc, section.content, y);
@@ -287,7 +275,7 @@ function addSection3(doc: jsPDF, pageNumber: { value: number }) {
   addFooter(doc);
   
   let y = MARGINS.top + 10;
-  const section = PULSE_V2_SECTIONS.philosophy;
+  const section = USAF_SECTIONS.philosophy;
   y = addSectionTitle(doc, `${section.number}. ${section.title}`, y);
   y += 5;
   y = addParagraph(doc, section.intro, y);
@@ -308,7 +296,7 @@ function addSection4(doc: jsPDF, pageNumber: { value: number }) {
   addFooter(doc);
   
   let y = MARGINS.top + 10;
-  const section = PULSE_V2_SECTIONS.parameterModel;
+  const section = USAF_SECTIONS.parameterModel;
   y = addSectionTitle(doc, `${section.number}. ${section.title}`, y);
   y += 5;
   y = addParagraph(doc, section.intro, y);
@@ -349,7 +337,7 @@ function addSection5(doc: jsPDF, pageNumber: { value: number }) {
   addFooter(doc);
   
   let y = MARGINS.top + 10;
-  const section = PULSE_V2_SECTIONS.maturityScale;
+  const section = USAF_SECTIONS.maturityScale;
   y = addSectionTitle(doc, `${section.number}. ${section.title}`, y);
   y += 5;
   y = addParagraph(doc, section.intro, y);
@@ -387,7 +375,7 @@ function addSection5(doc: jsPDF, pageNumber: { value: number }) {
 function addSection6(doc: jsPDF, pageNumber: { value: number }) {
   let y = checkPageBreak(doc, (doc as any).lastAutoTable?.finalY || 150, 100, pageNumber);
   
-  const section = PULSE_V2_SECTIONS.outputs;
+  const section = USAF_SECTIONS.outputs;
   y = addSectionTitle(doc, `${section.number}. ${section.title}`, y);
   y += 5;
   y = addParagraph(doc, section.intro, y);
@@ -401,7 +389,6 @@ function addSection6(doc: jsPDF, pageNumber: { value: number }) {
     
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...COLORS.textLight);
-    const descWidth = doc.internal.pageSize.getWidth() - MARGINS.left - MARGINS.right - 80;
     doc.text('— ' + item.description, MARGINS.left + 80, y);
     y += 7;
   });
@@ -417,7 +404,7 @@ function addSection7(doc: jsPDF, pageNumber: { value: number }) {
   addFooter(doc);
   
   let y = MARGINS.top + 10;
-  const section = PULSE_V2_SECTIONS.advantages;
+  const section = USAF_SECTIONS.advantages;
   y = addSectionTitle(doc, `${section.number}. ${section.title}`, y);
   y += 5;
   
@@ -433,7 +420,7 @@ function addSection8_9_10(doc: jsPDF, pageNumber: { value: number }) {
   let y = checkPageBreak(doc, (doc as any).lastAutoTable?.finalY || 150, 120, pageNumber);
   
   // Section 8
-  const section8 = PULSE_V2_SECTIONS.bestFit;
+  const section8 = USAF_SECTIONS.bestFit;
   y = addSectionTitle(doc, `${section8.number}. ${section8.title}`, y);
   y += 5;
   y = addParagraph(doc, section8.content, y);
@@ -441,7 +428,7 @@ function addSection8_9_10(doc: jsPDF, pageNumber: { value: number }) {
   
   // Section 9
   y = checkPageBreak(doc, y, 60, pageNumber);
-  const section9 = PULSE_V2_SECTIONS.whatIsNot;
+  const section9 = USAF_SECTIONS.whatIsNot;
   y = addSectionTitle(doc, `${section9.number}. ${section9.title}`, y);
   y += 5;
   y = addParagraph(doc, section9.content, y);
@@ -449,7 +436,7 @@ function addSection8_9_10(doc: jsPDF, pageNumber: { value: number }) {
   
   // Section 10
   y = checkPageBreak(doc, y, 80, pageNumber);
-  const section10 = PULSE_V2_SECTIONS.summary;
+  const section10 = USAF_SECTIONS.summary;
   y = addSectionTitle(doc, `${section10.number}. ${section10.title}`, y);
   y += 5;
   y = addParagraph(doc, section10.content, y);
@@ -480,5 +467,8 @@ export function downloadPulseV2PDF() {
 
   // Download
   const dateStr = new Date().toISOString().split('T')[0];
-  doc.save(`Pulse-V2-Framework-Documentation-${dateStr}.pdf`);
+  doc.save(`USAF-Framework-Documentation-${dateStr}.pdf`);
 }
+
+// Backward compatibility alias
+export const downloadUSAFPDF = downloadPulseV2PDF;
