@@ -38,6 +38,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
+import { AgentVersionHistory } from "@/components/AgentVersionHistory";
 
 interface AgentConfiguration {
   id: string;
@@ -126,10 +127,30 @@ export default function AgentConfiguration() {
     setPromptExpanded(false);
   };
 
-  const handleSave = async () => {
-    if (!editedAgent) return;
+  const handleSave = async (changeSummary?: string) => {
+    if (!editedAgent || !user) return;
     try {
       setSaving(true);
+      
+      // First, save the current version to history before updating
+      const { error: historyError } = await supabase
+        .from("agent_prompt_versions")
+        .insert({
+          agent_config_id: editedAgent.id,
+          version_number: editedAgent.version + 1,
+          display_name: editedAgent.display_name,
+          description: editedAgent.description,
+          parameters: editedAgent.parameters,
+          system_prompt: editedAgent.system_prompt,
+          created_by: user.id,
+          change_summary: changeSummary || null,
+        });
+
+      if (historyError) {
+        console.error("Error saving version history:", historyError);
+        // Continue with save even if history fails
+      }
+      
       const { error } = await supabase
         .from("agent_configurations")
         .update({
@@ -152,6 +173,22 @@ export default function AgentConfiguration() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleRevertToVersion = (version: {
+    display_name: string;
+    description: string | null;
+    parameters: string[];
+    system_prompt: string;
+  }) => {
+    if (!editedAgent) return;
+    setEditedAgent({
+      ...editedAgent,
+      display_name: version.display_name,
+      description: version.description,
+      parameters: version.parameters,
+      system_prompt: version.system_prompt,
+    });
   };
 
   const handleRevert = () => {
@@ -396,6 +433,11 @@ export default function AgentConfiguration() {
                 </div>
 
                 <div className="flex items-center gap-2">
+                  <AgentVersionHistory
+                    agentConfigId={editedAgent.id}
+                    currentVersion={editedAgent.version}
+                    onRevert={handleRevertToVersion}
+                  />
                   <Button
                     variant="outline"
                     onClick={handleRevert}
@@ -404,7 +446,7 @@ export default function AgentConfiguration() {
                     <RotateCcw className="h-4 w-4 mr-2" />
                     Revert
                   </Button>
-                  <Button onClick={handleSave} disabled={!hasChanges || saving}>
+                  <Button onClick={() => handleSave()} disabled={!hasChanges || saving}>
                     <Save className="h-4 w-4 mr-2" />
                     Save
                   </Button>
