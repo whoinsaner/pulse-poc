@@ -692,6 +692,26 @@ export const SAMPLE_REPORT_DATA: ReportData = {
         }
       ]
     },
+    {
+      parameterId: 'param-theme-7',
+      parameterName: 'tone_genre_cohesion',
+      displayName: 'Tone & Genre Cohesion',
+      category: 'Theme',
+      score: 85,
+      confidence: 0.87,
+      maturity: 'Strong',
+      riskLevel: 'Low',
+      fixCost: 'Medium',
+      upsideImpact: 'High',
+      rationale: 'The script effectively balances sci-fi wonder with conspiracy thriller tension. Tonal shifts between intimate character moments and high-stakes chase sequences feel intentional and genre-appropriate.',
+      evidence: [
+        {
+          type: 'structure',
+          reference: 'Overall tone',
+          explanation: 'Maintains tension while allowing moments of awe and human connection'
+        }
+      ]
+    },
     // ============= DIALOGUE AGENT (Module F) =============
     {
       parameterId: 'param-dial-1',

@@ -1,6 +1,7 @@
 import { useOutletContext } from 'react-router-dom';
 import { ReportData, StakeholderLens, LENS_CONFIG, Report } from '@/types/database';
 import { ScoreRing } from '@/components/ScoreRing';
+import { DecisionSignalBadge } from '@/components/report/DecisionSignalBadge';
 import { FullLensComparison } from '@/components/report/FullLensComparison';
 import { StakeholderReportCache } from '@/components/report/StakeholderReportCache';
 import { Card } from '@/components/ui/card';
@@ -140,6 +141,9 @@ export default function ReportOverview() {
 
           {/* Right: Score visualization */}
           <div className="flex flex-col items-center justify-center">
+            {/* Decision Signal Badge - Prominent Display */}
+            <DecisionSignalBadge score={currentScore} size="lg" showDescription className="mb-6" />
+            
             <div className="relative">
               <ScoreRing score={currentScore} size="lg" showLabel />
             </div>
