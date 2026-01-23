@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/lib/auth';
 import { supabase } from '@/integrations/supabase/client';
 import { Logo } from '@/components/Logo';
@@ -78,6 +78,7 @@ const TYPE_LABELS: Record<ScriptType, string> = {
 
 export default function Scripts() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user, currentOrganization, userRole, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
   const [scripts, setScripts] = useState<Script[]>([]);
@@ -110,6 +111,20 @@ export default function Scripts() {
       fetchScripts();
     }
   }, [currentOrganization]);
+
+  // Handle ?analyze= query parameter from ScriptUpload navigation
+  useEffect(() => {
+    const analyzeScriptId = searchParams.get('analyze');
+    if (analyzeScriptId && scripts.length > 0 && !isLoading) {
+      const scriptToAnalyze = scripts.find(s => s.id === analyzeScriptId);
+      if (scriptToAnalyze) {
+        setSelectedScript(scriptToAnalyze);
+        setShowAnalyzeDialog(true);
+        // Clear the query param to prevent re-triggering
+        setSearchParams({}, { replace: true });
+      }
+    }
+  }, [searchParams, scripts, isLoading, setSearchParams]);
 
   const fetchScripts = async () => {
     if (!currentOrganization) return;
