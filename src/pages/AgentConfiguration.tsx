@@ -8,10 +8,8 @@ import {
   ChevronLeft, 
   Save, 
   RotateCcw, 
-  Copy, 
   Trash2, 
   Plus,
-  Lock,
   ChevronDown,
   ChevronRight,
   Settings2,
@@ -129,8 +127,7 @@ export default function AgentConfiguration() {
   };
 
   const handleSave = async () => {
-    if (!editedAgent || editedAgent.is_system) return;
-
+    if (!editedAgent) return;
     try {
       setSaving(true);
       const { error } = await supabase
@@ -361,9 +358,6 @@ export default function AgentConfiguration() {
                           <span className="truncate flex-1 text-left">
                             {agent.display_name}
                           </span>
-                          {agent.is_system && (
-                            <Lock className="h-3 w-3 text-muted-foreground ml-2" />
-                          )}
                         </Button>
                       ))}
                     </CollapsibleContent>
@@ -382,33 +376,19 @@ export default function AgentConfiguration() {
               <div className="flex items-start justify-between">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    {editedAgent.is_system ? (
-                      <Input
-                        value={editedAgent.display_name}
-                        disabled
-                        className="text-2xl font-bold h-auto py-1 px-2 bg-transparent border-transparent"
-                      />
-                    ) : (
-                      <Input
-                        value={editedAgent.display_name}
-                        onChange={(e) =>
-                          setEditedAgent({ ...editedAgent, display_name: e.target.value })
-                        }
-                        className="text-2xl font-bold h-auto py-1 px-2"
-                      />
-                    )}
+                    <Input
+                      value={editedAgent.display_name}
+                      onChange={(e) =>
+                        setEditedAgent({ ...editedAgent, display_name: e.target.value })
+                      }
+                      className="text-2xl font-bold h-auto py-1 px-2"
+                    />
                     <Badge className={cn(
                       CATEGORY_CONFIG[editedAgent.category]?.color || "bg-muted",
                       "text-white"
                     )}>
                       {CATEGORY_CONFIG[editedAgent.category]?.label || editedAgent.category}
                     </Badge>
-                    {editedAgent.is_system && (
-                      <Badge variant="outline" className="gap-1">
-                        <Lock className="h-3 w-3" />
-                        System
-                      </Badge>
-                    )}
                   </div>
                   <p className="text-sm text-muted-foreground font-mono">
                     {editedAgent.agent_name}
@@ -416,45 +396,38 @@ export default function AgentConfiguration() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  {editedAgent.is_system ? (
-                    <Button onClick={handleClone} disabled={saving}>
-                      <Copy className="h-4 w-4 mr-2" />
-                      Clone to Customize
-                    </Button>
-                  ) : (
-                    <>
-                      <Button
-                        variant="outline"
-                        onClick={handleRevert}
-                        disabled={!hasChanges || saving}
-                      >
-                        <RotateCcw className="h-4 w-4 mr-2" />
-                        Revert
-                      </Button>
-                      <Button onClick={handleSave} disabled={!hasChanges || saving}>
-                        <Save className="h-4 w-4 mr-2" />
-                        Save
-                      </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="destructive" size="icon" disabled={saving}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Agent</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Are you sure you want to delete this custom agent? This action cannot be undone.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </>
+                  <Button
+                    variant="outline"
+                    onClick={handleRevert}
+                    disabled={!hasChanges || saving}
+                  >
+                    <RotateCcw className="h-4 w-4 mr-2" />
+                    Revert
+                  </Button>
+                  <Button onClick={handleSave} disabled={!hasChanges || saving}>
+                    <Save className="h-4 w-4 mr-2" />
+                    Save
+                  </Button>
+                  {!editedAgent.is_system && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="destructive" size="icon" disabled={saving}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete Agent</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to delete this custom agent? This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   )}
                 </div>
               </div>
@@ -473,7 +446,6 @@ export default function AgentConfiguration() {
                     onChange={(e) =>
                       setEditedAgent({ ...editedAgent, description: e.target.value })
                     }
-                    disabled={editedAgent.is_system}
                     placeholder="Describe what this agent analyzes..."
                     className="min-h-[80px]"
                   />
@@ -497,44 +469,37 @@ export default function AgentConfiguration() {
                         <Badge
                           key={param}
                           variant="secondary"
-                          className={cn(
-                            "gap-1",
-                            !editedAgent.is_system && "pr-1"
-                          )}
+                          className="gap-1 pr-1"
                         >
                           {param}
-                          {!editedAgent.is_system && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-4 w-4 ml-1 hover:bg-destructive hover:text-destructive-foreground rounded-full"
-                              onClick={() => handleRemoveParameter(param)}
-                            >
-                              ×
-                            </Button>
-                          )}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-4 w-4 ml-1 hover:bg-destructive hover:text-destructive-foreground rounded-full"
+                            onClick={() => handleRemoveParameter(param)}
+                          >
+                            ×
+                          </Button>
                         </Badge>
                       ))
                     )}
                   </div>
-                  {!editedAgent.is_system && (
-                    <div className="flex gap-2">
-                      <Input
-                        placeholder="Add parameter (e.g., pacing_quality)"
-                        value={newParameterInput}
-                        onChange={(e) => setNewParameterInput(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            handleAddParameter();
-                          }
-                        }}
-                      />
-                      <Button onClick={handleAddParameter} size="icon">
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  )}
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Add parameter (e.g., pacing_quality)"
+                      value={newParameterInput}
+                      onChange={(e) => setNewParameterInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          handleAddParameter();
+                        }
+                      }}
+                    />
+                    <Button onClick={handleAddParameter} size="icon">
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
 
@@ -568,7 +533,6 @@ export default function AgentConfiguration() {
                     onChange={(e) =>
                       setEditedAgent({ ...editedAgent, system_prompt: e.target.value })
                     }
-                    disabled={editedAgent.is_system}
                     className={cn(
                       "font-mono text-sm transition-all",
                       promptExpanded ? "min-h-[500px]" : "min-h-[150px]"
