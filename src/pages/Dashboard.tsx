@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DashboardStats } from '@/components/DashboardStats';
-import { Upload, FileText, BarChart3, Users, LogOut, Plus, Layers, FlaskConical, Settings, Cpu, Palette, Play } from 'lucide-react';
+import { Upload, FileText, BarChart3, Users, LogOut, Plus, Layers, FlaskConical, Settings, Cpu, Palette, Play, Bot } from 'lucide-react';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -170,7 +170,18 @@ export default function Dashboard() {
                   </div>
                   <div>
                     <h3 className="font-semibold">AI Models</h3>
-                    <p className="text-sm text-muted-foreground">Configure agents</p>
+                    <p className="text-sm text-muted-foreground">Model configurations</p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="card-hover cursor-pointer group" onClick={() => navigate('/admin/agents')}>
+                <CardContent className="p-6 flex items-center gap-4">
+                  <div className="p-3 rounded-lg bg-violet-500/10 group-hover:bg-violet-500/20 transition-colors">
+                    <Bot className="h-6 w-6 text-violet-500" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold">Agent Prompts</h3>
+                    <p className="text-sm text-muted-foreground">Configure agent behavior</p>
                   </div>
                 </CardContent>
               </Card>
