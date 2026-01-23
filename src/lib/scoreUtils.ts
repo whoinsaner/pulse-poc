@@ -140,3 +140,100 @@ export function getRiskFromScore(score: number): 'Low' | 'Medium' | 'High' {
   if (score >= 40) return 'Medium';
   return 'High';
 }
+
+// ============= DECISION SIGNAL SYSTEM (Pulse V2) =============
+
+export type DecisionSignal = 'go' | 'iterate' | 'hold';
+
+export interface DecisionSignalData {
+  signal: DecisionSignal;
+  label: string;
+  description: string;
+  color: string;
+  bgColor: string;
+  borderColor: string;
+  icon: 'CheckCircle' | 'ArrowRight' | 'XCircle';
+}
+
+/**
+ * Get the decision signal (Go/Iterate/Hold) based on score
+ * Aligned with Pulse V2 specification for actionable decision-making
+ */
+export function getDecisionSignal(score: number): DecisionSignalData {
+  if (score >= 75) {
+    return {
+      signal: 'go',
+      label: 'GO',
+      description: 'Proceed to production. Script is greenlight-ready with strong commercial elements and minimal rewrites required.',
+      color: 'text-success',
+      bgColor: 'bg-success/10',
+      borderColor: 'border-success/30',
+      icon: 'CheckCircle',
+    };
+  }
+  if (score >= 50) {
+    return {
+      signal: 'iterate',
+      label: 'ITERATE',
+      description: 'Proceed with development. Requires focused structural and character rewrites before packaging. High potential with identified improvements.',
+      color: 'text-chart-4',
+      bgColor: 'bg-chart-4/10',
+      borderColor: 'border-chart-4/30',
+      icon: 'ArrowRight',
+    };
+  }
+  return {
+    signal: 'hold',
+    label: 'HOLD',
+    description: 'Not recommended in current state. Requires significant foundational work on structure, characters, and tonal cohesion before reconsideration.',
+    color: 'text-destructive',
+    bgColor: 'bg-destructive/10',
+    borderColor: 'border-destructive/30',
+    icon: 'XCircle',
+  };
+}
+
+/**
+ * Get the readiness label based on score (0-100 scale)
+ * Production-Ready (80+), High-Potential (65+), Development Stage (50+), Underdeveloped (30+), Not Viable (<30)
+ */
+export function getReadinessLabel(score: number): { label: string; sublabel: string; color: string; bgColor: string } {
+  if (score >= 80) {
+    return {
+      label: 'Production-Ready',
+      sublabel: 'Minimal rewrites required',
+      color: 'text-success',
+      bgColor: 'bg-success/10',
+    };
+  }
+  if (score >= 65) {
+    return {
+      label: 'High-Potential',
+      sublabel: 'Focused polish needed',
+      color: 'text-chart-3',
+      bgColor: 'bg-chart-3/10',
+    };
+  }
+  if (score >= 50) {
+    return {
+      label: 'Development Stage',
+      sublabel: 'Structural work required',
+      color: 'text-chart-4',
+      bgColor: 'bg-chart-4/10',
+    };
+  }
+  if (score >= 30) {
+    return {
+      label: 'Underdeveloped',
+      sublabel: 'Foundational issues present',
+      color: 'text-warning',
+      bgColor: 'bg-warning/10',
+    };
+  }
+  return {
+    label: 'Not Viable',
+    sublabel: 'Core premise broken',
+    color: 'text-destructive',
+    bgColor: 'bg-destructive/10',
+  };
+}

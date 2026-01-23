@@ -546,6 +546,17 @@ export const CORE_PARAMETERS: ParameterDefinition[] = [
     applicableScriptTypes: 'all',
     weight: 0.7,
   },
+  {
+    id: 'tone_genre_cohesion',
+    name: 'tone_genre_cohesion',
+    displayName: 'Tone & Genre Cohesion',
+    category: 'Theme',
+    agentSource: 'ThemeAgent',
+    description: 'Evaluates consistency of tonal approach throughout the narrative and adherence to genre conventions. Measures how well the script fulfills its genre promise to the audience while maintaining tonal integrity across scenes, acts, and character interactions.',
+    scoringGuide: '9-10: Perfect tonal control, masterful genre execution, seamless tone shifts when intentional. 7-8: Consistent tone with strong genre awareness, rare unintentional shifts. 5-6: Some tonal inconsistencies or genre confusion, occasionally breaks promise. 3-4: Significant tonal shifts that confuse, genre mismatch with audience expectations. 1-2: No tonal coherence, broken genre promise, audience cannot trust the narrative.',
+    applicableScriptTypes: 'all',
+    weight: 1.0,
+  },
 
   // Dialogue Agent Parameters
   {
