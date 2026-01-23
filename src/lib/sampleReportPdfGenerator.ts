@@ -397,6 +397,546 @@ export function generateSampleReportPDF(
       },
       margin: { left: MARGINS.left, right: MARGINS.right },
     });
+    
+    yPos = (doc as any).lastAutoTable.finalY + 15;
+    
+    // Character arcs section
+    yPos = checkPageBreak(doc, yPos, 60, pageNumber);
+    
+    doc.setFontSize(FONTS.h3);
+    doc.setTextColor(...COLORS.text);
+    doc.text('Character Arcs & Development', MARGINS.left, yPos);
+    yPos += 5;
+    
+    const arcData = reportData.characters
+      .filter(char => char.arcSummary)
+      .slice(0, 8)
+      .map((char) => [
+        char.name,
+        char.arcSummary || 'No arc summary available',
+      ]);
+    
+    if (arcData.length > 0) {
+      autoTable(doc, {
+        startY: yPos,
+        head: [['Character', 'Arc Summary']],
+        body: arcData,
+        theme: 'striped',
+        headStyles: { fillColor: COLORS.primary, fontSize: FONTS.small },
+        bodyStyles: { fontSize: FONTS.tiny },
+        columnStyles: {
+          0: { cellWidth: 35 },
+          1: { cellWidth: 130 },
+        },
+        margin: { left: MARGINS.left, right: MARGINS.right },
+      });
+      yPos = (doc as any).lastAutoTable.finalY + 15;
+    }
+  }
+  
+  // ============= SCENES PAGE =============
+  
+  if (reportData.scenes && reportData.scenes.length > 0) {
+    doc.addPage();
+    pageNumber.value++;
+    addHeader(doc, pageNumber);
+    addFooter(doc);
+    
+    yPos = MARGINS.top + 10;
+    
+    doc.setFontSize(FONTS.h1);
+    doc.setTextColor(...COLORS.primary);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Scene Breakdown', MARGINS.left, yPos);
+    yPos += 5;
+    
+    doc.setFontSize(FONTS.small);
+    doc.setTextColor(...COLORS.textLight);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`${reportData.scenes.length} total scenes analyzed`, MARGINS.left, yPos);
+    yPos += 10;
+    
+    // Scene statistics
+    const intScenes = reportData.scenes.filter(s => s.intExt === 'INT').length;
+    const extScenes = reportData.scenes.filter(s => s.intExt === 'EXT').length;
+    const uniqueLocations = new Set(reportData.scenes.map(s => s.location).filter(Boolean)).size;
+    
+    const sceneStats = [
+      ['Total Scenes', reportData.scenes.length.toString()],
+      ['Interior Scenes', intScenes.toString()],
+      ['Exterior Scenes', extScenes.toString()],
+      ['Unique Locations', uniqueLocations.toString()],
+    ];
+    
+    autoTable(doc, {
+      startY: yPos,
+      body: sceneStats,
+      theme: 'plain',
+      bodyStyles: { fontSize: FONTS.small },
+      columnStyles: {
+        0: { cellWidth: 50, fontStyle: 'bold' },
+        1: { cellWidth: 30 },
+      },
+      margin: { left: MARGINS.left },
+    });
+    
+    yPos = (doc as any).lastAutoTable.finalY + 10;
+    
+    // Scene list (first 30)
+    doc.setFontSize(FONTS.h3);
+    doc.setTextColor(...COLORS.text);
+    doc.text('Scene Details', MARGINS.left, yPos);
+    yPos += 5;
+    
+    const sceneData = reportData.scenes.slice(0, 30).map((scene) => [
+      scene.sceneNumber.toString(),
+      scene.heading || 'N/A',
+      scene.location || 'N/A',
+      scene.emotionalTone || 'N/A',
+    ]);
+    
+    autoTable(doc, {
+      startY: yPos,
+      head: [['#', 'Heading', 'Location', 'Tone']],
+      body: sceneData,
+      theme: 'striped',
+      headStyles: { fillColor: COLORS.tableHeader, fontSize: FONTS.small },
+      bodyStyles: { fontSize: FONTS.tiny },
+      columnStyles: {
+        0: { cellWidth: 12, halign: 'center' },
+        1: { cellWidth: 75 },
+        2: { cellWidth: 45 },
+        3: { cellWidth: 30 },
+      },
+      margin: { left: MARGINS.left, right: MARGINS.right },
+    });
+    
+    if (reportData.scenes.length > 30) {
+      yPos = (doc as any).lastAutoTable.finalY + 5;
+      doc.setFontSize(FONTS.tiny);
+      doc.setTextColor(...COLORS.textLight);
+      doc.text(`... and ${reportData.scenes.length - 30} more scenes`, MARGINS.left, yPos);
+    }
+  }
+  
+  // ============= THEMES & MOTIFS PAGE =============
+  
+  if (reportData.scenes && reportData.scenes.length > 0) {
+    doc.addPage();
+    pageNumber.value++;
+    addHeader(doc, pageNumber);
+    addFooter(doc);
+    
+    yPos = MARGINS.top + 10;
+    
+    doc.setFontSize(FONTS.h1);
+    doc.setTextColor(...COLORS.primary);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Themes & Motifs Analysis', MARGINS.left, yPos);
+    yPos += 10;
+    
+    // Extract themes from scenes and insights
+    const themePatterns = [
+      { pattern: /love|romance|heart|passion/i, name: 'Love & Romance' },
+      { pattern: /power|control|dominate|authority/i, name: 'Power & Control' },
+      { pattern: /family|parent|child|sibling|home/i, name: 'Family Bonds' },
+      { pattern: /death|mortality|dying|grave/i, name: 'Mortality' },
+      { pattern: /freedom|escape|liberation|cage/i, name: 'Freedom vs Captivity' },
+      { pattern: /truth|lie|deceit|honest|secret/i, name: 'Truth & Deception' },
+      { pattern: /revenge|vengeance|payback/i, name: 'Revenge' },
+      { pattern: /redemption|forgive|atone|save/i, name: 'Redemption' },
+    ];
+    
+    const detectedThemes: { name: string; occurrences: number; scenes: number[] }[] = [];
+    
+    themePatterns.forEach(({ pattern, name }) => {
+      const matchingScenes: number[] = [];
+      let occurrences = 0;
+      
+      reportData.scenes.forEach(scene => {
+        const text = `${scene.heading || ''} ${scene.description || ''} ${scene.emotionalTone || ''}`;
+        const matches = text.match(pattern);
+        if (matches) {
+          matchingScenes.push(scene.sceneNumber);
+          occurrences += matches.length;
+        }
+      });
+      
+      if (occurrences > 0) {
+        detectedThemes.push({ name, occurrences, scenes: matchingScenes });
+      }
+    });
+    
+    detectedThemes.sort((a, b) => b.occurrences - a.occurrences);
+    
+    if (detectedThemes.length > 0) {
+      const themeData = detectedThemes.slice(0, 10).map(theme => [
+        theme.name,
+        theme.occurrences.toString(),
+        theme.scenes.length.toString(),
+        theme.scenes.length >= 5 ? 'Strong' : theme.scenes.length >= 3 ? 'Moderate' : 'Emerging',
+      ]);
+      
+      autoTable(doc, {
+        startY: yPos,
+        head: [['Theme/Motif', 'Occurrences', 'Scenes', 'Strength']],
+        body: themeData,
+        theme: 'striped',
+        headStyles: { fillColor: COLORS.primary, fontSize: FONTS.small },
+        bodyStyles: { fontSize: FONTS.small },
+        columnStyles: {
+          0: { cellWidth: 60 },
+          1: { cellWidth: 30, halign: 'center' },
+          2: { cellWidth: 25, halign: 'center' },
+          3: { cellWidth: 30, halign: 'center' },
+        },
+        margin: { left: MARGINS.left, right: MARGINS.right },
+      });
+      
+      yPos = (doc as any).lastAutoTable.finalY + 15;
+    } else {
+      doc.setFontSize(FONTS.body);
+      doc.setTextColor(...COLORS.textLight);
+      doc.text('No prominent themes detected from scene analysis.', MARGINS.left, yPos);
+      yPos += 15;
+    }
+    
+    // Thematic insights from the insights array
+    const thematicInsights = reportData.insights?.filter(i => 
+      i.category.toLowerCase().includes('theme') || 
+      i.category.toLowerCase().includes('conflict') ||
+      i.category.toLowerCase().includes('character arc')
+    ) || [];
+    
+    if (thematicInsights.length > 0) {
+      yPos = checkPageBreak(doc, yPos, 50, pageNumber);
+      
+      doc.setFontSize(FONTS.h3);
+      doc.setTextColor(...COLORS.text);
+      doc.text('Thematic Insights', MARGINS.left, yPos);
+      yPos += 5;
+      
+      const insightData = thematicInsights.slice(0, 8).map(insight => [
+        insight.category,
+        insight.title,
+        insight.description.substring(0, 150) + (insight.description.length > 150 ? '...' : ''),
+      ]);
+      
+      autoTable(doc, {
+        startY: yPos,
+        head: [['Category', 'Insight', 'Description']],
+        body: insightData,
+        theme: 'striped',
+        headStyles: { fillColor: COLORS.secondary, fontSize: FONTS.small },
+        bodyStyles: { fontSize: FONTS.tiny },
+        margin: { left: MARGINS.left, right: MARGINS.right },
+      });
+    }
+  }
+  
+  // ============= BUDGET ESTIMATION PAGE =============
+  
+  if (reportData.scenes && reportData.scenes.length > 0) {
+    doc.addPage();
+    pageNumber.value++;
+    addHeader(doc, pageNumber);
+    addFooter(doc);
+    
+    yPos = MARGINS.top + 10;
+    
+    doc.setFontSize(FONTS.h1);
+    doc.setTextColor(...COLORS.primary);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Budget & Production Estimation', MARGINS.left, yPos);
+    yPos += 10;
+    
+    // Calculate budget metrics
+    const intScenes = reportData.scenes.filter(s => s.intExt === 'INT').length;
+    const extScenes = reportData.scenes.filter(s => s.intExt === 'EXT').length;
+    const uniqueLocations = new Set(reportData.scenes.map(s => s.location).filter(Boolean)).size;
+    const pageCount = reportData.scriptMetadata?.pageCount || 100;
+    const shootingDays = Math.ceil(pageCount / 5);
+    const characterCount = reportData.characters?.length || 0;
+    
+    // Simple budget calculation (in thousands)
+    const locationCost = (intScenes * 5) + (extScenes * 15);
+    const castCost = Math.min(characterCount, 3) * 50 * shootingDays * 0.8;
+    const crewCost = shootingDays * 35;
+    const postCost = pageCount * 7;
+    const totalBudget = locationCost + castCost + crewCost + postCost;
+    
+    const getBudgetTier = (total: number) => {
+      if (total < 500) return 'Micro Budget';
+      if (total < 2000) return 'Low Budget';
+      if (total < 20000) return 'Medium Budget';
+      if (total < 100000) return 'High Budget';
+      return 'Blockbuster';
+    };
+    
+    const formatCurrency = (amount: number) => {
+      if (amount >= 1000) return `$${(amount / 1000).toFixed(1)}M`;
+      return `$${amount}K`;
+    };
+    
+    // Budget summary box
+    doc.setFillColor(...COLORS.background);
+    doc.roundedRect(MARGINS.left, yPos, contentWidth, 40, 5, 5, 'F');
+    
+    doc.setFontSize(FONTS.h1);
+    doc.setTextColor(...COLORS.primary);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Estimated Budget: ${formatCurrency(totalBudget)}`, MARGINS.left + 10, yPos + 18);
+    
+    doc.setFontSize(FONTS.body);
+    doc.setTextColor(...COLORS.textLight);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`${getBudgetTier(totalBudget)} • ${shootingDays} Shooting Days • ${uniqueLocations} Locations`, MARGINS.left + 10, yPos + 30);
+    
+    yPos += 50;
+    
+    // Budget breakdown
+    const budgetData = [
+      ['Locations & Sets', formatCurrency(locationCost), `${intScenes} INT / ${extScenes} EXT scenes`],
+      ['Cast & Talent', formatCurrency(castCost), `${characterCount} characters`],
+      ['Crew & Equipment', formatCurrency(crewCost), `${shootingDays} days`],
+      ['Post Production', formatCurrency(postCost), `${pageCount} pages`],
+      ['TOTAL', formatCurrency(totalBudget), ''],
+    ];
+    
+    autoTable(doc, {
+      startY: yPos,
+      head: [['Category', 'Estimate', 'Details']],
+      body: budgetData,
+      theme: 'striped',
+      headStyles: { fillColor: COLORS.success, fontSize: FONTS.small },
+      bodyStyles: { fontSize: FONTS.small },
+      columnStyles: {
+        0: { cellWidth: 50 },
+        1: { cellWidth: 35, halign: 'right' },
+        2: { cellWidth: 80 },
+      },
+      margin: { left: MARGINS.left, right: MARGINS.right },
+      didParseCell: (data) => {
+        // Bold the total row
+        if (data.row.index === budgetData.length - 1) {
+          data.cell.styles.fontStyle = 'bold';
+        }
+      },
+    });
+    
+    yPos = (doc as any).lastAutoTable.finalY + 15;
+    
+    // Production considerations
+    yPos = checkPageBreak(doc, yPos, 50, pageNumber);
+    
+    doc.setFontSize(FONTS.h3);
+    doc.setTextColor(...COLORS.text);
+    doc.text('Production Considerations', MARGINS.left, yPos);
+    yPos += 8;
+    
+    const considerations = [];
+    if (extScenes > reportData.scenes.length * 0.5) {
+      considerations.push('High exterior scene ratio - weather dependent scheduling');
+    }
+    if (uniqueLocations > 15) {
+      considerations.push('Many unique locations - significant logistics overhead');
+    }
+    if (characterCount > 20) {
+      considerations.push('Large cast - coordination complexity');
+    }
+    if (shootingDays > 30) {
+      considerations.push('Extended shoot - crew fatigue management needed');
+    }
+    if (considerations.length === 0) {
+      considerations.push('Standard production complexity');
+    }
+    
+    considerations.forEach((item, i) => {
+      doc.setFontSize(FONTS.small);
+      doc.setTextColor(...COLORS.text);
+      doc.text(`• ${item}`, MARGINS.left + 5, yPos + (i * 6));
+    });
+  }
+  
+  // ============= RISK & MATURITY PAGE =============
+  
+  doc.addPage();
+  pageNumber.value++;
+  addHeader(doc, pageNumber);
+  addFooter(doc);
+  
+  yPos = MARGINS.top + 10;
+  
+  doc.setFontSize(FONTS.h1);
+  doc.setTextColor(...COLORS.primary);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Risk Assessment & Maturity', MARGINS.left, yPos);
+  yPos += 15;
+  
+  const riskScore = reportData.lensScores?.[activeLens] ?? reportData.overallScore ?? 0;
+  
+  // Maturity stage
+  const getMaturityStage = (s: number) => {
+    if (s >= 75) return { stage: 'Production Ready (7-10/10)', description: 'Script is polished and ready for packaging with minor adjustments.' };
+    if (s >= 55) return { stage: 'Development Territory (4-6/10)', description: 'Script has enough strengths that a focused rewrite can elevate it dramatically.' };
+    if (s >= 35) return { stage: 'Early Development (2-4/10)', description: 'Core concept exists but foundational elements need significant work.' };
+    return { stage: 'Concept Stage (0-2/10)', description: 'Ideas present but requires substantial development in all areas.' };
+  };
+  
+  const maturity = getMaturityStage(riskScore);
+  
+  doc.setFontSize(FONTS.h2);
+  doc.setTextColor(...COLORS.text);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Current Stage: ' + maturity.stage, MARGINS.left, yPos);
+  yPos += 8;
+  
+  doc.setFontSize(FONTS.body);
+  doc.setTextColor(...COLORS.textLight);
+  doc.setFont('helvetica', 'normal');
+  const maturityLines = doc.splitTextToSize(maturity.description, contentWidth);
+  doc.text(maturityLines, MARGINS.left, yPos);
+  yPos += maturityLines.length * 5 + 15;
+  
+  // Risk categories
+  doc.setFontSize(FONTS.h3);
+  doc.setTextColor(...COLORS.text);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Risk Categories', MARGINS.left, yPos);
+  yPos += 8;
+  
+  const getRiskLevel = (categoryScore: number) => {
+    if (categoryScore >= 70) return 'Low';
+    if (categoryScore >= 50) return 'Medium';
+    return 'High';
+  };
+  
+  const categoryScores = reportData.categoryScores || {};
+  const riskData = [
+    ['Creative Risk', getRiskLevel(categoryScores['Character'] || categoryScores['Characters & Arcs'] || 60), 'Character depth, tonal consistency, motivation clarity'],
+    ['Market Risk', getRiskLevel(categoryScores['Market'] || categoryScores['Marketability'] || 60), 'Audience targeting, competitive positioning, timing'],
+    ['Production Risk', getRiskLevel(categoryScores['Execution'] || categoryScores['Production Value'] || 70), 'Budget requirements, location complexity, VFX needs'],
+    ['Structural Risk', getRiskLevel(categoryScores['Structure'] || 65), 'Pacing, act balance, narrative coherence'],
+  ];
+  
+  autoTable(doc, {
+    startY: yPos,
+    head: [['Risk Category', 'Level', 'Description']],
+    body: riskData,
+    theme: 'striped',
+    headStyles: { fillColor: COLORS.warning, fontSize: FONTS.small },
+    bodyStyles: { fontSize: FONTS.small },
+    columnStyles: {
+      0: { cellWidth: 40 },
+      1: { cellWidth: 25, halign: 'center' },
+      2: { cellWidth: 100 },
+    },
+    margin: { left: MARGINS.left, right: MARGINS.right },
+  });
+  
+  yPos = (doc as any).lastAutoTable.finalY + 15;
+  
+  // Development recommendations
+  yPos = checkPageBreak(doc, yPos, 60, pageNumber);
+  
+  doc.setFontSize(FONTS.h3);
+  doc.setTextColor(...COLORS.text);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Development Recommendations', MARGINS.left, yPos);
+  yPos += 8;
+  
+  const recommendations = [];
+  if (riskScore < 50) {
+    recommendations.push('Focus on strengthening core narrative structure before detailed polish');
+  }
+  if (categoryScores['Character'] && categoryScores['Character'] < 60) {
+    recommendations.push('Deepen character motivations and arc clarity');
+  }
+  if (categoryScores['Structure'] && categoryScores['Structure'] < 60) {
+    recommendations.push('Review act balance and pacing rhythm');
+  }
+  if (categoryScores['Dialogue'] && categoryScores['Dialogue'] < 60) {
+    recommendations.push('Polish dialogue for distinctiveness and subtext');
+  }
+  if (recommendations.length === 0) {
+    recommendations.push('Script is in strong position - focus on final polish and packaging');
+  }
+  
+  recommendations.slice(0, 5).forEach((rec, i) => {
+    doc.setFontSize(FONTS.small);
+    doc.setTextColor(...COLORS.text);
+    doc.text(`${i + 1}. ${rec}`, MARGINS.left, yPos + (i * 7));
+  });
+  
+  // ============= NARRATIVE STRUCTURE PAGE =============
+  
+  if (reportData.narrativeGraph && reportData.narrativeGraph.nodes && reportData.narrativeGraph.nodes.length > 0) {
+    doc.addPage();
+    pageNumber.value++;
+    addHeader(doc, pageNumber);
+    addFooter(doc);
+    
+    yPos = MARGINS.top + 10;
+    
+    doc.setFontSize(FONTS.h1);
+    doc.setTextColor(...COLORS.primary);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Narrative Structure', MARGINS.left, yPos);
+    yPos += 10;
+    
+    const nodes = reportData.narrativeGraph.nodes;
+    const edges = reportData.narrativeGraph.edges;
+    
+    // Node statistics
+    const actNodes = nodes.filter(n => n.type === 'act');
+    const sequenceNodes = nodes.filter(n => n.type === 'sequence');
+    const beatNodes = nodes.filter(n => n.type === 'beat');
+    const sceneNodes = nodes.filter(n => n.type === 'scene');
+    
+    const structureStats = [
+      ['Acts', actNodes.length.toString()],
+      ['Sequences', sequenceNodes.length.toString()],
+      ['Major Beats', beatNodes.length.toString()],
+      ['Scene Nodes', sceneNodes.length.toString()],
+      ['Total Connections', edges.length.toString()],
+    ];
+    
+    autoTable(doc, {
+      startY: yPos,
+      body: structureStats,
+      theme: 'plain',
+      bodyStyles: { fontSize: FONTS.small },
+      columnStyles: {
+        0: { cellWidth: 50, fontStyle: 'bold' },
+        1: { cellWidth: 30 },
+      },
+      margin: { left: MARGINS.left },
+    });
+    
+    yPos = (doc as any).lastAutoTable.finalY + 15;
+    
+    // Key narrative beats
+    if (beatNodes.length > 0) {
+      doc.setFontSize(FONTS.h3);
+      doc.setTextColor(...COLORS.text);
+      doc.text('Key Narrative Beats', MARGINS.left, yPos);
+      yPos += 5;
+      
+      const beatData = beatNodes.slice(0, 12).map(beat => [
+        beat.label,
+        (beat.metadata?.description as string) || 'Story beat',
+      ]);
+      
+      autoTable(doc, {
+        startY: yPos,
+        head: [['Beat', 'Description']],
+        body: beatData,
+        theme: 'striped',
+        headStyles: { fillColor: COLORS.primary, fontSize: FONTS.small },
+        bodyStyles: { fontSize: FONTS.tiny },
+        margin: { left: MARGINS.left, right: MARGINS.right },
+      });
+    }
   }
   
   return doc;
