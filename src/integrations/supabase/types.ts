@@ -14,6 +14,62 @@ export type Database = {
   }
   public: {
     Tables: {
+      agent_configurations: {
+        Row: {
+          agent_name: string
+          category: string
+          created_at: string | null
+          description: string | null
+          display_name: string
+          id: string
+          is_active: boolean | null
+          is_system: boolean | null
+          organization_id: string | null
+          parameters: string[]
+          system_prompt: string
+          updated_at: string | null
+          version: number | null
+        }
+        Insert: {
+          agent_name: string
+          category?: string
+          created_at?: string | null
+          description?: string | null
+          display_name: string
+          id?: string
+          is_active?: boolean | null
+          is_system?: boolean | null
+          organization_id?: string | null
+          parameters?: string[]
+          system_prompt: string
+          updated_at?: string | null
+          version?: number | null
+        }
+        Update: {
+          agent_name?: string
+          category?: string
+          created_at?: string | null
+          description?: string | null
+          display_name?: string
+          id?: string
+          is_active?: boolean | null
+          is_system?: boolean | null
+          organization_id?: string | null
+          parameters?: string[]
+          system_prompt?: string
+          updated_at?: string | null
+          version?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_configurations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agent_model_mappings: {
         Row: {
           agent_name: string

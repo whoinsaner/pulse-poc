@@ -38,6 +38,7 @@ import {
   Crown,
   Lock,
   Edit2,
+  Bot,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -362,6 +363,10 @@ export default function ModelConfiguration() {
                 <p className="text-sm text-muted-foreground">Configure AI models for each agent</p>
               </div>
             </div>
+            <Button variant="outline" onClick={() => navigate('/admin/agents')}>
+              <Bot className="h-4 w-4 mr-2" />
+              Agent Prompts
+            </Button>
           </div>
         </div>
       </header>
