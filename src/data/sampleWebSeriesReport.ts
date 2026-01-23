@@ -157,6 +157,22 @@ export const SAMPLE_WEB_SERIES_REPORT_DATA: ReportData = {
         { type: 'structure', reference: 'Logline', explanation: 'High-concept premise immediately graspable' }
       ]
     },
+    {
+      parameterId: 'param-theme-1',
+      parameterName: 'tone_genre_cohesion',
+      displayName: 'Tone & Genre Cohesion',
+      category: 'Theme',
+      score: 86,
+      confidence: 0.88,
+      maturity: 'Strong',
+      riskLevel: 'Low',
+      fixCost: 'Medium',
+      upsideImpact: 'High',
+      rationale: 'The script effectively maintains its tech-thriller tone throughout, balancing paranoid tension with the meta-commentary on algorithm culture. Genre promises are fulfilled.',
+      evidence: [
+        { type: 'structure', reference: 'Throughout', explanation: 'Consistent thriller tension with modern tech-horror undertones' }
+      ]
+    },
   ],
   insights: [
     {
