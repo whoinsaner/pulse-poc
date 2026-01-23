@@ -4,6 +4,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { LensSelector } from '@/components/LensToggle';
 import { StakeholderBadge } from '@/components/StakeholderBadge';
 import { ExportDialog } from '@/components/report/ExportDialog';
+import { DecisionSignalBadge } from '@/components/report/DecisionSignalBadge';
 import { 
   FileText, 
   Users, 
@@ -15,6 +16,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
+import { getReadinessLabel } from '@/lib/scoreUtils';
 
 interface ActionRailProps {
   reportData: ReportData;
@@ -41,15 +43,6 @@ export function ActionRail({
   const totalCharacters = reportData.characters?.length || 0;
   const totalScenes = reportData.scenes?.length || 0;
   const totalInsights = reportData.insights?.length || 0;
-
-  // 0-100 scale thresholds
-  const getReadinessLabel = (score: number) => {
-    if (score >= 80) return { label: 'Production-Ready', color: 'text-success' };
-    if (score >= 65) return { label: 'High-Potential', color: 'text-chart-3' };
-    if (score >= 50) return { label: 'Development', color: 'text-chart-4' };
-    if (score >= 30) return { label: 'Needs Work', color: 'text-warning' };
-    return { label: 'Early Stage', color: 'text-destructive' };
-  };
 
   const readiness = getReadinessLabel(currentScore);
 
@@ -80,6 +73,9 @@ export function ActionRail({
                 }
               </p>
             </div>
+            
+            {/* Decision Signal Badge */}
+            <DecisionSignalBadge score={currentScore} size="sm" />
           </div>
 
           {/* Quick Stats */}

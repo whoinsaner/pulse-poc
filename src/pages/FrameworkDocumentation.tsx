@@ -10,7 +10,10 @@ import {
   Eye,
   Zap,
   BarChart3,
-  Sparkles
+  Sparkles,
+  CheckCircle,
+  ArrowRight,
+  XCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,6 +22,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { downloadFrameworkPDF } from '@/lib/pdfGenerator';
+import { downloadPulseV2PDF } from '@/lib/pulseV2PdfGenerator';
+import { PULSE_V2_SECTIONS, PULSE_V2_METADATA, DECISION_SIGNALS } from '@/lib/pulseV2Documentation';
 import {
   FRAMEWORK_METADATA,
   EXECUTIVE_SUMMARY,
@@ -28,10 +33,12 @@ import {
   getParametersByCategory,
 } from '@/lib/frameworkDocumentation';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 export default function FrameworkDocumentation() {
   const [isGenerating, setIsGenerating] = useState(false);
-  const [activeSection, setActiveSection] = useState('overview');
+  const [isGeneratingV2, setIsGeneratingV2] = useState(false);
+  const [activeSection, setActiveSection] = useState('pulse-v2');
 
   const agentCategories = getAgentsByCategory();
   const stakeholders = getStakeholderDocumentation();
@@ -41,7 +48,6 @@ export default function FrameworkDocumentation() {
   const handleDownloadPDF = async () => {
     setIsGenerating(true);
     try {
-      // Small delay to show loading state
       await new Promise(resolve => setTimeout(resolve, 500));
       downloadFrameworkPDF();
       toast.success('PDF downloaded successfully!');
@@ -53,8 +59,23 @@ export default function FrameworkDocumentation() {
     }
   };
 
+  const handleDownloadPulseV2PDF = async () => {
+    setIsGeneratingV2(true);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      downloadPulseV2PDF();
+      toast.success('Pulse V2 PDF downloaded successfully!');
+    } catch (error) {
+      console.error('Error generating Pulse V2 PDF:', error);
+      toast.error('Failed to generate PDF. Please try again.');
+    } finally {
+      setIsGeneratingV2(false);
+    }
+  };
+
   const sections = [
-    { id: 'overview', label: 'Overview', icon: Eye },
+    { id: 'pulse-v2', label: 'Pulse V2', icon: Sparkles },
+    { id: 'overview', label: 'Technical', icon: Eye },
     { id: 'agents', label: 'Agents', icon: Zap },
     { id: 'parameters', label: 'Parameters', icon: BarChart3 },
     { id: 'stakeholders', label: 'Stakeholders', icon: Users },
@@ -123,7 +144,7 @@ export default function FrameworkDocumentation() {
       {/* Main Content */}
       <div className="container mx-auto px-6 py-8">
         <Tabs value={activeSection} onValueChange={setActiveSection}>
-          <TabsList className="grid grid-cols-4 w-full max-w-md mb-8">
+          <TabsList className="grid grid-cols-5 w-full max-w-xl mb-8">
             {sections.map((section) => (
               <TabsTrigger 
                 key={section.id} 
@@ -135,6 +156,110 @@ export default function FrameworkDocumentation() {
               </TabsTrigger>
             ))}
           </TabsList>
+
+          {/* Pulse V2 Tab */}
+          <TabsContent value="pulse-v2" className="space-y-6">
+            {/* Decision Signals */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Sparkles className="h-5 w-5" />
+                  Pulse V2 Decision Signals
+                </CardTitle>
+                <CardDescription>
+                  Clear, actionable recommendations for every script evaluation
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid md:grid-cols-3 gap-4">
+                  <div className="p-4 rounded-lg bg-success/10 border border-success/30 text-center">
+                    <CheckCircle className="h-8 w-8 text-success mx-auto mb-2" />
+                    <div className="font-bold text-success text-lg">GO</div>
+                    <div className="text-xs text-muted-foreground mt-1">{DECISION_SIGNALS.go.scoreRange}</div>
+                    <p className="text-sm text-muted-foreground mt-2">{DECISION_SIGNALS.go.description}</p>
+                  </div>
+                  <div className="p-4 rounded-lg bg-chart-4/10 border border-chart-4/30 text-center">
+                    <ArrowRight className="h-8 w-8 text-chart-4 mx-auto mb-2" />
+                    <div className="font-bold text-chart-4 text-lg">ITERATE</div>
+                    <div className="text-xs text-muted-foreground mt-1">{DECISION_SIGNALS.iterate.scoreRange}</div>
+                    <p className="text-sm text-muted-foreground mt-2">{DECISION_SIGNALS.iterate.description}</p>
+                  </div>
+                  <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/30 text-center">
+                    <XCircle className="h-8 w-8 text-destructive mx-auto mb-2" />
+                    <div className="font-bold text-destructive text-lg">HOLD</div>
+                    <div className="text-xs text-muted-foreground mt-1">{DECISION_SIGNALS.hold.scoreRange}</div>
+                    <p className="text-sm text-muted-foreground mt-2">{DECISION_SIGNALS.hold.description}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* 12 Core Parameters */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5" />
+                  12 Core Parameters
+                </CardTitle>
+                <CardDescription>
+                  {PULSE_V2_SECTIONS.parameterModel.intro}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {PULSE_V2_SECTIONS.parameterModel.parameters.map((param, i) => (
+                    <div key={i} className="p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors">
+                      <div className="font-medium text-sm">{param.name}</div>
+                      <div className="text-xs text-muted-foreground mt-1">{param.description}</div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Maturity Scale */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Maturity Scale</CardTitle>
+                <CardDescription>{PULSE_V2_SECTIONS.maturityScale.intro}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {PULSE_V2_SECTIONS.maturityScale.levels.map((level, i) => (
+                    <div key={i} className="flex items-center gap-4 p-3 rounded-lg border">
+                      <Badge variant="outline" className="font-mono">{level.range}</Badge>
+                      <div className="font-semibold">{level.label}</div>
+                      <div className="text-sm text-muted-foreground">{level.description}</div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Download CTA */}
+            <Card className="bg-primary/5 border-primary/20">
+              <CardContent className="flex flex-col md:flex-row items-center justify-between gap-4 py-6">
+                <div className="flex items-center gap-4">
+                  <FileText className="h-10 w-10 text-primary" />
+                  <div>
+                    <h3 className="font-semibold">Download Pulse V2 Documentation</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Professional PDF with the complete 10-section framework specification
+                    </p>
+                  </div>
+                </div>
+                <Button 
+                  size="lg" 
+                  onClick={handleDownloadPulseV2PDF}
+                  disabled={isGeneratingV2}
+                  className="gap-2"
+                >
+                  <Download className="h-5 w-5" />
+                  {isGeneratingV2 ? 'Generating...' : 'Download Pulse V2 PDF'}
+                </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
