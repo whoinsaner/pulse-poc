@@ -1710,20 +1710,35 @@ serve(async (req) => {
     
     // ============= MODE-SPECIFIC LOGIC =============
     
+    // Helper to normalize file path (handle legacy full URLs)
+    const normalizeFilePath = (filePath: string): string => {
+      // Check if filePath is a full URL and extract relative path
+      const urlMatch = filePath.match(/\/storage\/v1\/object(?:\/public)?\/scripts\/(.+)$/);
+      if (urlMatch) {
+        console.log(`[analyze-script] Normalized URL to path: ${urlMatch[1]}`);
+        return urlMatch[1];
+      }
+      return filePath;
+    };
+    
+    const normalizedFilePath = normalizeFilePath(script.file_url);
+    
     if (mode === 'quick') {
-      // QUICK MODE: Extract text directly, chunk, and analyze
-      console.log('[analyze-script] QUICK MODE: Extracting text directly from file');
+      // QUICK MODE: Try to extract text directly, fall back to parsed data if extraction fails
+      console.log('[analyze-script] QUICK MODE: Attempting direct text extraction');
+      
+      let quickModeSuccess = false;
       
       try {
         const { data: fileData, error: downloadError } = await supabase.storage
           .from('scripts')
-          .download(script.file_url);
+          .download(normalizedFilePath);
         
         if (downloadError || !fileData) {
           throw new Error(`Failed to download script: ${downloadError?.message}`);
         }
 
-        const { text, method } = await extractTextFromFile(fileData, script.format, script.file_url);
+        const { text, method } = await extractTextFromFile(fileData, script.format, normalizedFilePath);
         console.log(`[analyze-script] Extracted ${text.length} chars using ${method}`);
 
         // Chunk the text
@@ -1737,28 +1752,46 @@ serve(async (req) => {
           // For large scripts, create chunk summaries and analyze in parallel
           scriptContext = buildQuickContext(script, chunks.slice(0, 2).join('\n\n') + '\n\n[... additional content in chunks ...]');
         }
+        quickModeSuccess = true;
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-        console.error('[analyze-script] Quick mode extraction failed:', errorMessage);
+        console.log('[analyze-script] Quick mode extraction failed, falling back to parsed data:', errorMessage);
         
-        // Update with specific error
-        await supabase
-          .from('analysis_runs')
-          .update({ 
-            status: 'failed',
-            completed_at: new Date().toISOString(),
-            error_message: getExtractionErrorMessage(errorMessage)
-          })
-          .eq('id', analysisRunId);
+        // FALLBACK: Use parsed structured data like deep mode
+        const [scenesResult, charsResult] = await Promise.all([
+          supabase.from('scenes').select('*').eq('script_id', scriptId).order('scene_number'),
+          supabase.from('characters').select('*').eq('script_id', scriptId).order('dialogue_count', { ascending: false }),
+        ]);
 
-        return new Response(
-          JSON.stringify({ 
-            success: false, 
-            error: getExtractionErrorMessage(errorMessage),
-            errorCode: errorMessage 
-          }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        const scenes = scenesResult.data || [];
+        const characters = charsResult.data || [];
+
+        if (scenes.length > 0 || characters.length > 0) {
+          console.log(`[analyze-script] Quick mode fallback: using ${scenes.length} scenes, ${characters.length} characters from extraction`);
+          scriptContext = buildScriptContext(script, scenes, characters, null, false);
+          quickModeSuccess = true;
+        } else {
+          // No text extraction AND no parsed data - fail with helpful message
+          console.error('[analyze-script] No extractable text and no parsed data available');
+          
+          await supabase
+            .from('analysis_runs')
+            .update({ 
+              status: 'failed',
+              completed_at: new Date().toISOString(),
+              error_message: 'Script extraction not complete. Please run extraction first, then retry analysis.'
+            })
+            .eq('id', analysisRunId);
+
+          return new Response(
+            JSON.stringify({ 
+              success: false, 
+              error: 'Script extraction not complete. Please run extraction first from the Scripts library, then retry analysis.',
+              errorCode: 'EXTRACTION_REQUIRED'
+            }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
       }
     } else {
       // DEEP MODE: Use parsed structured data (original behavior)
@@ -1787,7 +1820,7 @@ serve(async (req) => {
         try {
           const { data: fileData, error: downloadError } = await supabase.storage
             .from('scripts')
-            .download(script.file_url);
+            .download(normalizedFilePath);
           
           if (!downloadError && fileData) {
             rawScriptText = await fileData.text();
