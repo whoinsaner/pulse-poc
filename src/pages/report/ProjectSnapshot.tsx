@@ -1,6 +1,7 @@
 import { useOutletContext } from 'react-router-dom';
 import { ReportData, StakeholderLens, LENS_CONFIG } from '@/types/database';
 import { ScoreRing } from '@/components/ScoreRing';
+import { DecisionSignalBadge } from '@/components/report/DecisionSignalBadge';
 import { Card } from '@/components/ui/card';
 import { 
   SectionHeader, 
@@ -186,6 +187,9 @@ export default function ProjectSnapshot() {
 
           {/* Right: Score */}
           <div className="flex flex-col items-center justify-center">
+            {/* Decision Signal Badge - Prominent Display */}
+            <DecisionSignalBadge score={currentScore} size="lg" showDescription className="mb-6" />
+            
             <div className="relative">
               <div className="absolute inset-0 scale-110 blur-3xl opacity-30">
                 <ScoreRing score={currentScore} size="lg" />
