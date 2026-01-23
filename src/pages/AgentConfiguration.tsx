@@ -16,7 +16,10 @@ import {
   Sparkles,
   Layers,
   Wand2,
-  Cpu
+  Cpu,
+  RefreshCw,
+  AlertCircle,
+  CheckCircle2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +29,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Switch } from "@/components/ui/switch";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,6 +43,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { AgentVersionHistory } from "@/components/AgentVersionHistory";
+import { syncAgentsFromFramework, getAgentSyncStatus, AgentSyncStatus } from "@/lib/agentSync";
+import { ALL_AGENTS, AGENT_BY_ID } from "@/lib/scriptFramework";
 
 interface AgentConfiguration {
   id: string;
@@ -79,10 +85,48 @@ export default function AgentConfiguration() {
   });
   const [promptExpanded, setPromptExpanded] = useState(false);
   const [newParameterInput, setNewParameterInput] = useState("");
+  const [syncing, setSyncing] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<Record<string, AgentSyncStatus>>({});
 
   useEffect(() => {
     fetchAgents();
+    fetchSyncStatus();
   }, [profile?.current_organization_id]);
+
+  const fetchSyncStatus = async () => {
+    const status = await getAgentSyncStatus();
+    setSyncStatus(status);
+  };
+
+  const handleSync = async () => {
+    setSyncing(true);
+    try {
+      const result = await syncAgentsFromFramework();
+      if (result.success) {
+        const messages: string[] = [];
+        if (result.seeded.length > 0) {
+          messages.push(`Seeded ${result.seeded.length} new agents`);
+        }
+        if (result.updated.length > 0) {
+          messages.push(`Updated ${result.updated.length} agents`);
+        }
+        if (messages.length === 0) {
+          toast.success("All agents are in sync");
+        } else {
+          toast.success(messages.join(", "));
+        }
+        await fetchAgents();
+        await fetchSyncStatus();
+      } else {
+        toast.error(`Sync completed with errors: ${result.errors.join(", ")}`);
+      }
+    } catch (error) {
+      console.error("Sync error:", error);
+      toast.error("Failed to sync agents");
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const fetchAgents = async () => {
     try {
@@ -330,6 +374,15 @@ export default function AgentConfiguration() {
             <Button
               variant="outline"
               size="sm"
+              onClick={handleSync}
+              disabled={syncing}
+            >
+              <RefreshCw className={cn("h-4 w-4 mr-2", syncing && "animate-spin")} />
+              {syncing ? "Syncing..." : "Sync Framework"}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => navigate("/admin/models")}
             >
               <Settings2 className="h-4 w-4 mr-2" />
@@ -382,21 +435,38 @@ export default function AgentConfiguration() {
                       </Button>
                     </CollapsibleTrigger>
                     <CollapsibleContent className="space-y-1 mt-1">
-                      {categoryAgents.map((agent) => (
-                        <Button
-                          key={agent.id}
-                          variant="ghost"
-                          className={cn(
-                            "w-full justify-start pl-8 py-1.5 h-auto text-sm",
-                            selectedAgent?.id === agent.id && "bg-accent"
-                          )}
-                          onClick={() => handleSelectAgent(agent)}
-                        >
-                          <span className="truncate flex-1 text-left">
-                            {agent.display_name}
-                          </span>
-                        </Button>
-                      ))}
+                      {categoryAgents.map((agent) => {
+                        const isInFramework = !!AGENT_BY_ID[agent.agent_name];
+                        const isInactive = !agent.is_active;
+                        
+                        return (
+                          <Button
+                            key={agent.id}
+                            variant="ghost"
+                            className={cn(
+                              "w-full justify-start pl-8 py-1.5 h-auto text-sm gap-2",
+                              selectedAgent?.id === agent.id && "bg-accent",
+                              isInactive && "opacity-50"
+                            )}
+                            onClick={() => handleSelectAgent(agent)}
+                          >
+                            <span className={cn(
+                              "truncate flex-1 text-left",
+                              isInactive && "line-through"
+                            )}>
+                              {agent.display_name}
+                            </span>
+                            {isInactive && (
+                              <Badge variant="outline" className="text-xs text-muted-foreground">
+                                Inactive
+                              </Badge>
+                            )}
+                            {!isInFramework && agent.is_system && (
+                              <AlertCircle className="h-3 w-3 text-amber-500 shrink-0" />
+                            )}
+                          </Button>
+                        );
+                      })}
                     </CollapsibleContent>
                   </Collapsible>
                 );
@@ -590,9 +660,48 @@ export default function AgentConfiguration() {
               {/* Metadata */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base">Metadata</CardTitle>
+                  <CardTitle className="text-base">Metadata & Status</CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-4">
+                  {/* Active Toggle */}
+                  <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
+                    <div className="space-y-0.5">
+                      <p className="text-sm font-medium">Agent Active</p>
+                      <p className="text-xs text-muted-foreground">
+                        Inactive agents are skipped during analysis
+                      </p>
+                    </div>
+                    <Switch
+                      checked={editedAgent.is_active}
+                      onCheckedChange={(checked) =>
+                        setEditedAgent({ ...editedAgent, is_active: checked })
+                      }
+                    />
+                  </div>
+
+                  {/* Framework Status */}
+                  {(() => {
+                    const isInFramework = !!AGENT_BY_ID[editedAgent.agent_name];
+                    return (
+                      <div className={cn(
+                        "flex items-center gap-2 p-3 rounded-lg border",
+                        isInFramework ? "bg-green-500/10 border-green-500/30" : "bg-amber-500/10 border-amber-500/30"
+                      )}>
+                        {isInFramework ? (
+                          <>
+                            <CheckCircle2 className="h-4 w-4 text-green-500" />
+                            <span className="text-sm">In USAF Framework</span>
+                          </>
+                        ) : (
+                          <>
+                            <AlertCircle className="h-4 w-4 text-amber-500" />
+                            <span className="text-sm">Legacy agent (not in current framework)</span>
+                          </>
+                        )}
+                      </div>
+                    );
+                  })()}
+
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <p className="text-muted-foreground">Created</p>
@@ -603,8 +712,8 @@ export default function AgentConfiguration() {
                       <p>{new Date(editedAgent.updated_at).toLocaleDateString()}</p>
                     </div>
                     <div>
-                      <p className="text-muted-foreground">Active</p>
-                      <p>{editedAgent.is_active ? "Yes" : "No"}</p>
+                      <p className="text-muted-foreground">System Agent</p>
+                      <p>{editedAgent.is_system ? "Yes" : "No (Custom)"}</p>
                     </div>
                     <div>
                       <p className="text-muted-foreground">Version</p>
