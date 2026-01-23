@@ -39,6 +39,7 @@ import {
   Loader2,
   Info,
   AlertTriangle,
+  FileSearch,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -52,6 +53,7 @@ import { cn } from '@/lib/utils';
 import { AnalysisTrigger } from '@/components/AnalysisTrigger';
 import { ScriptContentViewer } from '@/components/ScriptContentViewer';
 import { ScriptDetailDialog } from '@/components/ScriptDetailDialog';
+import { ScriptExtractionDialog } from '@/components/ScriptExtractionDialog';
 import { SAMPLE_SCRIPTS, type SampleScriptData } from '@/data/sampleScripts';
 import type { Script, ScriptFormat, ScriptType } from '@/types/database';
 
@@ -95,6 +97,7 @@ export default function Scripts() {
   const [sampleScriptsOpen, setSampleScriptsOpen] = useState(true);
   const [addingScript, setAddingScript] = useState<string | null>(null);
   const [previewScript, setPreviewScript] = useState<SampleScriptData | null>(null);
+  const [showExtractionDialog, setShowExtractionDialog] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -365,6 +368,14 @@ export default function Scripts() {
                         }}>
                           <Eye className="h-4 w-4 mr-2" />
                           View Content
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedScript(script);
+                          setShowExtractionDialog(true);
+                        }}>
+                          <FileSearch className="h-4 w-4 mr-2" />
+                          Run Extraction
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={(e) => {
                           e.stopPropagation();
@@ -677,6 +688,19 @@ export default function Scripts() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Script Extraction Dialog */}
+        <ScriptExtractionDialog
+          script={selectedScript}
+          open={showExtractionDialog}
+          onOpenChange={setShowExtractionDialog}
+          onExtractionComplete={() => {
+            toast({
+              title: 'Ready for Analysis',
+              description: 'Script extraction complete. You can now run AI analysis.',
+            });
+          }}
+        />
       </main>
     </div>
   );
