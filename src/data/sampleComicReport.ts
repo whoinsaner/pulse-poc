@@ -431,6 +431,20 @@ export const SAMPLE_COMIC_REPORT_DATA: ReportData = {
       rationale: 'Theme emerges organically from character choices and world design rather than being stated explicitly.',
       evidence: [{ type: 'structure', reference: 'Throughout', explanation: 'Show-don\'t-tell approach to thematic content' }]
     },
+    {
+      parameterId: 'theme-5',
+      parameterName: 'tone_genre_cohesion',
+      displayName: 'Tone & Genre Cohesion',
+      category: 'Theme',
+      score: 88,
+      confidence: 0.90,
+      maturity: 'Strong',
+      riskLevel: 'Low',
+      fixCost: 'Medium',
+      upsideImpact: 'High',
+      rationale: 'The script masterfully balances cyberpunk noir atmosphere with samurai honor codes. Tonal shifts between quiet contemplation and explosive action feel earned and genre-appropriate.',
+      evidence: [{ type: 'structure', reference: 'Overall tone', explanation: 'Noir cyberpunk and samurai genres blend seamlessly without tonal whiplash' }]
+    },
 
     // ============= DIALOGUE AGENT (5 parameters) =============
     {
