@@ -99,6 +99,7 @@ export default function SampleWebSeriesReportLayout() {
             activeLens={activeLens}
             setActiveLens={setActiveLens}
             currentScore={getCurrentScore()}
+            reportTitle="The Algorithm"
           />
         </div>
       </div>

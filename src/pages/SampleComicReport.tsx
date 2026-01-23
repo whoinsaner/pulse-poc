@@ -95,6 +95,7 @@ export default function SampleComicReportLayout() {
             activeLens={activeLens}
             setActiveLens={setActiveLens}
             currentScore={getCurrentScore()}
+            reportTitle="Neon Ronin"
           />
         </div>
       </div>

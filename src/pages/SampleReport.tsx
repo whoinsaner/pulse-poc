@@ -95,6 +95,7 @@ export default function SampleReportLayout() {
             activeLens={activeLens}
             setActiveLens={setActiveLens}
             currentScore={getCurrentScore()}
+            reportTitle="The Signal"
           />
         </div>
       </div>
