@@ -111,6 +111,53 @@ export type Database = {
           },
         ]
       }
+      agent_prompt_versions: {
+        Row: {
+          agent_config_id: string
+          change_summary: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          display_name: string
+          id: string
+          parameters: string[]
+          system_prompt: string
+          version_number: number
+        }
+        Insert: {
+          agent_config_id: string
+          change_summary?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          display_name: string
+          id?: string
+          parameters?: string[]
+          system_prompt: string
+          version_number?: number
+        }
+        Update: {
+          agent_config_id?: string
+          change_summary?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          display_name?: string
+          id?: string
+          parameters?: string[]
+          system_prompt?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_prompt_versions_agent_config_id_fkey"
+            columns: ["agent_config_id"]
+            isOneToOne: false
+            referencedRelation: "agent_configurations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       analysis_runs: {
         Row: {
           agent_progress: Json | null
