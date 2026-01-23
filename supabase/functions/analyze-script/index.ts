@@ -177,6 +177,97 @@ async function getAgentModelConfig(
   return config;
 }
 
+// ============= AGENT PROMPT CONFIGURATION =============
+
+interface AgentPromptConfig {
+  systemPrompt: string;
+  parameters: string[];
+  category: string;
+}
+
+// Cache for agent configurations to avoid repeated DB calls
+const agentConfigCache: Map<string, { config: AgentPromptConfig; timestamp: number }> = new Map();
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minute cache
+
+/**
+ * Get agent prompt configuration - checks database first, falls back to hardcoded AGENTS
+ * Supports org-specific custom agents that override system defaults
+ */
+async function getAgentPromptConfig(
+  supabaseClient: any,
+  agentName: string,
+  organizationId?: string
+): Promise<AgentPromptConfig> {
+  // Check cache first
+  const cacheKey = `${organizationId || 'system'}_${agentName}`;
+  const cached = agentConfigCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+    console.log(`[AgentConfig] Using cached config for ${agentName}`);
+    return cached.config;
+  }
+
+  try {
+    // Try org-specific custom config first
+    if (organizationId) {
+      const { data: orgConfig, error: orgError } = await supabaseClient
+        .from('agent_configurations')
+        .select('system_prompt, parameters, category')
+        .eq('agent_name', agentName)
+        .eq('organization_id', organizationId)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (!orgError && orgConfig) {
+        console.log(`[AgentConfig] Using org-specific config for ${agentName}`);
+        const config: AgentPromptConfig = {
+          systemPrompt: orgConfig.system_prompt,
+          parameters: orgConfig.parameters || [],
+          category: orgConfig.category || 'analysis',
+        };
+        agentConfigCache.set(cacheKey, { config, timestamp: Date.now() });
+        return config;
+      }
+    }
+
+    // Fall back to system config from database
+    const { data: systemConfig, error: sysError } = await supabaseClient
+      .from('agent_configurations')
+      .select('system_prompt, parameters, category')
+      .eq('agent_name', agentName)
+      .eq('is_system', true)
+      .maybeSingle();
+
+    if (!sysError && systemConfig) {
+      console.log(`[AgentConfig] Using system DB config for ${agentName}`);
+      const config: AgentPromptConfig = {
+        systemPrompt: systemConfig.system_prompt,
+        parameters: systemConfig.parameters || [],
+        category: systemConfig.category || 'analysis',
+      };
+      agentConfigCache.set(cacheKey, { config, timestamp: Date.now() });
+      return config;
+    }
+  } catch (err) {
+    console.log(`[AgentConfig] DB lookup failed for ${agentName}, using hardcoded fallback:`, err);
+  }
+
+  // Final fallback: use hardcoded AGENTS object
+  const hardcodedAgent = AGENTS[agentName];
+  if (hardcodedAgent) {
+    console.log(`[AgentConfig] Using hardcoded fallback for ${agentName}`);
+    const config: AgentPromptConfig = {
+      systemPrompt: hardcodedAgent.systemPrompt,
+      parameters: hardcodedAgent.parameters,
+      category: hardcodedAgent.category || 'analysis',
+    };
+    agentConfigCache.set(cacheKey, { config, timestamp: Date.now() });
+    return config;
+  }
+
+  // Agent not found anywhere
+  throw new Error(`Agent configuration not found for: ${agentName}`);
+}
+
 interface AnalyzeRequest {
   scriptId: string;
   analysisRunId: string;
@@ -2068,6 +2159,28 @@ async function runStandardAnalysis(
   const runSingleAgent = async ([agentName, agentConfig]: [string, any]): Promise<{ agent: string; success: boolean; error?: string }> => {
     // Get model config for this agent
     const modelConfig = await getAgentModelConfig(supabase, agentName, qualityMode);
+    
+    // Get prompt config from database (supports org-specific customization)
+    let promptConfig: AgentPromptConfig;
+    try {
+      // Extract organization_id from the analysis run for org-specific configs
+      const { data: runData } = await supabase
+        .from('analysis_runs')
+        .select('script_id, scripts!inner(organization_id)')
+        .eq('id', analysisRunId)
+        .single();
+      
+      const organizationId = runData?.scripts?.organization_id;
+      promptConfig = await getAgentPromptConfig(supabase, agentName, organizationId);
+    } catch (err) {
+      console.log(`[${agentName}] Failed to fetch prompt config, using passed config:`, err);
+      promptConfig = {
+        systemPrompt: agentConfig.systemPrompt,
+        parameters: agentConfig.parameters,
+        category: agentConfig.category || 'analysis',
+      };
+    }
+    
     let lastError: Error | null = null;
     
     for (let attempt = 0; attempt <= modelConfig.maxRetries; attempt++) {
@@ -2081,7 +2194,7 @@ async function runStandardAnalysis(
         
         await updateAgentProgress(supabase, analysisRunId, agentName, 'running', undefined, modelConfig.model);
 
-        const result = await runAgent(apiKey, agentName, agentConfig, scriptContext, parameterMap, modelConfig);
+        const result = await runAgent(apiKey, agentName, promptConfig, scriptContext, parameterMap, modelConfig);
 
         for (const score of result.scores) {
           if (!score.parameterId) continue;
@@ -2190,10 +2303,36 @@ async function runChunkedAnalysis(
     })
     .eq('id', analysisRunId);
 
+  // Get organization ID for org-specific configs
+  let organizationId: string | undefined;
+  try {
+    const { data: runData } = await supabase
+      .from('analysis_runs')
+      .select('script_id, scripts!inner(organization_id)')
+      .eq('id', analysisRunId)
+      .single();
+    organizationId = runData?.scripts?.organization_id;
+  } catch (err) {
+    console.log('[analyze-script] Could not get organization ID for prompt configs');
+  }
+
   // For each agent, analyze chunks and aggregate
   const agentPromises = agentsToRun.map(async ([agentName, agentConfig]) => {
     // Get model config for this agent
     const modelConfig = await getAgentModelConfig(supabase, agentName, qualityMode);
+    
+    // Get prompt config from database (supports org-specific customization)
+    let promptConfig: AgentPromptConfig;
+    try {
+      promptConfig = await getAgentPromptConfig(supabase, agentName, organizationId);
+    } catch (err) {
+      console.log(`[${agentName}] Failed to fetch prompt config, using passed config:`, err);
+      promptConfig = {
+        systemPrompt: agentConfig.systemPrompt,
+        parameters: agentConfig.parameters,
+        category: agentConfig.category || 'analysis',
+      };
+    }
     
     try {
       await updateAgentProgress(supabase, analysisRunId, agentName, 'running', undefined, modelConfig.model);
@@ -2207,7 +2346,7 @@ async function runChunkedAnalysis(
         
         console.log(`[analyze-script] ${agentName} analyzing ${chunkLabel} with ${modelConfig.model}`);
         
-        const result = await runAgent(apiKey, agentName, agentConfig, chunkContext, parameterMap, modelConfig);
+        const result = await runAgent(apiKey, agentName, promptConfig, chunkContext, parameterMap, modelConfig);
         
         chunkResults.push({
           chunkIndex: i,

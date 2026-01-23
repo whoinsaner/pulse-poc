@@ -13,6 +13,7 @@ import Scripts from "./pages/Scripts";
 import Settings from "./pages/Settings";
 import AcceptInvitation from "./pages/AcceptInvitation";
 import ModelConfiguration from "./pages/ModelConfiguration";
+import AgentConfiguration from "./pages/AgentConfiguration";
 import ReportLayout from "./components/report/ReportLayout";
 import ProjectSnapshot from "./pages/report/ProjectSnapshot";
 import ConceptHook from "./pages/report/ConceptHook";
@@ -89,6 +90,7 @@ const App = () => (
             <Route path="/settings" element={<Settings />} />
             <Route path="/invite/:token" element={<AcceptInvitation />} />
             <Route path="/admin/models" element={<ModelConfiguration />} />
+            <Route path="/admin/agents" element={<AgentConfiguration />} />
             <Route path="/report/:runId" element={<ReportLayout />}>
               <Route index element={<ProjectSnapshot />} />
               <Route path="concept" element={<ConceptHook />} />
