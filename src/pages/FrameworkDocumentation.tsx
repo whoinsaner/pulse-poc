@@ -23,7 +23,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { downloadFrameworkPDF } from '@/lib/pdfGenerator';
 import { downloadPulseV2PDF } from '@/lib/pulseV2PdfGenerator';
-import { PULSE_V2_SECTIONS, PULSE_V2_METADATA, DECISION_SIGNALS } from '@/lib/pulseV2Documentation';
+import { USAF_SECTIONS, USAF_METADATA, DECISION_SIGNALS } from '@/lib/pulseV2Documentation';
 import {
   FRAMEWORK_METADATA,
   EXECUTIVE_SUMMARY,
@@ -37,8 +37,8 @@ import { cn } from '@/lib/utils';
 
 export default function FrameworkDocumentation() {
   const [isGenerating, setIsGenerating] = useState(false);
-  const [isGeneratingV2, setIsGeneratingV2] = useState(false);
-  const [activeSection, setActiveSection] = useState('pulse-v2');
+  const [isGeneratingUSAF, setIsGeneratingUSAF] = useState(false);
+  const [activeSection, setActiveSection] = useState('usaf');
 
   const agentCategories = getAgentsByCategory();
   const stakeholders = getStakeholderDocumentation();
@@ -59,22 +59,22 @@ export default function FrameworkDocumentation() {
     }
   };
 
-  const handleDownloadPulseV2PDF = async () => {
-    setIsGeneratingV2(true);
+  const handleDownloadUSAFPDF = async () => {
+    setIsGeneratingUSAF(true);
     try {
       await new Promise(resolve => setTimeout(resolve, 500));
       downloadPulseV2PDF();
-      toast.success('Pulse V2 PDF downloaded successfully!');
+      toast.success('USAF Framework PDF downloaded successfully!');
     } catch (error) {
-      console.error('Error generating Pulse V2 PDF:', error);
+      console.error('Error generating USAF PDF:', error);
       toast.error('Failed to generate PDF. Please try again.');
     } finally {
-      setIsGeneratingV2(false);
+      setIsGeneratingUSAF(false);
     }
   };
 
   const sections = [
-    { id: 'pulse-v2', label: 'Pulse V2', icon: Sparkles },
+    { id: 'usaf', label: 'USAF', icon: Sparkles },
     { id: 'overview', label: 'Technical', icon: Eye },
     { id: 'agents', label: 'Agents', icon: Zap },
     { id: 'parameters', label: 'Parameters', icon: BarChart3 },
@@ -157,14 +157,14 @@ export default function FrameworkDocumentation() {
             ))}
           </TabsList>
 
-          {/* Pulse V2 Tab */}
-          <TabsContent value="pulse-v2" className="space-y-6">
+          {/* USAF Tab */}
+          <TabsContent value="usaf" className="space-y-6">
             {/* Decision Signals */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Sparkles className="h-5 w-5" />
-                  Pulse V2 Decision Signals
+                  USAF Decision Signals
                 </CardTitle>
                 <CardDescription>
                   Clear, actionable recommendations for every script evaluation
@@ -202,12 +202,12 @@ export default function FrameworkDocumentation() {
                   12 Core Parameters
                 </CardTitle>
                 <CardDescription>
-                  {PULSE_V2_SECTIONS.parameterModel.intro}
+                  {USAF_SECTIONS.parameterModel.intro}
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {PULSE_V2_SECTIONS.parameterModel.parameters.map((param, i) => (
+                  {USAF_SECTIONS.parameterModel.parameters.map((param, i) => (
                     <div key={i} className="p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors">
                       <div className="font-medium text-sm">{param.name}</div>
                       <div className="text-xs text-muted-foreground mt-1">{param.description}</div>
@@ -221,11 +221,11 @@ export default function FrameworkDocumentation() {
             <Card>
               <CardHeader>
                 <CardTitle>Maturity Scale</CardTitle>
-                <CardDescription>{PULSE_V2_SECTIONS.maturityScale.intro}</CardDescription>
+                <CardDescription>{USAF_SECTIONS.maturityScale.intro}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  {PULSE_V2_SECTIONS.maturityScale.levels.map((level, i) => (
+                  {USAF_SECTIONS.maturityScale.levels.map((level, i) => (
                     <div key={i} className="flex items-center gap-4 p-3 rounded-lg border">
                       <Badge variant="outline" className="font-mono">{level.range}</Badge>
                       <div className="font-semibold">{level.label}</div>
@@ -242,7 +242,7 @@ export default function FrameworkDocumentation() {
                 <div className="flex items-center gap-4">
                   <FileText className="h-10 w-10 text-primary" />
                   <div>
-                    <h3 className="font-semibold">Download Pulse V2 Documentation</h3>
+                    <h3 className="font-semibold">Download USAF Documentation</h3>
                     <p className="text-sm text-muted-foreground">
                       Professional PDF with the complete 10-section framework specification
                     </p>
@@ -250,12 +250,12 @@ export default function FrameworkDocumentation() {
                 </div>
                 <Button 
                   size="lg" 
-                  onClick={handleDownloadPulseV2PDF}
-                  disabled={isGeneratingV2}
+                  onClick={handleDownloadUSAFPDF}
+                  disabled={isGeneratingUSAF}
                   className="gap-2"
                 >
                   <Download className="h-5 w-5" />
-                  {isGeneratingV2 ? 'Generating...' : 'Download Pulse V2 PDF'}
+                  {isGeneratingUSAF ? 'Generating...' : 'Download USAF PDF'}
                 </Button>
               </CardContent>
             </Card>

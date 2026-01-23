@@ -1,20 +1,20 @@
 /**
- * Pulse V2 Documentation Content
- * Matches the 10-section structure from the Pulse V2 specification
+ * USAF Framework Documentation Content
+ * Matches the 10-section structure from the USAF specification
  */
 
-export const PULSE_V2_METADATA = {
-  version: '2.0',
-  name: 'Pulse V2',
+export const USAF_METADATA = {
+  version: '3.0',
+  name: 'USAF',
   fullName: 'Universal Script Analysis Framework',
   tagline: 'A Standardized, Cross-Format System for Evaluating Scripts with Clarity, Consistency, and Actionability',
 };
 
-export const PULSE_V2_SECTIONS = {
-  whatIsPulse: {
+export const USAF_SECTIONS = {
+  whatIsUSAF: {
     number: 1,
-    title: 'What Is Pulse V2?',
-    content: `Pulse V2 is a universal script analysis framework designed to evaluate any scripted narrative—across film, OTT, web series, long-form episodes, limited series, and experimental formats—using a single, consistent lens.
+    title: 'What Is USAF?',
+    content: `USAF is a universal script analysis framework designed to evaluate any scripted narrative—across film, OTT, web series, long-form episodes, limited series, and experimental formats—using a single, consistent lens.
 
 It transforms script evaluation from a subjective, taste-driven exercise into a structured diagnostic system that:
 
@@ -23,12 +23,12 @@ It transforms script evaluation from a subjective, taste-driven exercise into a 
 • Surfaces why a script works or fails
 • Clearly signals what to fix, develop, or greenlight
 
-Pulse V2 is format-agnostic, platform-aware, and built for real production and commissioning decisions.`,
+USAF is format-agnostic, platform-aware, and built for real production and commissioning decisions.`,
   },
 
   whyNeeded: {
     number: 2,
-    title: 'Why Pulse V2 Was Needed',
+    title: 'Why USAF Was Needed',
     content: `Traditional script reviews suffer from predictable problems:
 
 • Feedback varies wildly by reviewer
@@ -37,19 +37,19 @@ Pulse V2 is format-agnostic, platform-aware, and built for real production and c
 • Strong ideas die early due to messy drafts
 • Weak scripts advance because issues are poorly articulated
 
-Pulse V2 solves this by introducing a shared evaluation language, a parameter-based diagnostic model, and a maturity-led decision framework.`,
+USAF solves this by introducing a shared evaluation language, a parameter-based diagnostic model, and a maturity-led decision framework.`,
   },
 
   philosophy: {
     number: 3,
-    title: 'Core Philosophy of Pulse V2',
-    intro: 'Pulse V2 is built on five foundational principles.',
+    title: 'Core Philosophy of USAF',
+    intro: 'USAF is built on five foundational principles.',
     subsections: [
       {
         id: 'universal',
         number: '3.1',
         title: 'Universal, Not Format-Specific',
-        content: `Pulse V2 evaluates story fundamentals, not surface format.
+        content: `USAF evaluates story fundamentals, not surface format.
 
 Whether it's a feature film, 30-min OTT episode, 60-min prestige drama, web series, or limited series pilot—the same narrative engines apply:
 
@@ -59,13 +59,13 @@ Whether it's a feature film, 30-min OTT episode, 60-min prestige drama, web seri
 • Structural logic
 • Thematic coherence
 
-Pulse V2 adapts expectations, not standards.`,
+USAF adapts expectations, not standards.`,
       },
       {
         id: 'diagnosis',
         number: '3.2',
         title: 'Diagnosis Over Judgment',
-        content: `Pulse V2 does not aim to declare scripts as "good" or "bad."
+        content: `USAF does not aim to declare scripts as "good" or "bad."
 
 It answers:
 • What is working?
@@ -80,7 +80,7 @@ This makes it especially effective for early drafts and high-potential concepts.
         title: 'Weighting Reflects Reality',
         content: `Not all flaws are equal.
 
-Pulse V2 applies weighted parameters so that:
+USAF applies weighted parameters so that:
 • Core story failures matter more than polish issues
 • Structural problems outweigh dialogue or formatting concerns
 • Market readiness is evaluated separately from creative strength
@@ -91,7 +91,7 @@ This prevents false negatives and false positives.`,
         id: 'maturity',
         number: '3.4',
         title: 'Maturity Is as Important as Quality',
-        content: `Pulse V2 distinguishes between:
+        content: `USAF distinguishes between:
 • A weak script
 • A strong but unfinished script
 
@@ -102,7 +102,7 @@ Every script is assessed on a Maturity Scale, enabling teams to say:
         id: 'actionability',
         number: '3.5',
         title: 'Actionability Is Mandatory',
-        content: `Every Pulse V2 evaluation must end with:
+        content: `Every USAF evaluation must end with:
 • Clear rewrite priorities
 • Clear development focus areas
 • A clean decision signal
@@ -114,8 +114,8 @@ If a review cannot guide action, it is incomplete.`,
 
   parameterModel: {
     number: 4,
-    title: 'The Pulse V2 Parameter Model',
-    intro: 'Pulse V2 evaluates scripts across 12 core parameters, designed to be comprehensive yet non-redundant.',
+    title: 'The USAF Parameter Model',
+    intro: 'USAF evaluates scripts across 12 core parameters, designed to be comprehensive yet non-redundant.',
     parameters: [
       { name: 'Concept & Core Hook', description: 'Originality, clarity, pitchability' },
       { name: 'Narrative Structure & Pacing', description: 'Act logic, escalation, momentum' },
@@ -140,8 +140,8 @@ The score is never the conclusion—the explanation is.`,
 
   maturityScale: {
     number: 5,
-    title: 'The Maturity Scale (Pulse V2)',
-    intro: 'Pulse V2 uses a clear maturity framework to contextualize scores.',
+    title: 'The Maturity Scale (USAF)',
+    intro: 'USAF uses a clear maturity framework to contextualize scores.',
     levels: [
       { range: '90–100', label: 'Production-Ready', description: 'Minimal rewrites required' },
       { range: '70–89', label: 'Strong / Near-Ready', description: 'Solid core, focused polish needed' },
@@ -154,8 +154,8 @@ The score is never the conclusion—the explanation is.`,
 
   outputs: {
     number: 6,
-    title: 'Standard Outputs of a Pulse V2 Review',
-    intro: 'A Pulse V2 analysis typically produces:',
+    title: 'Standard Outputs of a USAF Review',
+    intro: 'A USAF analysis typically produces:',
     items: [
       { name: 'Executive Verdict (1-page)', description: 'For leadership and commissioning' },
       { name: 'Strengths vs Risks Heatmap', description: 'Clear visibility into trade-offs' },
@@ -164,12 +164,12 @@ The score is never the conclusion—the explanation is.`,
       { name: 'Top Rewrite Priorities', description: 'Highest ROI fixes first' },
       { name: 'Go / Iterate / Hold Decision Signal', description: 'Clear actionable recommendation' },
     ],
-    footer: 'This makes Pulse V2 suitable for both deep development and fast greenlight forums.',
+    footer: 'This makes USAF suitable for both deep development and fast greenlight forums.',
   },
 
   advantages: {
     number: 7,
-    title: 'Advantages of Pulse V2 for the Organization',
+    title: 'Advantages of USAF for the Organization',
     subsections: [
       {
         number: '7.1',
@@ -184,7 +184,7 @@ This dramatically reduces miscommunication.`,
       {
         number: '7.2',
         title: 'Faster, Defensible Decisions',
-        content: `Pulse V2 allows leadership to answer:
+        content: `USAF allows leadership to answer:
 • Is this worth more development money?
 • Where exactly should effort be spent?
 • Why are we passing or proceeding?
@@ -194,7 +194,7 @@ Decisions become traceable, not political.`,
       {
         number: '7.3',
         title: 'Protects High-Potential Scripts',
-        content: `Pulse V2 is designed to save promising scripts from early rejection.
+        content: `USAF is designed to save promising scripts from early rejection.
 
 It separates:
 • Core promise
@@ -213,7 +213,7 @@ This is critical in early-stage IP discovery.`,
       {
         number: '7.5',
         title: 'Scales Across Formats and Time',
-        content: `Pulse V2 works:
+        content: `USAF works:
 • Across reviewers
 • Across drafts (v1 → v2 → v3)
 • Across formats (film, OTT, web)
@@ -225,8 +225,8 @@ Progress becomes measurable, not anecdotal.`,
 
   bestFit: {
     number: 8,
-    title: 'Where Pulse V2 Fits Best',
-    content: `Pulse V2 is most effective at:
+    title: 'Where USAF Fits Best',
+    content: `USAF is most effective at:
 
 • Script intake & screening
 • Development checkpoints
@@ -239,22 +239,22 @@ It complements creative instinct—it does not replace it.`,
 
   whatIsNot: {
     number: 9,
-    title: 'What Pulse V2 Is Not',
-    content: `Pulse V2 is not:
+    title: 'What USAF Is Not',
+    content: `USAF is not:
 
 • A rigid checklist
 • A creativity suppressor
 • A purely numerical grading system
 • A replacement for vision or taste
 
-Think of Pulse V2 as:
+Think of USAF as:
 A narrative diagnostic system—not a verdict machine.`,
   },
 
   summary: {
     number: 10,
     title: 'Summary',
-    content: `Pulse V2 enables organizations to:
+    content: `USAF enables organizations to:
 
 • Evaluate scripts consistently
 • Make faster, clearer decisions
@@ -262,7 +262,7 @@ A narrative diagnostic system—not a verdict machine.`,
 • Reduce noise and bias
 • Protect high-upside storytelling
 
-By making judgment explicit, weighted, and actionable, Pulse V2 turns script evaluation into a strategic advantage, not a bottleneck.`,
+By making judgment explicit, weighted, and actionable, USAF turns script evaluation into a strategic advantage, not a bottleneck.`,
   },
 };
 
@@ -283,3 +283,7 @@ export const DECISION_SIGNALS = {
     description: 'Not recommended. Requires significant development before reconsideration.',
   },
 };
+
+// Backward compatibility aliases
+export const PULSE_V2_METADATA = USAF_METADATA;
+export const PULSE_V2_SECTIONS = USAF_SECTIONS;
