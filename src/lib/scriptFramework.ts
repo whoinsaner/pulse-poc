@@ -37,6 +37,7 @@ export const SCRIPT_TYPES: ScriptType[] = [
   { value: 'interactive_fiction', label: 'Interactive Fiction', description: 'Choice-based interactive narrative', category: 'interactive', formatTags: ['branching', 'choice_based', 'replayable'], distributionTags: ['streaming', 'gaming_platform'] },
   
   // Short Form & Corporate
+  { value: 'micro_drama', label: 'Micro Drama', description: 'Ultra-short vertical content (30-180 sec)', category: 'short_form', formatTags: ['short_form', 'time_compressed', 'vertical'], distributionTags: ['social_media', 'tiktok', 'reels', 'shorts'] },
   { value: 'short_form_video', label: 'Short-Form Video', description: 'Hook-driven content (<5 min)', category: 'short_form', formatTags: ['short_form', 'time_compressed'], distributionTags: ['social_media', 'youtube'] },
   { value: 'brand_film', label: 'Brand Film', description: 'Branded narrative content', category: 'corporate', formatTags: ['linear', 'short_form'], distributionTags: ['social_media', 'internal_enterprise'] },
   { value: 'advertisement', label: 'Advertisement', description: 'Commercial/ad spot', category: 'corporate', formatTags: ['short_form', 'time_compressed'], distributionTags: ['broadcast', 'social_media'] },
@@ -73,6 +74,7 @@ export const SIMPLE_SCRIPT_TYPES = [
   { value: 'documentary', label: 'Documentary', description: 'Non-fiction film' },
   { value: 'comic', label: 'Comic/Graphic Novel', description: 'Sequential art storytelling' },
   { value: 'web_series', label: 'Web Series', description: 'Digital-first episodic content' },
+  { value: 'micro_drama', label: 'Micro Drama', description: 'Ultra-short vertical content (30-180 sec)' },
 ];
 
 // ============= FORMAT, DISTRIBUTION, NARRATIVE, INTERACTION TAGS =============
@@ -432,6 +434,25 @@ export const WEB_SERIES_AGENTS: AgentDefinition[] = [
   },
 ];
 
+// Micro Drama Agents
+export const MICRO_DRAMA_AGENTS: AgentDefinition[] = [
+  {
+    id: 'MicroDramaAgent',
+    name: 'Micro Drama',
+    category: 'analysis',
+    description: 'Analyzes ultra-short vertical content (30-180 sec) optimized for scroll-stopping, emotional compression, and cliff density. Evaluates hook velocity, cliff density, and character legibility at speed.',
+    parameters: [
+      'hook_velocity', 'cliff_density', 'emotional_compression',
+      'character_legibility_at_speed', 'scroll_stop_power', 'vertical_format_optimization',
+      'dialogue_efficiency', 'visual_hook_density', 'replay_value', 'series_hook'
+    ],
+    reportSections: ['Micro Drama Analysis', 'Hook Analysis', 'Compression Analysis'],
+    applicableScriptTypes: ['micro_drama'],
+    color: 'bg-fuchsia-500/10 text-fuchsia-500 border-fuchsia-500/30',
+    icon: 'Zap'
+  },
+];
+
 // All agents combined
 export const ALL_AGENTS: AgentDefinition[] = [
   ...SYSTEM_AGENTS,
@@ -440,6 +461,7 @@ export const ALL_AGENTS: AgentDefinition[] = [
   ...INTERACTIVE_AGENTS,
   ...AUDIO_AGENTS,
   ...WEB_SERIES_AGENTS,
+  ...MICRO_DRAMA_AGENTS,
   ...META_AGENTS,
 ];
 

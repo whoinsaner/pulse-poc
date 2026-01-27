@@ -1115,12 +1115,140 @@ export const CLASSIFICATION_RULES = {
   disambiguationRule: 'If runtime > 45 min AND episodic AND platform-curated-first → OTT Series. If runtime > 45 min AND episodic AND algorithmic discovery → Long-Form Web Series.',
 };
 
+// ============= MICRO DRAMA PARAMETERS =============
+// Ultra-short vertical content (30-180 sec) parameters
+// Hook Velocity and Cliff Density at MAXIMUM weight (2.0)
+
+export const MICRO_DRAMA_PARAMETERS: ParameterDefinition[] = [
+  {
+    id: 'hook_velocity',
+    name: 'hook_velocity',
+    displayName: 'Hook Velocity',
+    category: 'Micro Drama',
+    agentSource: 'MicroDramaAgent',
+    description: 'Speed at which the hook captures viewer attention. For micro-dramas, this must happen within the first 2-3 seconds to prevent scroll-past behavior. Measures how quickly tension, curiosity, or emotional investment is established.',
+    scoringGuide: '9-10: Hook within 2 seconds, instant scroll-stop. 7-8: Hook by 3-5 seconds. 5-6: Hook present but too slow (5-10 sec). 3-4: Hook delayed beyond 10 seconds. 1-2: No discernible hook, viewer scrolls past.',
+    applicableScriptTypes: ['micro_drama'],
+    weight: 2.0, // MAXIMUM WEIGHT - Critical for micro-drama
+  },
+  {
+    id: 'cliff_density',
+    name: 'cliff_density',
+    displayName: 'Cliff Density',
+    category: 'Micro Drama',
+    agentSource: 'MicroDramaAgent',
+    description: 'Frequency and intensity of tension peaks and mini-cliffhangers within the ultra-short runtime. Measures how many "want to see what happens next" moments are packed into 30-180 seconds.',
+    scoringGuide: '9-10: Cliffhanger every 15-20 seconds, relentless tension. 7-8: Strong cliffs with good pacing. 5-6: One or two tension peaks. 3-4: Weak or predictable escalation. 1-2: Flat tension curve, no cliffs.',
+    applicableScriptTypes: ['micro_drama'],
+    weight: 2.0, // MAXIMUM WEIGHT - Critical for micro-drama
+  },
+  {
+    id: 'emotional_compression',
+    name: 'emotional_compression',
+    displayName: 'Emotional Compression',
+    category: 'Micro Drama',
+    agentSource: 'MicroDramaAgent',
+    description: 'Efficiency of emotional delivery in compressed format. Measures whether the story achieves meaningful emotional impact despite extreme time constraints.',
+    scoringGuide: '9-10: Full emotional journey in under 3 minutes. 7-8: Strong emotional beats, efficient delivery. 5-6: Some emotional resonance but rushed. 3-4: Emotional moments feel forced. 1-2: No emotional impact achievable.',
+    applicableScriptTypes: ['micro_drama'],
+    weight: 1.6,
+  },
+  {
+    id: 'character_legibility_at_speed',
+    name: 'character_legibility_at_speed',
+    displayName: 'Character Legibility at Speed',
+    category: 'Micro Drama',
+    agentSource: 'MicroDramaAgent',
+    description: 'Instant character recognition and understanding. Characters must be immediately legible through visual design, voice, or archetype within first appearance.',
+    scoringGuide: '9-10: Characters understood in one look/line. 7-8: Quick character establishment. 5-6: Characters require context. 3-4: Confusing character introductions. 1-2: Characters indistinguishable.',
+    applicableScriptTypes: ['micro_drama'],
+    weight: 1.5,
+  },
+  {
+    id: 'scroll_stop_power',
+    name: 'scroll_stop_power',
+    displayName: 'Scroll-Stop Power',
+    category: 'Micro Drama',
+    agentSource: 'MicroDramaAgent',
+    description: 'Visual and conceptual impact that stops the infinite scroll. Opening frame must be arresting enough to interrupt passive scrolling behavior.',
+    scoringGuide: '9-10: Impossible to scroll past, demands attention. 7-8: Strong visual/concept hook. 5-6: Moderate stopping power. 3-4: Blends into feed. 1-2: Easily scrolled past.',
+    applicableScriptTypes: ['micro_drama'],
+    weight: 1.8,
+  },
+  {
+    id: 'vertical_format_optimization',
+    name: 'vertical_format_optimization',
+    displayName: 'Vertical Format Optimization',
+    category: 'Micro Drama',
+    agentSource: 'MicroDramaAgent',
+    description: 'Native design for 9:16 vertical viewing. Composition, blocking, and visual storytelling optimized for mobile-first consumption.',
+    scoringGuide: '9-10: Perfect vertical composition, mobile-native. 7-8: Good vertical awareness. 5-6: Adaptable to vertical. 3-4: Horizontal thinking in vertical space. 1-2: Ignores format constraints.',
+    applicableScriptTypes: ['micro_drama'],
+    weight: 1.2,
+  },
+  {
+    id: 'dialogue_efficiency',
+    name: 'dialogue_efficiency',
+    displayName: 'Dialogue Efficiency',
+    category: 'Micro Drama',
+    agentSource: 'MicroDramaAgent',
+    description: 'Maximum information and emotion conveyed in minimum words. Every line must be essential; no dialogue fat allowed in micro-format.',
+    scoringGuide: '9-10: Every word essential, no waste. 7-8: Tight dialogue with minor trims possible. 5-6: Some unnecessary lines. 3-4: Dialogue-heavy for format. 1-2: Excessive dialogue, format mismatch.',
+    applicableScriptTypes: ['micro_drama'],
+    weight: 1.4,
+  },
+  {
+    id: 'visual_hook_density',
+    name: 'visual_hook_density',
+    displayName: 'Visual Hook Density',
+    category: 'Micro Drama',
+    agentSource: 'MicroDramaAgent',
+    description: 'Frequency of visually striking moments designed for engagement. Measures how many share-worthy, screenshot-able moments exist per 30 seconds.',
+    scoringGuide: '9-10: Multiple visual hooks per 30 seconds. 7-8: Strong visual variety. 5-6: Adequate visual interest. 3-4: Visually flat stretches. 1-2: No visual hooks.',
+    applicableScriptTypes: ['micro_drama'],
+    weight: 1.3,
+  },
+  {
+    id: 'replay_value',
+    name: 'replay_value',
+    displayName: 'Replay Value',
+    category: 'Micro Drama',
+    agentSource: 'MicroDramaAgent',
+    description: 'Incentive to rewatch for details, reactions, or sharing. Algorithm-friendly content is rewatched; replay loops boost distribution.',
+    scoringGuide: '9-10: Demands rewatches, layers to discover. 7-8: Worth rewatching once. 5-6: Satisfying but single-watch. 3-4: No replay incentive. 1-2: Actively discourages rewatch.',
+    applicableScriptTypes: ['micro_drama'],
+    weight: 1.1,
+  },
+  {
+    id: 'series_hook',
+    name: 'series_hook',
+    displayName: 'Series Hook',
+    category: 'Micro Drama',
+    agentSource: 'MicroDramaAgent',
+    description: 'Ending that drives viewers to seek more episodes. The "Part 2?" comment generator. Measures how effectively the ending creates demand for continuation.',
+    scoringGuide: '9-10: Viewers demand Part 2, comment "WHERE IS PART 2??". 7-8: Strong continuation desire. 5-6: Mild interest in more. 3-4: Self-contained, no pull. 1-2: Viewer satisfied, no series potential.',
+    applicableScriptTypes: ['micro_drama'],
+    weight: 1.5,
+  },
+];
+
+// Micro Drama failure patterns
+export const MICRO_DRAMA_FAILURE_PATTERNS = [
+  { id: 'slow_hook', name: 'Slow Hook', description: 'Hook takes more than 3 seconds, viewer scrolls past.', triggerParam: 'hook_velocity', threshold: 5 },
+  { id: 'flat_tension', name: 'Flat Tension Curve', description: 'No mini-cliffhangers or tension peaks throughout runtime.', triggerParam: 'cliff_density', threshold: 5 },
+  { id: 'dialogue_overload', name: 'Dialogue Overload', description: 'Too much dialogue for ultra-short format.', triggerParam: 'dialogue_efficiency', threshold: 4 },
+  { id: 'horizontal_thinking', name: 'Horizontal Thinking', description: 'Composition designed for 16:9 applied to 9:16.', triggerParam: 'vertical_format_optimization', threshold: 4 },
+  { id: 'forgettable_characters', name: 'Forgettable Characters', description: 'Characters not immediately legible or memorable.', triggerParam: 'character_legibility_at_speed', threshold: 4 },
+  { id: 'weak_ending', name: 'Weak Episode Ending', description: 'Ending satisfies without driving series continuation.', triggerParam: 'series_hook', threshold: 5 },
+];
+
 // ============= COMBINED PARAMETER LIST =============
 
 export const ALL_PARAMETERS: ParameterDefinition[] = [
   ...CORE_PARAMETERS,
   ...COMIC_PARAMETERS,
   ...WEB_SERIES_PARAMETERS,
+  ...MICRO_DRAMA_PARAMETERS,
 ];
 
 // ============= UTILITY FUNCTIONS =============
@@ -1128,6 +1256,7 @@ export const ALL_PARAMETERS: ParameterDefinition[] = [
 export function getParametersForScriptType(scriptType: string): ParameterDefinition[] {
   const isComic = ['comic', 'comic_series', 'graphic_novel', 'limited_comic_series', 'anthology_comic'].includes(scriptType);
   const isWebSeries = scriptType === 'web_series';
+  const isMicroDrama = scriptType === 'micro_drama';
   
   const params = ALL_PARAMETERS.filter(p => {
     if (p.applicableScriptTypes === 'all') return true;
@@ -1219,17 +1348,33 @@ export const COMIC_SECONDARY_TAGS = [
 // Export format for downloadable parameter file
 export function exportParametersToJSON(): string {
   return JSON.stringify({
-    version: '3.0.0',
+    version: '3.1.0',
     exportDate: new Date().toISOString(),
     coreParameters: CORE_PARAMETERS,
     comicParameters: COMIC_PARAMETERS,
     webSeriesParameters: WEB_SERIES_PARAMETERS,
+    microDramaParameters: MICRO_DRAMA_PARAMETERS,
     episodeLengthWeightModifiers: EPISODE_LENGTH_WEIGHT_MODIFIERS,
     comicsMaturityScale: COMICS_MATURITY_SCALE,
     webSeriesMaturityScale: WEB_SERIES_MATURITY_SCALE,
     comicFailurePatterns: COMIC_FAILURE_PATTERNS,
     webSeriesFailurePatterns: WEB_SERIES_FAILURE_PATTERNS,
+    microDramaFailurePatterns: MICRO_DRAMA_FAILURE_PATTERNS,
     comicSecondaryTags: COMIC_SECONDARY_TAGS,
     classificationRules: CLASSIFICATION_RULES,
   }, null, 2);
 }
+
+// Get parameters specifically for micro drama
+export function getParametersForMicroDrama(): ParameterDefinition[] {
+  return MICRO_DRAMA_PARAMETERS;
+}
+
+// Micro Drama maturity scale
+export const MICRO_DRAMA_MATURITY_SCALE = {
+  '9-10': 'Viral-ready',
+  '7-8': 'Platform-ready',
+  '5-6': 'Developing',
+  '3-4': 'Needs work',
+  '1-2': 'Format mismatch',
+};

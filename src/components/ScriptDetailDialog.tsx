@@ -57,6 +57,7 @@ export function ScriptDetailDialog({ script, open, onOpenChange }: ScriptDetailD
       documentary: 'Documentary',
       comic: 'Comic/Graphic Novel',
       web_series: 'Web Series',
+      micro_drama: 'Micro Drama',
     };
     return labels[type] || type;
   };
