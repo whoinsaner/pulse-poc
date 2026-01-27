@@ -1,218 +1,403 @@
 
-# Series Bible Extract View Implementation Plan
 
-## Overview
+# Report Redesign: USAF Philosophy Implementation
 
-This plan adds a dedicated **Series Bible Extract** view to the Pulse report pages. This view aggregates key information that would typically appear in a series bible: world rules, character long-arc trajectories, tonal guardrails, and core premise articulation. The view draws from existing parameter scores and provides a quick reference for creators, executives, and platform stakeholders.
+## Executive Overview
 
-## Key Features
+This plan redesigns the Web Series report to embody five core USAF framework philosophies: **Universal Evaluation**, **Diagnosis Over Judgment**, **Weighted Reality**, **Maturity vs Quality**, and **Actionability**. The redesign will serve as a template for all report types.
 
-The Series Bible Extract will aggregate and display:
+---
 
-1. **Core Premise & World Rules**
-   - Extracted from `world_rule_consistency`, `setting_agency`, `spatial_system_logic`, `plausibility` parameters
-   - Shows what can and cannot change in the story world
+## Philosophy Alignment
 
-2. **Character Long-Arc Trajectories**
-   - Derived from protagonist/antagonist data and `transformation_credibility`, `want_vs_need`, `psychological_flaw_depth` parameters
-   - Maps character starting points to intended destinations
+### Current State Issues
 
-3. **Tonal Guardrails**
-   - From `tone_genre_cohesion`, `symbol_motif_consistency`, `thematic_spine_clarity` parameters
-   - Defines genre expectations and tonal boundaries
+1. **Judgment-Heavy Language**: Labels like "Production-Ready" and readiness percentages imply binary good/bad
+2. **Scattered Information**: Data spread across 20+ pages causes redundancy and cognitive overload
+3. **Score Overload**: Raw numbers dominate without explaining "what this means for you"
+4. **Weak Maturity Distinction**: No clear visual separation between "weak script" vs "strong but unfinished"
+5. **Buried Actionability**: Recommendations buried deep in individual sections
 
-4. **Series Sustainability Metrics** (for episodic formats)
-   - From `serial_momentum`, `episode_self_containment`, `franchise_expandability` parameters
-   - Episode engine repeatability and season arc clarity
+### Target State
 
-## Technical Implementation
+| Philosophy | Implementation |
+|------------|----------------|
+| **Universal** | Category headers describe story fundamentals, not format specifics |
+| **Diagnosis** | Replace "Score: 74" with "What's Working / What's Broken / What's Underdeveloped" |
+| **Weighted Reality** | Visual weight indicators showing core vs polish issues |
+| **Maturity Scale** | Prominent maturity badge: Draft / Developing / Polished / Production |
+| **Actionability** | Every section ends with "Development Focus" or links to Rewrite Priorities |
 
-### 1. Create New Report Page Component
-**File:** `src/pages/report/SeriesBibleExtract.tsx`
+---
 
-This new page will:
-- Import and use the existing report UI components (`SectionHeader`, `VerdictBox`, `ScoreBar`, etc.)
-- Access report data via `useOutletContext` like other report pages
-- Filter relevant parameters from categories: World & Logic, Theme, Character, and Web Series
-- Display structured sections with visual hierarchy
+## Structural Changes
 
-### 2. Update Navigation Configuration
-**File:** `src/lib/reportNavigation.ts`
+### 1. Report Cover (New: Birds-Eye Dashboard)
 
-Add a new navigation item to the "Reference" group:
-```typescript
-{ 
-  id: 'bible', 
-  label: 'Series Bible', 
-  icon: BookOpen, 
-  path: '/bible',
-  requiredCategories: ['World & Logic', 'Character', 'Theme']
-}
-```
+Create a new **Report Cover** page that serves as the entry point with navigation to all sections.
 
-The page will be visible for all script types but will have enhanced content for series formats (web_series, pilot, episode).
-
-### 3. Add Route Definition
-**File:** `src/App.tsx`
-
-Add the new route under each report layout:
-- `/report/:runId/bible`
-- `/sample-report/bible`
-- `/sample-comic-report/bible`
-- `/sample-web-series-report/bible`
-
-### 4. Component Structure
-
-The page will be organized into these visual sections:
+**File**: `src/pages/report/ReportCover.tsx` (New)
 
 ```text
-+------------------------------------------+
-|  SECTION HEADER                          |
-|  Series Bible Extract | World Icon | Score|
-+------------------------------------------+
-
-+------------------------------------------+
-|  CORE PREMISE BOX                        |
-|  Logline + Hook Clarity Score            |
-|  One-line pitch + genre positioning      |
-+------------------------------------------+
-
-+------------------------------------------+
-|  WORLD RULES & CONSTRAINTS               |
-|  Grid: What's Fixed | What Can Change    |
-|  Parameters: world_rule_consistency,     |
-|  setting_agency, spatial_system_logic    |
-+------------------------------------------+
-
-+------------------------------------------+
-|  TONAL GUARDRAILS                        |
-|  Genre expectations, tonal boundaries    |
-|  Parameters: tone_genre_cohesion,        |
-|  symbol_motif_consistency                |
-+------------------------------------------+
-
-+------------------------------------------+
-|  CHARACTER TRAJECTORIES                  |
-|  Protagonist: Start → End                |
-|  Antagonist: Philosophy + Threat         |
-|  Parameters: want_vs_need, transformation|
-+------------------------------------------+
-
-+------------------------------------------+
-|  SERIES ENGINE (episodic only)           |
-|  Reset vs Accumulate Logic               |
-|  Episode repeatability score             |
-|  Season arc sustainability               |
-+------------------------------------------+
-
-+------------------------------------------+
-|  QUICK REFERENCE EXPORT                  |
-|  "Copy to Clipboard" for bible summary   |
-+------------------------------------------+
++----------------------------------------------------------+
+|  REPORT COVER                                             |
++----------------------------------------------------------+
+|                                                          |
+|  [Script Title]                                          |
+|  [Logline]                                               |
+|  [Genre] • [Format] • [Page Count]                       |
+|                                                          |
++----------------------------------------------------------+
+|                                                          |
+|  DECISION SIGNAL (GO / ITERATE / HOLD)                   |
+|  "What this means: [one-line explanation]"               |
+|                                                          |
++----------------------------------------------------------+
+|                                                          |
+|  MATURITY STATUS                                         |
+|  ┌─────────────────────────────────────────────────────┐ |
+|  │ ○ Draft  ◐ Developing  ◑ Polished  ● Production    │ |
+|  └─────────────────────────────────────────────────────┘ |
+|  "Strong concepts, underdeveloped character arcs"        |
+|                                                          |
++----------------------------------------------------------+
+|                                                          |
+|  WHAT'S WORKING / WHAT NEEDS WORK                        |
+|  ┌────────────────────┐ ┌──────────────────────────────┐ |
+|  │ ✓ Concept & Hook   │ │ ⚠ Character Flaw Depth      │ |
+|  │ ✓ Platform Fit     │ │ ⚠ Dialogue Subtext          │ |
+|  │ ✓ Structure        │ │ ✗ Exposition Balance        │ |
+|  └────────────────────┘ └──────────────────────────────┘ |
+|                                                          |
++----------------------------------------------------------+
+|                                                          |
+|  QUICK NAVIGATION                                        |
+|  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐        |
+|  │ Story   │ │Character│ │ Craft   │ │ Market  │        |
+|  │ 82/100  │ │ 74/100  │ │ 78/100  │ │ 86/100  │        |
+|  └─────────┘ └─────────┘ └─────────┘ └─────────┘        |
+|                                                          |
+|  [View Full Diagnosis →]  [Jump to Rewrite Priorities →] |
+|                                                          |
++----------------------------------------------------------+
 ```
 
-### 5. Data Extraction Logic
+### 2. Simplified Navigation Structure
 
-The component will extract data from existing sources:
+Consolidate 31 report pages into **7 focused sections** + **2 action pages**:
 
-| Bible Section | Source Parameters |
-|--------------|-------------------|
-| Core Premise | `concept_originality`, `hook_clarity`, `concept_compressibility`, `familiarity_anchor` |
-| World Rules | `world_rule_consistency`, `setting_agency`, `spatial_system_logic`, `plausibility` |
-| Tonal Guardrails | `tone_genre_cohesion`, `symbol_motif_consistency`, `thematic_spine_clarity`, `moral_complexity` |
-| Character Arcs | `want_vs_need`, `psychological_flaw_depth`, `transformation_credibility`, `agency_level` |
-| Series Engine | `serial_momentum`, `episode_self_containment`, `franchise_expandability`, `retention_curve_design` |
+**Modifications**: `src/lib/reportNavigation.ts`
 
-## Files to Create/Modify
+| Current (31 pages) | New (9 pages) |
+|-------------------|---------------|
+| Snapshot, Overview | **Cover** (entry dashboard) |
+| Concept, Plot, Structure | **Story Diagnosis** |
+| Protagonist, Antagonist, Cast, Psychology | **Character Diagnosis** |
+| Dialogue, Theme, Visual, Emotional | **Craft Diagnosis** |
+| Web Series (specialized) | **Format Diagnosis** (conditional) |
+| Market, Production, Audience, Platform | **Commercial Diagnosis** |
+| Rewrite, Scenes | **Development Priorities** |
+| Bible, Scorecard, Script | **Reference** (collapsible) |
+
+### 3. Diagnosis-First Section Design Pattern
+
+Each section page follows a consistent diagnostic pattern:
+
+**Template for all section pages:**
+
+```text
++----------------------------------------------------------+
+|  SECTION HEADER                                           |
+|  [Icon] [Section Name] • Maturity: [Developing]          |
++----------------------------------------------------------+
+
++----------------------------------------------------------+
+|  DIAGNOSIS SUMMARY                                        |
+|  ┌──────────────────────────────────────────────────────┐|
+|  │ What's Working                                       │|
+|  │ • [Strength 1 with evidence quote]                   │|
+|  │ • [Strength 2 with evidence quote]                   │|
+|  └──────────────────────────────────────────────────────┘|
+|  ┌──────────────────────────────────────────────────────┐|
+|  │ What's Structurally Broken                           │|
+|  │ • [Issue 1 - Score < 40] [FIX COST: High] [→ Link]   │|
+|  └──────────────────────────────────────────────────────┘|
+|  ┌──────────────────────────────────────────────────────┐|
+|  │ What's Underdeveloped                                │|
+|  │ • [Issue 2 - Score 40-60] [FIX COST: Medium]         │|
+|  │ • [Issue 3 - Score 40-60] [FIX COST: Low]            │|
+|  └──────────────────────────────────────────────────────┘|
++----------------------------------------------------------+
+
++----------------------------------------------------------+
+|  WEIGHTED PARAMETER BREAKDOWN (Expandable)                |
+|  ┌──────────────────────────────────────────────────────┐|
+|  │ ████████████████░░░░ 78 [Hook Efficiency] ⬤ CORE     │|
+|  │ ████████████░░░░░░░░ 62 [Character Arc] ⬤ CORE       │|
+|  │ ██████████████████░░ 88 [Pacing] ○ POLISH            │|
+|  └──────────────────────────────────────────────────────┘|
+|  [Show all 12 parameters ▼]                              |
++----------------------------------------------------------+
+
++----------------------------------------------------------+
+|  DEVELOPMENT FOCUS                                        |
+|  "For this section, prioritize: [Top 2 actionable items]" |
+|  [Jump to Rewrite Priorities →]                          |
++----------------------------------------------------------+
+```
+
+---
+
+## New Components
+
+### 1. MaturityBadge Component
+
+**File**: `src/components/report/ui/MaturityBadge.tsx` (New)
+
+Displays script maturity stage with visual progression:
+
+- **Draft** (< 40): "Early concepts, major structural work needed"
+- **Developing** (40-65): "Strong foundation, focused development required"
+- **Polished** (65-80): "Near-complete, polish pass recommended"
+- **Production** (80+): "Ready for production consideration"
+
+### 2. DiagnosisSummary Component
+
+**File**: `src/components/report/ui/DiagnosisSummary.tsx` (New)
+
+Replaces score-first displays with diagnostic language:
+
+```typescript
+interface DiagnosisSummaryProps {
+  parameters: ParameterScoreData[];
+  categoryName: string;
+}
+
+// Groups parameters into:
+// - Working (score >= 70)
+// - Broken (score < 40, high risk)
+// - Underdeveloped (score 40-70, medium risk)
+```
+
+### 3. WeightedParameterBar Component
+
+**File**: `src/components/report/ui/WeightedParameterBar.tsx` (New)
+
+Shows parameter importance with visual weight indicators:
+
+- **Core Story** (weight >= 1.2): Solid dot, larger bar, prominent color
+- **Standard** (weight 0.8-1.2): Half dot, normal bar
+- **Polish** (weight < 0.8): Empty dot, subtle bar
+
+### 4. SectionNavigator Component
+
+**File**: `src/components/report/ui/SectionNavigator.tsx` (New)
+
+Cross-linking component shown at bottom of each section:
+
+```text
+← Previous: Story Diagnosis    |    Next: Craft Diagnosis →
+                    [View All Sections]
+```
+
+---
+
+## File Modifications
+
+### Phase 1: Core Infrastructure
+
+| File | Action | Changes |
+|------|--------|---------|
+| `src/lib/scoreUtils.ts` | Modify | Add `getMaturityStage()`, `getDiagnosticCategory()` functions |
+| `src/types/database.ts` | Modify | Add `MaturityStage` type, diagnostic interfaces |
+| `src/lib/reportNavigation.ts` | Rewrite | Consolidate 31 pages → 9 sections |
+
+### Phase 2: New Components
+
+| File | Action |
+|------|--------|
+| `src/components/report/ui/MaturityBadge.tsx` | Create |
+| `src/components/report/ui/DiagnosisSummary.tsx` | Create |
+| `src/components/report/ui/WeightedParameterBar.tsx` | Create |
+| `src/components/report/ui/SectionNavigator.tsx` | Create |
+| `src/components/report/ui/DevelopmentFocus.tsx` | Create |
+
+### Phase 3: Report Pages (Web Series Focus)
 
 | File | Action | Description |
 |------|--------|-------------|
-| `src/pages/report/SeriesBibleExtract.tsx` | **Create** | New page component (~300 lines) |
-| `src/lib/reportNavigation.ts` | **Modify** | Add bible nav item to Reference group |
-| `src/App.tsx` | **Modify** | Add route for `/bible` path in all report layouts |
+| `src/pages/report/ReportCover.tsx` | Create | Birds-eye dashboard with navigation |
+| `src/pages/report/StoryDiagnosis.tsx` | Create | Combines Concept, Plot, Structure |
+| `src/pages/report/CharacterDiagnosis.tsx` | Create | Combines all character pages |
+| `src/pages/report/CraftDiagnosis.tsx` | Create | Combines Dialogue, Theme, Visual, Emotional |
+| `src/pages/report/FormatDiagnosis.tsx` | Create | Web Series / Micro Drama specific |
+| `src/pages/report/CommercialDiagnosis.tsx` | Create | Combines Market, Production, Audience |
+| `src/pages/report/DevelopmentPriorities.tsx` | Rewrite | Enhanced RewritePriorities with cross-links |
 
-## UI/UX Considerations
+### Phase 4: Layout Updates
 
-1. **Visual Consistency**: Uses existing glass-premium cards, SectionHeader, SubSectionHeader, and ScoreBar components
-2. **Conditional Content**: Shows "Series Engine" section only for episodic formats (web_series, pilot, episode)
-3. **Quick Export**: Includes a "Copy Summary" button that copies a plain-text version of the bible extract
-4. **Parameter Links**: Each section shows relevant parameter scores with ability to see rationale
+| File | Action | Changes |
+|------|--------|---------|
+| `src/pages/SampleWebSeriesReport.tsx` | Modify | Update route structure, default to Cover |
+| `src/components/report/SampleCommandHeader.tsx` | Modify | Simplified nav with 7 tabs |
+| `src/components/report/SampleActionRail.tsx` | Modify | Add maturity stage, remove redundant stats |
+| `src/App.tsx` | Modify | Update routing for consolidated pages |
 
-## Technical Details
+---
 
-### Parameter Filtering Approach
+## Language Guidelines
 
-```typescript
-// World-related parameters
-const worldParams = reportData.parameterScores?.filter(p => 
-  p.parameterName?.includes('world') || 
-  p.parameterName?.includes('setting') ||
-  p.parameterName?.includes('plausibility') ||
-  p.category === 'World & Logic'
-) || [];
+### Replace Judgment with Diagnosis
 
-// Tone-related parameters
-const toneParams = reportData.parameterScores?.filter(p => 
-  p.parameterName?.includes('tone') || 
-  p.parameterName?.includes('genre') ||
-  p.parameterName?.includes('thematic') ||
-  p.parameterName?.includes('symbol')
-) || [];
+| Before (Judgment) | After (Diagnosis) |
+|------------------|-------------------|
+| "Score: 62/100" | "Developing: Strong concept, needs character depth" |
+| "Good" / "Poor" | "Working" / "Needs Development" |
+| "Production-Ready" | "Maturity: Polished (ready for consideration)" |
+| "Weaknesses" | "What needs development" |
+| "Critical issues" | "Core structural gaps" |
 
-// Character arc parameters
-const arcParams = reportData.parameterScores?.filter(p => 
-  p.parameterName?.includes('want_vs_need') || 
-  p.parameterName?.includes('transformation') ||
-  p.parameterName?.includes('psychological') ||
-  p.parameterName?.includes('agency')
-) || [];
+### Actionability Language
 
-// Series sustainability (episodic only)
-const seriesParams = reportData.parameterScores?.filter(p => 
-  p.parameterName?.includes('serial') || 
-  p.parameterName?.includes('episode') ||
-  p.parameterName?.includes('franchise') ||
-  p.parameterName?.includes('retention') ||
-  p.category === 'Web Series'
-) || [];
-```
+Every diagnostic statement links to action:
 
-### Episodic Format Detection
+- "Devon's exposition is heavy → [See Dialogue rewrite in Development Priorities]"
+- "Flaw centrality is underdeveloped → [Character Development Focus: Page 3]"
+
+---
+
+## Scoring Consistency
+
+### Standardize to 0-100 Scale
+
+All displays use integer scores (no decimals except Action Rail):
 
 ```typescript
-const isEpisodicFormat = ['web_series', 'pilot', 'episode'].includes(
-  reportData.scriptMetadata?.scriptType || ''
-);
+// Display formatting
+const displayScore = Math.round(score); // 84, not 84.2
+const percentageBar = `${score}%`;      // Width for progress bars
 ```
 
-## Integration Points
+### Weight Visibility
 
-- **Report Context**: Uses `useOutletContext<ReportContextValue>()` for data access
-- **Stakeholder Filtering**: Supports `useStakeholderFiltering` hook for lens-based filtering
-- **Existing Components**: Reuses `VerdictBox`, `ScoreDisplay`, `ScoreBar`, `SubSectionHeader`, `Card`
+Show weights transparently:
 
-## Sample Content Preview
+```text
+Hook Efficiency    ████████████████░░░░  78  [CORE: 1.4x weight]
+Dialogue Subtext   ████████░░░░░░░░░░░░  42  [Standard weight]
+Scene Headings     ██████████████████░░  88  [Polish: 0.6x weight]
+```
 
-For a web series like "The Algorithm":
+---
 
-**Core Premise:**
-> "A content creator discovers the platform algorithm is predicting real-world deaths, and she might be next."
-> Hook Clarity: 92/100 | Familiarity Anchor: 88/100
+## Information Architecture
 
-**World Rules:**
-- Fixed: Algorithm predictions are accurate; 72-hour countdown is immutable
-- Flexible: Character relationships, investigation methods, revelation timing
+### Eliminating Redundancy
 
-**Tonal Guardrails:**
-- Genre: Sci-Fi Thriller with social commentary
-- Tone: Suspenseful, paranoid, digitally anxious
-- Avoid: Camp, overt comedy, slow exposition
+Current report shows the same data in multiple places:
 
-**Character Trajectories:**
-- Maya Chen: Influencer → Investigator → Whistleblower
-- @PredictorX: Anonymous threat → Revealed connection → Moral complexity
+- Score appears in: Header, Action Rail, Section header, Parameter cards, Scorecard
+- Logline appears in: Cover, Concept page, Executive Summary
 
-**Series Engine:**
-- Episode Reset: New countdown/victim per episode
-- Accumulate: Maya's investigation, relationship with Devon
-- Season Arc: Uncover algorithm origin and purpose
+**New approach**: Each data point has ONE authoritative location with cross-links:
+
+| Data | Primary Location | Cross-links |
+|------|-----------------|-------------|
+| Overall Score | Report Cover | Action Rail (small) |
+| Decision Signal | Report Cover | None (single source) |
+| Category Scores | Section headers | Cover navigation cards |
+| Parameter details | Section expandable panels | Development Priorities |
+| Logline | Report Cover only | None |
+| Rewrite items | Development Priorities | Section "Development Focus" links |
+
+### Cross-Link Pattern
+
+Each section ends with:
+
+```text
+┌──────────────────────────────────────────────────────────┐
+│ DEVELOPMENT FOCUS                                        │
+│                                                          │
+│ For Story: Prioritize strengthening the central conflict │
+│ and tightening Devon's exposition scene.                 │
+│                                                          │
+│ Related: [Character Diagnosis] • [Development Priorities]│
+└──────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Export & Existing Functionality
+
+All existing features are preserved:
+
+- **PDF Export**: Updated to match new structure
+- **Stakeholder Lens**: Works identically, recalculates on all pages
+- **Share**: Functions as before
+- **Script viewing**: Link preserved in header
+
+---
+
+## Technical Implementation Notes
+
+### Routing Changes
+
+```typescript
+// Old routes (sample)
+'/sample-web-series-report' → ProjectSnapshot
+'/sample-web-series-report/concept' → ConceptHook
+'/sample-web-series-report/plot' → PlotAnalysis
+// ... 28 more routes
+
+// New routes
+'/sample-web-series-report' → ReportCover (new default)
+'/sample-web-series-report/story' → StoryDiagnosis
+'/sample-web-series-report/characters' → CharacterDiagnosis
+'/sample-web-series-report/craft' → CraftDiagnosis
+'/sample-web-series-report/format' → FormatDiagnosis
+'/sample-web-series-report/commercial' → CommercialDiagnosis
+'/sample-web-series-report/development' → DevelopmentPriorities
+'/sample-web-series-report/reference' → Reference (expandable)
+```
+
+### Backward Compatibility
+
+Old routes will redirect to new consolidated pages:
+
+```typescript
+// Redirect map in App.tsx
+{ from: '/concept', to: '/story' },
+{ from: '/plot', to: '/story' },
+{ from: '/structure', to: '/story' },
+// etc.
+```
+
+---
+
+## Success Metrics
+
+After implementation, the report will:
+
+1. **Reduce cognitive load**: 7 core pages vs 31 scattered pages
+2. **Emphasize diagnosis**: "What's broken" before "what's the score"
+3. **Surface actionability**: Every section links to development priorities
+4. **Distinguish maturity**: Clear visual for "weak" vs "unfinished"
+5. **Maintain depth**: Expandable parameter panels preserve all detail
+6. **Ensure consistency**: Single source of truth for each data point
+
+---
+
+## Implementation Order
+
+1. Create new utility functions (`scoreUtils.ts` additions)
+2. Create new UI components (MaturityBadge, DiagnosisSummary, etc.)
+3. Create ReportCover page
+4. Create consolidated diagnosis pages (Story, Character, Craft, Commercial, Format)
+5. Update DevelopmentPriorities with cross-links
+6. Update navigation structure
+7. Update routing in App.tsx
+8. Update SampleWebSeriesReport layout
+9. Update Command Header and Action Rail
+10. Add redirects for old routes
+11. Update PDF export to match new structure
+
