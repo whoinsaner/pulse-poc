@@ -23,6 +23,11 @@ interface StakeholderReportData {
   executive_summary: string;
   generated_at: string;
   is_stale: boolean;
+  // New adapted content fields
+  adapted_insights?: any[];
+  adapted_recommendations?: any[];
+  key_metrics?: Record<string, any>;
+  vocabulary_version?: string;
 }
 
 // Stakeholder-specific parameter weights and categories
@@ -143,91 +148,28 @@ export default function StakeholderReport() {
 
       if (!report) throw new Error('Report not found');
 
-      const relevance = STAKEHOLDER_RELEVANCE[selectedLens];
-      
-      // Filter parameters by relevance
-      const relevantParams = (reportData.parameterScores || []).filter(p => 
-        relevance.categories.includes(p.category)
-      ).map(p => ({
-        ...p,
-        weightedScore: p.score * (relevance.weights[p.parameterName] || 1.0)
-      }));
-
-      // Calculate weighted score
-      const totalWeight = relevantParams.reduce((sum, p) => sum + (relevance.weights[p.parameterName] || 1.0), 0);
-      const weightedSum = relevantParams.reduce((sum, p) => sum + p.weightedScore, 0);
-      const stakeholderScore = totalWeight > 0 ? weightedSum / totalWeight : (reportData.lensScores?.[selectedLens] || 0);
-
-      // Filter insights by relevance
-      const relevantInsights = (reportData.insights || []).filter(i =>
-        relevance.categories.some(cat => i.category.toLowerCase().includes(cat.toLowerCase()))
+      // Call the edge function to generate adapted content
+      const { data: functionData, error: functionError } = await supabase.functions.invoke(
+        'generate-stakeholder-report',
+        {
+          body: {
+            reportId: report.id,
+            stakeholderLens: selectedLens
+          }
+        }
       );
 
-      // Generate executive summary
-      const lensConfig = LENS_CONFIG[selectedLens];
-      const executiveSummary = `${lensConfig.label} Assessment: "${reportData.scriptMetadata?.title}" scores ${stakeholderScore.toFixed(1)}/10 from a ${lensConfig.label.toLowerCase()} perspective. ${
-        relevantParams.filter(p => p.score >= 7).length > 0 
-          ? `Key strengths in ${relevantParams.filter(p => p.score >= 7).slice(0, 3).map(p => p.displayName || p.parameterName).join(', ')}. `
-          : ''
-      }${
-        relevantParams.filter(p => p.score < 5).length > 0
-          ? `Areas requiring attention: ${relevantParams.filter(p => p.score < 5).slice(0, 2).map(p => p.displayName || p.parameterName).join(', ')}.`
-          : 'No critical concerns identified.'
-      }`;
-
-      // Check if record exists first
-      const { data: existingRecord } = await supabase
-        .from('stakeholder_reports')
-        .select('id')
-        .eq('report_id', report.id)
-        .eq('stakeholder_lens', selectedLens)
-        .maybeSingle();
-
-      // Convert to JSON-serializable format
-      const relevantParamsJson = JSON.parse(JSON.stringify(relevantParams));
-      const relevantInsightsJson = JSON.parse(JSON.stringify(relevantInsights));
-
-      if (existingRecord) {
-        // Update existing record
-        const { error: updateError } = await supabase
-          .from('stakeholder_reports')
-          .update({
-            stakeholder_score: stakeholderScore,
-            relevant_parameters: relevantParamsJson,
-            relevant_insights: relevantInsightsJson,
-            executive_summary: executiveSummary,
-            generated_at: new Date().toISOString(),
-            is_stale: false
-          })
-          .eq('id', existingRecord.id);
-
-        if (updateError) throw updateError;
+      if (functionError) {
+        console.error('Edge function error:', functionError);
+        // Fall back to local generation if edge function fails
+        await generateLocalStakeholderReport(report.id);
       } else {
-        // Insert new record - use raw SQL insert via RPC for complex types
-        const insertData = {
-          report_id: report.id,
-          stakeholder_lens: selectedLens,
-          stakeholder_score: stakeholderScore,
-          relevant_parameters: relevantParamsJson,
-          relevant_insights: relevantInsightsJson,
-          executive_summary: executiveSummary,
-          generated_at: new Date().toISOString(),
-          is_stale: false
-        };
-
-        const { error: insertError } = await supabase
-          .from('stakeholder_reports')
-          .insert(insertData as any);
-
-        if (insertError) throw insertError;
+        toast({
+          title: 'Report Generated',
+          description: `${lensConfig.label} report ready with adapted content`
+        });
+        await loadData();
       }
-
-      toast({
-        title: 'Report Generated',
-        description: `${lensConfig.label} report ready`
-      });
-
-      await loadData();
     } catch (err) {
       console.error('Error generating stakeholder report:', err);
       toast({
@@ -238,6 +180,92 @@ export default function StakeholderReport() {
     } finally {
       setGenerating(false);
     }
+  };
+
+  // Fallback local generation (without AI adaptation)
+  const generateLocalStakeholderReport = async (reportDbId: string) => {
+    const relevance = STAKEHOLDER_RELEVANCE[selectedLens];
+    
+    // Filter parameters by relevance
+    const relevantParams = (reportData!.parameterScores || []).filter(p => 
+      relevance.categories.includes(p.category)
+    ).map(p => ({
+      ...p,
+      weightedScore: p.score * (relevance.weights[p.parameterName] || 1.0)
+    }));
+
+    // Calculate weighted score
+    const totalWeight = relevantParams.reduce((sum, p) => sum + (relevance.weights[p.parameterName] || 1.0), 0);
+    const weightedSum = relevantParams.reduce((sum, p) => sum + p.weightedScore, 0);
+    const stakeholderScore = totalWeight > 0 ? weightedSum / totalWeight : (reportData!.lensScores?.[selectedLens] || 0);
+
+    // Filter insights by relevance
+    const relevantInsights = (reportData!.insights || []).filter(i =>
+      relevance.categories.some(cat => i.category.toLowerCase().includes(cat.toLowerCase()))
+    );
+
+    // Generate executive summary
+    const executiveSummary = `${lensConfig.label} Assessment: "${reportData!.scriptMetadata?.title}" scores ${stakeholderScore.toFixed(1)}/10 from a ${lensConfig.label.toLowerCase()} perspective. ${
+      relevantParams.filter(p => p.score >= 7).length > 0 
+        ? `Key strengths in ${relevantParams.filter(p => p.score >= 7).slice(0, 3).map(p => p.displayName || p.parameterName).join(', ')}. `
+        : ''
+    }${
+      relevantParams.filter(p => p.score < 5).length > 0
+        ? `Areas requiring attention: ${relevantParams.filter(p => p.score < 5).slice(0, 2).map(p => p.displayName || p.parameterName).join(', ')}.`
+        : 'No critical concerns identified.'
+    }`;
+
+    // Check if record exists first
+    const { data: existingRecord } = await supabase
+      .from('stakeholder_reports')
+      .select('id')
+      .eq('report_id', reportDbId)
+      .eq('stakeholder_lens', selectedLens)
+      .maybeSingle();
+
+    // Convert to JSON-serializable format
+    const relevantParamsJson = JSON.parse(JSON.stringify(relevantParams));
+    const relevantInsightsJson = JSON.parse(JSON.stringify(relevantInsights));
+
+    if (existingRecord) {
+      const { error: updateError } = await supabase
+        .from('stakeholder_reports')
+        .update({
+          stakeholder_score: stakeholderScore,
+          relevant_parameters: relevantParamsJson,
+          relevant_insights: relevantInsightsJson,
+          executive_summary: executiveSummary,
+          generated_at: new Date().toISOString(),
+          is_stale: false
+        })
+        .eq('id', existingRecord.id);
+
+      if (updateError) throw updateError;
+    } else {
+      const insertData = {
+        report_id: reportDbId,
+        stakeholder_lens: selectedLens,
+        stakeholder_score: stakeholderScore,
+        relevant_parameters: relevantParamsJson,
+        relevant_insights: relevantInsightsJson,
+        executive_summary: executiveSummary,
+        generated_at: new Date().toISOString(),
+        is_stale: false
+      };
+
+      const { error: insertError } = await supabase
+        .from('stakeholder_reports')
+        .insert(insertData as any);
+
+      if (insertError) throw insertError;
+    }
+
+    toast({
+      title: 'Report Generated',
+      description: `${lensConfig.label} report ready`
+    });
+
+    await loadData();
   };
 
   const handleLensChange = (lens: StakeholderLens) => {
@@ -437,15 +465,48 @@ export default function StakeholderReport() {
             </div>
           </section>
 
-          {/* Relevant Insights */}
-          {(stakeholderReport.relevant_insights as any[]).length > 0 && (
+          {/* Adapted Recommendations (if available) */}
+          {(stakeholderReport.adapted_recommendations as any[] | undefined)?.length ? (
+            <section>
+              <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                <Target className="h-5 w-5 text-primary" />
+                Recommendations for {lensConfig.label}
+              </h3>
+              <div className="grid gap-3">
+                {(stakeholderReport.adapted_recommendations as any[]).map((rec, idx) => (
+                  <Card key={idx} className={cn(
+                    rec.priority === 'High' && 'border-destructive/30 bg-destructive/5',
+                    rec.priority === 'Medium' && 'border-chart-4/30 bg-chart-4/5'
+                  )}>
+                    <CardContent className="p-4">
+                      <div className="flex items-start gap-3">
+                        <Badge variant={rec.priority === 'High' ? 'destructive' : rec.priority === 'Medium' ? 'default' : 'secondary'}>
+                          {rec.priority}
+                        </Badge>
+                        <div>
+                          <h4 className="font-medium">{rec.action}</h4>
+                          <p className="text-sm text-muted-foreground mt-1">{rec.rationale}</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
+          {/* Adapted Insights (if available) or Relevant Insights */}
+          {((stakeholderReport.adapted_insights as any[] | undefined)?.length || (stakeholderReport.relevant_insights as any[]).length > 0) && (
             <section>
               <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
                 <Users className="h-5 w-5 text-primary" />
                 {lensConfig.label}-Relevant Insights
               </h3>
               <div className="grid gap-4">
-                {(stakeholderReport.relevant_insights as any[]).map((insight, idx) => (
+                {((stakeholderReport.adapted_insights as any[] | undefined)?.length 
+                  ? (stakeholderReport.adapted_insights as any[])
+                  : (stakeholderReport.relevant_insights as any[])
+                ).map((insight, idx) => (
                   <Card key={idx}>
                     <CardContent className="p-4">
                       <div className="flex items-start gap-3">
@@ -455,6 +516,9 @@ export default function StakeholderReport() {
                         <div>
                           <h4 className="font-medium">{insight.title}</h4>
                           <p className="text-sm text-muted-foreground mt-1">{insight.description}</p>
+                          {insight.actionable && (
+                            <Badge variant="outline" className="mt-2 text-xs">Actionable</Badge>
+                          )}
                         </div>
                       </div>
                     </CardContent>

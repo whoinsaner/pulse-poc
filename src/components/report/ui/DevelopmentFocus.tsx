@@ -3,12 +3,15 @@ import { Link } from 'react-router-dom';
 import { ArrowRight, Lightbulb } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { CrossLink } from './SectionNavigator';
+import { StakeholderLens } from '@/types/database';
+import { RECOMMENDATION_FRAMES } from '@/lib/stakeholderVocabulary';
 
 interface DevelopmentItem {
   title: string;
   description: string;
   linkTo?: string;
   linkLabel?: string;
+  priority?: 'High' | 'Medium' | 'Low';
 }
 
 interface DevelopmentFocusProps {
@@ -16,6 +19,7 @@ interface DevelopmentFocusProps {
   items: DevelopmentItem[];
   developmentPath?: string;
   relatedSections?: Array<{ label: string; path: string }>;
+  stakeholderLens?: StakeholderLens | null;
   className?: string;
 }
 
@@ -24,11 +28,15 @@ export function DevelopmentFocus({
   items,
   developmentPath = '/development',
   relatedSections = [],
+  stakeholderLens,
   className,
 }: DevelopmentFocusProps) {
   if (items.length === 0) {
     return null;
   }
+
+  // Get stakeholder-specific action framing
+  const actionFrame = stakeholderLens ? RECOMMENDATION_FRAMES[stakeholderLens] : null;
 
   return (
     <Card className={cn('p-5 bg-primary/5 border-primary/20', className)}>
@@ -39,9 +47,13 @@ export function DevelopmentFocus({
         
         <div className="flex-1 space-y-3">
           <div>
-            <h4 className="text-sm font-semibold">Development Focus</h4>
+            <h4 className="text-sm font-semibold">
+              {actionFrame ? `${actionFrame.actionVerb.split(' ')[0]} Focus` : 'Development Focus'}
+            </h4>
             <p className="text-sm text-muted-foreground">
-              For {sectionName}, prioritize:
+              {actionFrame 
+                ? `For ${sectionName}, ${actionFrame.actionVerb.toLowerCase()} ${actionFrame.decisionContext}:`
+                : `For ${sectionName}, prioritize:`}
             </p>
           </div>
 
@@ -51,6 +63,16 @@ export function DevelopmentFocus({
                 <span className="text-primary font-bold text-sm">{index + 1}.</span>
                 <div>
                   <span className="text-sm font-medium">{item.title}</span>
+                  {item.priority && (
+                    <span className={cn(
+                      'ml-2 text-xs px-1.5 py-0.5 rounded',
+                      item.priority === 'High' && 'bg-destructive/10 text-destructive',
+                      item.priority === 'Medium' && 'bg-chart-4/10 text-chart-4',
+                      item.priority === 'Low' && 'bg-muted text-muted-foreground'
+                    )}>
+                      {item.priority}
+                    </span>
+                  )}
                   {item.description && (
                     <p className="text-xs text-muted-foreground mt-0.5">
                       {item.description}
@@ -67,7 +89,7 @@ export function DevelopmentFocus({
               to={developmentPath}
               className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
             >
-              Jump to Rewrite Priorities
+              {actionFrame ? `View All ${actionFrame.riskFrame.split(' ')[0]} Items` : 'Jump to Rewrite Priorities'}
               <ArrowRight className="h-3.5 w-3.5" />
             </Link>
             

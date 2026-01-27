@@ -23,6 +23,10 @@ interface CachedStakeholderReport {
   executive_summary: string | null;
   generated_at: string;
   is_stale: boolean | null;
+  // Adapted content fields
+  adapted_insights?: any[] | null;
+  adapted_recommendations?: any[] | null;
+  vocabulary_version?: string | null;
 }
 
 interface StakeholderReportCacheProps {
@@ -50,7 +54,12 @@ export function StakeholderReportCache({ reportId, onSelectLens }: StakeholderRe
     if (error) {
       console.error('Error fetching cached reports:', error);
     } else {
-      setCachedReports(data || []);
+      // Cast the data to handle Json types
+      setCachedReports((data || []).map(r => ({
+        ...r,
+        adapted_insights: r.adapted_insights as any[] | null,
+        adapted_recommendations: r.adapted_recommendations as any[] | null,
+      })) as CachedStakeholderReport[]);
     }
     setLoading(false);
   };
@@ -132,6 +141,7 @@ export function StakeholderReportCache({ reportId, onSelectLens }: StakeholderRe
           const lensConfig = LENS_CONFIG[report.stakeholder_lens as StakeholderLens];
           const isStale = report.is_stale;
           const isRegenerating = regenerating === report.stakeholder_lens;
+          const hasAdaptedContent = (report.adapted_insights?.length || 0) > 0 || (report.adapted_recommendations?.length || 0) > 0;
 
           return (
             <div
@@ -158,6 +168,11 @@ export function StakeholderReportCache({ reportId, onSelectLens }: StakeholderRe
                       <Badge variant="outline" className="text-success border-success/30 text-xs">
                         <CheckCircle className="h-3 w-3 mr-1" />
                         Current
+                      </Badge>
+                    )}
+                    {hasAdaptedContent && (
+                      <Badge variant="outline" className="text-primary border-primary/30 text-xs">
+                        AI Adapted
                       </Badge>
                     )}
                   </div>
