@@ -43,6 +43,7 @@ import HooksAnalysis from "./pages/report/HooksAnalysis";
 import CompleteScorecard from "./pages/report/CompleteScorecard";
 import RewritePriorities from "./pages/report/RewritePriorities";
 import StakeholderReport from "./pages/report/StakeholderReport";
+import SeriesBibleExtract from "./pages/report/SeriesBibleExtract";
 import SampleReportLayout from "./pages/SampleReport";
 import SampleScript from "./pages/SampleScript";
 import SampleComicReportLayout from "./pages/SampleComicReport";
@@ -110,6 +111,7 @@ const App = () => (
               <Route path="rewrite" element={<RewritePriorities />} />
               <Route path="scenes" element={<SceneEconomy />} />
               <Route path="scorecard" element={<CompleteScorecard />} />
+              <Route path="bible" element={<SeriesBibleExtract />} />
               <Route path="script" element={<SampleScript />} />
               <Route path="analysis" element={<ReportAnalysis />} />
               <Route path="insights" element={<ReportInsights />} />
@@ -141,6 +143,7 @@ const App = () => (
               <Route path="rewrite" element={<RewritePriorities />} />
               <Route path="scenes" element={<SceneEconomy />} />
               <Route path="scorecard" element={<CompleteScorecard />} />
+              <Route path="bible" element={<SeriesBibleExtract />} />
               <Route path="script" element={<SampleScript />} />
               <Route path="analysis" element={<ReportAnalysis />} />
               <Route path="insights" element={<ReportInsights />} />
@@ -169,6 +172,7 @@ const App = () => (
               <Route path="rewrite" element={<RewritePriorities />} />
               <Route path="scenes" element={<SceneEconomy />} />
               <Route path="scorecard" element={<CompleteScorecard />} />
+              <Route path="bible" element={<SeriesBibleExtract />} />
               <Route path="script" element={<SampleComicScript />} />
               <Route path="analysis" element={<ReportAnalysis />} />
               <Route path="insights" element={<ReportInsights />} />
@@ -199,6 +203,7 @@ const App = () => (
               <Route path="rewrite" element={<RewritePriorities />} />
               <Route path="scenes" element={<SceneEconomy />} />
               <Route path="scorecard" element={<CompleteScorecard />} />
+              <Route path="bible" element={<SeriesBibleExtract />} />
               <Route path="script" element={<SampleScript />} />
               <Route path="analysis" element={<ReportAnalysis />} />
               <Route path="insights" element={<ReportInsights />} />
