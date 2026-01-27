@@ -473,20 +473,18 @@ serve(async (req) => {
       global: { headers: { Authorization: authHeader } }
     });
 
-    // Verify user is authenticated using getClaims for efficiency
-    const token = authHeader.replace('Bearer ', '');
-    const { data: claimsData, error: claimsError } = await supabaseAuth.auth.getClaims(token);
+    // Verify user is authenticated
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
     
-    if (claimsError || !claimsData?.claims) {
-      console.error('[script-parser] Invalid auth token:', claimsError?.message);
+    if (authError || !user) {
+      console.error('[script-parser] Invalid auth token:', authError?.message);
       return new Response(
         JSON.stringify({ error: 'Unauthorized - Invalid token' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const userId = claimsData.claims.sub;
-    console.log(`[script-parser] Authenticated user: ${userId}`);
+    console.log(`[script-parser] Authenticated user: ${user.id}`);
 
     const { scriptId, format, filePath, scriptType } = await req.json() as ParseRequest;
     
