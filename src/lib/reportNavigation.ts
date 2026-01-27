@@ -166,6 +166,7 @@ const ALL_NAV_GROUPS: NavGroup[] = [
     label: 'Reference',
     applicableTypes: 'all',
     items: [
+      { id: 'bible', label: 'Series Bible', icon: BookOpen, path: '/bible', requiredCategories: ['World & Logic', 'Character', 'Theme'] },
       { id: 'scorecard', label: 'Scorecard', icon: BarChart3, path: '/scorecard' },
       { id: 'script', label: 'Script', icon: FileText, path: '/script' },
     ],
