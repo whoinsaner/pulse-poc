@@ -3,7 +3,7 @@
 
 export type AppRole = 'admin' | 'analyst' | 'viewer';
 export type ScriptFormat = 'pdf' | 'fdx' | 'fountain' | 'highland' | 'txt' | 'docx';
-export type ScriptType = 'feature' | 'pilot' | 'episode' | 'short' | 'documentary' | 'comic' | 'web_series';
+export type ScriptType = 'feature' | 'pilot' | 'episode' | 'short' | 'documentary' | 'comic' | 'web_series' | 'micro_drama';
 export type AnalysisStatus = 'pending' | 'processing' | 'completed' | 'failed';
 export type StakeholderLens = 
   | 'studio_executive' 
@@ -348,4 +348,6 @@ export const CATEGORY_COLORS: Record<string, string> = {
   'Comic Dialogue': 'hsl(var(--chart-6))',
   'Comic Pacing': 'hsl(var(--chart-1))',
   'Comic Art Direction': 'hsl(var(--chart-2))',
+  // Micro Drama category
+  'Micro Drama': 'hsl(var(--chart-5))',
 };

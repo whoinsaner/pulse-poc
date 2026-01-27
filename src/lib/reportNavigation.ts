@@ -256,6 +256,7 @@ export function getScriptTypeLabel(scriptType: ScriptType | undefined): string {
     documentary: 'Documentary',
     comic: 'Comic / Graphic Novel',
     web_series: 'Web Series',
+    micro_drama: 'Micro Drama',
   };
   return labels[scriptType || 'feature'] || 'Script';
 }
