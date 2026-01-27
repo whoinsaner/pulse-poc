@@ -1,403 +1,203 @@
 
+# Stakeholder-Adaptive Content System
 
-# Report Redesign: USAF Philosophy Implementation
+## Problem Statement
 
-## Executive Overview
+Currently, the USAF report system adapts **scoring and filtering** based on stakeholder lens, but the **narrative content** (rationales, insights, recommendations) remains identical across all perspectives. This creates a disconnect where a Writer and a Financier see the same diagnostic language, even though their decision-making vocabularies differ significantly.
 
-This plan redesigns the Web Series report to embody five core USAF framework philosophies: **Universal Evaluation**, **Diagnosis Over Judgment**, **Weighted Reality**, **Maturity vs Quality**, and **Actionability**. The redesign will serve as a template for all report types.
+## Solution Overview
 
----
+Implement a **Stakeholder Content Adaptation Layer** that transforms the base analysis into role-specific language while preserving the objective diagnostic truth. This involves:
 
-## Philosophy Alignment
-
-### Current State Issues
-
-1. **Judgment-Heavy Language**: Labels like "Production-Ready" and readiness percentages imply binary good/bad
-2. **Scattered Information**: Data spread across 20+ pages causes redundancy and cognitive overload
-3. **Score Overload**: Raw numbers dominate without explaining "what this means for you"
-4. **Weak Maturity Distinction**: No clear visual separation between "weak script" vs "strong but unfinished"
-5. **Buried Actionability**: Recommendations buried deep in individual sections
-
-### Target State
-
-| Philosophy | Implementation |
-|------------|----------------|
-| **Universal** | Category headers describe story fundamentals, not format specifics |
-| **Diagnosis** | Replace "Score: 74" with "What's Working / What's Broken / What's Underdeveloped" |
-| **Weighted Reality** | Visual weight indicators showing core vs polish issues |
-| **Maturity Scale** | Prominent maturity badge: Draft / Developing / Polished / Production |
-| **Actionability** | Every section ends with "Development Focus" or links to Rewrite Priorities |
+1. **Stakeholder Vocabulary Mapping** - Define terminology translations per lens
+2. **Insight Reframing Agent** - AI-powered content adaptation at report generation time
+3. **Role-Specific Templates** - Pre-defined narrative patterns for each stakeholder
+4. **Cached Stakeholder Reports** - Store adapted content to avoid repeated generation
 
 ---
 
-## Structural Changes
+## Technical Implementation
 
-### 1. Report Cover (New: Birds-Eye Dashboard)
+### Phase 1: Stakeholder Vocabulary Configuration
 
-Create a new **Report Cover** page that serves as the entry point with navigation to all sections.
+**File**: `src/lib/stakeholderVocabulary.ts` (New)
 
-**File**: `src/pages/report/ReportCover.tsx` (New)
+Define how concepts translate across stakeholders:
+
+| Base Term | Actor | Producer | Financier |
+|-----------|-------|----------|-----------|
+| "Character lacks depth" | "Limited opportunities for emotional range display" | "May require additional character development passes" | "Character appeal risk affecting marketability" |
+| "Structural issues" | "Scene flow disrupts performance rhythm" | "Schedule impact from structural rewrites" | "Development cost risk from story architecture" |
+| "Market concerns" | "Role visibility in competitive landscape" | "Distribution positioning challenges" | "ROI risk factors in current market" |
+
+This vocabulary map drives content transformation.
+
+### Phase 2: Stakeholder Insight Generator
+
+**File**: `supabase/functions/generate-stakeholder-report/index.ts` (New)
+
+Create a dedicated edge function that:
+1. Takes the base report data and a target stakeholder lens
+2. Uses AI to reframe insights using stakeholder vocabulary
+3. Generates a role-specific executive summary
+4. Produces stakeholder-specific recommendations
+5. Stores the adapted content in `stakeholder_reports` table
 
 ```text
-+----------------------------------------------------------+
-|  REPORT COVER                                             |
-+----------------------------------------------------------+
-|                                                          |
-|  [Script Title]                                          |
-|  [Logline]                                               |
-|  [Genre] • [Format] • [Page Count]                       |
-|                                                          |
-+----------------------------------------------------------+
-|                                                          |
-|  DECISION SIGNAL (GO / ITERATE / HOLD)                   |
-|  "What this means: [one-line explanation]"               |
-|                                                          |
-+----------------------------------------------------------+
-|                                                          |
-|  MATURITY STATUS                                         |
-|  ┌─────────────────────────────────────────────────────┐ |
-|  │ ○ Draft  ◐ Developing  ◑ Polished  ● Production    │ |
-|  └─────────────────────────────────────────────────────┘ |
-|  "Strong concepts, underdeveloped character arcs"        |
-|                                                          |
-+----------------------------------------------------------+
-|                                                          |
-|  WHAT'S WORKING / WHAT NEEDS WORK                        |
-|  ┌────────────────────┐ ┌──────────────────────────────┐ |
-|  │ ✓ Concept & Hook   │ │ ⚠ Character Flaw Depth      │ |
-|  │ ✓ Platform Fit     │ │ ⚠ Dialogue Subtext          │ |
-|  │ ✓ Structure        │ │ ✗ Exposition Balance        │ |
-|  └────────────────────┘ └──────────────────────────────┘ |
-|                                                          |
-+----------------------------------------------------------+
-|                                                          |
-|  QUICK NAVIGATION                                        |
-|  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐        |
-|  │ Story   │ │Character│ │ Craft   │ │ Market  │        |
-|  │ 82/100  │ │ 74/100  │ │ 78/100  │ │ 86/100  │        |
-|  └─────────┘ └─────────┘ └─────────┘ └─────────┘        |
-|                                                          |
-|  [View Full Diagnosis →]  [Jump to Rewrite Priorities →] |
-|                                                          |
-+----------------------------------------------------------+
+Input:
+- Base insight: "Protagonist arc unclear in Act 2"
+- Target lens: "actor"
+
+Output:
+- Adapted insight: "Your character's journey plateaus in the middle section, 
+  limiting opportunities for emotional showcase. Consider requesting scenes 
+  that demonstrate internal conflict resolution."
+- Recommendations: "Discuss with writer: add 2-3 moments of visible internal struggle"
 ```
 
-### 2. Simplified Navigation Structure
+### Phase 3: Enhanced Stakeholder Report Schema
 
-Consolidate 31 report pages into **7 focused sections** + **2 action pages**:
+**Migration**: Update `stakeholder_reports` table
 
-**Modifications**: `src/lib/reportNavigation.ts`
+Add new columns:
+- `adapted_insights` (jsonb) - Reframed insights with stakeholder language
+- `adapted_recommendations` (jsonb) - Role-specific action items
+- `key_metrics` (jsonb) - Stakeholder-relevant data points (e.g., Actor: screen time, dialogue %)
+- `vocabulary_version` (text) - Track which vocabulary map version was used
 
-| Current (31 pages) | New (9 pages) |
-|-------------------|---------------|
-| Snapshot, Overview | **Cover** (entry dashboard) |
-| Concept, Plot, Structure | **Story Diagnosis** |
-| Protagonist, Antagonist, Cast, Psychology | **Character Diagnosis** |
-| Dialogue, Theme, Visual, Emotional | **Craft Diagnosis** |
-| Web Series (specialized) | **Format Diagnosis** (conditional) |
-| Market, Production, Audience, Platform | **Commercial Diagnosis** |
-| Rewrite, Scenes | **Development Priorities** |
-| Bible, Scorecard, Script | **Reference** (collapsible) |
+### Phase 4: Frontend Integration
 
-### 3. Diagnosis-First Section Design Pattern
+**Modifications**:
+- `src/pages/report/StakeholderReport.tsx` - Display adapted content when available
+- `src/components/report/ui/DiagnosisSummary.tsx` - Use stakeholder language for diagnostic categories
+- `src/components/report/DevelopmentFocus.tsx` - Show role-specific recommendations
+- `src/pages/report/ReportCover.tsx` - Generate personalized decision signal explanations
 
-Each section page follows a consistent diagnostic pattern:
+### Phase 5: On-Demand Generation Flow
 
-**Template for all section pages:**
+When a user selects a stakeholder lens:
 
-```text
-+----------------------------------------------------------+
-|  SECTION HEADER                                           |
-|  [Icon] [Section Name] • Maturity: [Developing]          |
-+----------------------------------------------------------+
-
-+----------------------------------------------------------+
-|  DIAGNOSIS SUMMARY                                        |
-|  ┌──────────────────────────────────────────────────────┐|
-|  │ What's Working                                       │|
-|  │ • [Strength 1 with evidence quote]                   │|
-|  │ • [Strength 2 with evidence quote]                   │|
-|  └──────────────────────────────────────────────────────┘|
-|  ┌──────────────────────────────────────────────────────┐|
-|  │ What's Structurally Broken                           │|
-|  │ • [Issue 1 - Score < 40] [FIX COST: High] [→ Link]   │|
-|  └──────────────────────────────────────────────────────┘|
-|  ┌──────────────────────────────────────────────────────┐|
-|  │ What's Underdeveloped                                │|
-|  │ • [Issue 2 - Score 40-60] [FIX COST: Medium]         │|
-|  │ • [Issue 3 - Score 40-60] [FIX COST: Low]            │|
-|  └──────────────────────────────────────────────────────┘|
-+----------------------------------------------------------+
-
-+----------------------------------------------------------+
-|  WEIGHTED PARAMETER BREAKDOWN (Expandable)                |
-|  ┌──────────────────────────────────────────────────────┐|
-|  │ ████████████████░░░░ 78 [Hook Efficiency] ⬤ CORE     │|
-|  │ ████████████░░░░░░░░ 62 [Character Arc] ⬤ CORE       │|
-|  │ ██████████████████░░ 88 [Pacing] ○ POLISH            │|
-|  └──────────────────────────────────────────────────────┘|
-|  [Show all 12 parameters ▼]                              |
-+----------------------------------------------------------+
-
-+----------------------------------------------------------+
-|  DEVELOPMENT FOCUS                                        |
-|  "For this section, prioritize: [Top 2 actionable items]" |
-|  [Jump to Rewrite Priorities →]                          |
-+----------------------------------------------------------+
-```
+1. Check if `stakeholder_reports` has a current (non-stale) entry for this lens
+2. If yes: Display cached adapted content
+3. If no: 
+   - Show base content with filtering (current behavior)
+   - Trigger background generation of adapted content
+   - Update UI when adaptation completes (via realtime subscription)
 
 ---
 
-## New Components
+## Content Adaptation Rules
 
-### 1. MaturityBadge Component
+### Executive Summary Template Per Stakeholder
 
-**File**: `src/components/report/ui/MaturityBadge.tsx` (New)
+**Actor Lens**:
+> "Role Assessment: [Character Name]'s journey offers [high/moderate/limited] opportunities for 
+> performance depth. [Strength areas]. [Key concern for actor consideration]. 
+> Overall castability: [score]/100."
 
-Displays script maturity stage with visual progression:
+**Producer Lens**:
+> "Production Assessment: '[Title]' presents [high/moderate/low] execution complexity with 
+> [X] locations, [Y] principal cast. [Key production strength]. [Primary schedule/budget risk]. 
+> Greenlight confidence: [score]/100."
 
-- **Draft** (< 40): "Early concepts, major structural work needed"
-- **Developing** (40-65): "Strong foundation, focused development required"
-- **Polished** (65-80): "Near-complete, polish pass recommended"
-- **Production** (80+): "Ready for production consideration"
+**Financier Lens**:
+> "Investment Assessment: '[Title]' shows [strong/moderate/weak] commercial indicators with 
+> [comparable titles] positioning. [ROI opportunity]. [Key risk factor]. 
+> Investment confidence: [score]/100."
 
-### 2. DiagnosisSummary Component
+### Insight Reframing Prompt
 
-**File**: `src/components/report/ui/DiagnosisSummary.tsx` (New)
-
-Replaces score-first displays with diagnostic language:
-
-```typescript
-interface DiagnosisSummaryProps {
-  parameters: ParameterScoreData[];
-  categoryName: string;
-}
-
-// Groups parameters into:
-// - Working (score >= 70)
-// - Broken (score < 40, high risk)
-// - Underdeveloped (score 40-70, medium risk)
-```
-
-### 3. WeightedParameterBar Component
-
-**File**: `src/components/report/ui/WeightedParameterBar.tsx` (New)
-
-Shows parameter importance with visual weight indicators:
-
-- **Core Story** (weight >= 1.2): Solid dot, larger bar, prominent color
-- **Standard** (weight 0.8-1.2): Half dot, normal bar
-- **Polish** (weight < 0.8): Empty dot, subtle bar
-
-### 4. SectionNavigator Component
-
-**File**: `src/components/report/ui/SectionNavigator.tsx` (New)
-
-Cross-linking component shown at bottom of each section:
-
-```text
-← Previous: Story Diagnosis    |    Next: Craft Diagnosis →
-                    [View All Sections]
-```
+The AI receives instructions to:
+1. Preserve the core diagnostic finding
+2. Translate terminology using stakeholder vocabulary
+3. Add role-specific implications
+4. Provide actionable next steps for that stakeholder role
 
 ---
 
-## File Modifications
+## File Changes Summary
 
-### Phase 1: Core Infrastructure
+### New Files
+| File | Purpose |
+|------|---------|
+| `src/lib/stakeholderVocabulary.ts` | Vocabulary mapping configuration |
+| `supabase/functions/generate-stakeholder-report/index.ts` | AI-powered content adaptation |
 
-| File | Action | Changes |
-|------|--------|---------|
-| `src/lib/scoreUtils.ts` | Modify | Add `getMaturityStage()`, `getDiagnosticCategory()` functions |
-| `src/types/database.ts` | Modify | Add `MaturityStage` type, diagnostic interfaces |
-| `src/lib/reportNavigation.ts` | Rewrite | Consolidate 31 pages → 9 sections |
+### Modified Files
+| File | Changes |
+|------|---------|
+| `src/pages/report/StakeholderReport.tsx` | Use adapted content when available |
+| `src/components/report/ui/DiagnosisSummary.tsx` | Stakeholder-specific diagnostic language |
+| `src/components/report/DevelopmentFocus.tsx` | Role-specific recommendations |
+| `src/pages/report/ReportCover.tsx` | Personalized decision signal |
+| `src/components/report/StakeholderReportCache.tsx` | Show adaptation status |
 
-### Phase 2: New Components
-
-| File | Action |
-|------|--------|
-| `src/components/report/ui/MaturityBadge.tsx` | Create |
-| `src/components/report/ui/DiagnosisSummary.tsx` | Create |
-| `src/components/report/ui/WeightedParameterBar.tsx` | Create |
-| `src/components/report/ui/SectionNavigator.tsx` | Create |
-| `src/components/report/ui/DevelopmentFocus.tsx` | Create |
-
-### Phase 3: Report Pages (Web Series Focus)
-
-| File | Action | Description |
-|------|--------|-------------|
-| `src/pages/report/ReportCover.tsx` | Create | Birds-eye dashboard with navigation |
-| `src/pages/report/StoryDiagnosis.tsx` | Create | Combines Concept, Plot, Structure |
-| `src/pages/report/CharacterDiagnosis.tsx` | Create | Combines all character pages |
-| `src/pages/report/CraftDiagnosis.tsx` | Create | Combines Dialogue, Theme, Visual, Emotional |
-| `src/pages/report/FormatDiagnosis.tsx` | Create | Web Series / Micro Drama specific |
-| `src/pages/report/CommercialDiagnosis.tsx` | Create | Combines Market, Production, Audience |
-| `src/pages/report/DevelopmentPriorities.tsx` | Rewrite | Enhanced RewritePriorities with cross-links |
-
-### Phase 4: Layout Updates
-
-| File | Action | Changes |
-|------|--------|---------|
-| `src/pages/SampleWebSeriesReport.tsx` | Modify | Update route structure, default to Cover |
-| `src/components/report/SampleCommandHeader.tsx` | Modify | Simplified nav with 7 tabs |
-| `src/components/report/SampleActionRail.tsx` | Modify | Add maturity stage, remove redundant stats |
-| `src/App.tsx` | Modify | Update routing for consolidated pages |
-
----
-
-## Language Guidelines
-
-### Replace Judgment with Diagnosis
-
-| Before (Judgment) | After (Diagnosis) |
-|------------------|-------------------|
-| "Score: 62/100" | "Developing: Strong concept, needs character depth" |
-| "Good" / "Poor" | "Working" / "Needs Development" |
-| "Production-Ready" | "Maturity: Polished (ready for consideration)" |
-| "Weaknesses" | "What needs development" |
-| "Critical issues" | "Core structural gaps" |
-
-### Actionability Language
-
-Every diagnostic statement links to action:
-
-- "Devon's exposition is heavy → [See Dialogue rewrite in Development Priorities]"
-- "Flaw centrality is underdeveloped → [Character Development Focus: Page 3]"
-
----
-
-## Scoring Consistency
-
-### Standardize to 0-100 Scale
-
-All displays use integer scores (no decimals except Action Rail):
-
-```typescript
-// Display formatting
-const displayScore = Math.round(score); // 84, not 84.2
-const percentageBar = `${score}%`;      // Width for progress bars
-```
-
-### Weight Visibility
-
-Show weights transparently:
-
-```text
-Hook Efficiency    ████████████████░░░░  78  [CORE: 1.4x weight]
-Dialogue Subtext   ████████░░░░░░░░░░░░  42  [Standard weight]
-Scene Headings     ██████████████████░░  88  [Polish: 0.6x weight]
-```
-
----
-
-## Information Architecture
-
-### Eliminating Redundancy
-
-Current report shows the same data in multiple places:
-
-- Score appears in: Header, Action Rail, Section header, Parameter cards, Scorecard
-- Logline appears in: Cover, Concept page, Executive Summary
-
-**New approach**: Each data point has ONE authoritative location with cross-links:
-
-| Data | Primary Location | Cross-links |
-|------|-----------------|-------------|
-| Overall Score | Report Cover | Action Rail (small) |
-| Decision Signal | Report Cover | None (single source) |
-| Category Scores | Section headers | Cover navigation cards |
-| Parameter details | Section expandable panels | Development Priorities |
-| Logline | Report Cover only | None |
-| Rewrite items | Development Priorities | Section "Development Focus" links |
-
-### Cross-Link Pattern
-
-Each section ends with:
-
-```text
-┌──────────────────────────────────────────────────────────┐
-│ DEVELOPMENT FOCUS                                        │
-│                                                          │
-│ For Story: Prioritize strengthening the central conflict │
-│ and tightening Devon's exposition scene.                 │
-│                                                          │
-│ Related: [Character Diagnosis] • [Development Priorities]│
-└──────────────────────────────────────────────────────────┘
-```
-
----
-
-## Export & Existing Functionality
-
-All existing features are preserved:
-
-- **PDF Export**: Updated to match new structure
-- **Stakeholder Lens**: Works identically, recalculates on all pages
-- **Share**: Functions as before
-- **Script viewing**: Link preserved in header
-
----
-
-## Technical Implementation Notes
-
-### Routing Changes
-
-```typescript
-// Old routes (sample)
-'/sample-web-series-report' → ProjectSnapshot
-'/sample-web-series-report/concept' → ConceptHook
-'/sample-web-series-report/plot' → PlotAnalysis
-// ... 28 more routes
-
-// New routes
-'/sample-web-series-report' → ReportCover (new default)
-'/sample-web-series-report/story' → StoryDiagnosis
-'/sample-web-series-report/characters' → CharacterDiagnosis
-'/sample-web-series-report/craft' → CraftDiagnosis
-'/sample-web-series-report/format' → FormatDiagnosis
-'/sample-web-series-report/commercial' → CommercialDiagnosis
-'/sample-web-series-report/development' → DevelopmentPriorities
-'/sample-web-series-report/reference' → Reference (expandable)
-```
-
-### Backward Compatibility
-
-Old routes will redirect to new consolidated pages:
-
-```typescript
-// Redirect map in App.tsx
-{ from: '/concept', to: '/story' },
-{ from: '/plot', to: '/story' },
-{ from: '/structure', to: '/story' },
-// etc.
-```
-
----
-
-## Success Metrics
-
-After implementation, the report will:
-
-1. **Reduce cognitive load**: 7 core pages vs 31 scattered pages
-2. **Emphasize diagnosis**: "What's broken" before "what's the score"
-3. **Surface actionability**: Every section links to development priorities
-4. **Distinguish maturity**: Clear visual for "weak" vs "unfinished"
-5. **Maintain depth**: Expandable parameter panels preserve all detail
-6. **Ensure consistency**: Single source of truth for each data point
+### Database Migration
+- Add `adapted_insights`, `adapted_recommendations`, `key_metrics`, `vocabulary_version` to `stakeholder_reports`
 
 ---
 
 ## Implementation Order
 
-1. Create new utility functions (`scoreUtils.ts` additions)
-2. Create new UI components (MaturityBadge, DiagnosisSummary, etc.)
-3. Create ReportCover page
-4. Create consolidated diagnosis pages (Story, Character, Craft, Commercial, Format)
-5. Update DevelopmentPriorities with cross-links
-6. Update navigation structure
-7. Update routing in App.tsx
-8. Update SampleWebSeriesReport layout
-9. Update Command Header and Action Rail
-10. Add redirects for old routes
-11. Update PDF export to match new structure
+1. Create stakeholder vocabulary configuration
+2. Create database migration for extended schema
+3. Implement `generate-stakeholder-report` edge function
+4. Update `StakeholderReport.tsx` to consume adapted content
+5. Add realtime subscription for background generation updates
+6. Update `DiagnosisSummary` and `DevelopmentFocus` components
+7. Update `ReportCover` with personalized decision signals
+8. Update `StakeholderReportCache` to show generation status
+9. Test with sample reports across all 9 stakeholder lenses
+10. Deploy and validate vocabulary translations
 
+---
+
+## Example Transformation
+
+### Base Analysis (Current)
+```
+Parameter: Protagonist Arc Clarity
+Score: 52/100
+Maturity: Developing
+Rationale: "The protagonist's emotional journey lacks clear turning points 
+in Act 2. The midpoint crisis doesn't force meaningful character change."
+```
+
+### Actor-Adapted Version
+```
+Parameter: Character Performance Depth
+Score: 52/100
+Maturity: Developing  
+Rationale: "Your character's journey through the middle section offers 
+limited opportunities for demonstrating transformation. The midpoint 
+scene lacks the emotional stakes needed for a showcase performance moment.
+Consider discussing with the writer: add visible internal struggle that 
+lets you show rather than tell the character's growth."
+Recommendation: "Request a rewrite meeting to add 2-3 moments where your 
+character's internal conflict becomes externally visible—these are the 
+scenes that earn award consideration."
+```
+
+### Financier-Adapted Version
+```
+Parameter: Lead Character Marketability
+Score: 52/100
+Maturity: Developing
+Rationale: "The protagonist's arc lacks the clear transformation arc that 
+drives word-of-mouth and repeat viewership. Similar projects with stronger 
+Act 2 character development show 23% higher audience scores."
+Recommendation: "Factor in 1-2 additional development cycles for character 
+work before package to talent. Weak lead arcs reduce star attachment rates 
+by approximately 40% in comparable projects."
+```
+
+---
+
+## Success Criteria
+
+After implementation:
+1. Each stakeholder lens shows content in their professional vocabulary
+2. Recommendations are actionable within each stakeholder's sphere of influence
+3. Executive summaries use role-specific metrics and framing
+4. Cached reports load instantly; new adaptations generate in background
+5. Content remains diagnostically accurate while being contextually relevant
