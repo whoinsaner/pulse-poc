@@ -3,8 +3,8 @@ import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useAuth } from '@/lib/auth';
 import { SAMPLE_WEB_SERIES_REPORT, SAMPLE_WEB_SERIES_REPORT_DATA } from '@/data/sampleWebSeriesReport';
 import { StakeholderLens, Report, ReportData } from '@/types/database';
-import { SampleCommandHeader } from '@/components/report/SampleCommandHeader';
-import { SampleActionRail } from '@/components/report/SampleActionRail';
+import { WebSeriesCommandHeader } from '@/components/report/WebSeriesCommandHeader';
+import { WebSeriesActionRail } from '@/components/report/WebSeriesActionRail';
 import { Skeleton } from '@/components/ui/skeleton';
 import { createContext, useContext } from 'react';
 
@@ -73,7 +73,7 @@ export default function SampleWebSeriesReportLayout() {
     <SampleWebSeriesReportContext.Provider value={contextValue}>
       <div className="min-h-screen bg-background flex flex-col">
         {/* Command Header with Sample Banner */}
-        <SampleCommandHeader
+        <WebSeriesCommandHeader
           reportData={reportData as ReportData}
           currentPath={currentPath}
           activeLens={activeLens}
@@ -88,13 +88,13 @@ export default function SampleWebSeriesReportLayout() {
         <div className="flex-1 flex">
           {/* Scrollable Content Area */}
           <main className="flex-1 overflow-auto">
-            <div className="p-6 lg:p-8 max-w-6xl mx-auto">
+            <div className="p-6 lg:p-8 max-w-5xl mx-auto">
               <Outlet context={contextValue} />
             </div>
           </main>
 
           {/* Action Rail */}
-          <SampleActionRail
+          <WebSeriesActionRail
             reportData={reportData as ReportData}
             activeLens={activeLens}
             setActiveLens={setActiveLens}
