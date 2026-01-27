@@ -822,40 +822,52 @@ export type Database = {
       }
       stakeholder_reports: {
         Row: {
+          adapted_insights: Json | null
+          adapted_recommendations: Json | null
           created_at: string
           executive_summary: string | null
           generated_at: string
           id: string
           is_stale: boolean | null
+          key_metrics: Json | null
           relevant_insights: Json | null
           relevant_parameters: Json | null
           report_id: string
           stakeholder_lens: string
           stakeholder_score: number | null
+          vocabulary_version: string | null
         }
         Insert: {
+          adapted_insights?: Json | null
+          adapted_recommendations?: Json | null
           created_at?: string
           executive_summary?: string | null
           generated_at?: string
           id?: string
           is_stale?: boolean | null
+          key_metrics?: Json | null
           relevant_insights?: Json | null
           relevant_parameters?: Json | null
           report_id: string
           stakeholder_lens: string
           stakeholder_score?: number | null
+          vocabulary_version?: string | null
         }
         Update: {
+          adapted_insights?: Json | null
+          adapted_recommendations?: Json | null
           created_at?: string
           executive_summary?: string | null
           generated_at?: string
           id?: string
           is_stale?: boolean | null
+          key_metrics?: Json | null
           relevant_insights?: Json | null
           relevant_parameters?: Json | null
           report_id?: string
           stakeholder_lens?: string
           stakeholder_score?: number | null
+          vocabulary_version?: string | null
         }
         Relationships: [
           {

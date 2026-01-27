@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.export-report]
 verify_jwt = false
+
+[functions.generate-stakeholder-report]
+verify_jwt = false

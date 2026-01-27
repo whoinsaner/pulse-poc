@@ -3,6 +3,8 @@ import { getDiagnosticCategory, getFixCostColor, getFixCostBg } from '@/lib/scor
 import { CheckCircle, AlertCircle, XCircle, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
+import { StakeholderLens } from '@/types/database';
+import { translateTerm } from '@/lib/stakeholderVocabulary';
 
 // Parameter score data interface
 export interface DiagnosticParameter {
@@ -13,12 +15,15 @@ export interface DiagnosticParameter {
   fixCost?: 'Low' | 'Medium' | 'High';
   evidence?: Array<{ quote?: string; explanation?: string }>;
   linkTo?: string;
+  // Adapted content from stakeholder report
+  adaptedRationale?: string;
 }
 
 interface DiagnosisSummaryProps {
   parameters: DiagnosticParameter[];
   categoryName: string;
   developmentLink?: string;
+  stakeholderLens?: StakeholderLens | null;
   className?: string;
 }
 
@@ -26,12 +31,25 @@ export function DiagnosisSummary({
   parameters, 
   categoryName, 
   developmentLink,
+  stakeholderLens,
   className 
 }: DiagnosisSummaryProps) {
+  // Apply stakeholder-specific translations if lens is set
+  const processedParameters = parameters.map(p => {
+    if (stakeholderLens && p.rationale) {
+      return {
+        ...p,
+        // Use adapted rationale if available, otherwise translate key terms
+        rationale: p.adaptedRationale || translateTermsInText(p.rationale, stakeholderLens)
+      };
+    }
+    return p;
+  });
+
   // Group parameters by diagnostic category
-  const working = parameters.filter(p => p.score >= 70);
-  const underdeveloped = parameters.filter(p => p.score >= 40 && p.score < 70);
-  const broken = parameters.filter(p => p.score < 40);
+  const working = processedParameters.filter(p => p.score >= 70);
+  const underdeveloped = processedParameters.filter(p => p.score >= 40 && p.score < 70);
+  const broken = processedParameters.filter(p => p.score < 40);
 
   const IconMap = {
     CheckCircle,
@@ -160,6 +178,54 @@ function DiagnosisSection({
       </ul>
     </div>
   );
+}
+
+// Helper to translate terms in text using stakeholder vocabulary
+function translateTermsInText(text: string, stakeholderLens: StakeholderLens): string {
+  // Common terms that might appear in rationales
+  const termMappings: Record<string, Record<string, string>> = {
+    'lacks depth': {
+      actor: 'offers limited emotional range opportunities',
+      producer: 'needs development passes',
+      financier: 'presents marketability concerns',
+      director: 'requires visual texture work',
+      writer: 'needs layering',
+      studio_executive: 'may limit talent attachment',
+      ott_platform: 'may impact viewer retention',
+      theatrical: 'has audience connection gaps',
+      investor: 'affects package value'
+    },
+    'structural issues': {
+      actor: 'disrupts performance flow',
+      producer: 'requires schedule adjustment',
+      financier: 'increases development costs',
+      director: 'needs pacing attention',
+      writer: 'needs act refinement',
+      studio_executive: 'requires development cycle',
+      ott_platform: 'affects episode mechanics',
+      theatrical: 'impacts satisfaction',
+      investor: 'extends timeline'
+    },
+    'unclear': {
+      actor: 'lacks clear performance beats',
+      producer: 'needs clarification for package',
+      financier: 'creates uncertainty',
+      director: 'requires visual anchoring',
+      writer: 'needs sharpening',
+      studio_executive: 'needs development focus',
+      ott_platform: 'affects hook clarity',
+      theatrical: 'needs audience clarity',
+      investor: 'increases risk'
+    }
+  };
+
+  let result = text;
+  for (const [term, translations] of Object.entries(termMappings)) {
+    if (result.toLowerCase().includes(term) && translations[stakeholderLens]) {
+      result = result.replace(new RegExp(term, 'gi'), translations[stakeholderLens]);
+    }
+  }
+  return result;
 }
 
 // Compact version for sidebar or cards
