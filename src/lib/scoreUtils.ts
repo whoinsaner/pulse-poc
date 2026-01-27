@@ -237,3 +237,188 @@ export function getReadinessLabel(score: number): { label: string; sublabel: str
     bgColor: 'bg-destructive/10',
   };
 }
+
+// ============= MATURITY STAGE SYSTEM (USAF Redesign) =============
+
+export type MaturityStage = 'draft' | 'developing' | 'polished' | 'production';
+
+export interface MaturityStageData {
+  stage: MaturityStage;
+  label: string;
+  description: string;
+  color: string;
+  bgColor: string;
+  borderColor: string;
+  progress: number; // 0-100 for visual indicator
+}
+
+/**
+ * Get the maturity stage based on score
+ * Distinguishes between "weak script" and "strong but unfinished"
+ */
+export function getMaturityStage(score: number): MaturityStageData {
+  if (score >= 80) {
+    return {
+      stage: 'production',
+      label: 'Production',
+      description: 'Ready for production consideration',
+      color: 'text-success',
+      bgColor: 'bg-success/10',
+      borderColor: 'border-success/30',
+      progress: 100,
+    };
+  }
+  if (score >= 65) {
+    return {
+      stage: 'polished',
+      label: 'Polished',
+      description: 'Near-complete, polish pass recommended',
+      color: 'text-chart-3',
+      bgColor: 'bg-chart-3/10',
+      borderColor: 'border-chart-3/30',
+      progress: 75,
+    };
+  }
+  if (score >= 40) {
+    return {
+      stage: 'developing',
+      label: 'Developing',
+      description: 'Strong foundation, focused development required',
+      color: 'text-chart-4',
+      bgColor: 'bg-chart-4/10',
+      borderColor: 'border-chart-4/30',
+      progress: 50,
+    };
+  }
+  return {
+    stage: 'draft',
+    label: 'Draft',
+    description: 'Early concepts, major structural work needed',
+    color: 'text-muted-foreground',
+    bgColor: 'bg-muted/50',
+    borderColor: 'border-border',
+    progress: 25,
+  };
+}
+
+// ============= DIAGNOSTIC CATEGORY SYSTEM (USAF Redesign) =============
+
+export type DiagnosticCategory = 'working' | 'underdeveloped' | 'broken';
+
+export interface DiagnosticCategoryData {
+  category: DiagnosticCategory;
+  label: string;
+  icon: 'CheckCircle' | 'AlertCircle' | 'XCircle';
+  color: string;
+  bgColor: string;
+}
+
+/**
+ * Categorize a parameter score into diagnostic buckets
+ * - Working: score >= 70 (things that are functioning well)
+ * - Underdeveloped: 40 <= score < 70 (needs development but not broken)
+ * - Broken: score < 40 (structural issues that need fixing)
+ */
+export function getDiagnosticCategory(score: number): DiagnosticCategoryData {
+  if (score >= 70) {
+    return {
+      category: 'working',
+      label: "What's Working",
+      icon: 'CheckCircle',
+      color: 'text-success',
+      bgColor: 'bg-success/10',
+    };
+  }
+  if (score >= 40) {
+    return {
+      category: 'underdeveloped',
+      label: "What's Underdeveloped",
+      icon: 'AlertCircle',
+      color: 'text-chart-4',
+      bgColor: 'bg-chart-4/10',
+    };
+  }
+  return {
+    category: 'broken',
+    label: "What's Structurally Broken",
+    icon: 'XCircle',
+    color: 'text-destructive',
+    bgColor: 'bg-destructive/10',
+  };
+}
+
+// ============= WEIGHT TIER SYSTEM (USAF Redesign) =============
+
+export type WeightTier = 'core' | 'standard' | 'polish';
+
+export interface WeightTierData {
+  tier: WeightTier;
+  label: string;
+  description: string;
+  color: string;
+  multiplierLabel: string;
+}
+
+/**
+ * Categorize parameter weight into tiers
+ * - Core: weight >= 1.2 (fundamental story elements)
+ * - Standard: 0.8 <= weight < 1.2 (important but not critical)
+ * - Polish: weight < 0.8 (surface-level concerns)
+ */
+export function getWeightTier(weight: number = 1.0): WeightTierData {
+  if (weight >= 1.2) {
+    return {
+      tier: 'core',
+      label: 'Core',
+      description: 'Critical story fundamental',
+      color: 'text-primary',
+      multiplierLabel: `${weight.toFixed(1)}x`,
+    };
+  }
+  if (weight >= 0.8) {
+    return {
+      tier: 'standard',
+      label: 'Standard',
+      description: 'Important element',
+      color: 'text-muted-foreground',
+      multiplierLabel: '',
+    };
+  }
+  return {
+    tier: 'polish',
+    label: 'Polish',
+    description: 'Surface-level concern',
+    color: 'text-muted-foreground/60',
+    multiplierLabel: `${weight.toFixed(1)}x`,
+  };
+}
+
+// ============= FIX COST UTILITIES =============
+
+export type FixCost = 'Low' | 'Medium' | 'High';
+
+export function getFixCostColor(cost: FixCost | string | undefined): string {
+  switch (cost) {
+    case 'Low':
+      return 'text-success';
+    case 'Medium':
+      return 'text-chart-4';
+    case 'High':
+      return 'text-destructive';
+    default:
+      return 'text-muted-foreground';
+  }
+}
+
+export function getFixCostBg(cost: FixCost | string | undefined): string {
+  switch (cost) {
+    case 'Low':
+      return 'bg-success/10';
+    case 'Medium':
+      return 'bg-chart-4/10';
+    case 'High':
+      return 'bg-destructive/10';
+    default:
+      return 'bg-muted';
+  }
+}

@@ -52,6 +52,14 @@ import SampleWebSeriesReportLayout from "./pages/SampleWebSeriesReport";
 import SampleMicroDramaReportLayout from "./pages/SampleMicroDramaReport";
 import ComicGallery from "./pages/ComicGallery";
 import MicroDramaAnalysis from "./pages/report/MicroDramaAnalysis";
+// New USAF Redesign Pages
+import ReportCover from "./pages/report/ReportCover";
+import StoryDiagnosis from "./pages/report/StoryDiagnosis";
+import CharacterDiagnosis from "./pages/report/CharacterDiagnosis";
+import CraftDiagnosis from "./pages/report/CraftDiagnosis";
+import FormatDiagnosis from "./pages/report/FormatDiagnosis";
+import CommercialDiagnosis from "./pages/report/CommercialDiagnosis";
+import DevelopmentPriorities from "./pages/report/DevelopmentPriorities";
 import Reports from "./pages/Reports";
 import Team from "./pages/Team";
 import ParametersAgents from "./pages/ParametersAgents";
@@ -184,25 +192,36 @@ const App = () => (
             </Route>
             <Route path="/sample-comic-script" element={<SampleComicScript />} />
             <Route path="/sample-web-series-report" element={<SampleWebSeriesReportLayout />}>
-              <Route index element={<ProjectSnapshot />} />
-              <Route path="concept" element={<ConceptHook />} />
-              <Route path="plot" element={<PlotAnalysis />} />
-              <Route path="structure" element={<StructuralEngineering />} />
-              <Route path="protagonist" element={<ProtagonistAnalysis />} />
-              <Route path="antagonist" element={<AntagonistAnalysis />} />
-              <Route path="supporting" element={<SupportingCast />} />
-              <Route path="psychology" element={<CharacterPsychology />} />
-              <Route path="dialogue" element={<DialogueSubtext />} />
-              <Route path="theme" element={<ThemeMoral />} />
-              <Route path="visual" element={<VisualStorytelling />} />
-              <Route path="emotional" element={<EmotionalResonance />} />
-              <Route path="web-series" element={<WebSeriesAnalysis />} />
-              <Route path="retention" element={<RetentionAnalysis />} />
-              <Route path="hooks" element={<HooksAnalysis />} />
-              <Route path="market" element={<Marketability />} />
-              <Route path="production" element={<Production />} />
-              <Route path="audience" element={<AudienceStrategy />} />
-              <Route path="rewrite" element={<RewritePriorities />} />
+              {/* New USAF Redesign Routes (consolidated) */}
+              <Route index element={<ReportCover />} />
+              <Route path="story" element={<StoryDiagnosis />} />
+              <Route path="characters" element={<CharacterDiagnosis />} />
+              <Route path="craft" element={<CraftDiagnosis />} />
+              <Route path="format" element={<FormatDiagnosis />} />
+              <Route path="commercial" element={<CommercialDiagnosis />} />
+              <Route path="development" element={<DevelopmentPriorities />} />
+              
+              {/* Legacy routes - redirect to new consolidated pages */}
+              <Route path="concept" element={<Navigate to="/sample-web-series-report/story" replace />} />
+              <Route path="plot" element={<Navigate to="/sample-web-series-report/story" replace />} />
+              <Route path="structure" element={<Navigate to="/sample-web-series-report/story" replace />} />
+              <Route path="protagonist" element={<Navigate to="/sample-web-series-report/characters" replace />} />
+              <Route path="antagonist" element={<Navigate to="/sample-web-series-report/characters" replace />} />
+              <Route path="supporting" element={<Navigate to="/sample-web-series-report/characters" replace />} />
+              <Route path="psychology" element={<Navigate to="/sample-web-series-report/characters" replace />} />
+              <Route path="dialogue" element={<Navigate to="/sample-web-series-report/craft" replace />} />
+              <Route path="theme" element={<Navigate to="/sample-web-series-report/craft" replace />} />
+              <Route path="visual" element={<Navigate to="/sample-web-series-report/craft" replace />} />
+              <Route path="emotional" element={<Navigate to="/sample-web-series-report/craft" replace />} />
+              <Route path="web-series" element={<Navigate to="/sample-web-series-report/format" replace />} />
+              <Route path="retention" element={<Navigate to="/sample-web-series-report/format" replace />} />
+              <Route path="hooks" element={<Navigate to="/sample-web-series-report/format" replace />} />
+              <Route path="market" element={<Navigate to="/sample-web-series-report/commercial" replace />} />
+              <Route path="production" element={<Navigate to="/sample-web-series-report/commercial" replace />} />
+              <Route path="audience" element={<Navigate to="/sample-web-series-report/commercial" replace />} />
+              <Route path="rewrite" element={<Navigate to="/sample-web-series-report/development" replace />} />
+              
+              {/* Reference pages - keep as is */}
               <Route path="scenes" element={<SceneEconomy />} />
               <Route path="scorecard" element={<CompleteScorecard />} />
               <Route path="bible" element={<SeriesBibleExtract />} />
@@ -210,7 +229,6 @@ const App = () => (
               <Route path="analysis" element={<ReportAnalysis />} />
               <Route path="insights" element={<ReportInsights />} />
               <Route path="narrative" element={<ReportNarrative />} />
-              <Route path="characters" element={<ReportCharacters />} />
             </Route>
             <Route path="/sample-micro-drama-report" element={<SampleMicroDramaReportLayout />}>
               <Route index element={<ProjectSnapshot />} />

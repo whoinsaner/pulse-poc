@@ -20,3 +20,13 @@ export { StrengthWeaknessList, StrengthWeaknessTags } from './StrengthWeaknessLi
 
 export { RecommendationCard, TieredRecommendations } from './RecommendationCard';
 export type { RecommendationPriority, RecommendationEffort } from './RecommendationCard';
+
+// USAF Redesign Components
+export { MaturityBadge, InlineMaturity } from './MaturityBadge';
+export { DiagnosisSummary, CompactDiagnosis } from './DiagnosisSummary';
+export type { DiagnosticParameter } from './DiagnosisSummary';
+export { WeightedParameterBar, WeightedParameterList } from './WeightedParameterBar';
+export type { WeightedParameter } from './WeightedParameterBar';
+export { SectionNavigator, CrossLink } from './SectionNavigator';
+export type { NavigationSection } from './SectionNavigator';
+export { DevelopmentFocus, InlineDevelopmentFocus } from './DevelopmentFocus';
