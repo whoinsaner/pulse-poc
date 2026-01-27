@@ -454,13 +454,60 @@ serve(async (req) => {
   }
 
   try {
+    // Authentication check - require valid auth token
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      console.error('[script-parser] No auth token provided');
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized - No auth token provided' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
+    // Create client with user's token to verify auth and check RLS access
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+
+    // Verify user is authenticated using getClaims for efficiency
+    const token = authHeader.replace('Bearer ', '');
+    const { data: claimsData, error: claimsError } = await supabaseAuth.auth.getClaims(token);
+    
+    if (claimsError || !claimsData?.claims) {
+      console.error('[script-parser] Invalid auth token:', claimsError?.message);
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized - Invalid token' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const userId = claimsData.claims.sub;
+    console.log(`[script-parser] Authenticated user: ${userId}`);
+
     const { scriptId, format, filePath, scriptType } = await req.json() as ParseRequest;
     
+    // Verify user has access to the script via RLS
+    const { data: scriptAccess, error: accessError } = await supabaseAuth
+      .from('scripts')
+      .select('id, organization_id')
+      .eq('id', scriptId)
+      .maybeSingle();
+
+    if (accessError || !scriptAccess) {
+      console.error('[script-parser] Script not found or user unauthorized:', accessError?.message);
+      return new Response(
+        JSON.stringify({ error: 'Not found or unauthorized' }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     console.log(`[script-parser] Starting parse for script ${scriptId}, format: ${format}, type: ${scriptType}`);
 
-    // Create Supabase client with service role for admin access
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    // Create Supabase client with service role for admin access (only after auth check passes)
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Download file from storage
