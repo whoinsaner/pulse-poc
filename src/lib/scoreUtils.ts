@@ -422,3 +422,83 @@ export function getFixCostBg(cost: FixCost | string | undefined): string {
       return 'bg-muted';
   }
 }
+
+// ============= DIAGNOSTIC SUMMARY UTILITIES (Report Card V2) =============
+
+export interface DiagnosticCounts {
+  working: number;
+  needsWork: number;
+  total: number;
+}
+
+/**
+ * Get counts of working vs needs-work parameters from category scores
+ * Working: score >= 65
+ * Needs Work: score < 65
+ */
+export function getDiagnosticCounts(categoryScores: Record<string, number>): DiagnosticCounts {
+  const scores = Object.values(categoryScores);
+  const working = scores.filter(s => s >= 65).length;
+  const needsWork = scores.filter(s => s < 65).length;
+  
+  return {
+    working,
+    needsWork,
+    total: scores.length,
+  };
+}
+
+/**
+ * Get the top strength category from category scores
+ * Returns the highest-scoring category name (formatted)
+ */
+export function getTopStrength(categoryScores: Record<string, number>): { category: string; score: number } | null {
+  const entries = Object.entries(categoryScores);
+  if (entries.length === 0) return null;
+  
+  const [topCategory, topScore] = entries.reduce((max, current) => 
+    current[1] > max[1] ? current : max
+  );
+  
+  // Format category name: convert camelCase/snake_case to Title Case
+  const formattedCategory = topCategory
+    .replace(/_/g, ' ')
+    .replace(/([A-Z])/g, ' $1')
+    .replace(/^./, str => str.toUpperCase())
+    .trim();
+  
+  return { category: formattedCategory, score: topScore };
+}
+
+/**
+ * Get sorted strengths (score >= 65) and areas needing development (score < 65)
+ */
+export function getSortedDiagnostics(categoryScores: Record<string, number>): {
+  strengths: Array<{ category: string; score: number }>;
+  needsDevelopment: Array<{ category: string; score: number }>;
+} {
+  const entries = Object.entries(categoryScores)
+    .map(([category, score]) => ({
+      category: category
+        .replace(/_/g, ' ')
+        .replace(/([A-Z])/g, ' $1')
+        .replace(/^./, str => str.toUpperCase())
+        .trim(),
+      score,
+    }))
+    .sort((a, b) => b.score - a.score);
+  
+  return {
+    strengths: entries.filter(e => e.score >= 65),
+    needsDevelopment: entries.filter(e => e.score < 65),
+  };
+}
+
+/**
+ * Get the border color class based on decision signal
+ */
+export function getDecisionSignalBorderClass(score: number): string {
+  if (score >= 75) return 'border-l-4 border-l-success';
+  if (score >= 50) return 'border-l-4 border-l-chart-4';
+  return 'border-l-4 border-l-destructive';
+}
