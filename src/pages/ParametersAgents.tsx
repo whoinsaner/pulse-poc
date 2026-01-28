@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -35,6 +35,9 @@ import {
   Download,
   Film,
   ArrowLeft,
+  RefreshCw,
+  CheckCircle2,
+  AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { exportParametersToCSV } from "@/lib/exportUtils";
@@ -63,6 +66,14 @@ import {
   getConfidenceLevel,
   ScriptTypeCategory,
 } from "@/lib/scriptFramework";
+import { 
+  ALL_FRAMEWORK_PARAMETERS, 
+  getParameterSyncStatus, 
+  getMissingParameters,
+  getFrameworkParameterCounts,
+  ParameterSyncStatus 
+} from "@/lib/parameterSync";
+import { toast } from "sonner";
 
 interface Parameter {
   id: string;
@@ -136,8 +147,36 @@ export default function ParametersAgents() {
   const [selectedLens, setSelectedLens] = useState<string>("all");
   const [selectedAgent, setSelectedAgent] = useState<string>("all");
   const [selectedScriptType, setSelectedScriptType] = useState<string>("all");
+  const [syncStatus, setSyncStatus] = useState<Record<string, ParameterSyncStatus>>({});
+  const [syncChecked, setSyncChecked] = useState(false);
 
-  const { data: parameters = [], isLoading: loadingParams } = useQuery({
+  // Check sync status on mount
+  useEffect(() => {
+    const checkSync = async () => {
+      try {
+        const status = await getParameterSyncStatus();
+        setSyncStatus(status);
+        
+        // Log sync summary
+        const missing = Object.values(status).filter(s => !s.inDatabase).length;
+        const orphaned = Object.values(status).filter(s => s.inDatabase && !s.isFrameworkDefined).length;
+        
+        if (missing > 0) {
+          console.log(`[ParameterSync] ${missing} framework parameters not in database`);
+        }
+        if (orphaned > 0) {
+          console.log(`[ParameterSync] ${orphaned} database parameters not in framework`);
+        }
+      } catch (error) {
+        console.error("[ParameterSync] Error checking sync status:", error);
+      } finally {
+        setSyncChecked(true);
+      }
+    };
+    checkSync();
+  }, []);
+
+  const { data: parameters = [], isLoading: loadingParams, refetch: refetchParams } = useQuery({
     queryKey: ["parameters"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -305,9 +344,26 @@ export default function ParametersAgents() {
                   <Layers className="h-6 w-6 text-primary" />
                   Parameters & Agents
                   <Badge variant="outline" className="text-xs font-normal">v{CURRENT_PROMPT_VERSION}</Badge>
+                  {syncChecked && (
+                    <Tooltip>
+                      <TooltipTrigger>
+                        {Object.values(syncStatus).filter(s => !s.inDatabase).length === 0 ? (
+                          <CheckCircle2 className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <AlertCircle className="h-4 w-4 text-amber-500" />
+                        )}
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {Object.values(syncStatus).filter(s => !s.inDatabase).length === 0 
+                          ? "All framework parameters synced to database"
+                          : `${Object.values(syncStatus).filter(s => !s.inDatabase).length} parameters missing from database`
+                        }
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
                 </h1>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Universal Script Analysis Framework — {ALL_AGENTS.length} agents across {SCRIPT_TYPES.length} script types
+                  Universal Script Analysis Framework — {ALL_AGENTS.length} agents, {ALL_FRAMEWORK_PARAMETERS.length} parameters across {SCRIPT_TYPES.length} script types
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-3">

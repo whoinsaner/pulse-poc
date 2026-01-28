@@ -89,13 +89,38 @@ export default function AgentConfiguration() {
   const [syncStatus, setSyncStatus] = useState<Record<string, AgentSyncStatus>>({});
 
   useEffect(() => {
-    fetchAgents();
-    fetchSyncStatus();
+    const initializeAgents = async () => {
+      // Auto-sync framework on mount to ensure agents are up-to-date
+      await autoSyncIfNeeded();
+      await fetchAgents();
+      await fetchSyncStatus();
+    };
+    initializeAgents();
   }, [profile?.current_organization_id]);
 
   const fetchSyncStatus = async () => {
     const status = await getAgentSyncStatus();
     setSyncStatus(status);
+  };
+
+  // Auto-sync if there are missing agents or framework updates
+  const autoSyncIfNeeded = async () => {
+    try {
+      const status = await getAgentSyncStatus();
+      const missingAgents = ALL_AGENTS.filter(agent => !status[agent.id]?.inDatabase);
+      
+      if (missingAgents.length > 0) {
+        console.log(`[AgentSync] Auto-syncing ${missingAgents.length} missing agents...`);
+        setSyncing(true);
+        const result = await syncAgentsFromFramework();
+        if (result.success && result.seeded.length > 0) {
+          toast.success(`Auto-synced ${result.seeded.length} new agents from framework`);
+        }
+        setSyncing(false);
+      }
+    } catch (error) {
+      console.error("[AgentSync] Auto-sync error:", error);
+    }
   };
 
   const handleSync = async () => {
