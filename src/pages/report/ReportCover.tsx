@@ -25,6 +25,7 @@ import {
   ArrowRight,
   Monitor,
   Smartphone,
+  LayoutPanelTop,
 } from 'lucide-react';
 
 interface ReportContextValue {
@@ -91,6 +92,13 @@ export default function ReportCover() {
     }
     if (scriptType === 'micro_drama') {
       return { id: 'format', label: 'Micro Drama', icon: Smartphone, path: '/format', score: reportData.categoryScores?.['Micro Drama'] || 0 };
+    }
+    if (scriptType === 'comic') {
+      // Calculate average comic score from comic-specific categories
+      const comicCategories = ['Comic Visuals', 'Comic Dialogue', 'Comic Pacing', 'Comic Collaboration'];
+      const comicScores = comicCategories.map(cat => reportData.categoryScores?.[cat] || 0).filter(s => s > 0);
+      const avgComicScore = comicScores.length > 0 ? comicScores.reduce((a, b) => a + b, 0) / comicScores.length : 0;
+      return { id: 'format', label: 'Comic', icon: LayoutPanelTop, path: '/format', score: avgComicScore };
     }
     return null;
   }, [metadata?.scriptType, reportData.categoryScores]);

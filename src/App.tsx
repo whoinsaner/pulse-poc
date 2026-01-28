@@ -58,6 +58,7 @@ import StoryDiagnosis from "./pages/report/StoryDiagnosis";
 import CharacterDiagnosis from "./pages/report/CharacterDiagnosis";
 import CraftDiagnosis from "./pages/report/CraftDiagnosis";
 import FormatDiagnosis from "./pages/report/FormatDiagnosis";
+import ComicFormatDiagnosis from "./pages/report/ComicFormatDiagnosis";
 import CommercialDiagnosis from "./pages/report/CommercialDiagnosis";
 import DevelopmentPriorities from "./pages/report/DevelopmentPriorities";
 import Reports from "./pages/Reports";
@@ -134,23 +135,34 @@ const App = () => (
               <Route path="hooks" element={<HooksAnalysis />} />
               <Route path="stakeholder/:stakeholder" element={<StakeholderReport />} />
             </Route>
+            {/* Feature Film Sample Report - USAF Redesign */}
             <Route path="/sample-report" element={<SampleReportLayout />}>
-              <Route index element={<ProjectSnapshot />} />
-              <Route path="concept" element={<ConceptHook />} />
-              <Route path="plot" element={<PlotAnalysis />} />
-              <Route path="structure" element={<StructuralEngineering />} />
-              <Route path="protagonist" element={<ProtagonistAnalysis />} />
-              <Route path="antagonist" element={<AntagonistAnalysis />} />
-              <Route path="supporting" element={<SupportingCast />} />
-              <Route path="psychology" element={<CharacterPsychology />} />
-              <Route path="dialogue" element={<DialogueSubtext />} />
-              <Route path="theme" element={<ThemeMoral />} />
-              <Route path="visual" element={<VisualStorytelling />} />
-              <Route path="emotional" element={<EmotionalResonance />} />
-              <Route path="market" element={<Marketability />} />
-              <Route path="production" element={<Production />} />
-              <Route path="audience" element={<AudienceStrategy />} />
-              <Route path="rewrite" element={<RewritePriorities />} />
+              {/* New USAF Consolidated Routes */}
+              <Route index element={<ReportCover />} />
+              <Route path="story" element={<StoryDiagnosis />} />
+              <Route path="characters" element={<CharacterDiagnosis />} />
+              <Route path="craft" element={<CraftDiagnosis />} />
+              <Route path="commercial" element={<CommercialDiagnosis />} />
+              <Route path="development" element={<DevelopmentPriorities />} />
+              
+              {/* Legacy routes - redirect to consolidated pages */}
+              <Route path="concept" element={<Navigate to="/sample-report/story" replace />} />
+              <Route path="plot" element={<Navigate to="/sample-report/story" replace />} />
+              <Route path="structure" element={<Navigate to="/sample-report/story" replace />} />
+              <Route path="protagonist" element={<Navigate to="/sample-report/characters" replace />} />
+              <Route path="antagonist" element={<Navigate to="/sample-report/characters" replace />} />
+              <Route path="supporting" element={<Navigate to="/sample-report/characters" replace />} />
+              <Route path="psychology" element={<Navigate to="/sample-report/characters" replace />} />
+              <Route path="dialogue" element={<Navigate to="/sample-report/craft" replace />} />
+              <Route path="theme" element={<Navigate to="/sample-report/craft" replace />} />
+              <Route path="visual" element={<Navigate to="/sample-report/craft" replace />} />
+              <Route path="emotional" element={<Navigate to="/sample-report/craft" replace />} />
+              <Route path="market" element={<Navigate to="/sample-report/commercial" replace />} />
+              <Route path="production" element={<Navigate to="/sample-report/commercial" replace />} />
+              <Route path="audience" element={<Navigate to="/sample-report/commercial" replace />} />
+              <Route path="rewrite" element={<Navigate to="/sample-report/development" replace />} />
+              
+              {/* Reference pages */}
               <Route path="scenes" element={<SceneEconomy />} />
               <Route path="scorecard" element={<CompleteScorecard />} />
               <Route path="bible" element={<SeriesBibleExtract />} />
@@ -158,28 +170,40 @@ const App = () => (
               <Route path="analysis" element={<ReportAnalysis />} />
               <Route path="insights" element={<ReportInsights />} />
               <Route path="narrative" element={<ReportNarrative />} />
-              <Route path="characters" element={<ReportCharacters />} />
+              <Route path="characters-detail" element={<ReportCharacters />} />
               <Route path="platform" element={<ReportPlatform />} />
             </Route>
             <Route path="/sample-script" element={<SampleScript />} />
+            {/* Comic Sample Report - USAF Redesign with Comic-Specific Format */}
             <Route path="/sample-comic-report" element={<SampleComicReportLayout />}>
-              <Route index element={<ProjectSnapshot />} />
-              <Route path="concept" element={<ConceptHook />} />
-              <Route path="plot" element={<PlotAnalysis />} />
-              <Route path="structure" element={<StructuralEngineering />} />
-              <Route path="protagonist" element={<ProtagonistAnalysis />} />
-              <Route path="antagonist" element={<AntagonistAnalysis />} />
-              <Route path="supporting" element={<SupportingCast />} />
-              <Route path="psychology" element={<CharacterPsychology />} />
-              <Route path="dialogue" element={<DialogueSubtext />} />
-              <Route path="theme" element={<ThemeMoral />} />
-              <Route path="visual" element={<VisualStorytelling />} />
-              <Route path="emotional" element={<EmotionalResonance />} />
-              <Route path="comic" element={<ReportComic />} />
-              <Route path="market" element={<Marketability />} />
-              <Route path="production" element={<Production />} />
-              <Route path="audience" element={<AudienceStrategy />} />
-              <Route path="rewrite" element={<RewritePriorities />} />
+              {/* New USAF Consolidated Routes */}
+              <Route index element={<ReportCover />} />
+              <Route path="story" element={<StoryDiagnosis />} />
+              <Route path="characters" element={<CharacterDiagnosis />} />
+              <Route path="craft" element={<CraftDiagnosis />} />
+              <Route path="format" element={<ComicFormatDiagnosis />} />
+              <Route path="commercial" element={<CommercialDiagnosis />} />
+              <Route path="development" element={<DevelopmentPriorities />} />
+              
+              {/* Legacy routes - redirect to consolidated pages */}
+              <Route path="concept" element={<Navigate to="/sample-comic-report/story" replace />} />
+              <Route path="plot" element={<Navigate to="/sample-comic-report/story" replace />} />
+              <Route path="structure" element={<Navigate to="/sample-comic-report/story" replace />} />
+              <Route path="protagonist" element={<Navigate to="/sample-comic-report/characters" replace />} />
+              <Route path="antagonist" element={<Navigate to="/sample-comic-report/characters" replace />} />
+              <Route path="supporting" element={<Navigate to="/sample-comic-report/characters" replace />} />
+              <Route path="psychology" element={<Navigate to="/sample-comic-report/characters" replace />} />
+              <Route path="dialogue" element={<Navigate to="/sample-comic-report/craft" replace />} />
+              <Route path="theme" element={<Navigate to="/sample-comic-report/craft" replace />} />
+              <Route path="visual" element={<Navigate to="/sample-comic-report/craft" replace />} />
+              <Route path="emotional" element={<Navigate to="/sample-comic-report/craft" replace />} />
+              <Route path="comic" element={<Navigate to="/sample-comic-report/format" replace />} />
+              <Route path="market" element={<Navigate to="/sample-comic-report/commercial" replace />} />
+              <Route path="production" element={<Navigate to="/sample-comic-report/commercial" replace />} />
+              <Route path="audience" element={<Navigate to="/sample-comic-report/commercial" replace />} />
+              <Route path="rewrite" element={<Navigate to="/sample-comic-report/development" replace />} />
+              
+              {/* Reference pages */}
               <Route path="scenes" element={<SceneEconomy />} />
               <Route path="scorecard" element={<CompleteScorecard />} />
               <Route path="bible" element={<SeriesBibleExtract />} />
@@ -187,7 +211,7 @@ const App = () => (
               <Route path="analysis" element={<ReportAnalysis />} />
               <Route path="insights" element={<ReportInsights />} />
               <Route path="narrative" element={<ReportNarrative />} />
-              <Route path="characters" element={<ReportCharacters />} />
+              <Route path="characters-detail" element={<ReportCharacters />} />
               <Route path="platform" element={<ReportPlatform />} />
             </Route>
             <Route path="/sample-comic-script" element={<SampleComicScript />} />
