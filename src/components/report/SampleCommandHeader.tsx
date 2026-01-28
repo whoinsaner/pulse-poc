@@ -14,7 +14,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { getNavGroupsForScriptType, getScriptTypeLabel } from '@/lib/reportNavigation';
+import { getUSAFNavGroups, getScriptTypeLabel } from '@/lib/reportNavigation';
 import type { ScriptType } from '@/types/database';
 
 interface SampleCommandHeaderProps {
@@ -70,9 +70,9 @@ export function SampleCommandHeader({
 }: SampleCommandHeaderProps) {
   const navigate = useNavigate();
   
-  // Get dynamic navigation based on script type and available categories
+  // Get dynamic navigation based on script type - use USAF consolidated navigation
   const scriptType = reportData.scriptMetadata?.scriptType || 'feature';
-  const navGroups = getNavGroupsForScriptType(scriptType, reportData.categoryScores);
+  const navGroups = getUSAFNavGroups(scriptType, reportData.categoryScores);
   
   // Get script type display info
   const ScriptTypeIcon = SCRIPT_TYPE_ICONS[scriptType];

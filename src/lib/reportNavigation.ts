@@ -70,6 +70,65 @@ export function isScreenplayType(scriptType: ScriptType | undefined): boolean {
 }
 
 /**
+ * USAF Consolidated Navigation Structure
+ * Used for the new diagnosis-first report layout
+ */
+const USAF_NAV_GROUPS: NavGroup[] = [
+  {
+    id: 'overview',
+    label: 'Overview',
+    applicableTypes: 'all',
+    items: [
+      { id: 'cover', label: 'Cover', icon: LayoutDashboard, path: '' },
+    ],
+  },
+  {
+    id: 'diagnosis',
+    label: 'Diagnosis',
+    applicableTypes: 'all',
+    items: [
+      { id: 'story', label: 'Story', icon: BookOpen, path: '/story', requiredCategories: ['Concept & Hook', 'Structure', 'Conflict'] },
+      { id: 'characters', label: 'Characters', icon: Users, path: '/characters', requiredCategories: ['Character'] },
+      { id: 'craft', label: 'Craft', icon: Palette, path: '/craft', requiredCategories: ['Dialogue', 'Theme', 'World & Logic', 'Emotional Arc'] },
+    ],
+  },
+  {
+    id: 'format',
+    label: 'Format',
+    applicableTypes: ['comic', 'web_series', 'micro_drama'],
+    items: [
+      { id: 'format', label: 'Format', icon: Layers, path: '/format' },
+    ],
+  },
+  {
+    id: 'market',
+    label: 'Market',
+    applicableTypes: 'all',
+    items: [
+      { id: 'commercial', label: 'Commercial', icon: TrendingUp, path: '/commercial', requiredCategories: ['Market', 'Execution'] },
+    ],
+  },
+  {
+    id: 'actions',
+    label: 'Actions',
+    applicableTypes: 'all',
+    items: [
+      { id: 'development', label: 'Development', icon: ListTodo, path: '/development' },
+    ],
+  },
+  {
+    id: 'reference',
+    label: 'Reference',
+    applicableTypes: 'all',
+    items: [
+      { id: 'scorecard', label: 'Scorecard', icon: BarChart3, path: '/scorecard' },
+      { id: 'script', label: 'Script', icon: FileText, path: '/script' },
+    ],
+  },
+];
+
+/**
+ * Legacy Navigation Structure (for backward compatibility)
  * Full navigation structure with applicability rules
  */
 const ALL_NAV_GROUPS: NavGroup[] = [
@@ -175,14 +234,17 @@ const ALL_NAV_GROUPS: NavGroup[] = [
 
 /**
  * Get navigation groups filtered for a specific script type
+ * @param useUSAFLayout - If true, use the consolidated USAF navigation structure
  */
 export function getNavGroupsForScriptType(
   scriptType: ScriptType | undefined,
-  categoryScores?: Record<string, number>
+  categoryScores?: Record<string, number>,
+  useUSAFLayout: boolean = false
 ): NavGroup[] {
   const type = scriptType || 'feature';
+  const navGroups = useUSAFLayout ? USAF_NAV_GROUPS : ALL_NAV_GROUPS;
   
-  return ALL_NAV_GROUPS
+  return navGroups
     .filter(group => {
       // Filter by script type applicability
       if (group.applicableTypes === 'all') return true;
@@ -201,6 +263,16 @@ export function getNavGroupsForScriptType(
       }),
     }))
     .filter(group => group.items.length > 0); // Remove empty groups
+}
+
+/**
+ * Get USAF consolidated navigation groups for a script type
+ */
+export function getUSAFNavGroups(
+  scriptType: ScriptType | undefined,
+  categoryScores?: Record<string, number>
+): NavGroup[] {
+  return getNavGroupsForScriptType(scriptType, categoryScores, true);
 }
 
 /**
