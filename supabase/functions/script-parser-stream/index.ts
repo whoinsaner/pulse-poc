@@ -1797,10 +1797,19 @@ serve(async (req) => {
 
         // Update script with page count
         console.log(`[script-parser-stream] Updating script page count`);
-        const extractedPages = Math.max(
-          ...allScenes.map(s => s.page_end || s.page_start || 0),
-          Math.ceil(rawText.length / 3000)
-        );
+        
+        // Calculate extracted pages - consider scene count as alternative for FDX/text formats
+        // where page numbers aren't embedded in the format
+        const scenePageMax = Math.max(...allScenes.map(s => s.page_end || s.page_start || 0), 0);
+        const textBasedPages = Math.ceil(rawText.length / 3000);
+        
+        // For FDX and text formats, estimate pages from scene count (avg ~1 page per scene for features)
+        // This is more reliable than text length for XML formats
+        const sceneBasedPages = format === 'fdx' || ['fountain', 'highland', 'txt'].includes(format)
+          ? Math.ceil(allScenes.length * 0.9) // ~0.9 pages per scene average
+          : 0;
+        
+        const extractedPages = Math.max(scenePageMax, textBasedPages, sceneBasedPages);
         
         const { error: updateError } = await supabase
           .from('scripts')
@@ -1815,14 +1824,43 @@ serve(async (req) => {
 
         // Calculate extraction quality
         // IMPORTANT: Use actual PDF page count when available, not file-size heuristic
-        // File-size heuristics are unreliable for compressed PDFs
+        // For FDX files, file-size heuristics are unreliable (XML overhead)
+        // Use scene count as primary quality indicator for structured formats
         const effectiveExpectedPages = actualPdfPageCount || expectedPages;
-        const coveragePercent = effectiveExpectedPages > 0 
-          ? Math.min(100, (extractedPages / effectiveExpectedPages) * 100) // Clamp to 100%
-          : 100;
-        const isComplete = coveragePercent >= 85 && allScenes.length > 0;
         
-        console.log(`[script-parser-stream] Coverage calculation: extractedPages=${extractedPages}, effectiveExpectedPages=${effectiveExpectedPages} (actual PDF: ${actualPdfPageCount}, file-size estimate: ${expectedPages}), coverage=${coveragePercent.toFixed(1)}%`);
+        // For FDX and structured formats, quality is determined by scene extraction success
+        // not page coverage (since page numbers aren't in the format)
+        const isStructuredFormat = format === 'fdx' || ['fountain', 'highland'].includes(format);
+        
+        let coveragePercent: number;
+        let isComplete: boolean;
+        
+        if (isStructuredFormat && allScenes.length > 0) {
+          // For structured formats: 
+          // - 50+ scenes = excellent (feature film)
+          // - 20+ scenes = good (short/pilot)
+          // - 5+ scenes = acceptable
+          // - Also consider if we got substantial text and characters
+          const sceneQuality = allScenes.length >= 50 ? 100 : 
+                              allScenes.length >= 20 ? 90 : 
+                              allScenes.length >= 10 ? 80 :
+                              allScenes.length >= 5 ? 70 : 50;
+          const hasCharacters = characters.length >= 3;
+          const hasSubstantialText = rawText.length > 10000;
+          
+          coveragePercent = sceneQuality;
+          isComplete = allScenes.length >= 5 && hasCharacters;
+          
+          console.log(`[script-parser-stream] Structured format quality: ${allScenes.length} scenes → ${coveragePercent}%, hasChars=${hasCharacters}, hasText=${hasSubstantialText}`);
+        } else {
+          // For PDF/DOCX: use page-based coverage
+          coveragePercent = effectiveExpectedPages > 0 
+            ? Math.min(100, (extractedPages / effectiveExpectedPages) * 100)
+            : 100;
+          isComplete = coveragePercent >= 85 && allScenes.length > 0;
+        }
+        
+        console.log(`[script-parser-stream] Coverage calculation: extractedPages=${extractedPages}, effectiveExpectedPages=${effectiveExpectedPages} (actual PDF: ${actualPdfPageCount}, file-size estimate: ${expectedPages}), coverage=${coveragePercent.toFixed(1)}%, isComplete=${isComplete}`);
 
         // Send final result
         sendSSE(controller, 'complete', {
