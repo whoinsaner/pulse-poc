@@ -6,11 +6,8 @@ import { Report, ReportData, LENS_CONFIG, StakeholderLens, AnalysisStatus, Agent
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ScoreRing } from '@/components/ScoreRing';
-import { CategoryRadarChart } from '@/components/charts/CategoryRadarChart';
 import { InProgressAnalysis } from '@/components/report/InProgressAnalysis';
-import { StakeholderBadge } from '@/components/StakeholderBadge';
-import { StakeholderQuickSelect } from '@/components/StakeholderSelector';
+import { ReportCardV2 } from '@/components/ReportCardV2';
 import { 
   ArrowLeft, FileText, Calendar, Eye, Trash2, Loader2, 
   Filter, LayoutGrid, List, Search, TrendingUp, Clock,
@@ -441,7 +438,7 @@ export default function Reports() {
                     : 'flex flex-col gap-4'
                 )}>
                   {filteredReports.map((report, index) => (
-                    <ReportCard
+                    <ReportCardV2
                       key={report.id}
                       report={report}
                       index={index}
@@ -483,178 +480,6 @@ export default function Reports() {
   );
 }
 
-interface ReportCardProps {
-  report: ReportWithScript;
-  index: number;
-  viewMode: ViewMode;
-  selectedLens: StakeholderLens | null;
-  onDelete: (e: React.MouseEvent) => void;
-  onClick: () => void;
-}
-
-function ReportCard({ report, index, viewMode, selectedLens, onDelete, onClick }: ReportCardProps) {
-  const reportData = report.full_report_data as ReportData;
-  const reportStakeholder = report.analysis_runs?.stakeholder_lens as StakeholderLens | null;
-  
-  // Get the score based on selected lens or overall
-  const getDisplayScore = () => {
-    if (selectedLens) {
-      return reportData?.lensScores?.[selectedLens] ?? report.overall_score ?? 0;
-    }
-    return report.overall_score ?? reportData?.overallScore ?? 0;
-  };
-
-  const score = getDisplayScore();
-
-  if (viewMode === 'list') {
-    return (
-      <Card
-        className={cn(
-          'overflow-hidden transition-all duration-300 hover:shadow-lg hover:border-primary/30 cursor-pointer group',
-          'animate-fade-up'
-        )}
-        style={{ animationDelay: `${index * 50}ms` }}
-        onClick={onClick}
-      >
-        <div className="flex items-center gap-4 p-4">
-          {/* Score */}
-          <ScoreRing score={score} size="sm" />
-
-          {/* Info */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <h3 className="font-semibold truncate group-hover:text-primary transition-colors">
-                {report.scripts?.title || report.title}
-              </h3>
-              <StakeholderBadge lens={reportStakeholder} size="sm" showIcon={false} />
-            </div>
-            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <Calendar className="h-3.5 w-3.5" />
-                {new Date(report.created_at).toLocaleDateString()}
-              </span>
-              {report.scripts?.genre && (
-                <span className="px-2 py-0.5 rounded-full bg-secondary text-xs">
-                  {report.scripts.genre}
-                </span>
-              )}
-            </div>
-          </div>
-
-          {/* Actions */}
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity">
-              <Eye className="h-4 w-4 mr-1" />
-              View
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-              onClick={onDelete}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      </Card>
-    );
-  }
-
-  // Grid view
-  return (
-    <Card
-      className={cn(
-        'overflow-hidden transition-all duration-300 hover:shadow-lg hover:border-primary/30 cursor-pointer group card-hover',
-        'animate-fade-up'
-      )}
-      style={{ animationDelay: `${index * 50}ms` }}
-      onClick={onClick}
-    >
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex-1 min-w-0">
-            <CardTitle className="text-base mb-2 truncate group-hover:text-primary transition-colors">
-              {report.scripts?.title || report.title}
-            </CardTitle>
-            <StakeholderBadge lens={reportStakeholder} size="sm" />
-          </div>
-          <ScoreRing score={score} size="md" />
-        </div>
-      </CardHeader>
-
-      <CardContent className="pt-0 space-y-4">
-        {/* Mini Radar Chart */}
-        {reportData?.categoryScores && Object.keys(reportData.categoryScores).length > 0 && (
-          <div className="h-32">
-            <CategoryRadarChart
-              categoryScores={reportData.categoryScores}
-              compact
-            />
-          </div>
-        )}
-
-        {/* Metadata */}
-        <div className="flex items-center justify-between text-sm text-muted-foreground">
-          <span className="flex items-center gap-1">
-            <Calendar className="h-3.5 w-3.5" />
-            {new Date(report.created_at).toLocaleDateString()}
-          </span>
-          <div className="flex gap-1">
-            {report.scripts?.genre && (
-              <span className="px-2 py-0.5 rounded-full bg-secondary text-xs">
-                {report.scripts.genre}
-              </span>
-            )}
-            {report.scripts?.script_type && (
-              <span className="px-2 py-0.5 rounded-full bg-secondary text-xs capitalize">
-                {report.scripts.script_type}
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Quick Stats */}
-        <div className="grid grid-cols-2 gap-2">
-          {Object.entries(reportData?.lensScores || {}).slice(0, 2).map(([lens, lensScore]) => (
-            <div
-              key={lens}
-              className={cn(
-                'p-2 rounded-lg text-center',
-                lens === selectedLens ? 'bg-primary/10' : 'bg-muted/50'
-              )}
-            >
-              <p className="text-[10px] text-muted-foreground truncate">
-                {LENS_CONFIG[lens as StakeholderLens]?.label}
-              </p>
-              <p className="text-sm font-bold">{Math.round(lensScore as number)}</p>
-            </div>
-          ))}
-        </div>
-
-        {/* Actions */}
-        <div className="flex gap-2 pt-2 border-t border-border">
-          <Button 
-            variant="outline" 
-            size="sm"
-            className="flex-1 group-hover:bg-primary group-hover:text-primary-foreground transition-colors"
-          >
-            <Eye className="h-4 w-4 mr-1" />
-            View Report
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            className="text-destructive hover:bg-destructive hover:text-destructive-foreground shrink-0"
-            onClick={onDelete}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
 
 function ReportsListSkeleton() {
   return (
