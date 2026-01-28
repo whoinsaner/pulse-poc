@@ -1334,6 +1334,24 @@ serve(async (req) => {
           rawText = parsed.rawText;
           extractionMethod = 'fdx-xml';
           
+          // AI fallback if FDX parsing found 0 scenes but has content
+          if (allScenes.length === 0 && rawText.length > 500 && lovableApiKey) {
+            console.log(`[script-parser-stream] FDX parsing found 0 scenes - using AI fallback`);
+            sendSSE(controller, 'progress', { stage: 'extract', percent: 50, message: 'FDX structure unclear - using AI to parse...' });
+            
+            const aiResult = await parseWithAI(lovableApiKey, rawText, isComic, expectedPages, (progress, message) => {
+              sendSSE(controller, 'progress', { stage: 'extract', percent: 50 + (progress * 0.3), message });
+            });
+            
+            if (aiResult.scenes.length > 0) {
+              console.log(`[script-parser-stream] AI rescue found ${aiResult.scenes.length} scenes`);
+              allScenes = aiResult.scenes;
+              aiResult.characters.forEach(c => allCharacters.set(c.name, c));
+              usedAIRescue = true;
+              extractionMethod = 'fdx-ai-rescue';
+            }
+          }
+          
         } else if (format === 'pdf' || format === 'docx') {
           // Binary formats - NEW: Use text extraction first!
           const bytes = await fileData.arrayBuffer();
@@ -2174,54 +2192,131 @@ function parseComicFormat(
   };
 }
 
-// Parse Final Draft XML
+// Parse Final Draft XML - IMPROVED to handle variations
 function parseFinalDraft(content: string): { scenes: Scene[]; characters: Character[]; rawText: string } {
   const scenes: Scene[] = [];
   const characterMap = new Map<string, Character>();
   let rawText = '';
   let sceneNumber = 0;
   
-  const sceneHeadingRegex = /<Paragraph Type="Scene Heading"[^>]*>([^<]*(?:<[^>]+>[^<]*)*)<\/Paragraph>/gi;
-  const characterRegex = /<Paragraph Type="Character"[^>]*>([^<]*(?:<[^>]+>[^<]*)*)<\/Paragraph>/gi;
-  const textRegex = /<Text[^>]*>([^<]*)<\/Text>/gi;
+  // Multiple patterns for scene headings - FDX variations
+  const sceneHeadingPatterns = [
+    // Standard FDX format (case-insensitive)
+    /<Paragraph[^>]*Type\s*=\s*["']Scene Heading["'][^>]*>([\s\S]*?)<\/Paragraph>/gi,
+    // Slug Line variant (some exporters use this)
+    /<Paragraph[^>]*Type\s*=\s*["']Slug Line["'][^>]*>([\s\S]*?)<\/Paragraph>/gi,
+    // Scene Heading element (FDX 10+)
+    /<SceneHeading[^>]*>([\s\S]*?)<\/SceneHeading>/gi,
+    // General Action with scene heading content pattern
+    /<Paragraph[^>]*Type\s*=\s*["']General["'][^>]*>([\s\S]*?)<\/Paragraph>/gi,
+  ];
   
+  // Multiple patterns for character cues
+  const characterPatterns = [
+    /<Paragraph[^>]*Type\s*=\s*["']Character["'][^>]*>([\s\S]*?)<\/Paragraph>/gi,
+    /<Character[^>]*>([\s\S]*?)<\/Character>/gi,
+  ];
+  
+  // Extract all text content first
+  const textRegex = /<Text[^>]*>([^<]*)<\/Text>/gi;
   let textMatch;
   while ((textMatch = textRegex.exec(content)) !== null) {
     rawText += textMatch[1] + '\n';
   }
   
-  let sceneMatch;
-  while ((sceneMatch = sceneHeadingRegex.exec(content)) !== null) {
-    sceneNumber++;
-    const headingText = sceneMatch[1].replace(/<[^>]+>/g, '').trim();
-    const intExtMatch = headingText.match(/^(INT\.|EXT\.|INT\/EXT\.)/i);
-    
-    scenes.push({
-      scene_number: sceneNumber,
-      heading: headingText,
-      int_ext: intExtMatch ? intExtMatch[1].replace('.', '').toUpperCase() : null,
-      location: headingText.replace(/^(INT\.|EXT\.|INT\/EXT\.)\s*/i, '').split('-')[0]?.trim() || null,
-      time_of_day: headingText.split('-')[1]?.trim() || null,
-      description: null,
-      page_start: null,
-      page_end: null,
-    });
+  // Also try Content elements (some FDX versions)
+  const contentRegex = /<Content[^>]*>([^<]*)<\/Content>/gi;
+  while ((textMatch = contentRegex.exec(content)) !== null) {
+    rawText += textMatch[1] + '\n';
   }
   
-  let charMatch;
-  while ((charMatch = characterRegex.exec(content)) !== null) {
-    const charName = charMatch[1].replace(/<[^>]+>/g, '').trim().toUpperCase();
-    if (!characterMap.has(charName)) {
-      characterMap.set(charName, {
-        name: charName,
-        dialogue_count: 0,
-        scene_count: 1,
-        first_appearance: scenes.length || 1,
-        description: null,
-      });
+  console.log(`[script-parser-stream] FDX raw text extracted: ${rawText.length} chars`);
+  
+  // Try each scene heading pattern
+  for (const regex of sceneHeadingPatterns) {
+    let match;
+    // Reset regex lastIndex for each pattern
+    regex.lastIndex = 0;
+    while ((match = regex.exec(content)) !== null) {
+      const headingText = match[1].replace(/<[^>]+>/g, '').trim();
+      
+      // Only count as scene if it looks like a scene heading (INT./EXT. or location pattern)
+      const looksLikeScene = /^(INT\.|EXT\.|INT\/EXT\.|I\/E\.|INTERIOR|EXTERIOR)/i.test(headingText) ||
+                            /^[A-Z][A-Z\s]+\s*-\s*(DAY|NIGHT|MORNING|EVENING|DAWN|DUSK|CONTINUOUS|LATER)/i.test(headingText);
+      
+      if (looksLikeScene && headingText.length > 3) {
+        sceneNumber++;
+        const intExtMatch = headingText.match(/^(INT\.|EXT\.|INT\/EXT\.|I\/E\.)/i);
+        
+        scenes.push({
+          scene_number: sceneNumber,
+          heading: headingText,
+          int_ext: intExtMatch ? intExtMatch[1].replace('.', '').replace('/', '').toUpperCase() : null,
+          location: headingText.replace(/^(INT\.|EXT\.|INT\/EXT\.|I\/E\.)\s*/i, '').split('-')[0]?.trim() || null,
+          time_of_day: headingText.split('-')[1]?.trim() || null,
+          description: null,
+          page_start: null,
+          page_end: null,
+        });
+      }
     }
-    characterMap.get(charName)!.dialogue_count++;
+    
+    // If we found scenes with this pattern, don't try others
+    if (scenes.length > 0) {
+      console.log(`[script-parser-stream] FDX scenes found with pattern ${sceneHeadingPatterns.indexOf(regex) + 1}: ${scenes.length}`);
+      break;
+    }
   }
+  
+  // If still no scenes, try to extract from raw text using Fountain-style detection
+  if (scenes.length === 0 && rawText.length > 100) {
+    console.log(`[script-parser-stream] FDX: No structured scenes found, falling back to text analysis`);
+    const lines = rawText.split('\n');
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (/^(INT\.|EXT\.|INT\/EXT\.)\s*.+/i.test(trimmed)) {
+        sceneNumber++;
+        const intExtMatch = trimmed.match(/^(INT\.|EXT\.|INT\/EXT\.)/i);
+        scenes.push({
+          scene_number: sceneNumber,
+          heading: trimmed,
+          int_ext: intExtMatch ? intExtMatch[1].replace('.', '').toUpperCase() : null,
+          location: trimmed.replace(/^(INT\.|EXT\.|INT\/EXT\.)\s*/i, '').split('-')[0]?.trim() || null,
+          time_of_day: trimmed.split('-')[1]?.trim() || null,
+          description: null,
+          page_start: null,
+          page_end: null,
+        });
+      }
+    }
+    console.log(`[script-parser-stream] FDX text-based scene detection: ${scenes.length} scenes`);
+  }
+  
+  // Extract characters with multiple patterns
+  for (const regex of characterPatterns) {
+    regex.lastIndex = 0;
+    let charMatch;
+    while ((charMatch = regex.exec(content)) !== null) {
+      const charName = charMatch[1].replace(/<[^>]+>/g, '').trim().toUpperCase();
+      if (charName.length > 0 && charName.length < 50 && !/^(INT|EXT|FADE|CUT|DISSOLVE|THE|CONTINUED)/.test(charName)) {
+        if (!characterMap.has(charName)) {
+          characterMap.set(charName, {
+            name: charName,
+            dialogue_count: 0,
+            scene_count: 1,
+            first_appearance: scenes.length || 1,
+            description: null,
+          });
+        }
+        characterMap.get(charName)!.dialogue_count++;
+      }
+    }
+    
+    // If we found characters, stop trying patterns
+    if (characterMap.size > 0) break;
+  }
+  
+  console.log(`[script-parser-stream] FDX parsing complete: ${scenes.length} scenes, ${characterMap.size} characters`);
   
   return { scenes, characters: Array.from(characterMap.values()), rawText };
 }
