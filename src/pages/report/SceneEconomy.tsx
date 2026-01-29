@@ -49,12 +49,13 @@ export default function SceneEconomy() {
   const beneficialCount = Math.floor(totalScenes * 0.15);
   const questionableCount = totalScenes - essentialCount - beneficialCount;
 
-  // Derived economy metrics
+  // Derived economy metrics - convert 0-100 scale to 0-10 for display
+  const baseScore10 = categoryScore / 10;
   const economyMetrics = [
-    { label: 'Scene Efficiency', score: Math.min(10, categoryScore), description: 'Every scene earns its place' },
-    { label: 'Escalation Logic', score: Math.min(10, categoryScore + 0.4), description: 'Stakes build appropriately' },
-    { label: 'Redundancy Control', score: Math.min(10, categoryScore - 0.5), description: 'Minimal repetitive scenes' },
-    { label: 'Pacing Balance', score: Math.min(10, categoryScore + 0.2), description: 'Action/dialogue rhythm' },
+    { label: 'Scene Efficiency', score: Math.min(10, Math.max(0, baseScore10)), description: 'Every scene earns its place' },
+    { label: 'Escalation Logic', score: Math.min(10, Math.max(0, baseScore10 + 0.4)), description: 'Stakes build appropriately' },
+    { label: 'Redundancy Control', score: Math.min(10, Math.max(0, baseScore10 - 0.5)), description: 'Minimal repetitive scenes' },
+    { label: 'Pacing Balance', score: Math.min(10, Math.max(0, baseScore10 + 0.2)), description: 'Action/dialogue rhythm' },
   ];
 
   // Act breakdown
