@@ -30,6 +30,8 @@ export interface ClassificationResult {
   userSelected?: string;
 }
 
+export type ExtractionMethod = 'pdfjs' | 'ai_vision' | 'ai_vision_chunked' | 'regex' | 'native' | 'unknown';
+
 export interface ParsingResult {
   success: boolean;
   scenesCount?: number;
@@ -40,6 +42,7 @@ export interface ParsingResult {
   readyForAnalysis?: boolean;
   aiAssisted?: boolean;
   coveragePercent?: number;
+  extractionMethod?: ExtractionMethod;
   errorMessage?: string;
   errorCode?: string;
   recommendations?: string[];
@@ -291,6 +294,7 @@ export function useStreamingParser(options: UseStreamingParserOptions = {}) {
           readyForAnalysis: data.readyForAnalysis,
           aiAssisted: data.aiAssisted,
           coveragePercent: data.coveragePercent,
+          extractionMethod: data.extractionMethod,
           classification: data.classification,
         };
         setResult(resultData);
