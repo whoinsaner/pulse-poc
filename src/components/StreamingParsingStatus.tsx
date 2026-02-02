@@ -1,7 +1,8 @@
-import { Check, Loader2, FileText, ScanSearch, Users, BookOpen, Sparkles, AlertTriangle, X, Clock, Tag } from 'lucide-react';
+import { Check, Loader2, FileText, ScanSearch, Users, BookOpen, Sparkles, AlertTriangle, X, Clock, Tag, Eye, Cpu, FileCode } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
-import type { ParsingProgress, ChunkStatus, ParsingWarnings, ETAInfo } from '@/hooks/useStreamingParser';
+import { Badge } from '@/components/ui/badge';
+import type { ParsingProgress, ChunkStatus, ParsingWarnings, ETAInfo, ParsingResult, ExtractionMethod } from '@/hooks/useStreamingParser';
 
 interface ParsingStageInfo {
   id: string;
@@ -27,7 +28,17 @@ interface StreamingParsingStatusProps {
   warnings: ParsingWarnings | null;
   eta: ETAInfo | null;
   format?: string;
+  result?: ParsingResult | null;
 }
+
+const EXTRACTION_METHOD_CONFIG: Record<ExtractionMethod, { label: string; icon: React.ComponentType<{ className?: string }>; variant: 'default' | 'secondary' | 'info' }> = {
+  pdfjs: { label: 'Text Extraction', icon: FileCode, variant: 'secondary' },
+  ai_vision: { label: 'AI Vision', icon: Eye, variant: 'info' },
+  ai_vision_chunked: { label: 'AI Vision (Chunked)', icon: Eye, variant: 'info' },
+  regex: { label: 'Pattern Matching', icon: Cpu, variant: 'secondary' },
+  native: { label: 'Native Format', icon: FileCode, variant: 'default' },
+  unknown: { label: 'Unknown', icon: FileText, variant: 'secondary' },
+};
 
 export function StreamingParsingStatus({
   isActive,
@@ -37,8 +48,12 @@ export function StreamingParsingStatus({
   warnings,
   eta,
   format,
+  result,
 }: StreamingParsingStatusProps) {
-  if (!isActive && !progress) return null;
+  if (!isActive && !progress && !result) return null;
+  
+  const extractionMethod = result?.extractionMethod;
+  const methodConfig = extractionMethod ? EXTRACTION_METHOD_CONFIG[extractionMethod] : null;
 
   const currentStageIndex = PARSING_STAGES.findIndex(s => s.id === currentStage);
   const completedStages = PARSING_STAGES.slice(0, currentStageIndex).map(s => s.id);
@@ -51,6 +66,31 @@ export function StreamingParsingStatus({
 
   return (
     <div className="space-y-4">
+      {/* Extraction Method Badge */}
+      {methodConfig && (
+        <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border border-border/50">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Extraction Method:</span>
+            <Badge variant={methodConfig.variant} className="gap-1.5">
+              <methodConfig.icon className="h-3 w-3" />
+              {methodConfig.label}
+            </Badge>
+          </div>
+          {result?.coveragePercent !== undefined && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Coverage:</span>
+              <span className={cn(
+                "text-sm font-medium",
+                result.coveragePercent >= 90 ? "text-success" :
+                result.coveragePercent >= 70 ? "text-warning" : "text-destructive"
+              )}>
+                {Math.round(result.coveragePercent)}%
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* ETA Display */}
       {eta && (
         <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border border-border/50">
