@@ -2,8 +2,11 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import JSZip from "https://esm.sh/jszip@3.10.1";
-// Note: pdf-parse removed - uses Node fs.readFileSync which crashes Deno
-// Using pdfjs-dist instead with proper Deno compatibility
+// PDF.js for proper PDF text extraction with font encoding support
+import * as pdfjsLib from "https://esm.sh/pdfjs-dist@4.4.168/build/pdf.mjs";
+
+// Configure PDF.js to run without a worker (required for Deno/Edge Functions)
+pdfjsLib.GlobalWorkerOptions.workerSrc = '';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -64,7 +67,126 @@ async function cpuYield(): Promise<void> {
   await new Promise(resolve => setTimeout(resolve, 0));
 }
 
-// AI-powered PDF text extraction fallback using Lovable AI
+// PDF.js text extraction - handles font encoding tables and Unicode mapping properly
+async function extractPDFTextWithPDFJS(
+  arrayBuffer: ArrayBuffer,
+  onProgress?: (message: string, percent: number) => void
+): Promise<{ 
+  text: string; 
+  pageCount: number; 
+  success: boolean; 
+  error?: string 
+}> {
+  try {
+    onProgress?.('Loading PDF document...', 5);
+    
+    // Load PDF document using PDF.js
+    const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+    const pdf = await loadingTask.promise;
+    
+    const pageCount = pdf.numPages;
+    const textParts: string[] = [];
+    
+    onProgress?.(`Extracting text from ${pageCount} pages...`, 10);
+    console.log(`[script-parser-stream] PDF.js: Starting extraction of ${pageCount} pages`);
+    
+    // Process each page sequentially to avoid memory issues
+    for (let i = 1; i <= pageCount; i++) {
+      try {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        
+        // Extract text items with proper line break detection based on Y position
+        let pageText = '';
+        let lastY: number | null = null;
+        let lastX = 0;
+        
+        for (const item of textContent.items) {
+          if ('str' in item && item.str) {
+            const currentY = item.transform[5];
+            const currentX = item.transform[4];
+            
+            // Detect line breaks based on Y position changes
+            if (lastY !== null && Math.abs(currentY - lastY) > 5) {
+              pageText += '\n';
+            } else if (lastY !== null && currentX < lastX - 50) {
+              // New line if X position jumps back significantly (new column or line)
+              pageText += '\n';
+            } else if (pageText.length > 0 && !pageText.endsWith(' ') && !pageText.endsWith('\n')) {
+              // Add space between items on same line if needed
+              pageText += ' ';
+            }
+            
+            pageText += item.str;
+            lastY = currentY;
+            lastX = currentX + (item.width || 0);
+          }
+        }
+        
+        // Clean up the page text
+        const cleanedPageText = pageText
+          .replace(/\s+/g, ' ')
+          .replace(/\n +/g, '\n')
+          .replace(/ +\n/g, '\n')
+          .replace(/\n{3,}/g, '\n\n')
+          .trim();
+        
+        if (cleanedPageText.length > 0) {
+          textParts.push(`--- PAGE ${i} ---\n${cleanedPageText}`);
+        }
+        
+        // Progress update and CPU yield every 10 pages
+        if (i % 10 === 0) {
+          const percent = Math.round((i / pageCount) * 80) + 10;
+          onProgress?.(`Extracted ${i}/${pageCount} pages`, percent);
+          await cpuYield();
+        } else if (i % 5 === 0) {
+          // Yield every 5 pages even without progress update
+          await cpuYield();
+        }
+      } catch (pageError) {
+        console.error(`[script-parser-stream] PDF.js: Error on page ${i}:`, pageError);
+        // Continue with next page rather than failing completely
+        textParts.push(`--- PAGE ${i} ---\n[Page extraction error]`);
+      }
+    }
+    
+    const combinedText = textParts.join('\n\n');
+    const charCount = combinedText.replace(/--- PAGE \d+ ---\n/g, '').length;
+    
+    onProgress?.(`Extraction complete: ${charCount} chars from ${pageCount} pages`, 90);
+    console.log(`[script-parser-stream] PDF.js extraction complete: ${pageCount} pages, ${charCount} chars`);
+    
+    // Consider extraction successful if we got meaningful text
+    // 500 chars minimum to filter out near-empty PDFs
+    if (charCount > 500) {
+      return {
+        text: combinedText,
+        pageCount,
+        success: true,
+      };
+    }
+    
+    // Not enough text - likely scanned/image-based PDF
+    return {
+      text: combinedText,
+      pageCount,
+      success: false,
+      error: 'PDF appears to be scanned or image-based. Minimal text extracted via PDF.js.'
+    };
+    
+  } catch (error) {
+    console.error('[script-parser-stream] PDF.js extraction error:', error);
+    return {
+      text: '',
+      pageCount: 0,
+      success: false,
+      error: error instanceof Error ? error.message : 'PDF.js extraction failed'
+    };
+  }
+}
+
+// AI-powered PDF text extraction fallback using Lovable AI (for scanned/image PDFs)
 async function extractTextWithAI(
   apiKey: string, 
   pdfBase64: string, 
@@ -118,7 +240,7 @@ Output ONLY the extracted text, no commentary.`;
             ]
           }
         ],
-        max_tokens: 16000,
+        max_tokens: 65000, // Increased from 16000 for better large PDF coverage
         temperature: 0.1,
       }),
     });
@@ -163,7 +285,38 @@ Output ONLY the extracted text, no commentary.`;
   }
 }
 
-// Extract text from PDF using chunked regex-based extraction (Deno compatible)
+// Chunked AI extraction for large scanned PDFs
+async function extractTextWithAIChunked(
+  apiKey: string,
+  pdfBase64: string,
+  totalPages: number,
+  isComic: boolean,
+  onProgress?: (message: string, pagesProcessed: number) => void
+): Promise<{ text: string; success: boolean; pagesExtracted: number; error?: string }> {
+  // For very large PDFs (50+ pages), we'd need to process in chunks
+  // However, the Gemini model can handle reasonably large PDFs in one call
+  // This function exists as a fallback for future chunking implementation
+  
+  console.log(`[script-parser-stream] Chunked AI extraction: ${totalPages} pages`);
+  onProgress?.(`Starting AI extraction for ${totalPages} pages...`, 0);
+  
+  // For now, use single AI call with increased token limit
+  const result = await extractTextWithAI(
+    apiKey,
+    pdfBase64,
+    isComic,
+    (msg) => onProgress?.(msg, totalPages)
+  );
+  
+  return {
+    text: result.text,
+    success: result.success,
+    pagesExtracted: result.success ? totalPages : 0,
+    error: result.error
+  };
+}
+
+// Legacy regex-based PDF text extraction (used as fallback when PDF.js fails)
 // This processes the PDF in chunks to avoid CPU time exceeded errors
 async function extractPDFText(arrayBuffer: ArrayBuffer): Promise<{ text: string; pageCount: number; success: boolean; error?: string }> {
   try {
@@ -184,24 +337,17 @@ async function extractPDFText(arrayBuffer: ArrayBuffer): Promise<{ text: string;
     // 30+ pages OR 500KB+ → use fast path to avoid CPU timeout
     const isLargeFile = fileSize > 500 * 1024 || pageCount > 30;
     
-    console.log(`[script-parser-stream] PDF extraction: ${(fileSize / 1024).toFixed(0)}KB, ${pageCount} pages, fast mode: ${isLargeFile}`);
+    console.log(`[script-parser-stream] Regex PDF extraction (fallback): ${(fileSize / 1024).toFixed(0)}KB, ${pageCount} pages, fast mode: ${isLargeFile}`);
     
-    // Early bailout for very large scripts - go straight to AI extraction
-    if (pageCount > 50) {
-      console.log(`[script-parser-stream] Very large PDF (${pageCount} pages) - skipping regex, recommending AI`);
-      return {
-        text: '',
-        pageCount,
-        success: false,
-        error: 'Large PDF - AI extraction recommended',
-      };
-    }
+    // NOTE: 50-page bailout removed - PDF.js handles large PDFs as primary method
+    // This regex extraction is now only a fallback for edge cases
     
     // Extract text from PDF streams
     const textParts: string[] = [];
     
-    // Reduced iteration limits to prevent CPU timeout
-    const maxIterations = isLargeFile ? 300 : 1000;
+    // Scale iteration limits based on page count for large files
+    const baseIterations = isLargeFile ? 300 : 1000;
+    const maxIterations = Math.min(5000, baseIterations + (pageCount * 20));
     let iterations = 0;
     
     // Method 1: Extract from BT...ET text blocks (PDF text operators)
@@ -1362,25 +1508,102 @@ serve(async (req) => {
           let extractionSuccess = false;
           
           if (format === 'pdf') {
-            const pdfResult = await extractPDFText(bytes);
+            // NEW: Use PDF.js as primary extraction method (handles font encoding properly)
+            sendSSE(controller, 'progress', { stage: 'extract', percent: 15, message: 'Extracting text with PDF.js...' });
+            
+            const pdfjsResult = await extractPDFTextWithPDFJS(
+              bytes,
+              (msg, pct) => sendSSE(controller, 'progress', { 
+                stage: 'extract', 
+                percent: 15 + Math.round(pct * 0.15), // 15-30% range
+                message: msg 
+              })
+            );
+            
             // Always capture actual PDF page count for accurate coverage calculation
-            if (pdfResult.pageCount > 0) {
-              actualPdfPageCount = pdfResult.pageCount;
-              console.log(`[script-parser-stream] Actual PDF page count from structure: ${actualPdfPageCount}`);
+            if (pdfjsResult.pageCount > 0) {
+              actualPdfPageCount = pdfjsResult.pageCount;
+              console.log(`[script-parser-stream] PDF.js extracted: ${pdfjsResult.pageCount} pages, ${pdfjsResult.text.length} chars, success=${pdfjsResult.success}`);
             }
-            if (pdfResult.success && pdfResult.text.length > 500) {
-              extractedText = pdfResult.text;
+            
+            if (pdfjsResult.success && pdfjsResult.text.length > 500) {
+              extractedText = pdfjsResult.text;
               extractionSuccess = true;
+              extractionMethod = 'pdfjs';
               sendSSE(controller, 'progress', { 
                 stage: 'extract', 
                 percent: 30, 
-                message: `Extracted text from ${pdfResult.pageCount} PDF pages` 
+                message: `PDF.js extracted ${pdfjsResult.text.length} chars from ${pdfjsResult.pageCount} pages` 
               });
-            } else if (pdfResult.error) {
-              sendSSE(controller, 'warning', { 
-                warnings: [pdfResult.error],
-                recommendations: ['Will attempt AI-based extraction as fallback.']
+            } else {
+              // PDF.js failed or returned minimal text - try AI vision extraction as fallback
+              console.log(`[script-parser-stream] PDF.js extraction insufficient, trying AI vision fallback...`);
+              sendSSE(controller, 'progress', { 
+                stage: 'extract', 
+                percent: 25, 
+                message: 'PDF appears to be scanned - using AI vision...' 
               });
+              
+              // Only try AI vision if we have the API key and file isn't too large
+              if (lovableApiKey) {
+                const fileSize = bytes.byteLength;
+                const maxAISize = 5 * 1024 * 1024; // 5MB limit for AI vision
+                
+                if (fileSize <= maxAISize) {
+                  const pdfBase64 = arrayBufferToBase64(bytes);
+                  const aiResult = await extractTextWithAI(
+                    lovableApiKey, 
+                    pdfBase64, 
+                    effectiveScriptType === 'comic',
+                    (msg) => sendSSE(controller, 'progress', { stage: 'extract', percent: 28, message: msg })
+                  );
+                  
+                  if (aiResult.success && aiResult.text.length > 500) {
+                    extractedText = aiResult.text;
+                    extractionSuccess = true;
+                    extractionMethod = 'pdfjs+ai-vision';
+                    sendSSE(controller, 'progress', { 
+                      stage: 'extract', 
+                      percent: 30, 
+                      message: `AI extracted ${aiResult.text.length} chars from scanned PDF` 
+                    });
+                  } else if (aiResult.error) {
+                    sendSSE(controller, 'warning', { 
+                      warnings: [aiResult.error],
+                      recommendations: ['PDF text extraction was limited. Analysis may be incomplete.']
+                    });
+                  }
+                } else {
+                  // File too large for AI vision, try regex fallback
+                  console.log(`[script-parser-stream] PDF too large for AI vision (${(fileSize / 1024 / 1024).toFixed(1)}MB), trying regex fallback`);
+                  const regexResult = await extractPDFText(bytes);
+                  if (regexResult.text.length > extractedText.length) {
+                    extractedText = regexResult.text;
+                    extractionSuccess = regexResult.text.length > 500;
+                    extractionMethod = 'pdfjs+regex-fallback';
+                  }
+                  
+                  if (!extractionSuccess) {
+                    sendSSE(controller, 'warning', { 
+                      warnings: ['Large PDF with limited text extraction. The PDF may be scanned or use embedded fonts.'],
+                      recommendations: ['Consider uploading a text-based version of the script for better results.']
+                    });
+                  }
+                }
+              } else if (pdfjsResult.error) {
+                sendSSE(controller, 'warning', { 
+                  warnings: [pdfjsResult.error],
+                  recommendations: ['Will attempt regex-based extraction as fallback.']
+                });
+                
+                // Try regex fallback as last resort
+                const regexResult = await extractPDFText(bytes);
+                if (regexResult.text.length > 500) {
+                  extractedText = regexResult.text;
+                  extractionSuccess = true;
+                  extractionMethod = 'regex-fallback';
+                }
+              }
             }
           } else if (format === 'docx') {
             const docxResult = await extractDOCXText(bytes);
