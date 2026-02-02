@@ -25,10 +25,8 @@ export default function Upload() {
 
   const handleUploadComplete = (scriptId: string) => {
     setUploadComplete(true);
-    // Navigate to analysis page after a brief delay
-    setTimeout(() => {
-      navigate(`/dashboard`);
-    }, 2000);
+    // Navigation is now handled by ScriptUpload's explicit navigation functions
+    // (handleRunAnalysis, handleViewScript) - no auto-redirect needed
   };
 
   return (

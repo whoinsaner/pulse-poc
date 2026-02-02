@@ -221,14 +221,14 @@ export function ScriptUpload({ onUploadComplete, onClose }: ScriptUploadProps) {
   const handleRunAnalysis = () => {
     if (currentScriptId) {
       navigate(`/scripts?analyze=${currentScriptId}`);
-      onUploadComplete?.(currentScriptId);
+      // Don't call onUploadComplete - user chose analysis, navigation handles flow
     }
   };
 
   const handleViewScript = () => {
     if (currentScriptId) {
       navigate(`/scripts`);
-      onUploadComplete?.(currentScriptId);
+      // Don't call onUploadComplete - user chose to view scripts, navigation handles flow
     }
   };
 
