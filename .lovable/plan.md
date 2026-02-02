@@ -1,92 +1,264 @@
 
-# Fix: Analysis Popup Auto-Closing After Script Upload
+# Plan: Integrate PDF.js for Proper PDF Text Extraction
 
-## Problem Identified
+## Problem Summary
 
-The analysis popup auto-closes approximately 2 seconds after opening because of a race condition between two navigation actions:
+The current PDF text extraction uses regex-based parsing that:
+1. Fails with embedded fonts (glyph indices vs Unicode)
+2. Bails out for PDFs over 50 pages
+3. Results in low extraction coverage (17.8% for 191-page scripts)
 
-1. User clicks "Run AI Analysis" in `ScriptUpload.tsx`
-2. `handleRunAnalysis` navigates to `/scripts?analyze=<id>` AND calls `onUploadComplete`
-3. `onUploadComplete` in `Upload.tsx` contains a **2-second delayed navigation to /dashboard**
-4. This delayed navigation fires after the user has already navigated to `/scripts`, causing the page to redirect and close the dialog
+## Proposed Solution
 
-## Root Cause Location
+Integrate `pdfjs-dist` (Mozilla's PDF.js) via ESM.sh for proper PDF text extraction in Deno/Edge Functions. PDF.js handles font encoding tables, ToUnicode CMaps, and proper text extraction without vision models.
 
-**File:** `src/pages/Upload.tsx` (lines 26-32)
+---
+
+## Technical Implementation
+
+### Step 1: Add PDF.js Import
+
+**File:** `supabase/functions/script-parser-stream/index.ts`
+
+Add the pdfjs-dist import using ESM.sh (Deno-compatible CDN):
+
 ```typescript
-const handleUploadComplete = (scriptId: string) => {
-  setUploadComplete(true);
-  // Navigate to analysis page after a brief delay
-  setTimeout(() => {
-    navigate(`/dashboard`);
-  }, 2000);
-};
+import * as pdfjsLib from "https://esm.sh/pdfjs-dist@4.4.168/build/pdf.mjs";
 ```
 
-**File:** `src/components/ScriptUpload.tsx` (lines 221-226)
+**Note:** PDF.js requires a worker for heavy operations. In Deno/Edge Functions, we'll use the "fake worker" mode by setting:
+
 ```typescript
-const handleRunAnalysis = () => {
-  if (currentScriptId) {
-    navigate(`/scripts?analyze=${currentScriptId}`);
-    onUploadComplete?.(currentScriptId); // This triggers the problematic timeout
+pdfjsLib.GlobalWorkerOptions.workerSrc = '';
+```
+
+---
+
+### Step 2: Create New PDF.js Text Extraction Function
+
+**File:** `supabase/functions/script-parser-stream/index.ts`
+
+Add a new function that uses PDF.js for proper text extraction:
+
+```typescript
+async function extractPDFTextWithPDFJS(
+  arrayBuffer: ArrayBuffer,
+  onProgress?: (message: string, percent: number) => void
+): Promise<{ 
+  text: string; 
+  pageCount: number; 
+  success: boolean; 
+  error?: string 
+}> {
+  try {
+    // Load PDF document
+    const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+    const pdf = await loadingTask.promise;
+    
+    const pageCount = pdf.numPages;
+    const textParts: string[] = [];
+    
+    onProgress?.(`Extracting text from ${pageCount} pages...`, 10);
+    
+    // Process each page
+    for (let i = 1; i <= pageCount; i++) {
+      const page = await pdf.getPage(i);
+      const textContent = await page.getTextContent();
+      
+      // Extract text items with positioning
+      let pageText = '';
+      let lastY = 0;
+      
+      for (const item of textContent.items) {
+        if ('str' in item) {
+          // Check for line break (Y position changed significantly)
+          if (lastY !== 0 && Math.abs(item.transform[5] - lastY) > 5) {
+            pageText += '\n';
+          }
+          pageText += item.str;
+          lastY = item.transform[5];
+        }
+      }
+      
+      textParts.push(`--- PAGE ${i} ---\n${pageText}`);
+      
+      // Progress update and CPU yield every 10 pages
+      if (i % 10 === 0) {
+        const percent = Math.round((i / pageCount) * 80) + 10;
+        onProgress?.(`Extracted ${i}/${pageCount} pages`, percent);
+        await cpuYield();
+      }
+    }
+    
+    const combinedText = textParts.join('\n\n');
+    
+    onProgress?.(`Extraction complete: ${combinedText.length} chars`, 90);
+    
+    return {
+      text: combinedText,
+      pageCount,
+      success: combinedText.length > 500,
+      error: combinedText.length <= 500 
+        ? 'PDF appears to be scanned/image-based' 
+        : undefined
+    };
+    
+  } catch (error) {
+    console.error('[script-parser-stream] PDF.js extraction error:', error);
+    return {
+      text: '',
+      pageCount: 0,
+      success: false,
+      error: error instanceof Error ? error.message : 'PDF.js extraction failed'
+    };
   }
-};
+}
 ```
 
-## Solution
+---
 
-Modify `ScriptUpload.tsx` to NOT call `onUploadComplete` when navigating to analysis, since the user is explicitly choosing to run analysis (not returning to dashboard).
+### Step 3: Update Extraction Flow
 
-### Implementation Steps
+**File:** `supabase/functions/script-parser-stream/index.ts`
 
-**Step 1: Update handleRunAnalysis in ScriptUpload.tsx**
+Replace the current extraction logic with a fallback chain:
 
-Remove the `onUploadComplete` call from `handleRunAnalysis` since navigation to the analysis page is the intended action:
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│                    PDF Extraction Flow                          │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  1. Try PDF.js extraction (proper font handling)                │
+│        ↓                                                        │
+│  2. If PDF.js fails or text < 500 chars:                        │
+│     → Try AI vision extraction (chunked for large PDFs)         │
+│        ↓                                                        │
+│  3. If AI fails or rate limited:                                │
+│     → Fall back to regex extraction (best effort)               │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Changes to main extraction block (around line 1900):**
 
 ```typescript
-const handleRunAnalysis = () => {
-  if (currentScriptId) {
-    navigate(`/scripts?analyze=${currentScriptId}`);
-    // Don't call onUploadComplete - user chose analysis, not dashboard return
+// For PDF files, use PDF.js first, then fallback chain
+if (format === 'pdf') {
+  sendSSE(controller, 'progress', { 
+    stage: 'extract', 
+    percent: 15, 
+    message: 'Extracting text with PDF.js...' 
+  });
+  
+  // Step 1: Try PDF.js extraction
+  const pdfjsResult = await extractPDFTextWithPDFJS(
+    arrayBuffer,
+    (msg, pct) => sendSSE(controller, 'progress', { 
+      stage: 'extract', 
+      percent: 15 + Math.round(pct * 0.5), 
+      message: msg 
+    })
+  );
+  
+  if (pdfjsResult.success && pdfjsResult.text.length > 500) {
+    rawText = pdfjsResult.text;
+    pageCount = pdfjsResult.pageCount;
+    // Continue with Fountain normalization...
+  } else {
+    // Step 2: Try AI vision extraction
+    // (existing AI extraction code, with chunking for large PDFs)
   }
-};
+}
 ```
 
-**Step 2: Update handleViewScript in ScriptUpload.tsx** 
+---
 
-Similarly update `handleViewScript` to not call `onUploadComplete`:
+### Step 4: Remove 50-Page Bailout
+
+**File:** `supabase/functions/script-parser-stream/index.ts`  
+**Lines:** 189-198
+
+Remove the early return that skips extraction for large PDFs:
 
 ```typescript
-const handleViewScript = () => {
-  if (currentScriptId) {
-    navigate(`/scripts`);
-    // Don't call onUploadComplete - user chose to view scripts
+// DELETE THIS BLOCK:
+if (pageCount > 50) {
+  console.log(`...`);
+  return { text: '', pageCount, success: false, error: '...' };
+}
+```
+
+PDF.js can handle large PDFs efficiently with proper chunking and CPU yields.
+
+---
+
+### Step 5: Add Chunked AI Fallback (for scanned PDFs)
+
+**File:** `supabase/functions/script-parser-stream/index.ts`
+
+For PDFs where PDF.js returns little/no text (scanned documents), implement chunked AI extraction:
+
+```typescript
+async function extractTextWithAIChunked(
+  apiKey: string,
+  pdfBase64: string,
+  totalPages: number,
+  isComic: boolean,
+  onProgress?: (message: string, pagesProcessed: number) => void
+): Promise<{ text: string; success: boolean; pagesExtracted: number; error?: string }> {
+  
+  // Process in chunks of 30 pages
+  const chunkSize = 30;
+  const chunks = Math.ceil(totalPages / chunkSize);
+  const allText: string[] = [];
+  
+  for (let i = 0; i < chunks; i++) {
+    const startPage = i * chunkSize + 1;
+    const endPage = Math.min((i + 1) * chunkSize, totalPages);
+    
+    onProgress?.(`AI extracting pages ${startPage}-${endPage}...`, endPage);
+    
+    // Call AI extraction for this chunk
+    // (implementation details for page-range extraction)
+    
+    await cpuYield();
   }
-};
+  
+  return {
+    text: allText.join('\n\n'),
+    success: allText.length > 0,
+    pagesExtracted: totalPages
+  };
+}
 ```
 
-**Step 3: Clean up Upload.tsx**
-
-Simplify `handleUploadComplete` since it should only be used for the "Upload Another" flow or when no explicit navigation is chosen:
-
-```typescript
-const handleUploadComplete = (scriptId: string) => {
-  setUploadComplete(true);
-  // Only navigate to dashboard if not already navigating elsewhere
-  // (handled by ScriptUpload's explicit navigation functions)
-};
-```
-
-Remove the timeout-based navigation entirely - it creates unexpected UX behavior.
+---
 
 ## Files to Modify
 
-1. `src/components/ScriptUpload.tsx` - Remove `onUploadComplete` call from `handleRunAnalysis` and `handleViewScript`
-2. `src/pages/Upload.tsx` - Remove the setTimeout navigation to prevent any residual issues
+| File | Changes |
+|------|---------|
+| `supabase/functions/script-parser-stream/index.ts` | Add PDF.js import, new extraction function, update extraction flow, remove 50-page bailout |
 
-## Why This Fix Works
+---
 
-- When user clicks "Run AI Analysis", they navigate directly to `/scripts?analyze=<id>` without triggering the dashboard redirect
-- When user clicks "View Scripts", they navigate directly to `/scripts` without triggering the dashboard redirect  
-- The `onUploadComplete` callback remains available for other flows but won't interfere with explicit navigation choices
-- No more race condition between two competing navigation targets
+## Potential Risks and Mitigations
+
+| Risk | Mitigation |
+|------|------------|
+| PDF.js bundle size impact | Use ESM.sh which handles tree-shaking; only import what's needed |
+| Worker not available in Deno | Use workerless mode (`workerSrc = ''`) - slightly slower but functional |
+| Memory issues with large PDFs | Process pages sequentially, not in parallel; yield frequently |
+| Some PDFs still fail (encrypted, corrupted) | Maintain fallback chain to AI vision extraction |
+| Edge function timeout | Add CPU yields every 10 pages; implement progress streaming |
+
+---
+
+## Expected Outcomes
+
+After implementation:
+- **191-page scripts**: Full text extraction via PDF.js (vs 17.8% currently)
+- **Proper Unicode handling**: Font encoding tables properly decoded
+- **No more bailouts**: All PDF sizes processed with same logic
+- **Graceful degradation**: Scanned PDFs still use AI vision as fallback
+- **Progress visibility**: Users see extraction progress via SSE updates
