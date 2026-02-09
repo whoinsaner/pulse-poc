@@ -198,7 +198,68 @@ async function extractTextWithAIChunked(
   };
 }
 
-// Legacy regex-based PDF text extraction (used as fallback when PDF.js fails)
+// PyMuPDF-based PDF text extraction via external Python microservice (primary method)
+async function extractPDFWithPython(
+  pdfBytes: ArrayBuffer,
+  onProgress?: (message: string) => void
+): Promise<{ text: string; pageCount: number; success: boolean; error?: string }> {
+  const serviceUrl = Deno.env.get('PDF_EXTRACTOR_URL');
+  if (!serviceUrl) {
+    console.log('[script-parser-stream] PDF_EXTRACTOR_URL not configured, skipping PyMuPDF extraction');
+    return { text: '', pageCount: 0, success: false, error: 'Python extractor not configured' };
+  }
+
+  try {
+    onProgress?.('Sending PDF to extraction service...');
+    console.log(`[script-parser-stream] Calling PyMuPDF service at ${serviceUrl} (${(pdfBytes.byteLength / 1024).toFixed(0)}KB)`);
+
+    const pdfBase64 = arrayBufferToBase64(pdfBytes);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
+
+    const response = await fetch(serviceUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pdf_base64: pdfBase64 }),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`[script-parser-stream] PyMuPDF service error: ${response.status}`, errorText);
+      return { text: '', pageCount: 0, success: false, error: `Service error: ${response.status}` };
+    }
+
+    const result = await response.json();
+    const extractedText = result.text || '';
+    const pageCount = result.page_count || 0;
+
+    console.log(`[script-parser-stream] PyMuPDF extraction complete: ${extractedText.length} chars from ${pageCount} pages`);
+    onProgress?.(`Extracted ${extractedText.length} chars from ${pageCount} pages`);
+
+    return {
+      text: extractedText,
+      pageCount,
+      success: extractedText.length > 500,
+      error: extractedText.length <= 500 ? 'Insufficient text extracted by PyMuPDF' : undefined,
+    };
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : 'Python extraction failed';
+    const isTimeout = error instanceof Error && error.name === 'AbortError';
+    console.error(`[script-parser-stream] PyMuPDF extraction ${isTimeout ? 'timed out' : 'failed'}:`, errorMsg);
+    return {
+      text: '',
+      pageCount: 0,
+      success: false,
+      error: isTimeout ? 'Python extraction service timed out (30s)' : errorMsg,
+    };
+  }
+}
+
+// Legacy regex-based PDF text extraction (used as fallback when PyMuPDF and AI vision fail)
 // This processes the PDF in chunks to avoid CPU time exceeded errors
 async function extractPDFText(arrayBuffer: ArrayBuffer): Promise<{ text: string; pageCount: number; success: boolean; error?: string }> {
   try {
@@ -1390,20 +1451,48 @@ serve(async (req) => {
           let extractionSuccess = false;
           
           if (format === 'pdf') {
-            // Estimate page count from file size for routing decision
             const fileSizeKB = bytes.byteLength / 1024;
-            const estimatedPages = Math.ceil(fileSizeKB / 3.5); // ~3.5KB per page typical
-            const isLargePDF = estimatedPages > 40 || bytes.byteLength > 400 * 1024;
+            const estimatedPages = Math.ceil(fileSizeKB / 3.5);
             const maxAISize = 5 * 1024 * 1024; // 5MB limit for AI vision
+
+            // STEP 1: Try PyMuPDF extraction (primary -- best quality, no AI cost)
+            sendSSE(controller, 'progress', { stage: 'extract', percent: 15, message: 'Extracting text from PDF...' });
             
-            // For large PDFs with API key, skip slow regex extraction and go straight to AI vision
-            if (isLargePDF && lovableApiKey && bytes.byteLength <= maxAISize) {
-              console.log(`[script-parser-stream] Large PDF detected (~${estimatedPages} pages) - using AI vision directly`);
-              sendSSE(controller, 'progress', { stage: 'extract', percent: 15, message: 'Extracting text with AI vision...' });
+            const pythonResult = await extractPDFWithPython(
+              bytes,
+              (msg: string) => sendSSE(controller, 'progress', { stage: 'extract', percent: 18, message: msg })
+            );
+
+            if (pythonResult.success) {
+              extractedText = pythonResult.text;
+              actualPdfPageCount = pythonResult.pageCount;
+              extractionSuccess = true;
+              extractionMethod = 'pymupdf';
+              sendSSE(controller, 'progress', { 
+                stage: 'extract', 
+                percent: 30, 
+                message: `Extracted ${pythonResult.text.length} chars from ${pythonResult.pageCount} pages (PyMuPDF)` 
+              });
+              console.log(`[script-parser-stream] PyMuPDF succeeded: ${pythonResult.text.length} chars, ${pythonResult.pageCount} pages`);
+            } else {
+              console.log(`[script-parser-stream] PyMuPDF skipped/failed: ${pythonResult.error}`);
+            }
+
+            // STEP 2: If PyMuPDF failed, try AI Vision (handles scanned/image PDFs)
+            if (!extractionSuccess && lovableApiKey && bytes.byteLength <= maxAISize) {
+              const isLargePDF = estimatedPages > 40 || bytes.byteLength > 400 * 1024;
               
-              // Quick page count from PDF structure for accuracy
+              if (isLargePDF) {
+                console.log(`[script-parser-stream] Large PDF (~${estimatedPages} pages) - using AI vision directly`);
+              } else {
+                console.log(`[script-parser-stream] Trying AI vision as fallback`);
+              }
+              
+              sendSSE(controller, 'progress', { stage: 'extract', percent: 20, message: 'Using AI vision for text extraction...' });
+              
+              // Quick page count from PDF structure
               const decoder = new TextDecoder('latin1', { fatal: false });
-              const rawContent = decoder.decode(new Uint8Array(bytes).slice(0, 50000)); // Only decode first 50KB for page count
+              const rawContent = decoder.decode(new Uint8Array(bytes).slice(0, 50000));
               const pageMatches = rawContent.match(/\/Type\s*\/Page[^s]/g);
               actualPdfPageCount = pageMatches ? pageMatches.length : estimatedPages;
               
@@ -1412,13 +1501,13 @@ serve(async (req) => {
                 lovableApiKey, 
                 pdfBase64, 
                 effectiveScriptType === 'comic',
-                (msg: string) => sendSSE(controller, 'progress', { stage: 'extract', percent: 20, message: msg })
+                (msg: string) => sendSSE(controller, 'progress', { stage: 'extract', percent: 25, message: msg })
               );
               
               if (aiResult.success && aiResult.text.length > 500) {
                 extractedText = aiResult.text;
                 extractionSuccess = true;
-                extractionMethod = 'ai-vision-direct';
+                extractionMethod = 'ai-vision';
                 sendSSE(controller, 'progress', { 
                   stage: 'extract', 
                   percent: 30, 
@@ -1427,20 +1516,19 @@ serve(async (req) => {
               } else if (aiResult.error) {
                 sendSSE(controller, 'warning', { 
                   warnings: [aiResult.error],
-                  recommendations: ['PDF extraction had issues. Analysis may be limited.']
+                  recommendations: ['AI vision extraction had issues. Falling back to pattern matching.']
                 });
               }
             }
-            
-            // For smaller PDFs or when AI direct failed, try regex-based extraction
+
+            // STEP 3: Final fallback -- regex (best effort)
             if (!extractionSuccess) {
-              sendSSE(controller, 'progress', { stage: 'extract', percent: 15, message: 'Extracting text from PDF...' });
+              sendSSE(controller, 'progress', { stage: 'extract', percent: 15, message: 'Extracting text with pattern matching...' });
               
               const regexResult = await extractPDFText(bytes);
               
               if (regexResult.pageCount > 0) {
                 actualPdfPageCount = regexResult.pageCount;
-                console.log(`[script-parser-stream] Regex extraction: ${regexResult.pageCount} pages, ${regexResult.text.length} chars, success=${regexResult.success}`);
               }
               
               if (regexResult.success && regexResult.text.length > 500) {
@@ -1452,56 +1540,20 @@ serve(async (req) => {
                   percent: 30, 
                   message: `Extracted ${regexResult.text.length} chars from ${regexResult.pageCount} pages` 
                 });
-              } else if (lovableApiKey && bytes.byteLength <= maxAISize) {
-                // Regex failed - try AI vision
-                console.log(`[script-parser-stream] Regex extraction insufficient (${regexResult.text.length} chars), trying AI vision...`);
-                sendSSE(controller, 'progress', { stage: 'extract', percent: 20, message: 'Using AI vision for text extraction...' });
-                
-                const pdfBase64 = arrayBufferToBase64(bytes);
-                const aiResult = await extractTextWithAI(
-                  lovableApiKey, 
-                  pdfBase64, 
-                  effectiveScriptType === 'comic',
-                  (msg: string) => sendSSE(controller, 'progress', { stage: 'extract', percent: 25, message: msg })
-                );
-                
-                if (aiResult.success && aiResult.text.length > 500) {
-                  extractedText = aiResult.text;
-                  extractionSuccess = true;
-                  extractionMethod = 'ai-vision';
-                  actualPdfPageCount = actualPdfPageCount || regexResult.pageCount;
-                  sendSSE(controller, 'progress', { 
-                    stage: 'extract', 
-                    percent: 30, 
-                    message: `AI extracted ${aiResult.text.length} chars from PDF` 
-                  });
-                } else {
-                  // Use whatever regex extracted if AI failed
-                  if (regexResult.text.length > 0) {
-                    extractedText = regexResult.text;
-                    extractionSuccess = regexResult.text.length > 200;
-                    extractionMethod = 'regex-partial';
-                  }
-                  if (aiResult.error) {
-                    sendSSE(controller, 'warning', { 
-                      warnings: [aiResult.error],
-                      recommendations: ['PDF text extraction was limited. Analysis may be incomplete.']
-                    });
-                  }
-                }
+              } else if (regexResult.text.length > 200) {
+                extractedText = regexResult.text;
+                extractionSuccess = true;
+                extractionMethod = 'regex-partial';
               } else {
-                // Use regex result even if partial (no API key or file too large)
+                // Nothing worked
                 if (regexResult.text.length > 0) {
                   extractedText = regexResult.text;
-                  extractionSuccess = regexResult.text.length > 200;
                   extractionMethod = 'regex-only';
                 }
-                if (regexResult.error || !extractionSuccess) {
-                  sendSSE(controller, 'warning', { 
-                    warnings: ['PDF text extraction was limited. The PDF may be scanned or use embedded fonts.'],
-                    recommendations: ['Consider uploading a text-based version of the script for better results.']
-                  });
-                }
+                sendSSE(controller, 'warning', { 
+                  warnings: ['PDF text extraction was limited. The PDF may be scanned or use embedded fonts.'],
+                  recommendations: ['Consider uploading a text-based version of the script for better results.']
+                });
               }
             }
           } // End PDF format block

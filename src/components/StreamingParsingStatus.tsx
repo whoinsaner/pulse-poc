@@ -32,6 +32,7 @@ interface StreamingParsingStatusProps {
 }
 
 const EXTRACTION_METHOD_CONFIG: Record<ExtractionMethod, { label: string; icon: React.ComponentType<{ className?: string }>; variant: 'default' | 'secondary' | 'info' }> = {
+  pymupdf: { label: 'PDF Text Extraction', icon: FileCode, variant: 'default' },
   pdfjs: { label: 'Text Extraction', icon: FileCode, variant: 'secondary' },
   ai_vision: { label: 'AI Vision', icon: Eye, variant: 'info' },
   ai_vision_chunked: { label: 'AI Vision (Chunked)', icon: Eye, variant: 'info' },

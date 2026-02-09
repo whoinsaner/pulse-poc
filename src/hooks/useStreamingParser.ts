@@ -30,7 +30,7 @@ export interface ClassificationResult {
   userSelected?: string;
 }
 
-export type ExtractionMethod = 'pdfjs' | 'ai_vision' | 'ai_vision_chunked' | 'regex' | 'native' | 'unknown';
+export type ExtractionMethod = 'pymupdf' | 'pdfjs' | 'ai_vision' | 'ai_vision_chunked' | 'regex' | 'native' | 'unknown';
 
 export interface ParsingResult {
   success: boolean;
