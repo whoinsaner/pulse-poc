@@ -1,235 +1,166 @@
 
-# Plan: Integrate PDF.js for Proper PDF Text Extraction
 
-## Problem Summary
+# Plan: Integrate Python PDF Extraction Microservice as Primary Extraction Step
 
-The current PDF text extraction uses regex-based parsing that:
-1. Fails with embedded fonts (glyph indices vs Unicode)
-2. Bails out for PDFs over 50 pages
-3. Results in low extraction coverage (17.8% for 191-page scripts)
+## Architecture Overview
 
-## Proposed Solution
+A dedicated Python microservice using **PyMuPDF (fitz)** will serve as the primary PDF text extraction method. The existing `script-parser-stream` edge function will call this service first, falling back to AI Vision and regex only if the Python service fails.
 
-Integrate `pdfjs-dist` (Mozilla's PDF.js) via ESM.sh for proper PDF text extraction in Deno/Edge Functions. PDF.js handles font encoding tables, ToUnicode CMaps, and proper text extraction without vision models.
+```text
+Current Flow:
+  PDF Upload --> [AI Vision (large)] or [Regex (small)] --> [AI Vision fallback] --> Parse
+
+New Flow:
+  PDF Upload --> [PyMuPDF Service] --> [AI Vision fallback] --> [Regex fallback] --> Parse
+```
+
+## Why PyMuPDF?
+
+- Handles font encoding tables and Unicode CMap correctly (solves the gibberish problem)
+- Extracts text with proper line breaks and positioning
+- No page limit -- handles 191+ page scripts easily
+- Fast: ~0.5s for a 200-page PDF (vs seconds for AI Vision)
+- Zero API cost (no AI credits consumed)
 
 ---
 
 ## Technical Implementation
 
-### Step 1: Add PDF.js Import
+### Step 1: Create Python Extraction Service
+
+Deploy a lightweight **FastAPI** microservice that accepts a PDF file and returns extracted text.
+
+**Service endpoint:** `POST /extract-pdf`
+- Accepts: multipart/form-data with PDF file, or JSON with base64-encoded PDF
+- Returns: JSON with extracted text, page count, and quality metadata
+
+**Key PyMuPDF logic:**
+- Opens PDF with `fitz.open()`
+- Iterates each page calling `page.get_text("text")` for layout-aware extraction
+- Applies line-break detection and screenplay formatting heuristics
+- Returns per-page text with `--- PAGE N ---` markers (matching current format)
+- Reports extraction quality (chars per page, blank page detection)
+
+**Hosting options** (requires user decision):
+- Google Cloud Run (serverless, auto-scaling, free tier available)
+- AWS Lambda with container image
+- Railway / Render / Fly.io (simple deploy)
+- Self-hosted VPS
+
+### Step 2: Store Python Service URL as a Secret
+
+Add a new secret `PDF_EXTRACTOR_URL` to the project that points to the deployed Python service endpoint (e.g., `https://pdf-extractor-xyz.run.app/extract-pdf`).
+
+### Step 3: Update Edge Function -- Add Python Extraction Call
 
 **File:** `supabase/functions/script-parser-stream/index.ts`
 
-Add the pdfjs-dist import using ESM.sh (Deno-compatible CDN):
+Add a new function `extractPDFWithPython()` that calls the microservice:
 
 ```typescript
-import * as pdfjsLib from "https://esm.sh/pdfjs-dist@4.4.168/build/pdf.mjs";
-```
+async function extractPDFWithPython(
+  pdfBytes: ArrayBuffer,
+  onProgress?: (message: string) => void
+): Promise<{ text: string; pageCount: number; success: boolean; error?: string }> {
+  const serviceUrl = Deno.env.get('PDF_EXTRACTOR_URL');
+  if (!serviceUrl) {
+    return { text: '', pageCount: 0, success: false, error: 'Python extractor not configured' };
+  }
 
-**Note:** PDF.js requires a worker for heavy operations. In Deno/Edge Functions, we'll use the "fake worker" mode by setting:
-
-```typescript
-pdfjsLib.GlobalWorkerOptions.workerSrc = '';
-```
-
----
-
-### Step 2: Create New PDF.js Text Extraction Function
-
-**File:** `supabase/functions/script-parser-stream/index.ts`
-
-Add a new function that uses PDF.js for proper text extraction:
-
-```typescript
-async function extractPDFTextWithPDFJS(
-  arrayBuffer: ArrayBuffer,
-  onProgress?: (message: string, percent: number) => void
-): Promise<{ 
-  text: string; 
-  pageCount: number; 
-  success: boolean; 
-  error?: string 
-}> {
   try {
-    // Load PDF document
-    const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
-    const pdf = await loadingTask.promise;
-    
-    const pageCount = pdf.numPages;
-    const textParts: string[] = [];
-    
-    onProgress?.(`Extracting text from ${pageCount} pages...`, 10);
-    
-    // Process each page
-    for (let i = 1; i <= pageCount; i++) {
-      const page = await pdf.getPage(i);
-      const textContent = await page.getTextContent();
-      
-      // Extract text items with positioning
-      let pageText = '';
-      let lastY = 0;
-      
-      for (const item of textContent.items) {
-        if ('str' in item) {
-          // Check for line break (Y position changed significantly)
-          if (lastY !== 0 && Math.abs(item.transform[5] - lastY) > 5) {
-            pageText += '\n';
-          }
-          pageText += item.str;
-          lastY = item.transform[5];
-        }
-      }
-      
-      textParts.push(`--- PAGE ${i} ---\n${pageText}`);
-      
-      // Progress update and CPU yield every 10 pages
-      if (i % 10 === 0) {
-        const percent = Math.round((i / pageCount) * 80) + 10;
-        onProgress?.(`Extracted ${i}/${pageCount} pages`, percent);
-        await cpuYield();
-      }
+    onProgress?.('Sending PDF to extraction service...');
+
+    const pdfBase64 = arrayBufferToBase64(pdfBytes);
+
+    const response = await fetch(serviceUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pdf_base64: pdfBase64 }),
+    });
+
+    if (!response.ok) {
+      return { text: '', pageCount: 0, success: false, error: `Service error: ${response.status}` };
     }
-    
-    const combinedText = textParts.join('\n\n');
-    
-    onProgress?.(`Extraction complete: ${combinedText.length} chars`, 90);
-    
+
+    const result = await response.json();
+    onProgress?.(`Extracted ${result.text.length} chars from ${result.page_count} pages`);
+
     return {
-      text: combinedText,
-      pageCount,
-      success: combinedText.length > 500,
-      error: combinedText.length <= 500 
-        ? 'PDF appears to be scanned/image-based' 
-        : undefined
+      text: result.text,
+      pageCount: result.page_count,
+      success: result.text.length > 500,
+      error: result.text.length <= 500 ? 'Insufficient text extracted' : undefined,
     };
-    
   } catch (error) {
-    console.error('[script-parser-stream] PDF.js extraction error:', error);
     return {
       text: '',
       pageCount: 0,
       success: false,
-      error: error instanceof Error ? error.message : 'PDF.js extraction failed'
+      error: error instanceof Error ? error.message : 'Python extraction failed',
     };
   }
 }
 ```
 
----
-
-### Step 3: Update Extraction Flow
-
-**File:** `supabase/functions/script-parser-stream/index.ts`
-
-Replace the current extraction logic with a fallback chain:
-
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│                    PDF Extraction Flow                          │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  1. Try PDF.js extraction (proper font handling)                │
-│        ↓                                                        │
-│  2. If PDF.js fails or text < 500 chars:                        │
-│     → Try AI vision extraction (chunked for large PDFs)         │
-│        ↓                                                        │
-│  3. If AI fails or rate limited:                                │
-│     → Fall back to regex extraction (best effort)               │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-**Changes to main extraction block (around line 1900):**
-
-```typescript
-// For PDF files, use PDF.js first, then fallback chain
-if (format === 'pdf') {
-  sendSSE(controller, 'progress', { 
-    stage: 'extract', 
-    percent: 15, 
-    message: 'Extracting text with PDF.js...' 
-  });
-  
-  // Step 1: Try PDF.js extraction
-  const pdfjsResult = await extractPDFTextWithPDFJS(
-    arrayBuffer,
-    (msg, pct) => sendSSE(controller, 'progress', { 
-      stage: 'extract', 
-      percent: 15 + Math.round(pct * 0.5), 
-      message: msg 
-    })
-  );
-  
-  if (pdfjsResult.success && pdfjsResult.text.length > 500) {
-    rawText = pdfjsResult.text;
-    pageCount = pdfjsResult.pageCount;
-    // Continue with Fountain normalization...
-  } else {
-    // Step 2: Try AI vision extraction
-    // (existing AI extraction code, with chunking for large PDFs)
-  }
-}
-```
-
----
-
-### Step 4: Remove 50-Page Bailout
+### Step 4: Update PDF Extraction Flow
 
 **File:** `supabase/functions/script-parser-stream/index.ts`  
-**Lines:** 189-198
+**Lines:** ~1383-1507 (the PDF format block)
 
-Remove the early return that skips extraction for large PDFs:
+Replace the current routing logic with the new priority chain:
 
-```typescript
-// DELETE THIS BLOCK:
-if (pageCount > 50) {
-  console.log(`...`);
-  return { text: '', pageCount, success: false, error: '...' };
+```text
+if (format === 'pdf') {
+  // STEP 1: Try Python PyMuPDF extraction (primary -- best quality)
+  const pythonResult = await extractPDFWithPython(bytes, progressCallback);
+
+  if (pythonResult.success) {
+    extractedText = pythonResult.text;
+    actualPdfPageCount = pythonResult.pageCount;
+    extractionSuccess = true;
+    extractionMethod = 'pymupdf';
+  }
+
+  // STEP 2: If Python failed, try AI Vision (for scanned/image PDFs)
+  if (!extractionSuccess && lovableApiKey && bytes.byteLength <= maxAISize) {
+    const aiResult = await extractTextWithAI(lovableApiKey, pdfBase64, isComic, progressCallback);
+    if (aiResult.success) {
+      extractedText = aiResult.text;
+      extractionSuccess = true;
+      extractionMethod = 'ai-vision';
+    }
+  }
+
+  // STEP 3: Final fallback -- regex (best effort)
+  if (!extractionSuccess) {
+    const regexResult = await extractPDFText(bytes);
+    if (regexResult.text.length > 200) {
+      extractedText = regexResult.text;
+      extractionSuccess = true;
+      extractionMethod = 'regex';
+    }
+  }
 }
 ```
 
-PDF.js can handle large PDFs efficiently with proper chunking and CPU yields.
+### Step 5: Update Extraction Method Types
 
----
+**File:** `src/hooks/useStreamingParser.ts`
 
-### Step 5: Add Chunked AI Fallback (for scanned PDFs)
-
-**File:** `supabase/functions/script-parser-stream/index.ts`
-
-For PDFs where PDF.js returns little/no text (scanned documents), implement chunked AI extraction:
+Add `'pymupdf'` to the `ExtractionMethod` type:
 
 ```typescript
-async function extractTextWithAIChunked(
-  apiKey: string,
-  pdfBase64: string,
-  totalPages: number,
-  isComic: boolean,
-  onProgress?: (message: string, pagesProcessed: number) => void
-): Promise<{ text: string; success: boolean; pagesExtracted: number; error?: string }> {
-  
-  // Process in chunks of 30 pages
-  const chunkSize = 30;
-  const chunks = Math.ceil(totalPages / chunkSize);
-  const allText: string[] = [];
-  
-  for (let i = 0; i < chunks; i++) {
-    const startPage = i * chunkSize + 1;
-    const endPage = Math.min((i + 1) * chunkSize, totalPages);
-    
-    onProgress?.(`AI extracting pages ${startPage}-${endPage}...`, endPage);
-    
-    // Call AI extraction for this chunk
-    // (implementation details for page-range extraction)
-    
-    await cpuYield();
-  }
-  
-  return {
-    text: allText.join('\n\n'),
-    success: allText.length > 0,
-    pagesExtracted: totalPages
-  };
-}
+export type ExtractionMethod = 'pymupdf' | 'pdfjs' | 'ai_vision' | 'ai_vision_chunked' | 'regex' | 'native' | 'unknown';
+```
+
+### Step 6: Update UI Badge Config
+
+**File:** `src/components/StreamingParsingStatus.tsx`
+
+Add PyMuPDF to the extraction method display config:
+
+```typescript
+pymupdf: { label: 'PDF Text Extraction', icon: FileCode, variant: 'default' },
 ```
 
 ---
@@ -238,27 +169,56 @@ async function extractTextWithAIChunked(
 
 | File | Changes |
 |------|---------|
-| `supabase/functions/script-parser-stream/index.ts` | Add PDF.js import, new extraction function, update extraction flow, remove 50-page bailout |
+| `supabase/functions/script-parser-stream/index.ts` | Add `extractPDFWithPython()` function; restructure PDF extraction flow to call Python service first |
+| `src/hooks/useStreamingParser.ts` | Add `'pymupdf'` to `ExtractionMethod` type |
+| `src/components/StreamingParsingStatus.tsx` | Add PyMuPDF badge config |
+
+## New Files to Create
+
+| File | Purpose |
+|------|---------|
+| Python service (external repo) | FastAPI app with PyMuPDF extraction endpoint |
+
+## Secrets Required
+
+| Secret | Purpose |
+|--------|---------|
+| `PDF_EXTRACTOR_URL` | URL of the deployed Python extraction microservice |
 
 ---
 
-## Potential Risks and Mitigations
+## Sequence of Operations
 
-| Risk | Mitigation |
-|------|------------|
-| PDF.js bundle size impact | Use ESM.sh which handles tree-shaking; only import what's needed |
-| Worker not available in Deno | Use workerless mode (`workerSrc = ''`) - slightly slower but functional |
-| Memory issues with large PDFs | Process pages sequentially, not in parallel; yield frequently |
-| Some PDFs still fail (encrypted, corrupted) | Maintain fallback chain to AI vision extraction |
-| Edge function timeout | Add CPU yields every 10 pages; implement progress streaming |
+1. User uploads PDF
+2. Edge function downloads PDF from storage
+3. Edge function sends PDF (base64) to Python microservice via HTTP
+4. Python service extracts text with PyMuPDF, returns clean text + page count
+5. If Python service succeeds (text > 500 chars): use result, skip AI/regex
+6. If Python service fails or returns insufficient text: fall through to AI Vision
+7. If AI Vision also fails: fall through to regex (best effort)
+8. Continue with existing classification, normalization, and structural parsing
 
 ---
 
-## Expected Outcomes
+## Considerations
 
-After implementation:
-- **191-page scripts**: Full text extraction via PDF.js (vs 17.8% currently)
-- **Proper Unicode handling**: Font encoding tables properly decoded
-- **No more bailouts**: All PDF sizes processed with same logic
-- **Graceful degradation**: Scanned PDFs still use AI vision as fallback
-- **Progress visibility**: Users see extraction progress via SSE updates
+| Concern | Mitigation |
+|---------|------------|
+| Additional latency from HTTP call to Python service | PyMuPDF is fast (~0.5s for 200 pages); network overhead is small compared to AI Vision calls |
+| Python service availability | Graceful fallback to AI Vision if service is down or unreachable (3-second timeout) |
+| File size limits | Python service should accept up to 20MB (matching upload limit); base64 encoding increases size ~33% |
+| Cost | PyMuPDF is open source; hosting cost is minimal on serverless platforms |
+| Security | Service should be behind authentication (API key header) to prevent abuse |
+| The Python service is outside Lovable | User must deploy and maintain it separately; the edge function only calls it via HTTP |
+
+---
+
+## User Action Required
+
+Before implementation can proceed:
+1. **Choose a hosting platform** for the Python service (Cloud Run, Railway, etc.)
+2. **Deploy the Python service** (can provide the code)
+3. **Add the service URL** as a secret (`PDF_EXTRACTOR_URL`)
+
+The edge function changes and UI updates can be implemented immediately -- they will gracefully skip the Python step if the URL is not configured.
+
