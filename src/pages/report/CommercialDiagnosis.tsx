@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { ReportData, StakeholderLens, LENS_CONFIG } from '@/types/database';
+import { ReportData, StakeholderLens, LENS_CONFIG, AgentSectionContent } from '@/types/database';
+import { CommercialNarrativePanel, ProductionNarrativePanel } from '@/components/report/AgentNarrativePanel';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { 
@@ -174,6 +175,24 @@ export default function CommercialDiagnosis() {
           })}
         </div>
       </Card>
+
+      {/* Agent Narrative Content */}
+      {reportData.agentContent && (
+        <div className="space-y-6">
+          {reportData.agentContent.MarketAgent && (
+            <div>
+              <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">Market Analysis</h3>
+              <CommercialNarrativePanel content={reportData.agentContent.MarketAgent} />
+            </div>
+          )}
+          {reportData.agentContent.ExecutionAgent && (
+            <div>
+              <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">Production & Execution</h3>
+              <ProductionNarrativePanel content={reportData.agentContent.ExecutionAgent} />
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Diagnosis Summary */}
       <DiagnosisSummary

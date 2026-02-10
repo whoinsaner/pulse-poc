@@ -104,35 +104,47 @@ const App = () => (
             <Route path="/admin/models" element={<ModelConfiguration />} />
             <Route path="/admin/agents" element={<AgentConfiguration />} />
             <Route path="/report/:runId" element={<ReportLayout />}>
-              <Route index element={<ProjectSnapshot />} />
-              <Route path="concept" element={<ConceptHook />} />
-              <Route path="plot" element={<PlotAnalysis />} />
-              <Route path="structure" element={<StructuralEngineering />} />
-              <Route path="protagonist" element={<ProtagonistAnalysis />} />
-              <Route path="antagonist" element={<AntagonistAnalysis />} />
-              <Route path="supporting" element={<SupportingCast />} />
-              <Route path="psychology" element={<CharacterPsychology />} />
-              <Route path="dialogue" element={<DialogueSubtext />} />
-              <Route path="theme" element={<ThemeMoral />} />
-              <Route path="visual" element={<VisualStorytelling />} />
-              <Route path="emotional" element={<EmotionalResonance />} />
-              <Route path="market" element={<Marketability />} />
-              <Route path="production" element={<Production />} />
-              <Route path="audience" element={<AudienceStrategy />} />
-              <Route path="rewrite" element={<RewritePriorities />} />
-              <Route path="scenes" element={<SceneEconomy />} />
+              {/* USAF Consolidated Routes (primary) */}
+              <Route index element={<ReportCover />} />
+              <Route path="story" element={<StoryDiagnosis />} />
+              <Route path="characters" element={<CharacterDiagnosis />} />
+              <Route path="craft" element={<CraftDiagnosis />} />
+              <Route path="format" element={<FormatDiagnosis />} />
+              <Route path="comic-format" element={<ComicFormatDiagnosis />} />
+              <Route path="commercial" element={<CommercialDiagnosis />} />
+              <Route path="development" element={<DevelopmentPriorities />} />
               <Route path="scorecard" element={<CompleteScorecard />} />
-              <Route path="bible" element={<SeriesBibleExtract />} />
               <Route path="script" element={<SampleScript />} />
+              
+              {/* Legacy routes - redirect to consolidated pages */}
+              <Route path="concept" element={<Navigate to="../story" replace />} />
+              <Route path="plot" element={<Navigate to="../story" replace />} />
+              <Route path="structure" element={<Navigate to="../story" replace />} />
+              <Route path="protagonist" element={<Navigate to="../characters" replace />} />
+              <Route path="antagonist" element={<Navigate to="../characters" replace />} />
+              <Route path="supporting" element={<Navigate to="../characters" replace />} />
+              <Route path="psychology" element={<Navigate to="../characters" replace />} />
+              <Route path="dialogue" element={<Navigate to="../craft" replace />} />
+              <Route path="theme" element={<Navigate to="../craft" replace />} />
+              <Route path="visual" element={<Navigate to="../craft" replace />} />
+              <Route path="emotional" element={<Navigate to="../craft" replace />} />
+              <Route path="market" element={<Navigate to="../commercial" replace />} />
+              <Route path="production" element={<Navigate to="../commercial" replace />} />
+              <Route path="audience" element={<Navigate to="../commercial" replace />} />
+              <Route path="rewrite" element={<Navigate to="../development" replace />} />
+              <Route path="scenes" element={<Navigate to="../development" replace />} />
+              
+              {/* Still-active legacy routes */}
+              <Route path="bible" element={<SeriesBibleExtract />} />
               <Route path="analysis" element={<ReportAnalysis />} />
               <Route path="insights" element={<ReportInsights />} />
               <Route path="narrative" element={<ReportNarrative />} />
-              <Route path="characters" element={<ReportCharacters />} />
+              <Route path="characters-detail" element={<ReportCharacters />} />
               <Route path="platform" element={<ReportPlatform />} />
-              <Route path="comic" element={<ReportComic />} />
-              <Route path="web-series" element={<WebSeriesAnalysis />} />
-              <Route path="retention" element={<RetentionAnalysis />} />
-              <Route path="hooks" element={<HooksAnalysis />} />
+              <Route path="comic" element={<Navigate to="../comic-format" replace />} />
+              <Route path="web-series" element={<Navigate to="../format" replace />} />
+              <Route path="retention" element={<Navigate to="../format" replace />} />
+              <Route path="hooks" element={<Navigate to="../format" replace />} />
               <Route path="stakeholder/:stakeholder" element={<StakeholderReport />} />
             </Route>
             {/* Feature Film Sample Report - USAF Redesign */}

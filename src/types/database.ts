@@ -182,6 +182,35 @@ export interface Report {
   created_at: string;
 }
 
+// Agent section content produced by enhanced prompts
+export interface AgentSectionContent {
+  verdict?: string;
+  whatWorks?: string[];
+  whatsBroken?: string[];
+  whatsUnderdeveloped?: string[];
+  keyQuotes?: Array<{ quote: string; context: string; page?: number }>;
+  deepDive?: string;
+  recommendations?: Array<{
+    title: string;
+    description: string;
+    priority: 'critical' | 'high' | 'medium';
+    effort: 'easy' | 'moderate' | 'hard';
+  }>;
+  // Character-specific
+  protagonistProfile?: { name: string; want: string; need: string; flaw: string; arc: string; strengths?: string[]; weaknesses?: string[] };
+  antagonistProfile?: { name: string; motivation: string; threat: string; complexity: string };
+  supportingCast?: Array<{ name: string; role: string; impact: string }>;
+  psychologyInsights?: string;
+  // Market-specific
+  comparableTitles?: Array<{ title: string; relevance: string }>;
+  targetAudience?: string;
+  platformFit?: string;
+  // Execution-specific
+  budgetTier?: string;
+  productionComplexity?: string;
+  talentRequirements?: string;
+}
+
 export interface ReportData {
   scriptMetadata: {
     title: string;
@@ -199,6 +228,7 @@ export interface ReportData {
   characters: CharacterData[];
   scenes: SceneData[];
   narrativeGraph?: NarrativeGraphData;
+  agentContent?: Record<string, AgentSectionContent>;
 }
 
 export type MaturityLevel = 'Weak' | 'Developing' | 'Strong';
