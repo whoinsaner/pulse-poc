@@ -278,7 +278,7 @@ interface AnalyzeRequest {
   stakeholderLens?: string | null;
 }
 
-// UASF Output Contract
+// USAF Output Contract
 interface ParameterOutput {
   score: number;
   maturity: 'Weak' | 'Developing' | 'Strong';
@@ -373,7 +373,7 @@ You may infer, but you must explain inference.
 - ONLY output parameter evaluations + observations
 `;
 
-// Agent definitions with UASF-compliant prompts
+// Agent definitions with USAF-compliant prompts
 const AGENTS: Record<string, { parameters: string[]; systemPrompt: string; category?: string }> = {
   // ============= SYSTEM AGENTS (Pre-processing) =============
   
@@ -2627,7 +2627,7 @@ async function runAgent(
     .map(name => parameterMap.get(name))
     .filter(Boolean);
 
-  const userPrompt = `Analyze this script and score the following parameters using the UASF Output Contract:
+  const userPrompt = `Analyze this script and score the following parameters using the USAF Output Contract:
 
 PARAMETERS TO EVALUATE:
 ${parametersToScore.map(p => `- ${p.display_name} (${p.name}): ${p.description || 'Evaluate quality'}`).join('\n')}
@@ -2635,7 +2635,7 @@ ${parametersToScore.map(p => `- ${p.display_name} (${p.name}): ${p.description |
 SCRIPT CONTEXT:
 ${context}
 
-Return a JSON object with this EXACT structure (UASF Output Contract):
+Return a JSON object with this EXACT structure (USAF Output Contract):
 {
   "scores": [
     {
@@ -3071,7 +3071,7 @@ async function generateReport(
   }
 
   const reportData = {
-    uasfVersion: '3.0',
+    usafVersion: '3.0',
     analysisMode: mode,
     scriptMetadata: {
       title: script.title,
@@ -3164,12 +3164,12 @@ async function generateReport(
     analysis_run_id: analysisRunId,
     script_id: scriptId,
     organization_id: scriptData?.organization_id,
-    title: `UASF ${mode === 'quick' ? 'Quick' : 'Deep'} Analysis: ${script.title}`,
+    title: `USAF ${mode === 'quick' ? 'Quick' : 'Deep'} Analysis: ${script.title}`,
     overall_score: overallScore,
     lens_scores: lensScores,
     executive_summary: executiveSummary,
     full_report_data: reportData,
   });
 
-  console.log(`[analyze-script] UASF ${mode} Report generated with overall score: ${overallScore}`);
+  console.log(`[analyze-script] USAF ${mode} Report generated with overall score: ${overallScore}`);
 }

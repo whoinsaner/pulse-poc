@@ -556,7 +556,7 @@ export function AnalysisTrigger({
         </p>
       </div>
 
-      {/* Agent Grid - Core UASF Agents */}
+      {/* Agent Grid - Core USAF Agents */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">

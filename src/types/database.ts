@@ -213,7 +213,7 @@ export interface ParameterScoreData {
   confidence: number;
   evidence: Evidence[];
   rationale: string;
-  // New UASF output contract fields
+  // New USAF output contract fields
   maturity?: MaturityLevel;
   riskLevel?: RiskLevel;
   fixCost?: RiskLevel;
