@@ -1,27 +1,68 @@
 
 
-# Add PDF_EXTRACTOR_URL Secret
+# Fix Scene Heading Detection for Numbered Sluglines
 
-## What needs to happen
+## Problem
 
-Store the Railway deployment URL as a backend secret so the edge function can call the Python PDF extraction service.
+The uploaded screenplay uses numbered/lettered scene sluglines like:
+- `1A. EXT. VILLAGE ROAD – NIGHT`
+- `1B. INT. MANICKAM'S HOUSE – NIGHT`
+- `52. EXT. HIGHWAY – DAY`
 
-## Secret Details
+The current regex patterns require lines to **start with** `INT.`/`EXT.`, so any scene number prefix causes the match to fail. This resulted in only 4 scenes detected (from edge cases) instead of the full script, yielding 72.8% coverage and `isComplete=false`.
 
-| Secret Name | Value |
-|------------|-------|
-| `PDF_EXTRACTOR_URL` | `https://pdf-extractor-production-ac24.up.railway.app/extract-pdf` |
+## Solution
+
+Update scene heading regex patterns in **two places** within `supabase/functions/script-parser-stream/index.ts`:
+
+1. **`normalizeToFountain` function** (line 563) -- the normalization pass
+2. **`parseTextFormat` function** (line 2106) -- the actual scene extraction pass
+
+Both need a new pattern that strips optional leading scene numbers before matching `INT.`/`EXT.`.
+
+## Changes
+
+**File: `supabase/functions/script-parser-stream/index.ts`**
+
+### 1. `normalizeToFountain` -- update `sceneHeadingPattern` (line 563)
+
+Change from:
+```
+/^(INT\.|EXT\.|INT\/EXT\.|I\/E\.)\s*.+/i
+```
+To:
+```
+/^(?:\d+[A-Z]?\.\s*)?(INT\.|EXT\.|INT\/EXT\.|I\/E\.)\s*.+/i
+```
+
+The `(?:\d+[A-Z]?\.\s*)?` prefix optionally matches patterns like `1.`, `1A.`, `52.`, `123B.` followed by a space.
+
+### 2. `parseTextFormat` -- update `sceneHeadingPattern` (line 2106)
+
+Change from:
+```
+/^(INT\.|EXT\.|INT\/EXT\.|I\/E\.)\s*(.+?)(?:\s*-\s*(.+))?$/i
+```
+To:
+```
+/^(?:\d+[A-Z]?\.\s*)?(INT\.|EXT\.|INT\/EXT\.|I\/E\.)\s*(.+?)(?:\s*[-–—]\s*(.+))?$/i
+```
+
+This also adds support for em-dash (`–`, `—`) separators in addition to hyphens, since the sample text uses `–` (en-dash) between location and time of day.
+
+### 3. `normalizeToFountain` -- also handle dash variants in loose pattern matching
+
+Update `looseScenePattern` (line 564) to handle en-dash/em-dash separators as well, so the time-of-day portion is correctly captured.
 
 ## Technical Details
 
-- The `script-parser-stream` edge function already reads this secret via `Deno.env.get('PDF_EXTRACTOR_URL')`
-- Once configured, all PDF uploads will attempt PyMuPDF extraction first before falling back to AI Vision or regex
-- If the secret is removed later, the system gracefully skips the Python step
+- The `(?:\d+[A-Z]?\.\s*)?` is a non-capturing optional group, so capture group indices remain unchanged
+- No other functions or files need changes
+- The edge function will be automatically redeployed after the edit
 
-## After Adding the Secret
+## Verification
 
-Upload a test PDF screenplay to verify:
-1. The extraction method badge shows "PDF Text Extraction" (pymupdf)
-2. The parsed text quality is correct
-3. Fallback works if the service is temporarily unavailable
-
+After deployment, re-upload the same PDF. Expected results:
+- Scene count should jump from 4 to the full count (likely 50+ scenes based on a 191-page screenplay)
+- Coverage should reach near 100%
+- `isComplete` should be `true`
