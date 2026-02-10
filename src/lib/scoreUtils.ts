@@ -436,8 +436,18 @@ export interface DiagnosticCounts {
  * Working: score >= 65
  * Needs Work: score < 65
  */
-export function getDiagnosticCounts(categoryScores: Record<string, number>): DiagnosticCounts {
-  const scores = Object.values(categoryScores);
+/** Extract numeric score from a value that may be a number or {score: number, ...} object */
+function extractScore(value: unknown): number {
+  if (typeof value === 'number') return value;
+  if (value && typeof value === 'object' && 'score' in value) {
+    const s = (value as Record<string, unknown>).score;
+    if (typeof s === 'number') return s;
+  }
+  return 0;
+}
+
+export function getDiagnosticCounts(categoryScores: Record<string, unknown>): DiagnosticCounts {
+  const scores = Object.values(categoryScores).map(extractScore);
   const working = scores.filter(s => s >= 65).length;
   const needsWork = scores.filter(s => s < 65).length;
   
@@ -452,8 +462,8 @@ export function getDiagnosticCounts(categoryScores: Record<string, number>): Dia
  * Get the top strength category from category scores
  * Returns the highest-scoring category name (formatted)
  */
-export function getTopStrength(categoryScores: Record<string, number>): { category: string; score: number } | null {
-  const entries = Object.entries(categoryScores);
+export function getTopStrength(categoryScores: Record<string, unknown>): { category: string; score: number } | null {
+  const entries = Object.entries(categoryScores).map(([k, v]) => [k, extractScore(v)] as const);
   if (entries.length === 0) return null;
   
   const [topCategory, topScore] = entries.reduce((max, current) => 
@@ -473,18 +483,18 @@ export function getTopStrength(categoryScores: Record<string, number>): { catego
 /**
  * Get sorted strengths (score >= 65) and areas needing development (score < 65)
  */
-export function getSortedDiagnostics(categoryScores: Record<string, number>): {
+export function getSortedDiagnostics(categoryScores: Record<string, unknown>): {
   strengths: Array<{ category: string; score: number }>;
   needsDevelopment: Array<{ category: string; score: number }>;
 } {
   const entries = Object.entries(categoryScores)
-    .map(([category, score]) => ({
+    .map(([category, value]) => ({
       category: category
         .replace(/_/g, ' ')
         .replace(/([A-Z])/g, ' $1')
         .replace(/^./, str => str.toUpperCase())
         .trim(),
-      score,
+      score: extractScore(value),
     }))
     .sort((a, b) => b.score - a.score);
   
