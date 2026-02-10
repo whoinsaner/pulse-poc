@@ -14,6 +14,19 @@ import {
 import { useState } from 'react';
 import type { AgentSectionContent } from '@/types/database';
 
+/** Safely extract a display string from items that may be strings or {content, evidence} objects */
+function toDisplayString(item: unknown): string {
+  if (typeof item === 'string') return item;
+  if (item && typeof item === 'object') {
+    const obj = item as Record<string, unknown>;
+    if (typeof obj.content === 'string') return obj.content;
+    if (typeof obj.text === 'string') return obj.text;
+    // Last resort: join all string values
+    return Object.values(obj).filter(v => typeof v === 'string').join(' — ') || JSON.stringify(item);
+  }
+  return String(item);
+}
+
 interface AgentNarrativePanelProps {
   agentName: string;
   content: AgentSectionContent;
@@ -46,7 +59,7 @@ export function AgentNarrativePanel({ agentName, content, className }: AgentNarr
               {content.whatWorks.map((item, i) => (
                 <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
                   <CheckCircle className="h-3.5 w-3.5 text-success shrink-0 mt-0.5" />
-                  <span>{item}</span>
+                  <span>{toDisplayString(item)}</span>
                 </li>
               ))}
             </ul>
@@ -63,7 +76,7 @@ export function AgentNarrativePanel({ agentName, content, className }: AgentNarr
               {content.whatsBroken.map((item, i) => (
                 <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
                   <XCircle className="h-3.5 w-3.5 text-destructive shrink-0 mt-0.5" />
-                  <span>{item}</span>
+                  <span>{toDisplayString(item)}</span>
                 </li>
               ))}
             </ul>
@@ -80,7 +93,7 @@ export function AgentNarrativePanel({ agentName, content, className }: AgentNarr
               {content.whatsUnderdeveloped.map((item, i) => (
                 <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
                   <AlertCircle className="h-3.5 w-3.5 text-chart-4 shrink-0 mt-0.5" />
-                  <span>{item}</span>
+                  <span>{toDisplayString(item)}</span>
                 </li>
               ))}
             </ul>
