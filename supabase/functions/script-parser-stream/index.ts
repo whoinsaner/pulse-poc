@@ -199,6 +199,7 @@ async function extractTextWithAIChunked(
 }
 
 // PyMuPDF-based PDF text extraction via external Python microservice (primary method)
+// Retries once on transient errors (502, 503, 504, timeouts) before giving up
 async function extractPDFWithPython(
   pdfBytes: ArrayBuffer,
   onProgress?: (message: string) => void
@@ -209,54 +210,82 @@ async function extractPDFWithPython(
     return { text: '', pageCount: 0, success: false, error: 'Python extractor not configured' };
   }
 
-  try {
-    onProgress?.('Sending PDF to extraction service...');
-    console.log(`[script-parser-stream] Calling PyMuPDF service at ${serviceUrl} (${(pdfBytes.byteLength / 1024).toFixed(0)}KB)`);
+  const pdfBase64 = arrayBufferToBase64(pdfBytes);
+  const maxAttempts = 2;
+  const retryDelayMs = 3000;
+  const retryableStatuses = new Set([502, 503, 504]);
 
-    const pdfBase64 = arrayBufferToBase64(pdfBytes);
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      if (attempt === 1) {
+        onProgress?.('Sending PDF to extraction service...');
+      } else {
+        onProgress?.(`Retrying extraction service (attempt ${attempt})...`);
+        console.log(`[script-parser-stream] PyMuPDF retry attempt ${attempt} after ${retryDelayMs}ms delay`);
+      }
+      console.log(`[script-parser-stream] Calling PyMuPDF service at ${serviceUrl} (${(pdfBytes.byteLength / 1024).toFixed(0)}KB) [attempt ${attempt}/${maxAttempts}]`);
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
 
-    const response = await fetch(serviceUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pdf_base64: pdfBase64 }),
-      signal: controller.signal,
-    });
+      const response = await fetch(serviceUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pdf_base64: pdfBase64 }),
+        signal: controller.signal,
+      });
 
-    clearTimeout(timeoutId);
+      clearTimeout(timeoutId);
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`[script-parser-stream] PyMuPDF service error: ${response.status}`, errorText);
-      return { text: '', pageCount: 0, success: false, error: `Service error: ${response.status}` };
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`[script-parser-stream] PyMuPDF service error: ${response.status}`, errorText);
+        
+        // Retry on transient server errors
+        if (retryableStatuses.has(response.status) && attempt < maxAttempts) {
+          console.log(`[script-parser-stream] Retryable status ${response.status}, waiting ${retryDelayMs}ms before retry...`);
+          await new Promise(r => setTimeout(r, retryDelayMs));
+          continue;
+        }
+        return { text: '', pageCount: 0, success: false, error: `Service error: ${response.status}` };
+      }
+
+      const result = await response.json();
+      const extractedText = result.text || '';
+      const pageCount = result.page_count || 0;
+
+      console.log(`[script-parser-stream] PyMuPDF extraction complete: ${extractedText.length} chars from ${pageCount} pages`);
+      onProgress?.(`Extracted ${extractedText.length} chars from ${pageCount} pages`);
+
+      return {
+        text: extractedText,
+        pageCount,
+        success: extractedText.length > 500,
+        error: extractedText.length <= 500 ? 'Insufficient text extracted by PyMuPDF' : undefined,
+      };
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Python extraction failed';
+      const isTimeout = error instanceof Error && error.name === 'AbortError';
+      console.error(`[script-parser-stream] PyMuPDF extraction ${isTimeout ? 'timed out' : 'failed'} [attempt ${attempt}/${maxAttempts}]:`, errorMsg);
+      
+      // Retry on timeout if we have attempts left
+      if (attempt < maxAttempts) {
+        console.log(`[script-parser-stream] Will retry after ${retryDelayMs}ms...`);
+        await new Promise(r => setTimeout(r, retryDelayMs));
+        continue;
+      }
+      
+      return {
+        text: '',
+        pageCount: 0,
+        success: false,
+        error: isTimeout ? 'Python extraction service timed out (30s)' : errorMsg,
+      };
     }
-
-    const result = await response.json();
-    const extractedText = result.text || '';
-    const pageCount = result.page_count || 0;
-
-    console.log(`[script-parser-stream] PyMuPDF extraction complete: ${extractedText.length} chars from ${pageCount} pages`);
-    onProgress?.(`Extracted ${extractedText.length} chars from ${pageCount} pages`);
-
-    return {
-      text: extractedText,
-      pageCount,
-      success: extractedText.length > 500,
-      error: extractedText.length <= 500 ? 'Insufficient text extracted by PyMuPDF' : undefined,
-    };
-  } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : 'Python extraction failed';
-    const isTimeout = error instanceof Error && error.name === 'AbortError';
-    console.error(`[script-parser-stream] PyMuPDF extraction ${isTimeout ? 'timed out' : 'failed'}:`, errorMsg);
-    return {
-      text: '',
-      pageCount: 0,
-      success: false,
-      error: isTimeout ? 'Python extraction service timed out (30s)' : errorMsg,
-    };
   }
+
+  // Should never reach here, but just in case
+  return { text: '', pageCount: 0, success: false, error: 'Max retries exceeded' };
 }
 
 // Legacy regex-based PDF text extraction (used as fallback when PyMuPDF and AI vision fail)
