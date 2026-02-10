@@ -83,12 +83,26 @@ const USAF_NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    id: 'diagnosis',
-    label: 'Diagnosis',
+    id: 'story',
+    label: 'Story Analysis',
     applicableTypes: 'all',
     items: [
       { id: 'story', label: 'Story', icon: BookOpen, path: '/story', requiredCategories: ['Concept & Hook', 'Structure', 'Conflict'] },
+    ],
+  },
+  {
+    id: 'characters',
+    label: 'Characters',
+    applicableTypes: 'all',
+    items: [
       { id: 'characters', label: 'Characters', icon: Users, path: '/characters', requiredCategories: ['Character'] },
+    ],
+  },
+  {
+    id: 'craft',
+    label: 'Craft',
+    applicableTypes: 'all',
+    items: [
       { id: 'craft', label: 'Craft', icon: Palette, path: '/craft', requiredCategories: ['Dialogue', 'Theme', 'World & Logic', 'Emotional Arc'] },
     ],
   },
@@ -102,7 +116,7 @@ const USAF_NAV_GROUPS: NavGroup[] = [
   },
   {
     id: 'market',
-    label: 'Market',
+    label: 'Production & Market',
     applicableTypes: 'all',
     items: [
       { id: 'commercial', label: 'Commercial', icon: TrendingUp, path: '/commercial', requiredCategories: ['Market', 'Execution'] },
@@ -110,7 +124,7 @@ const USAF_NAV_GROUPS: NavGroup[] = [
   },
   {
     id: 'actions',
-    label: 'Actions',
+    label: 'Recommendations',
     applicableTypes: 'all',
     items: [
       { id: 'development', label: 'Development', icon: ListTodo, path: '/development' },
