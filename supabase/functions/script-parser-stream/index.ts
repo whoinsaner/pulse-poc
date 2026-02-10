@@ -560,8 +560,8 @@ function normalizeToFountain(rawText: string): {
   const characterNames = new Set<string>();
   
   // Scene heading patterns - includes Hindi transliterated terms
-  const sceneHeadingPattern = /^(INT\.|EXT\.|INT\/EXT\.|I\/E\.)\s*.+/i;
-  const looseScenePattern = /^(INTERIOR|EXTERIOR|INT|EXT|ANDAR|BAHAR|अंदर|बाहर)[\s\.\/:-]+(.+)/i;
+  const sceneHeadingPattern = /^(?:\d+[A-Z]?\.\s*)?(INT\.|EXT\.|INT\/EXT\.|I\/E\.)\s*.+/i;
+  const looseScenePattern = /^(INTERIOR|EXTERIOR|INT|EXT|ANDAR|BAHAR|अंदर|बाहर)[\s\.\/:\-–—]+(.+)/i;
   // Additional scene patterns for unusual formats
   const numberedScenePattern = /^(SCENE|SC\.?|SEQ\.?)\s*#?\s*(\d+)/i;
   const markerPattern = /^(FADE IN|FADE OUT|SMASH CUT|JUMP CUT|TIME CUT):/i;
@@ -2103,7 +2103,7 @@ function parseTextFormat(content: string): { scenes: Scene[]; characters: Charac
   let currentPage = 1;
   
   // Scene heading patterns - standard + expanded
-  const sceneHeadingPattern = /^(INT\.|EXT\.|INT\/EXT\.|I\/E\.)\s*(.+?)(?:\s*-\s*(.+))?$/i;
+  const sceneHeadingPattern = /^(?:\d+[A-Z]?\.\s*)?(INT\.|EXT\.|INT\/EXT\.|I\/E\.)\s*(.+?)(?:\s*[-–—]\s*(.+))?$/i;
   const hindiScenePattern = /^(ANDAR|BAHAR|अंदर|बाहर)[\s\.\/:-]+(.+?)(?:\s*-\s*(.+))?$/i;
   // Additional scene patterns for unusual formats
   const numberedScenePattern = /^(SCENE|SC\.?|SEQ\.?)\s*#?\s*(\d+)/i;
