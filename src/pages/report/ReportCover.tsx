@@ -240,7 +240,7 @@ export default function ReportCover() {
             return (
               <Link 
                 key={section.id}
-                to={section.path}
+                to={`.${section.path}`}
                 className="block"
               >
                 <Card className="p-4 hover:border-primary/50 transition-colors h-full">
@@ -263,7 +263,7 @@ export default function ReportCover() {
           
           {/* Format-specific section */}
           {formatSection && (
-            <Link to={formatSection.path} className="block">
+            <Link to={`.${formatSection.path}`} className="block">
               <Card className="p-4 hover:border-primary/50 transition-colors h-full bg-primary/5 border-primary/20">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="p-2 rounded-lg bg-primary/10">
@@ -285,13 +285,13 @@ export default function ReportCover() {
 
       {/* Action Buttons */}
       <div className="flex flex-wrap gap-3 pt-4 border-t border-border/50">
-        <Link to="/story">
+        <Link to="./story">
           <Button>
             View Full Diagnosis
             <ArrowRight className="h-4 w-4 ml-2" />
           </Button>
         </Link>
-        <Link to="/development">
+        <Link to="./development">
           <Button variant="outline">
             <ListTodo className="h-4 w-4 mr-2" />
             Jump to Rewrite Priorities
