@@ -2263,20 +2263,11 @@ async function runStandardAnalysis(
   const BATCH_SIZE = 3; // Run 3 agents at a time to avoid rate limits
   const BATCH_DELAY_MS = 3000; // Wait 3s between batches
   
-  // Helper to check if an error is transient and worth retrying
-  const isTransientError = (error: Error): boolean => {
-    const msg = error.message.toLowerCase();
-    return (
-      msg.includes('timeout') ||
-      msg.includes('rate limit') ||
-      msg.includes('429') ||
-      msg.includes('503') ||
-      msg.includes('502') ||
-      msg.includes('empty') ||
-      msg.includes('network') ||
-      msg.includes('connection') ||
-      msg.includes('fetch failed')
-    );
+  // Helper to check if an error is retryable
+  // We now retry ALL errors since JSON parse failures, malformed responses, and API errors
+  // are all worth retrying as the LLM may produce valid output on subsequent attempts
+  const isRetryableError = (_error: Error): boolean => {
+    return true; // All agent errors are retryable - LLM outputs are non-deterministic
   };
 
   const runSingleAgent = async ([agentName, agentConfig]: [string, any]): Promise<{ agent: string; success: boolean; error?: string }> => {
@@ -2367,8 +2358,8 @@ async function runStandardAnalysis(
         lastError = err instanceof Error ? err : new Error(String(err));
         console.error(`[analyze-script] ${agentName} attempt ${attempt + 1} failed:`, lastError.message);
         
-        // Only retry on transient errors
-        if (!isTransientError(lastError) || attempt === modelConfig.maxRetries) {
+        // Retry all errors - LLM outputs are non-deterministic so retries often succeed
+        if (!isRetryableError(lastError) || attempt === modelConfig.maxRetries) {
           break;
         }
       }
@@ -2966,8 +2957,9 @@ async function runInsightSynthesis(
   context: string,
   qualityMode: QualityMode = 'balanced'
 ) {
-  // Get model config for synthesis agent
+  // Get model config for synthesis agent (includes retry settings)
   const modelConfig = await getAgentModelConfig(supabase, 'InsightSynthesisAgent', qualityMode);
+  const MAX_RETRIES = modelConfig.maxRetries || 3;
   
   const { data: scores } = await supabase
     .from('parameter_scores')
@@ -3001,6 +2993,8 @@ For each low or risky parameter:
 
 Insights must be actionable and evidence-based.
 
+CRITICAL: Keep descriptions concise (under 150 words each) to ensure valid JSON output.
+
 Return JSON array:
 [
   {
@@ -3016,72 +3010,103 @@ Return JSON array:
   }
 ]`;
 
-  try {
-    console.log(`[InsightSynthesisAgent] Using model: ${modelConfig.model}`);
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: modelConfig.model,
-        messages: [
-          { role: 'system', content: 'You are InsightSynthesisAgent, a senior script analyst synthesizing findings into executive-level actionable insights.' },
-          { role: 'user', content: prompt }
-        ],
-      }),
-    });
+  let lastError: Error | null = null;
 
-    if (!response.ok) {
-      console.error('[InsightSynthesisAgent] API error:', response.status);
-      await updateAgentProgress(supabase, analysisRunId, 'InsightSynthesisAgent', 'failed', `API error: ${response.status}`);
-      return;
-    }
-
-    const result = await response.json();
-    const content = result.choices?.[0]?.message?.content || '';
-    
-    // Use the robust JSON extraction with control character handling
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     try {
+      if (attempt > 0) {
+        const delay = modelConfig.retryDelayMs * Math.pow(2, attempt - 1);
+        console.log(`[InsightSynthesisAgent] Retry attempt ${attempt}/${MAX_RETRIES}, waiting ${delay}ms`);
+        await new Promise(r => setTimeout(r, delay));
+      }
+
+      await updateAgentProgress(supabase, analysisRunId, 'InsightSynthesisAgent', 'running', undefined, modelConfig.model);
+      console.log(`[InsightSynthesisAgent] Using model: ${modelConfig.model} (attempt ${attempt + 1})`);
+      
+      const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: modelConfig.model,
+          messages: [
+            { role: 'system', content: 'You are InsightSynthesisAgent, a senior script analyst synthesizing findings into executive-level actionable insights. Return ONLY valid JSON arrays. Keep descriptions concise.' },
+            { role: 'user', content: prompt }
+          ],
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+
+      const result = await response.json();
+      const content = result.choices?.[0]?.message?.content || '';
+      
+      if (!content || content.trim().length === 0) {
+        throw new Error('Empty response from AI');
+      }
+
+      // Use the robust JSON extraction with control character handling
       const sanitized = sanitizeJsonString(content);
       const jsonMatch = sanitized.match(/\[[\s\S]*\]/);
       
-      if (jsonMatch) {
-        const insights = JSON.parse(jsonMatch[0]);
-        for (const insight of insights) {
-          await supabase.from('insights').insert({
-            analysis_run_id: analysisRunId,
-            category: insight.category || 'Synthesis',
-            title: insight.title,
-            description: insight.description,
-            priority: insight.priority || 1,
-            actionable: insight.actionable !== false,
-            supporting_evidence: {
-              evidence: insight.supportingEvidence || [],
-              affectedStakeholders: insight.affectedStakeholders || [],
-              minimalFix: insight.minimalFix || '',
-              maximalFix: insight.maximalFix || '',
-            },
-          });
-        }
-        
-        // Update agent progress
-        await updateAgentProgress(supabase, analysisRunId, 'InsightSynthesisAgent', 'completed');
-        console.log('[InsightSynthesisAgent] Completed successfully');
-      } else {
-        console.error('[InsightSynthesisAgent] No JSON array found in response');
-        await updateAgentProgress(supabase, analysisRunId, 'InsightSynthesisAgent', 'failed', 'No JSON array in response');
+      if (!jsonMatch) {
+        throw new Error('No JSON array found in response');
       }
-    } catch (parseError) {
-      console.error('[InsightSynthesisAgent] JSON parse error:', parseError);
-      console.error('[InsightSynthesisAgent] Raw content:', content.slice(0, 500));
-      await updateAgentProgress(supabase, analysisRunId, 'InsightSynthesisAgent', 'failed', `JSON parse error: ${parseError}`);
+      
+      let insights;
+      try {
+        insights = JSON.parse(jsonMatch[0]);
+      } catch (parseErr) {
+        // Try balanced-brace extraction as fallback
+        const braceResult = extractBalancedJson(sanitized);
+        if (braceResult) {
+          const arrayMatch = braceResult.match(/\[[\s\S]*\]/);
+          if (arrayMatch) {
+            insights = JSON.parse(arrayMatch[0]);
+          }
+        }
+        if (!insights) {
+          throw new Error(`JSON parse error: ${parseErr}`);
+        }
+      }
+
+      for (const insight of insights) {
+        await supabase.from('insights').insert({
+          analysis_run_id: analysisRunId,
+          category: insight.category || 'Synthesis',
+          title: insight.title,
+          description: insight.description,
+          priority: insight.priority || 1,
+          actionable: insight.actionable !== false,
+          supporting_evidence: {
+            evidence: insight.supportingEvidence || [],
+            affectedStakeholders: insight.affectedStakeholders || [],
+            minimalFix: insight.minimalFix || '',
+            maximalFix: insight.maximalFix || '',
+          },
+        });
+      }
+      
+      await updateAgentProgress(supabase, analysisRunId, 'InsightSynthesisAgent', 'completed');
+      console.log(`[InsightSynthesisAgent] Completed successfully${attempt > 0 ? ` (after ${attempt} retries)` : ''}`);
+      return;
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+      console.error(`[InsightSynthesisAgent] Attempt ${attempt + 1}/${MAX_RETRIES + 1} failed:`, lastError.message);
+      
+      if (attempt === MAX_RETRIES) {
+        break;
+      }
     }
-  } catch (error) {
-    console.error('[analyze-script] InsightSynthesis error:', error);
-    await updateAgentProgress(supabase, analysisRunId, 'InsightSynthesisAgent', 'failed', String(error));
   }
+
+  // All retries exhausted
+  console.error('[InsightSynthesisAgent] All retries exhausted:', lastError?.message);
+  await updateAgentProgress(supabase, analysisRunId, 'InsightSynthesisAgent', 'failed', lastError?.message || 'Unknown error');
 }
 
 async function runStakeholderLensAgent(
