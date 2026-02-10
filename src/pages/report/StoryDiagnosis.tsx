@@ -1,7 +1,8 @@
 import { useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { ReportData, StakeholderLens } from '@/types/database';
+import { ReportData, StakeholderLens, AgentSectionContent } from '@/types/database';
 import { Card } from '@/components/ui/card';
+import { AgentNarrativePanel } from '@/components/report/AgentNarrativePanel';
 import { 
   SectionHeader, 
   DiagnosisSummary,
@@ -105,44 +106,44 @@ export default function StoryDiagnosis() {
         defaultVisibleCount={6}
       />
 
-      {/* Category Deep-Dives */}
-      <div className="grid gap-6">
-        {/* Concept & Hook */}
-        <CategoryCard
-          title="Concept & Hook"
-          parameters={storyParameters.filter(p => 
-            p.parameterName.includes('concept') || 
-            p.parameterName.includes('hook') || 
-            p.parameterName.includes('familiarity') ||
-            p.parameterName.includes('franchise')
+      {/* Agent Narrative Content (from agentContent) */}
+      {reportData.agentContent && (
+        <div className="space-y-6">
+          {reportData.agentContent.ConceptAgent && (
+            <div>
+              <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">Concept & Hook</h3>
+              <AgentNarrativePanel agentName="ConceptAgent" content={reportData.agentContent.ConceptAgent} />
+            </div>
           )}
-        />
+          {reportData.agentContent.StructureAgent && (
+            <div>
+              <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">Structure</h3>
+              <AgentNarrativePanel agentName="StructureAgent" content={reportData.agentContent.StructureAgent} />
+            </div>
+          )}
+          {reportData.agentContent.ConflictAgent && (
+            <div>
+              <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">Conflict & Stakes</h3>
+              <AgentNarrativePanel agentName="ConflictAgent" content={reportData.agentContent.ConflictAgent} />
+            </div>
+          )}
+        </div>
+      )}
 
-        {/* Structure */}
-        <CategoryCard
-          title="Structure"
-          parameters={storyParameters.filter(p => 
-            p.parameterName.includes('structure') || 
-            p.parameterName.includes('inciting') || 
-            p.parameterName.includes('escalation') ||
-            p.parameterName.includes('climax') ||
-            p.parameterName.includes('setup') ||
-            p.parameterName.includes('scene_necessity') ||
-            p.parameterName.includes('pacing')
-          )}
-        />
-
-        {/* Conflict */}
-        <CategoryCard
-          title="Conflict"
-          parameters={storyParameters.filter(p => 
-            p.parameterName.includes('conflict') || 
-            p.parameterName.includes('stakes') || 
-            p.parameterName.includes('obstacle') ||
-            p.parameterName.includes('tension')
-          )}
-        />
-      </div>
+      {/* Fallback: Category Deep-Dives (when no agentContent) */}
+      {!reportData.agentContent && (
+        <div className="grid gap-6">
+          <CategoryCard title="Concept & Hook" parameters={storyParameters.filter(p => 
+            p.parameterName.includes('concept') || p.parameterName.includes('hook') || p.parameterName.includes('familiarity') || p.parameterName.includes('franchise')
+          )} />
+          <CategoryCard title="Structure" parameters={storyParameters.filter(p => 
+            p.parameterName.includes('structure') || p.parameterName.includes('inciting') || p.parameterName.includes('escalation') || p.parameterName.includes('climax') || p.parameterName.includes('setup') || p.parameterName.includes('scene_necessity') || p.parameterName.includes('pacing')
+          )} />
+          <CategoryCard title="Conflict" parameters={storyParameters.filter(p => 
+            p.parameterName.includes('conflict') || p.parameterName.includes('stakes') || p.parameterName.includes('obstacle') || p.parameterName.includes('tension')
+          )} />
+        </div>
+      )}
 
       {/* Development Focus */}
       {developmentItems.length > 0 && (

@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { ReportData, StakeholderLens } from '@/types/database';
+import { ReportData, StakeholderLens, AgentSectionContent } from '@/types/database';
+import { AgentNarrativePanel } from '@/components/report/AgentNarrativePanel';
 import { Card } from '@/components/ui/card';
 import { 
   SectionHeader, 
@@ -146,7 +147,37 @@ export default function CraftDiagnosis() {
         developmentLink={`${basePath}/development`}
       />
 
-      {/* Craft Dimensions Grid */}
+      {/* Agent Narrative Content */}
+      {reportData.agentContent && (
+        <div className="space-y-6">
+          {reportData.agentContent.DialogueAgent && (
+            <div>
+              <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">Dialogue & Subtext</h3>
+              <AgentNarrativePanel agentName="DialogueAgent" content={reportData.agentContent.DialogueAgent} />
+            </div>
+          )}
+          {reportData.agentContent.ThemeAgent && (
+            <div>
+              <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">Theme & Meaning</h3>
+              <AgentNarrativePanel agentName="ThemeAgent" content={reportData.agentContent.ThemeAgent} />
+            </div>
+          )}
+          {reportData.agentContent.WorldLogicAgent && (
+            <div>
+              <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">Visual Storytelling</h3>
+              <AgentNarrativePanel agentName="WorldLogicAgent" content={reportData.agentContent.WorldLogicAgent} />
+            </div>
+          )}
+          {reportData.agentContent.EmotionalArcAgent && (
+            <div>
+              <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">Emotional Resonance</h3>
+              <AgentNarrativePanel agentName="EmotionalArcAgent" content={reportData.agentContent.EmotionalArcAgent} />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Fallback: Craft Dimensions Grid */}
       <div className="grid md:grid-cols-2 gap-4">
         {dimensions.map((dimension) => {
           const avgScore = dimension.params.length > 0

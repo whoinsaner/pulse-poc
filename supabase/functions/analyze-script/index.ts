@@ -294,6 +294,34 @@ interface ParameterOutput {
   }>;
 }
 
+interface SectionContent {
+  verdict?: string;
+  whatWorks?: string[];
+  whatsBroken?: string[];
+  whatsUnderdeveloped?: string[];
+  keyQuotes?: Array<{ quote: string; context: string; page?: number }>;
+  deepDive?: string;
+  recommendations?: Array<{
+    title: string;
+    description: string;
+    priority: 'critical' | 'high' | 'medium';
+    effort: 'easy' | 'moderate' | 'hard';
+  }>;
+  // Character-specific fields (CharacterAgent)
+  protagonistProfile?: { name: string; want: string; need: string; flaw: string; arc: string; strengths?: string[]; weaknesses?: string[] };
+  antagonistProfile?: { name: string; motivation: string; threat: string; complexity: string };
+  supportingCast?: Array<{ name: string; role: string; impact: string }>;
+  psychologyInsights?: string;
+  // Market-specific fields (MarketAgent)
+  comparableTitles?: Array<{ title: string; relevance: string }>;
+  targetAudience?: string;
+  platformFit?: string;
+  // Execution-specific fields (ExecutionAgent)
+  budgetTier?: string;
+  productionComplexity?: string;
+  talentRequirements?: string;
+}
+
 interface AgentResult {
   agent: string;
   scores: Array<{
@@ -329,6 +357,7 @@ interface AgentResult {
       explanation: string;
     }>;
   }>;
+  sectionContent?: SectionContent;
 }
 
 interface ChunkResult {
@@ -2329,8 +2358,9 @@ async function runStandardAnalysis(
           }
         }
 
-        await updateAgentProgress(supabase, analysisRunId, agentName, 'completed');
-        console.log(`[analyze-script] ${agentName} completed${attempt > 0 ? ` (after ${attempt} retries)` : ''}`);
+        // Store sectionContent in agent progress for later collection by generateReport
+        await updateAgentProgress(supabase, analysisRunId, agentName, 'completed', undefined, undefined, result.sectionContent);
+        console.log(`[analyze-script] ${agentName} completed${attempt > 0 ? ` (after ${attempt} retries)` : ''}${result.sectionContent ? ' (with sectionContent)' : ''}`);
         
         return { agent: agentName, success: true };
       } catch (err) {
@@ -2615,6 +2645,108 @@ function aggregateChunkInsights(chunkResults: ChunkResult[]): NonNullable<AgentR
     .slice(0, 10);
 }
 
+// Per-agent sectionContent instructions
+function getSectionContentInstructions(agentName: string): string {
+  switch (agentName) {
+    case 'ConceptAgent':
+      return `"verdict": "One-sentence diagnostic verdict on the concept's viability",
+    "whatWorks": ["Strength with evidence (2-4 items)"],
+    "whatsBroken": ["Critical issue with evidence (0-3 items)"],
+    "whatsUnderdeveloped": ["Gap that needs development (0-3 items)"],
+    "keyQuotes": [{"quote": "Key line from script", "context": "Why it matters", "page": 1}],
+    "deepDive": "2-3 paragraph narrative analysis of concept originality, genre positioning, logline strength, and commercial viability. Include comparable titles.",
+    "recommendations": [{"title": "Action item", "description": "Detail", "priority": "critical|high|medium", "effort": "easy|moderate|hard"}],
+    "comparableTitles": [{"title": "Film/show name", "relevance": "Why it's comparable"}]`;
+    case 'StructureAgent':
+      return `"verdict": "One-sentence structural diagnosis",
+    "whatWorks": ["Structural strength with evidence"],
+    "whatsBroken": ["Structural issue with evidence"],
+    "whatsUnderdeveloped": ["Structural gap"],
+    "keyQuotes": [{"quote": "Key structural moment", "context": "Why it matters"}],
+    "deepDive": "2-3 paragraph narrative on act breakdown, pacing diagnosis, turning points, structural pattern (3-act, 5-act, non-linear). Include specific page/scene references.",
+    "recommendations": [{"title": "Action item", "description": "Detail", "priority": "critical|high|medium", "effort": "easy|moderate|hard"}]`;
+    case 'CharacterAgent':
+      return `"verdict": "One-sentence character diagnosis",
+    "whatWorks": ["Character strength with evidence"],
+    "whatsBroken": ["Character issue with evidence"],
+    "whatsUnderdeveloped": ["Character gap"],
+    "keyQuotes": [{"quote": "Revealing character dialogue", "context": "What it reveals"}],
+    "deepDive": "2-3 paragraph narrative on character dynamics, arc quality, and ensemble balance",
+    "recommendations": [{"title": "Action item", "description": "Detail", "priority": "critical|high|medium", "effort": "easy|moderate|hard"}],
+    "protagonistProfile": {"name": "Character name", "want": "External goal", "need": "Internal need", "flaw": "Core flaw", "arc": "Transformation summary", "strengths": ["Acting strength"], "weaknesses": ["Arc weakness"]},
+    "antagonistProfile": {"name": "Character name", "motivation": "What drives them", "threat": "Nature of opposition", "complexity": "Nuance assessment"},
+    "supportingCast": [{"name": "Character", "role": "Narrative function", "impact": "Story contribution"}],
+    "psychologyInsights": "1-2 paragraph analysis of psychological depth, subconscious patterns, defense mechanisms"`;
+    case 'ConflictAgent':
+      return `"verdict": "One-sentence conflict diagnosis",
+    "whatWorks": ["Conflict strength with evidence"],
+    "whatsBroken": ["Conflict issue with evidence"],
+    "whatsUnderdeveloped": ["Conflict gap"],
+    "keyQuotes": [{"quote": "Key confrontation line", "context": "Stakes it reveals"}],
+    "deepDive": "2-3 paragraph narrative on stakes escalation, conflict diversity, tension curve, and cost of failure",
+    "recommendations": [{"title": "Action item", "description": "Detail", "priority": "critical|high|medium", "effort": "easy|moderate|hard"}]`;
+    case 'DialogueAgent':
+      return `"verdict": "One-sentence dialogue diagnosis",
+    "whatWorks": ["Dialogue strength with specific example"],
+    "whatsBroken": ["Dialogue issue with example"],
+    "whatsUnderdeveloped": ["Dialogue gap"],
+    "keyQuotes": [{"quote": "Exemplary or problematic dialogue line", "context": "Why it stands out"}],
+    "deepDive": "2-3 paragraph narrative on voice distinctiveness, subtext quality, exposition handling, and quotability. Include specific dialogue examples.",
+    "recommendations": [{"title": "Action item", "description": "Detail", "priority": "critical|high|medium", "effort": "easy|moderate|hard"}]`;
+    case 'ThemeAgent':
+      return `"verdict": "One-sentence thematic diagnosis",
+    "whatWorks": ["Thematic strength with evidence"],
+    "whatsBroken": ["Thematic issue"],
+    "whatsUnderdeveloped": ["Thematic gap"],
+    "keyQuotes": [{"quote": "Line that embodies/undermines theme", "context": "Thematic significance"}],
+    "deepDive": "2-3 paragraph narrative identifying the thematic spine, tracking motifs, assessing moral complexity, and evaluating show-vs-tell ratio",
+    "recommendations": [{"title": "Action item", "description": "Detail", "priority": "critical|high|medium", "effort": "easy|moderate|hard"}]`;
+    case 'WorldLogicAgent':
+      return `"verdict": "One-sentence world/visual diagnosis",
+    "whatWorks": ["World-building strength"],
+    "whatsBroken": ["Logic issue or inconsistency"],
+    "whatsUnderdeveloped": ["Visual storytelling gap"],
+    "keyQuotes": [{"quote": "Scene description or direction", "context": "Visual potential"}],
+    "deepDive": "2-3 paragraph narrative on visual storytelling opportunities, setting analysis, atmosphere, and internal logic consistency",
+    "recommendations": [{"title": "Action item", "description": "Detail", "priority": "critical|high|medium", "effort": "easy|moderate|hard"}]`;
+    case 'EmotionalArcAgent':
+      return `"verdict": "One-sentence emotional arc diagnosis",
+    "whatWorks": ["Emotional strength with evidence"],
+    "whatsBroken": ["Emotional issue"],
+    "whatsUnderdeveloped": ["Emotional gap"],
+    "keyQuotes": [{"quote": "Emotionally charged moment", "context": "Why it works or fails"}],
+    "deepDive": "2-3 paragraph narrative on emotional beat map, catharsis moments, tonal consistency, and audience emotional journey",
+    "recommendations": [{"title": "Action item", "description": "Detail", "priority": "critical|high|medium", "effort": "easy|moderate|hard"}]`;
+    case 'MarketAgent':
+      return `"verdict": "One-sentence market diagnosis",
+    "whatWorks": ["Market strength"],
+    "whatsBroken": ["Market positioning issue"],
+    "whatsUnderdeveloped": ["Market gap"],
+    "deepDive": "2-3 paragraph narrative on target audience, platform fit, marketing hooks, comparable titles, and IP potential",
+    "recommendations": [{"title": "Action item", "description": "Detail", "priority": "critical|high|medium", "effort": "easy|moderate|hard"}],
+    "comparableTitles": [{"title": "Film/show name", "relevance": "Box office/audience comparison"}],
+    "targetAudience": "Detailed target audience definition",
+    "platformFit": "Platform suitability analysis"`;
+    case 'ExecutionAgent':
+      return `"verdict": "One-sentence production feasibility diagnosis",
+    "whatWorks": ["Production advantage"],
+    "whatsBroken": ["Production risk"],
+    "whatsUnderdeveloped": ["Production gap"],
+    "deepDive": "2-3 paragraph narrative on budget tier, production complexity, talent needs, schedule risks, and failure modes",
+    "recommendations": [{"title": "Action item", "description": "Detail", "priority": "critical|high|medium", "effort": "easy|moderate|hard"}],
+    "budgetTier": "Estimated budget range (e.g., Low: $1-5M, Mid: $5-20M, High: $20M+)",
+    "productionComplexity": "Key production challenges summary",
+    "talentRequirements": "Key casting and crew considerations"`;
+    default:
+      return `"verdict": "One-sentence diagnostic verdict",
+    "whatWorks": ["Strength with evidence"],
+    "whatsBroken": ["Issue with evidence"],
+    "whatsUnderdeveloped": ["Gap with evidence"],
+    "deepDive": "2-3 paragraph analytical narrative",
+    "recommendations": [{"title": "Action item", "description": "Detail", "priority": "critical|high|medium", "effort": "easy|moderate|hard"}]`;
+  }
+}
+
 async function runAgent(
   apiKey: string,
   agentName: string,
@@ -2626,6 +2758,9 @@ async function runAgent(
   const parametersToScore = config.parameters
     .map(name => parameterMap.get(name))
     .filter(Boolean);
+
+  // Determine sectionContent instructions based on agent type
+  const sectionContentInstructions = getSectionContentInstructions(agentName);
 
   const userPrompt = `Analyze this script and score the following parameters using the USAF Output Contract:
 
@@ -2668,7 +2803,10 @@ Return a JSON object with this EXACT structure (USAF Output Contract):
       "maximalFix": "Comprehensive fix approach",
       "supportingEvidence": []
     }
-  ]
+  ],
+  "sectionContent": {
+    ${sectionContentInstructions}
+  }
 }
 
 SCORING GUIDE (0-10):
@@ -2680,6 +2818,8 @@ MATURITY MAPPING:
 - Score 0-3 → "Weak"
 - Score 4-6 → "Developing"
 - Score 7-10 → "Strong"
+
+SECTION CONTENT: The "sectionContent" field is CRITICAL. It provides narrative diagnostic content for the report UI. Write substantive, evidence-based analysis - not generic templates. Each field should contain real insights specific to THIS script.
 
 CRITICAL: You MUST respond with ONLY the JSON object. No text before or after. No markdown code blocks. Start your response with { and end with }.`;
 
@@ -2783,6 +2923,7 @@ CRITICAL: You MUST respond with ONLY the JSON object. No text before or after. N
       minimalFix: i.minimalFix || '',
       maximalFix: i.maximalFix || '',
     })),
+    sectionContent: parsed.sectionContent || undefined,
   };
 }
 
@@ -2792,7 +2933,8 @@ async function updateAgentProgress(
   agentName: string,
   status: string,
   error?: string,
-  model?: string
+  model?: string,
+  sectionContent?: SectionContent
 ) {
   const { data: run } = await supabase
     .from('analysis_runs')
@@ -2802,11 +2944,13 @@ async function updateAgentProgress(
 
   const progress = run?.agent_progress || {};
   progress[agentName] = {
+    ...progress[agentName],
     status,
     ...(status === 'running' && { startedAt: new Date().toISOString() }),
     ...(status === 'completed' && { completedAt: new Date().toISOString() }),
     ...(error && { error }),
-    ...(model && { model }), // Track which model was used
+    ...(model && { model }),
+    ...(sectionContent && { sectionContent }),
   };
 
   await supabase
@@ -3015,17 +3159,30 @@ async function generateReport(
   script: any,
   mode: string = 'deep'
 ) {
-  const [scoresResult, insightsResult, scenesResult, charsResult, lensWeightsResult] = await Promise.all([
+  const [scoresResult, insightsResult, scenesResult, charsResult, lensWeightsResult, analysisRunResult] = await Promise.all([
     supabase.from('parameter_scores').select('*, parameters(*)').eq('analysis_run_id', analysisRunId),
     supabase.from('insights').select('*').eq('analysis_run_id', analysisRunId),
     supabase.from('scenes').select('*').eq('script_id', scriptId),
     supabase.from('characters').select('*').eq('script_id', scriptId),
     supabase.from('lens_weights').select('*'),
+    supabase.from('analysis_runs').select('agent_progress').eq('id', analysisRunId).single(),
   ]);
 
   const scores = scoresResult.data || [];
   const insights = insightsResult.data || [];
   const lensWeights = lensWeightsResult.data || [];
+  
+  // Collect agentContent from agent_progress sectionContent fields
+  const agentProgress = analysisRunResult.data?.agent_progress || {};
+  const agentContent: Record<string, any> = {};
+  for (const [agentName, progressData] of Object.entries(agentProgress)) {
+    if (agentName === '_meta') continue;
+    const data = progressData as any;
+    if (data?.sectionContent) {
+      agentContent[agentName] = data.sectionContent;
+    }
+  }
+  console.log(`[generateReport] Collected agentContent from ${Object.keys(agentContent).length} agents`);
 
   const overallScore = scores.length > 0
     ? Math.round(scores.reduce((sum: number, s: any) => sum + s.score, 0) / scores.length)
@@ -3140,6 +3297,7 @@ async function generateReport(
       description: s.description,
       emotionalTone: s.emotional_tone,
     })),
+    agentContent: Object.keys(agentContent).length > 0 ? agentContent : undefined,
   };
 
   const topInsights = insights.sort((a: any, b: any) => a.priority - b.priority).slice(0, 3);

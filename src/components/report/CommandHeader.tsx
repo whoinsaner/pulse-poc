@@ -13,7 +13,7 @@ import {
   Palette,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { getNavGroupsForScriptType, getScriptTypeLabel } from '@/lib/reportNavigation';
+import { getNavGroupsForScriptType, getUSAFNavGroups, getScriptTypeLabel } from '@/lib/reportNavigation';
 import type { ScriptType } from '@/types/database';
 
 interface CommandHeaderProps {
@@ -67,7 +67,8 @@ export function CommandHeader({
   
   // Get dynamic navigation based on script type and available categories
   const scriptType = reportData.scriptMetadata?.scriptType || 'feature';
-  const navGroups = getNavGroupsForScriptType(scriptType, reportData.categoryScores);
+  // Use USAF consolidated navigation for live reports
+  const navGroups = getUSAFNavGroups(scriptType, reportData.categoryScores);
   
   // Get script type display info
   const ScriptTypeIcon = SCRIPT_TYPE_ICONS[scriptType];
