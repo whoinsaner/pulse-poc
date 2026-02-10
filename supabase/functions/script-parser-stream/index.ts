@@ -2121,11 +2121,22 @@ function parseTextFormat(content: string): { scenes: Scene[]; characters: Charac
     'अंदर', 'बाहर', 'दिन', 'रात', 'सुबह', 'शाम', 'दोपहर',
   ]);
 
+  // Page marker pattern for PyMuPDF extracted text
+  const pageMarkerPattern = /^-+\s*PAGE\s*(\d+)\s*-+$/i;
+  
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
     
-    // Estimate page
-    currentPage = Math.max(currentPage, Math.ceil((i + 1) / 55));
+    // Track page from --- PAGE X --- markers (PyMuPDF output), fallback to line estimate
+    const pageMarkerMatch = line.match(pageMarkerPattern);
+    if (pageMarkerMatch) {
+      currentPage = parseInt(pageMarkerMatch[1], 10);
+      continue; // Skip page markers, they're not script content
+    }
+    if (currentPage <= 1 && i > 55) {
+      // Fallback: no page markers found, estimate from line count
+      currentPage = Math.max(currentPage, Math.ceil((i + 1) / 55));
+    }
     
     // Standard scene heading (INT./EXT.)
     const sceneMatch = line.match(sceneHeadingPattern);
@@ -2213,13 +2224,29 @@ function parseTextFormat(content: string): { scenes: Scene[]; characters: Charac
       continue;
     }
     
-    // Character detection
-    if (line.length > 0 && line.length < 50) {
-      const charMatch = line.match(characterPattern);
-      if (charMatch && !line.includes(':') && lines[i + 1]?.trim()) {
+    // Character detection - must be ALL CAPS, short, followed by dialogue
+    if (line.length > 1 && line.length < 40) {
+      // Character cues in screenplays are ALL CAPS names, optionally with (V.O.), (O.S.), (CONT'D)
+      const charCuePattern = /^([A-Z][A-Z\s\.']{0,35})(\s*\(.*\))?$/;
+      const charMatch = line.match(charCuePattern);
+      if (charMatch && !line.includes(':')) {
         const charName = charMatch[1].trim();
+        const nextLine = lines[i + 1]?.trim() || '';
+        const nextNextLine = lines[i + 2]?.trim() || '';
         
-        if (!nonCharacterWords.has(charName.toUpperCase()) && charName.length > 1) {
+        // Validate: name must be ALL CAPS, not a scene heading, not a transition
+        const isAllCaps = charName === charName.toUpperCase();
+        const hasDialogueBelow = nextLine.length > 0 && 
+          !nextLine.match(sceneHeadingPattern) &&
+          !nextLine.match(numberedScenePattern) &&
+          !nextLine.match(locationOnlyPattern) &&
+          !nextLine.match(pageMarkerPattern);
+        const looksLikeTransition = /^(FADE|CUT|DISSOLVE|SMASH|JUMP|TIME|MATCH|IRIS|WIPE)\b/i.test(charName);
+        const looksLikeDirection = /^(BACK TO|CLOSE ON|ANGLE ON|WIDE ON|INSERT|SUPER|TITLE|MONTAGE|INTERCUT|FLASHBACK|LATER|CONTINUOUS|MEANWHILE)\b/i.test(charName);
+        const tooManyWords = charName.split(/\s+/).length > 4;
+        
+        if (isAllCaps && hasDialogueBelow && !looksLikeTransition && !looksLikeDirection && !tooManyWords &&
+            !nonCharacterWords.has(charName) && charName.length > 1) {
           if (!characterMap.has(charName)) {
             characterMap.set(charName, {
               name: charName,
