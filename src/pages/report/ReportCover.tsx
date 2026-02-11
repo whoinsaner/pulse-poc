@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
 import { ReportData, StakeholderLens } from '@/types/database';
 import { Card } from '@/components/ui/card';
@@ -24,6 +24,8 @@ import {
   AlertCircle,
   XCircle,
   ArrowRight,
+  ChevronDown,
+  ChevronUp,
   Monitor,
   Smartphone,
   LayoutPanelTop,
@@ -177,55 +179,8 @@ export default function ReportCover() {
 
       {/* What's Working / What Needs Work */}
       <div className="grid md:grid-cols-2 gap-4">
-        {/* Working */}
-        <Card className="p-5 bg-success/5 border-success/20">
-          <div className="flex items-center gap-2 mb-4">
-            <CheckCircle className="h-5 w-5 text-success" />
-            <h3 className="font-semibold">What's Working</h3>
-            <Badge variant="secondary" className="ml-auto">{diagnostics.working.length}</Badge>
-          </div>
-          <ul className="space-y-2">
-            {topWorking.map((name, i) => (
-              <li key={i} className="flex items-center gap-2 text-sm">
-                <CheckCircle className="h-3.5 w-3.5 text-success shrink-0" />
-                <span>{name}</span>
-              </li>
-            ))}
-            {diagnostics.working.length > 3 && (
-              <li className="text-xs text-muted-foreground">
-                +{diagnostics.working.length - 3} more
-              </li>
-            )}
-          </ul>
-        </Card>
-
-        {/* Needs Work */}
-        <Card className="p-5 bg-chart-4/5 border-chart-4/20">
-          <div className="flex items-center gap-2 mb-4">
-            <AlertCircle className="h-5 w-5 text-chart-4" />
-            <h3 className="font-semibold">What Needs Work</h3>
-            <Badge variant="secondary" className="ml-auto">
-              {diagnostics.broken.length + diagnostics.underdeveloped.length}
-            </Badge>
-          </div>
-          <ul className="space-y-2">
-            {topNeedsWork.map((item, i) => (
-              <li key={i} className="flex items-center gap-2 text-sm">
-                {item.isBroken ? (
-                  <XCircle className="h-3.5 w-3.5 text-destructive shrink-0" />
-                ) : (
-                  <AlertCircle className="h-3.5 w-3.5 text-chart-4 shrink-0" />
-                )}
-                <span>{item.name}</span>
-              </li>
-            ))}
-            {(diagnostics.broken.length + diagnostics.underdeveloped.length) > 3 && (
-              <li className="text-xs text-muted-foreground">
-                +{diagnostics.broken.length + diagnostics.underdeveloped.length - 3} more
-              </li>
-            )}
-          </ul>
-        </Card>
+        <ExpandableWorkingCard items={diagnostics.working} />
+        <ExpandableNeedsWorkCard broken={diagnostics.broken} underdeveloped={diagnostics.underdeveloped} />
       </div>
 
       {/* Quick Navigation */}
@@ -300,5 +255,84 @@ export default function ReportCover() {
         </Link>
       </div>
     </div>
+  );
+}
+
+const INITIAL_VISIBLE = 3;
+
+function ExpandableWorkingCard({ items }: { items: Array<{ displayName: string; score: number }> }) {
+  const [expanded, setExpanded] = useState(false);
+  const visible = expanded ? items : items.slice(0, INITIAL_VISIBLE);
+  const remaining = items.length - INITIAL_VISIBLE;
+
+  return (
+    <Card className="p-5 bg-success/5 border-success/20">
+      <div className="flex items-center gap-2 mb-4">
+        <CheckCircle className="h-5 w-5 text-success" />
+        <h3 className="font-semibold">What's Working</h3>
+        <Badge variant="secondary" className="ml-auto">{items.length}</Badge>
+      </div>
+      <ul className="space-y-2">
+        {visible.map((item, i) => (
+          <li key={i} className="flex items-center gap-2 text-sm">
+            <CheckCircle className="h-3.5 w-3.5 text-success shrink-0" />
+            <span>{item.displayName}</span>
+          </li>
+        ))}
+      </ul>
+      {items.length > INITIAL_VISIBLE && (
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="flex items-center gap-1 mt-3 text-xs font-medium text-success transition-colors hover:opacity-80"
+        >
+          {expanded ? (
+            <><ChevronUp className="h-3.5 w-3.5" /> Show less</>
+          ) : (
+            <><ChevronDown className="h-3.5 w-3.5" /> +{remaining} more</>
+          )}
+        </button>
+      )}
+    </Card>
+  );
+}
+
+function ExpandableNeedsWorkCard({ broken, underdeveloped }: { broken: Array<{ displayName: string; score: number }>; underdeveloped: Array<{ displayName: string; score: number }> }) {
+  const [expanded, setExpanded] = useState(false);
+  const allItems = [...broken, ...underdeveloped];
+  const visible = expanded ? allItems : allItems.slice(0, INITIAL_VISIBLE);
+  const remaining = allItems.length - INITIAL_VISIBLE;
+
+  return (
+    <Card className="p-5 bg-chart-4/5 border-chart-4/20">
+      <div className="flex items-center gap-2 mb-4">
+        <AlertCircle className="h-5 w-5 text-chart-4" />
+        <h3 className="font-semibold">What Needs Work</h3>
+        <Badge variant="secondary" className="ml-auto">{allItems.length}</Badge>
+      </div>
+      <ul className="space-y-2">
+        {visible.map((item, i) => (
+          <li key={i} className="flex items-center gap-2 text-sm">
+            {item.score < 40 ? (
+              <XCircle className="h-3.5 w-3.5 text-destructive shrink-0" />
+            ) : (
+              <AlertCircle className="h-3.5 w-3.5 text-chart-4 shrink-0" />
+            )}
+            <span>{item.displayName}</span>
+          </li>
+        ))}
+      </ul>
+      {allItems.length > INITIAL_VISIBLE && (
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="flex items-center gap-1 mt-3 text-xs font-medium text-chart-4 transition-colors hover:opacity-80"
+        >
+          {expanded ? (
+            <><ChevronUp className="h-3.5 w-3.5" /> Show less</>
+          ) : (
+            <><ChevronDown className="h-3.5 w-3.5" /> +{remaining} more</>
+          )}
+        </button>
+      )}
+    </Card>
   );
 }
