@@ -1,6 +1,7 @@
+import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { getDiagnosticCategory, getFixCostColor, getFixCostBg } from '@/lib/scoreUtils';
-import { CheckCircle, AlertCircle, XCircle, ArrowRight } from 'lucide-react';
+import { CheckCircle, AlertCircle, XCircle, ArrowRight, ChevronDown, ChevronUp } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { StakeholderLens } from '@/types/database';
@@ -119,6 +120,8 @@ interface DiagnosisSectionProps {
   showLink?: boolean;
 }
 
+const INITIAL_VISIBLE_COUNT = 3;
+
 function DiagnosisSection({
   icon: Icon,
   title,
@@ -129,6 +132,11 @@ function DiagnosisSection({
   showFixCost = false,
   showLink = false,
 }: DiagnosisSectionProps) {
+  const [expanded, setExpanded] = useState(false);
+  const hasMore = items.length > INITIAL_VISIBLE_COUNT;
+  const visibleItems = expanded ? items : items.slice(0, INITIAL_VISIBLE_COUNT);
+  const remainingCount = items.length - INITIAL_VISIBLE_COUNT;
+
   return (
     <div className={cn('rounded-xl border p-4', bgClass, borderClass)}>
       <div className="flex items-center gap-2 mb-3">
@@ -140,7 +148,7 @@ function DiagnosisSection({
       </div>
       
       <ul className="space-y-2">
-        {items.map((item) => (
+        {visibleItems.map((item) => (
           <li key={item.parameterName} className="flex items-start gap-3">
             <span className="text-sm flex-1">
               <span className="font-medium">{item.displayName}</span>
@@ -176,6 +184,28 @@ function DiagnosisSection({
           </li>
         ))}
       </ul>
+
+      {hasMore && (
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className={cn(
+            'flex items-center gap-1 mt-3 text-xs font-medium transition-colors hover:opacity-80',
+            colorClass
+          )}
+        >
+          {expanded ? (
+            <>
+              <ChevronUp className="h-3.5 w-3.5" />
+              Show less
+            </>
+          ) : (
+            <>
+              <ChevronDown className="h-3.5 w-3.5" />
+              +{remainingCount} more
+            </>
+          )}
+        </button>
+      )}
     </div>
   );
 }
