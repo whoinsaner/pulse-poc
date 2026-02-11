@@ -199,6 +199,19 @@ export default function CraftDiagnosis() {
         defaultVisibleCount={6}
       />
 
+      {/* Development Focus */}
+      {developmentItems.length > 0 && (
+        <DevelopmentFocus
+          sectionName="Craft"
+          items={developmentItems}
+          developmentPath={`${basePath}/development`}
+          relatedSections={[
+            { label: 'Story Diagnosis', path: `${basePath}/story` },
+            { label: 'Character Diagnosis', path: `${basePath}/characters` },
+          ]}
+        />
+      )}
+
     </div>
   );
 }

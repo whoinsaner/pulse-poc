@@ -58,19 +58,19 @@ import ReportCover from "./pages/report/ReportCover";
 import StoryDiagnosis from "./pages/report/StoryDiagnosis";
 import StoryConceptHook from "./pages/report/StoryConceptHook";
 import StoryConflictStakes from "./pages/report/StoryConflictStakes";
-import StoryDevelopmentFocus from "./pages/report/StoryDevelopmentFocus";
+
 import StoryStructure from "./pages/report/StoryStructure";
 import CharacterDiagnosis from "./pages/report/CharacterDiagnosis";
-import CharacterDevelopmentFocus from "./pages/report/CharacterDevelopmentFocus";
+
 import CraftDiagnosis from "./pages/report/CraftDiagnosis";
 import CraftDialogue from "./pages/report/CraftDialogue";
 import CraftTheme from "./pages/report/CraftTheme";
 import CraftVisual from "./pages/report/CraftVisual";
 import CraftEmotional from "./pages/report/CraftEmotional";
-import CraftDevelopmentFocus from "./pages/report/CraftDevelopmentFocus";
+
 import CommercialMarket from "./pages/report/CommercialMarket";
 import CommercialProduction from "./pages/report/CommercialProduction";
-import CommercialDevelopmentFocus from "./pages/report/CommercialDevelopmentFocus";
+
 import FormatDiagnosis from "./pages/report/FormatDiagnosis";
 import ComicFormatDiagnosis from "./pages/report/ComicFormatDiagnosis";
 import CommercialDiagnosis from "./pages/report/CommercialDiagnosis";
@@ -124,25 +124,25 @@ const App = () => (
               <Route path="story/concept" element={<StoryConceptHook />} />
               <Route path="story/structure" element={<StoryStructure />} />
               <Route path="story/conflict" element={<StoryConflictStakes />} />
-              <Route path="story/focus" element={<StoryDevelopmentFocus />} />
+              <Route path="story/focus" element={<Navigate to="../story" replace />} />
               <Route path="characters" element={<CharacterDiagnosis />} />
               <Route path="characters/protagonist" element={<ProtagonistAnalysis />} />
               <Route path="characters/antagonist" element={<AntagonistAnalysis />} />
               <Route path="characters/cast" element={<SupportingCast />} />
-              <Route path="characters/focus" element={<CharacterDevelopmentFocus />} />
+              <Route path="characters/focus" element={<Navigate to="../characters" replace />} />
               <Route path="craft" element={<CraftDiagnosis />} />
               <Route path="craft/dialogue" element={<CraftDialogue />} />
               <Route path="craft/theme" element={<CraftTheme />} />
               <Route path="craft/visual" element={<CraftVisual />} />
               <Route path="craft/emotional" element={<CraftEmotional />} />
-              <Route path="craft/focus" element={<CraftDevelopmentFocus />} />
+              <Route path="craft/focus" element={<Navigate to="../craft" replace />} />
               <Route path="craft/scenes" element={<SceneEconomy />} />
               <Route path="format" element={<FormatDiagnosis />} />
               <Route path="comic-format" element={<ComicFormatDiagnosis />} />
               <Route path="commercial" element={<CommercialDiagnosis />} />
               <Route path="commercial/market" element={<CommercialMarket />} />
               <Route path="commercial/production" element={<CommercialProduction />} />
-              <Route path="commercial/focus" element={<CommercialDevelopmentFocus />} />
+              <Route path="commercial/focus" element={<Navigate to="../commercial" replace />} />
               <Route path="development" element={<DevelopmentPriorities />} />
               <Route path="development/rewrite" element={<RewritePriorities />} />
               <Route path="development/scenes" element={<Navigate to="../craft/scenes" replace />} />
@@ -188,23 +188,19 @@ const App = () => (
               <Route path="story/concept" element={<StoryConceptHook />} />
               <Route path="story/structure" element={<StoryStructure />} />
               <Route path="story/conflict" element={<StoryConflictStakes />} />
-              <Route path="story/focus" element={<StoryDevelopmentFocus />} />
               <Route path="characters" element={<CharacterDiagnosis />} />
               <Route path="characters/protagonist" element={<ProtagonistAnalysis />} />
               <Route path="characters/antagonist" element={<AntagonistAnalysis />} />
               <Route path="characters/cast" element={<SupportingCast />} />
-              <Route path="characters/focus" element={<CharacterDevelopmentFocus />} />
               <Route path="craft" element={<CraftDiagnosis />} />
               <Route path="craft/dialogue" element={<CraftDialogue />} />
               <Route path="craft/theme" element={<CraftTheme />} />
               <Route path="craft/visual" element={<CraftVisual />} />
               <Route path="craft/emotional" element={<CraftEmotional />} />
-              <Route path="craft/focus" element={<CraftDevelopmentFocus />} />
               <Route path="craft/scenes" element={<SceneEconomy />} />
               <Route path="commercial" element={<CommercialDiagnosis />} />
               <Route path="commercial/market" element={<CommercialMarket />} />
               <Route path="commercial/production" element={<CommercialProduction />} />
-              <Route path="commercial/focus" element={<CommercialDevelopmentFocus />} />
               <Route path="development" element={<DevelopmentPriorities />} />
               <Route path="development/rewrite" element={<RewritePriorities />} />
               <Route path="development/scenes" element={<Navigate to="../craft/scenes" replace />} />
@@ -246,24 +242,20 @@ const App = () => (
               <Route path="story/concept" element={<StoryConceptHook />} />
               <Route path="story/structure" element={<StoryStructure />} />
               <Route path="story/conflict" element={<StoryConflictStakes />} />
-              <Route path="story/focus" element={<StoryDevelopmentFocus />} />
               <Route path="characters" element={<CharacterDiagnosis />} />
               <Route path="characters/protagonist" element={<ProtagonistAnalysis />} />
               <Route path="characters/antagonist" element={<AntagonistAnalysis />} />
               <Route path="characters/cast" element={<SupportingCast />} />
-              <Route path="characters/focus" element={<CharacterDevelopmentFocus />} />
               <Route path="craft" element={<CraftDiagnosis />} />
               <Route path="craft/dialogue" element={<CraftDialogue />} />
               <Route path="craft/theme" element={<CraftTheme />} />
               <Route path="craft/visual" element={<CraftVisual />} />
               <Route path="craft/emotional" element={<CraftEmotional />} />
-              <Route path="craft/focus" element={<CraftDevelopmentFocus />} />
               <Route path="craft/scenes" element={<SceneEconomy />} />
               <Route path="format" element={<ComicFormatDiagnosis />} />
               <Route path="commercial" element={<CommercialDiagnosis />} />
               <Route path="commercial/market" element={<CommercialMarket />} />
               <Route path="commercial/production" element={<CommercialProduction />} />
-              <Route path="commercial/focus" element={<CommercialDevelopmentFocus />} />
               <Route path="development" element={<DevelopmentPriorities />} />
               <Route path="development/rewrite" element={<RewritePriorities />} />
               <Route path="development/scenes" element={<Navigate to="../craft/scenes" replace />} />
@@ -305,24 +297,20 @@ const App = () => (
               <Route path="story/concept" element={<StoryConceptHook />} />
               <Route path="story/structure" element={<StoryStructure />} />
               <Route path="story/conflict" element={<StoryConflictStakes />} />
-              <Route path="story/focus" element={<StoryDevelopmentFocus />} />
               <Route path="characters" element={<CharacterDiagnosis />} />
               <Route path="characters/protagonist" element={<ProtagonistAnalysis />} />
               <Route path="characters/antagonist" element={<AntagonistAnalysis />} />
               <Route path="characters/cast" element={<SupportingCast />} />
-              <Route path="characters/focus" element={<CharacterDevelopmentFocus />} />
               <Route path="craft" element={<CraftDiagnosis />} />
               <Route path="craft/dialogue" element={<CraftDialogue />} />
               <Route path="craft/theme" element={<CraftTheme />} />
               <Route path="craft/visual" element={<CraftVisual />} />
               <Route path="craft/emotional" element={<CraftEmotional />} />
-              <Route path="craft/focus" element={<CraftDevelopmentFocus />} />
               <Route path="craft/scenes" element={<SceneEconomy />} />
               <Route path="format" element={<FormatDiagnosis />} />
               <Route path="commercial" element={<CommercialDiagnosis />} />
               <Route path="commercial/market" element={<CommercialMarket />} />
               <Route path="commercial/production" element={<CommercialProduction />} />
-              <Route path="commercial/focus" element={<CommercialDevelopmentFocus />} />
               <Route path="development" element={<DevelopmentPriorities />} />
               <Route path="development/rewrite" element={<RewritePriorities />} />
               <Route path="development/scenes" element={<Navigate to="../craft/scenes" replace />} />

@@ -6,6 +6,7 @@ import {
   SectionHeader, 
   DiagnosisSummary,
   WeightedParameterList,
+  DevelopmentFocus,
 } from '@/components/report/ui';
 import { InlineMaturity } from '@/components/report/ui/MaturityBadge';
 import { BookOpen } from 'lucide-react';
@@ -106,6 +107,25 @@ export default function StoryDiagnosis() {
           )} />
         </div>
       )}
+
+      {/* Development Focus */}
+      {(() => {
+        const items = storyParameters
+          .filter(p => p.score < 70)
+          .sort((a, b) => a.score - b.score)
+          .map(p => ({ title: p.displayName, description: p.rationale || '' }));
+        return items.length > 0 ? (
+          <DevelopmentFocus
+            sectionName="Story"
+            items={items}
+            developmentPath={`${basePath}/development`}
+            relatedSections={[
+              { label: 'Character Diagnosis', path: `${basePath}/characters` },
+              { label: 'Craft Diagnosis', path: `${basePath}/craft` },
+            ]}
+          />
+        ) : null;
+      })()}
 
     </div>
   );
