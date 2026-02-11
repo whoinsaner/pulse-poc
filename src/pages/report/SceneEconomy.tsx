@@ -177,7 +177,7 @@ export default function SceneEconomy() {
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium">{param.displayName || param.parameterName}</p>
                   {param.rationale && (
-                    <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{param.rationale}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{param.rationale}</p>
                   )}
                 </div>
                 <div className="flex items-center gap-2 shrink-0 ml-4">
