@@ -239,21 +239,6 @@ export default function ReportCover() {
         </div>
       </div>
 
-      {/* Action Buttons */}
-      <div className="flex flex-wrap gap-3 pt-4 border-t border-border/50">
-        <Link to="./story">
-          <Button>
-            View Full Diagnosis
-            <ArrowRight className="h-4 w-4 ml-2" />
-          </Button>
-        </Link>
-        <Link to="./development">
-          <Button variant="outline">
-            <ListTodo className="h-4 w-4 mr-2" />
-            Jump to Rewrite Priorities
-          </Button>
-        </Link>
-      </div>
     </div>
   );
 }
