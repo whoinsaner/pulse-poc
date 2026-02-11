@@ -1,154 +1,140 @@
 
+# Standardize Report Layout Across All Script Types and Samples
 
-# Scene-by-Scene Analysis: Enrichment Plan
+## Problem
 
-## Current Problem
+The "Vaddi Kaasula Vaada" report uses the USAF consolidated layout with a **left sidebar navigation** (ReportSidebar), **CommandHeader**, and diagnosis-first page structure. However, the four sample reports use inconsistent patterns:
 
-The Narrative Analysis page exists with 5 visualization components, but they all display **estimated/guessed data** because the underlying scene fields are empty:
+| Report | Layout | Navigation | Status |
+|--------|--------|-----------|--------|
+| Live reports (`/report/:runId`) | Sidebar + CommandHeader | USAF nav groups | Standard (the target) |
+| Sample Feature Film | ActionRail (right) + SampleCommandHeader (tabs) | USAF nav groups | Needs sidebar conversion |
+| Sample Comic | ActionRail (right) + SampleCommandHeader (tabs) | USAF nav groups | Needs sidebar conversion |
+| Sample Web Series | WebSeriesActionRail + WebSeriesCommandHeader | USAF nav groups | Needs sidebar conversion |
+| Sample Micro Drama | ActionRail + SampleCommandHeader | **Legacy routes** (old pages) | Needs full overhaul |
 
-| Field | Status | Impact |
-|-------|--------|--------|
-| `description` | Always null (regex parser) | SceneHeatmap guesses dialogue/action from heading keywords |
-| `emotional_tone` | Always null (all parsers) | NarrativeTimeline shows "neutral" for everything |
-| `page_start` / `page_end` | Partially populated | PacingAnalysis scene durations are inaccurate |
+Additionally, the **micro-drama sample** still uses legacy routes (`/concept`, `/plot`, `/protagonist`, etc.) pointing to old page components instead of the consolidated USAF pages.
 
-All 5 components (NarrativeTimeline, SceneHeatmap, PacingAnalysis, SceneComplexityAnalyzer, NarrativeGraphViewer) use fallback `estimateMetrics()` functions that produce unreliable results.
+## Solution
 
----
+### Part 1: Create a Unified Sample Report Layout
 
-## Solution: Two-Phase Approach
+Replace the 4 separate sample layout files with a single `UnifiedSampleReportLayout` component that mirrors the live `ReportLayout` structure:
 
-### Phase 1: Enrich the Script Parser (script-parser-stream)
+- **Left sidebar** using `ReportSidebar` (or a sample-specific variant that doesn't need `runId`)
+- **CommandHeader** with a "Sample" banner
+- Dynamic navigation via `getUSAFNavGroups(scriptType)` -- already working for most
+- Passes the same `ReportContextValue` shape via `Outlet context`
 
-Capture scene descriptions during the extraction stage so that every scene has at least a `description` and accurate `page_start`/`page_end` values.
+**Files to create:**
+- `src/components/report/SampleReportSidebar.tsx` -- A sidebar variant for sample reports that accepts `basePath` instead of `runId`
 
-**Changes to `parseTextFormat()` function:**
-- After detecting a scene heading, accumulate the following non-heading, non-character lines as the scene's `description` text
-- Cap description at ~500 characters to keep database payload reasonable
-- This provides the raw material for Phase 2
+**Files to modify:**
+- `src/pages/SampleReport.tsx` -- Replace ActionRail layout with sidebar layout
+- `src/pages/SampleComicReport.tsx` -- Replace ActionRail layout with sidebar layout
+- `src/pages/SampleWebSeriesReport.tsx` -- Replace WebSeriesActionRail layout with sidebar layout
+- `src/pages/SampleMicroDramaReport.tsx` -- Replace legacy layout with sidebar layout, update context to match standard shape
 
-**Changes to `parseComicFormat()` function:**
-- Similarly capture panel description text between panel markers
+### Part 2: Standardize Micro-Drama Routes
 
-**Changes to `parseWithAI()` function:**
-- Already requests `description` in the prompt (confirmed in code) - just ensure it flows through properly
-- Add `emotional_tone` to the AI parsing prompt so AI-rescued scripts get tone data
+Update `src/App.tsx` to replace the micro-drama sample's legacy routes with the USAF consolidated routes:
 
-### Phase 2: Add Scene Enrichment Agent (analyze-script)
+**Before (legacy):**
+```
+/sample-micro-drama-report/concept -> ConceptHook
+/sample-micro-drama-report/plot -> PlotAnalysis
+/sample-micro-drama-report/protagonist -> ProtagonistAnalysis
+/sample-micro-drama-report/micro-drama -> MicroDramaAnalysis
+```
 
-Add a lightweight `SceneEnrichmentAgent` that runs as part of the analysis pipeline to evaluate each scene individually.
+**After (USAF standard):**
+```
+/sample-micro-drama-report/ -> ReportCover
+/sample-micro-drama-report/story -> StoryDiagnosis
+/sample-micro-drama-report/story/concept -> StoryConceptHook
+/sample-micro-drama-report/characters -> CharacterDiagnosis
+/sample-micro-drama-report/craft -> CraftDiagnosis
+/sample-micro-drama-report/format -> FormatDiagnosis (micro-drama specific)
+/sample-micro-drama-report/commercial -> CommercialDiagnosis
+/sample-micro-drama-report/development -> DevelopmentPriorities
+/sample-micro-drama-report/scorecard -> CompleteScorecard
+/sample-micro-drama-report/narrative -> ReportNarrative
+```
 
-**What it does:**
-- Takes the parsed scenes + raw script text as context
-- For each scene, produces: `emotional_tone`, `dialogue_density` (0-100), `action_intensity` (0-100), `narrative_function` (setup/escalation/climax/resolution/transition)
-- Updates the `scenes` table directly with `emotional_tone`
-- Stores full per-scene metrics in the report's `full_report_data.sceneAnalysis` field
+Legacy micro-drama routes will redirect to their USAF counterparts.
 
-**Why a separate agent instead of modifying the parser:**
-- The parser runs before analysis and doesn't have AI context about the story as a whole
-- Emotional tone requires understanding narrative context (e.g., a "quiet" scene after a chase is "tense calm", not "peaceful")
-- Per-scene dialogue/action metrics need the full script to calculate accurately
-- Keeps parser fast and deterministic; analysis is where AI reasoning belongs
+### Part 3: Add Scene Analysis Route to All Sample Reports
 
-**Database changes:**
-- Add UPDATE RLS policy for `scenes` table (currently missing) so the analysis function can write `emotional_tone` back
-- No new columns needed - `description` and `emotional_tone` already exist
+The `narrative` route (Scene Analysis) currently exists for Feature Film and Comic samples but is missing from the navigation config for some types. Ensure all sample reports include the route and the nav item appears correctly.
 
-### Phase 3: Update Visualization Components
+### Part 4: Ensure Navigation Visibility Rules
 
-Replace heuristic estimation with real data rendering.
+Update `USAF_NAV_GROUPS` in `reportNavigation.ts` to handle micro-drama correctly:
 
-**SceneHeatmap.tsx:**
-- Use actual `emotional_tone` for emotional intensity instead of keyword guessing
-- Use `sceneAnalysis` data from report for dialogue density and action level
-- Show "Estimated" badge when data is from heuristics (fallback for old reports)
+- **Format group**: Already includes `micro_drama` in applicable types -- verify it shows the right FormatDiagnosis content
+- **Series Bible**: Already restricted to episodic types including `micro_drama`
+- **Scene Analysis**: Already added to Craft group with no type restriction (shows for all)
 
-**PacingAnalysis.tsx:**
-- Use real `page_start`/`page_end` for scene duration instead of `sceneNumber` fallback
+### Part 5: Ensure Correct Context Shape
 
-**SceneComplexityAnalyzer.tsx:**
-- Replace `analyzeSceneComplexity()` heuristic with real scene analysis data
-- Remove `Math.floor(Math.random() * 8) + 2` for cast size (line 109) - use actual character data
+All report pages consume context via `useOutletContext<ReportContextValue>()`. The context must include:
+- `reportData: ReportData`
+- `activeLens: StakeholderLens`
+- `currentScore: number`
+- `isComic: boolean`
+- `scriptType: ScriptType`
 
-**NarrativeTimeline.tsx:**
-- Use real emotional tone data for the emotional arc visualization
-- Reference actual scene descriptions in beat details
-
----
+Currently the sample layouts provide slightly different shapes. Standardize all of them to match the live `ReportLayout` context shape.
 
 ## Technical Details
 
-### Parser Changes (script-parser-stream/index.ts)
+### SampleReportSidebar Component
 
-In `parseTextFormat()` around line 2170-2290:
-- Add a `descriptionLines` accumulator that collects non-structural lines after a scene heading
-- When a new scene heading is detected, join the accumulated lines and store as `description` on the previous scene
-- Trim to 500 chars max
+A lightweight adaptation of `ReportSidebar` that:
+- Accepts `basePath` (e.g., `/sample-report`) instead of `runId`
+- Navigates to `basePath + item.path` instead of `/report/${runId}${item.path}`
+- Includes the same score ring, readiness label, and collapsible nav
+- No export dialog or stakeholder lens section (sample-specific)
 
-In `parseWithAI()` around line 2597-2698:
-- Add `emotional_tone` field to the AI prompt's JSON schema
-- Values: "tense", "calm", "dramatic", "comedic", "romantic", "suspenseful", "melancholic", "hopeful", "neutral"
+### Sample Layout Consolidation
 
-### Database Migration
+Each of the 4 sample layouts will be updated to use the same structure:
 
-```text
--- Allow service role to update scenes (for analysis enrichment)
--- The analyze-script function uses service role key, so this policy
--- allows the enrichment agent to write emotional_tone back to scenes
-CREATE POLICY "Service can update scenes" ON public.scenes
-  FOR UPDATE
-  USING (true)
-  WITH CHECK (true);
+```
+<div className="min-h-screen bg-background flex flex-col">
+  <SampleBanner ... />
+  <CommandHeader-like top bar />
+  <div className="flex-1 flex">
+    <SampleReportSidebar ... />
+    <main className="flex-1 overflow-auto">
+      <Outlet context={contextValue} />
+    </main>
+  </div>
+</div>
 ```
 
-Note: Since the analyze-script function already uses the service role key (which bypasses RLS), no migration is actually needed for the enrichment write. The existing INSERT policy covers the parser.
+### Route Changes in App.tsx
 
-### SceneEnrichmentAgent (analyze-script/index.ts)
+**Micro-drama sample** -- full USAF route replacement (same pattern as other samples):
+- Add: `index -> ReportCover`, `story -> StoryDiagnosis`, all USAF sub-routes
+- Add: `format -> FormatDiagnosis` (for micro-drama format analysis)
+- Add: `narrative -> ReportNarrative`
+- Redirect legacy routes (`/concept`, `/plot`, etc.) to USAF equivalents
 
-Add to the agent pipeline (runs after core agents, before report generation):
-- Input: scenes list + raw script text (first 80,000 chars)
-- Output: per-scene analysis stored in `sceneAnalysis` field of `full_report_data`
-- Model: `google/gemini-2.5-flash` (fast, cost-effective for structured output)
-- Prompt asks for JSON array matching scene numbers with: `emotional_tone`, `dialogue_density`, `action_intensity`, `narrative_function`, `key_moment` (boolean)
+**All sample reports** -- ensure `narrative` route exists (already present for Feature Film and Comic, needs adding for Web Series and Micro Drama if missing).
 
-### Report Data Schema Extension
+### Files Changed Summary
 
-Add new field to `ReportData` type:
+| File | Change |
+|------|--------|
+| `src/components/report/SampleReportSidebar.tsx` | New: sidebar for sample reports |
+| `src/pages/SampleReport.tsx` | Replace ActionRail with SampleReportSidebar |
+| `src/pages/SampleComicReport.tsx` | Replace ActionRail with SampleReportSidebar |
+| `src/pages/SampleWebSeriesReport.tsx` | Replace WebSeriesActionRail with SampleReportSidebar |
+| `src/pages/SampleMicroDramaReport.tsx` | Full overhaul to USAF layout with sidebar |
+| `src/App.tsx` | Micro-drama routes to USAF; ensure narrative route for all samples |
+| `src/lib/reportNavigation.ts` | Add `micro_drama` to Format group if missing; verify all nav items |
 
-```text
-interface SceneAnalysisData {
-  sceneNumber: number;
-  emotionalTone: string;
-  dialogueDensity: number;   // 0-100
-  actionIntensity: number;   // 0-100
-  narrativeFunction: 'setup' | 'escalation' | 'climax' | 'resolution' | 'transition';
-  keyMoment: boolean;
-  briefSummary?: string;     // 1-2 sentence summary
-}
+### No Pipeline/Agent/Prompt Changes Needed
 
-// Added to ReportData interface
-sceneAnalysis?: SceneAnalysisData[];
-```
-
-### Component Updates
-
-Each visualization component gets a data precedence strategy:
-
-```text
-1. Use sceneAnalysis data from report (best - AI-analyzed)
-2. Fall back to scene.emotionalTone / scene.description (good - parser-enriched)
-3. Fall back to estimateMetrics() heuristic (worst - legacy/old reports)
-4. Show "Estimated" indicator when using fallback
-```
-
----
-
-## Execution Order
-
-1. **Parser enrichment** - Modify `parseTextFormat()` and `parseComicFormat()` to capture descriptions
-2. **Database type update** - Add `SceneAnalysisData` to `ReportData` TypeScript type
-3. **SceneEnrichmentAgent** - Add to analysis pipeline in `analyze-script`
-4. **Component updates** - Update all 4 visualization components to use real data
-5. **Indicator badges** - Add "AI Analyzed" vs "Estimated" visual indicators
-6. **Testing** - Deploy and test with a new script upload + analysis run
-
+The report structure is purely a frontend concern. The analysis pipeline, agents, and prompts already produce the same `full_report_data` shape regardless of script type. The USAF pages (StoryDiagnosis, CraftDiagnosis, etc.) already handle all script types by reading from `reportData.parameterScores` and `reportData.agentContent` dynamically.
