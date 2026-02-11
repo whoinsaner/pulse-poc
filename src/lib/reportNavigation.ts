@@ -2,7 +2,7 @@
  * Dynamic Report Navigation System
  * Generates navigation based on script type and available categories
  */
-
+import { extractScore } from '@/lib/scoreUtils';
 import { 
   LayoutDashboard, 
   Lightbulb, 
@@ -272,7 +272,7 @@ export function getNavGroupsForScriptType(
         
         // Show if any of the required categories have scores
         return item.requiredCategories.some(cat => 
-          categoryScores[cat] !== undefined && categoryScores[cat] > 0
+          categoryScores[cat] !== undefined && extractScore(categoryScores[cat]) > 0
         );
       }),
     }))
