@@ -36,6 +36,7 @@ export interface NavItem {
   icon: LucideIcon;
   path: string;
   requiredCategories?: string[];
+  applicableTypes?: ScriptType[] | 'all';
 }
 
 export interface NavGroup {
@@ -156,7 +157,7 @@ const USAF_NAV_GROUPS: NavGroup[] = [
     items: [
       { id: 'scorecard', label: 'Scorecard', icon: BarChart3, path: '/scorecard' },
       { id: 'script', label: 'Script', icon: FileText, path: '/script' },
-      { id: 'bible', label: 'Series Bible', icon: BookOpen, path: '/bible', requiredCategories: ['World & Logic', 'Character', 'Theme'] },
+      { id: 'bible', label: 'Series Bible', icon: BookOpen, path: '/bible', requiredCategories: ['World & Logic', 'Character', 'Theme'], applicableTypes: ['web_series', 'pilot', 'episode', 'micro_drama'] },
     ],
   },
 ];
@@ -259,7 +260,7 @@ const ALL_NAV_GROUPS: NavGroup[] = [
     label: 'Reference',
     applicableTypes: 'all',
     items: [
-      { id: 'bible', label: 'Series Bible', icon: BookOpen, path: '/bible', requiredCategories: ['World & Logic', 'Character', 'Theme'] },
+      { id: 'bible', label: 'Series Bible', icon: BookOpen, path: '/bible', requiredCategories: ['World & Logic', 'Character', 'Theme'], applicableTypes: ['web_series', 'pilot', 'episode', 'micro_drama'] },
       { id: 'scorecard', label: 'Scorecard', icon: BarChart3, path: '/scorecard' },
       { id: 'script', label: 'Script', icon: FileText, path: '/script' },
     ],
@@ -287,6 +288,11 @@ export function getNavGroupsForScriptType(
     .map(group => ({
       ...group,
       items: group.items.filter(item => {
+        // Filter by item-level applicableTypes
+        if (item.applicableTypes && item.applicableTypes !== 'all') {
+          if (!item.applicableTypes.includes(type)) return false;
+        }
+        
         // If no required categories, always show
         if (!item.requiredCategories || !categoryScores) return true;
         
