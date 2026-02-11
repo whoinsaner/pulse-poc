@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { SceneData } from '@/types/database';
+import { SceneData, SceneAnalysisData } from '@/types/database';
 import { cn } from '@/lib/utils';
-import { Flame, MessageSquare, Zap, Info } from 'lucide-react';
+import { Flame, MessageSquare, Zap, Info, Sparkles } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Badge } from '@/components/ui/badge';
 
 interface SceneHeatmapProps {
   scenes: SceneData[];
+  sceneAnalysis?: SceneAnalysisData[];
 }
 
 type MetricType = 'emotional' | 'dialogue' | 'action';
@@ -16,11 +18,25 @@ const METRICS: { id: MetricType; label: string; icon: React.ComponentType<{ clas
   { id: 'action', label: 'Action Level', icon: Zap, color: 'chart-3' },
 ];
 
-// Estimate metrics from scene data
-function estimateMetrics(scene: SceneData) {
+const EMOTIONAL_INTENSITY: Record<string, number> = {
+  tense: 90, suspenseful: 80, dramatic: 75, exciting: 85,
+  romantic: 60, melancholic: 55, comedic: 50, hopeful: 65,
+  calm: 30, neutral: 40,
+};
+
+// Get metrics from scene analysis data or fall back to estimation
+function getMetrics(scene: SceneData, analysisItem?: SceneAnalysisData) {
+  if (analysisItem) {
+    return {
+      emotional: EMOTIONAL_INTENSITY[analysisItem.emotionalTone?.toLowerCase() || 'neutral'] || 50,
+      dialogue: analysisItem.dialogueDensity,
+      action: analysisItem.actionIntensity,
+      isAnalyzed: true,
+    };
+  }
+
+  // Fallback: estimate from scene data
   const tone = scene.emotionalTone?.toLowerCase() || '';
-  
-  // Emotional intensity based on tone keywords
   let emotional = 50;
   if (tone.includes('intense') || tone.includes('dramatic') || tone.includes('tense')) emotional = 90;
   else if (tone.includes('emotional') || tone.includes('passionate') || tone.includes('angry')) emotional = 80;
@@ -29,14 +45,12 @@ function estimateMetrics(scene: SceneData) {
   else if (tone.includes('calm') || tone.includes('peaceful') || tone.includes('quiet')) emotional = 30;
   else if (tone.includes('neutral') || tone.includes('mundane')) emotional = 20;
   
-  // Dialogue density based on description keywords
   const desc = scene.description?.toLowerCase() || '';
   let dialogue = 50;
   if (desc.includes('conversation') || desc.includes('argument') || desc.includes('discuss')) dialogue = 85;
   else if (desc.includes('talk') || desc.includes('speak') || desc.includes('say')) dialogue = 70;
   else if (desc.includes('silent') || desc.includes('quiet') || desc.includes('alone')) dialogue = 20;
   
-  // Action level based on location and description
   const heading = scene.heading?.toLowerCase() || '';
   let action = 50;
   if (desc.includes('fight') || desc.includes('chase') || desc.includes('run') || desc.includes('escape')) action = 95;
@@ -44,10 +58,10 @@ function estimateMetrics(scene: SceneData) {
   else if (heading.includes('ext') && (desc.includes('car') || desc.includes('street'))) action = 70;
   else if (heading.includes('int') && (desc.includes('office') || desc.includes('room'))) action = 30;
   
-  return { emotional, dialogue, action };
+  return { emotional, dialogue, action, isAnalyzed: false };
 }
 
-export function SceneHeatmap({ scenes }: SceneHeatmapProps) {
+export function SceneHeatmap({ scenes, sceneAnalysis }: SceneHeatmapProps) {
   const [activeMetric, setActiveMetric] = useState<MetricType>('emotional');
   const [hoveredScene, setHoveredScene] = useState<number | null>(null);
 
@@ -76,7 +90,12 @@ export function SceneHeatmap({ scenes }: SceneHeatmapProps) {
   }
 
   const sortedScenes = [...scenes].sort((a, b) => a.sceneNumber - b.sceneNumber);
-  const sceneMetrics = sortedScenes.map(s => ({ scene: s, metrics: estimateMetrics(s) }));
+  const analysisMap = new Map(sceneAnalysis?.map(sa => [sa.sceneNumber, sa]) || []);
+  const hasAnalysis = sceneAnalysis && sceneAnalysis.length > 0;
+  const sceneMetrics = sortedScenes.map(s => ({ 
+    scene: s, 
+    metrics: getMetrics(s, analysisMap.get(s.sceneNumber))
+  }));
 
   const getIntensityColor = (value: number, metric: MetricType) => {
     const intensity = Math.floor(value / 20); // 0-4 levels
@@ -125,6 +144,17 @@ export function SceneHeatmap({ scenes }: SceneHeatmapProps) {
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
             Visualize {scenes.length} scenes by emotional intensity, dialogue, and action
           </p>
+          <div className="mt-3">
+            {hasAnalysis ? (
+              <Badge variant="outline" className="gap-1.5 text-chart-2 border-chart-2/30">
+                <Sparkles className="h-3 w-3" /> AI Analyzed
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="gap-1.5 text-muted-foreground border-border">
+                <Info className="h-3 w-3" /> Estimated
+              </Badge>
+            )}
+          </div>
         </div>
 
         {/* Metric selector */}

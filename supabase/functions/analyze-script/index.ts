@@ -2106,8 +2106,11 @@ serve(async (req) => {
         await runInsightSynthesis(supabase, lovableApiKey, analysisRunId, scriptContext, qualityMode);
         await runStakeholderLensAgent(supabase, lovableApiKey, analysisRunId);
 
-        // Generate report
-        await generateReport(supabase, analysisRunId, scriptId, script, mode);
+        // Run scene enrichment agent
+        const sceneAnalysisData = await runSceneEnrichmentAgent(supabase, lovableApiKey, scriptId, scriptContext, qualityMode);
+
+        // Generate report (includes sceneAnalysis data)
+        await generateReport(supabase, analysisRunId, scriptId, script, mode, sceneAnalysisData);
 
         // Update final status
         const failedAgents = agentResults.filter(r => !r.success);
@@ -3109,6 +3112,138 @@ Return JSON array:
   await updateAgentProgress(supabase, analysisRunId, 'InsightSynthesisAgent', 'failed', lastError?.message || 'Unknown error');
 }
 
+// ============= SCENE ENRICHMENT AGENT =============
+async function runSceneEnrichmentAgent(
+  supabase: any,
+  apiKey: string,
+  scriptId: string,
+  scriptContext: string,
+  qualityMode: QualityMode = 'balanced'
+) {
+  console.log('[SceneEnrichmentAgent] Starting scene enrichment...');
+  
+  try {
+    // Fetch existing scenes
+    const { data: scenes, error: scenesError } = await supabase
+      .from('scenes')
+      .select('*')
+      .eq('script_id', scriptId)
+      .order('scene_number');
+    
+    if (scenesError || !scenes || scenes.length === 0) {
+      console.log('[SceneEnrichmentAgent] No scenes to enrich');
+      return null;
+    }
+
+    const sceneList = scenes.map((s: any) => 
+      `Scene ${s.scene_number}: ${s.heading}${s.description ? ' - ' + s.description.substring(0, 200) : ''}`
+    ).join('\n');
+
+    const prompt = `You are SceneEnrichmentAgent. Analyze each scene from this script and produce per-scene metrics.
+
+SCRIPT CONTEXT:
+${scriptContext.substring(0, 60000)}
+
+SCENES TO ANALYZE:
+${sceneList}
+
+For each scene, evaluate:
+- emotional_tone: One of "tense", "calm", "dramatic", "comedic", "romantic", "suspenseful", "melancholic", "hopeful", "neutral"
+- dialogue_density: 0-100 (how dialogue-heavy the scene is)
+- action_intensity: 0-100 (how much physical action/movement)
+- narrative_function: One of "setup", "escalation", "climax", "resolution", "transition"
+- key_moment: true if this is a pivotal/turning point scene
+- brief_summary: 1-2 sentence summary of what happens
+
+Return ONLY a valid JSON array:
+[
+  {
+    "scene_number": 1,
+    "emotional_tone": "tense",
+    "dialogue_density": 70,
+    "action_intensity": 30,
+    "narrative_function": "setup",
+    "key_moment": false,
+    "brief_summary": "The protagonist arrives at the office."
+  }
+]`;
+
+    const modelConfig = await getAgentModelConfig(supabase, 'SceneEnrichmentAgent', qualityMode);
+
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: modelConfig.model || 'google/gemini-2.5-flash',
+        messages: [
+          { role: 'system', content: 'You are SceneEnrichmentAgent, analyzing individual scenes for emotional tone, pacing, and narrative function. Return ONLY valid JSON arrays.' },
+          { role: 'user', content: prompt }
+        ],
+        max_tokens: 16000,
+        temperature: 0.2,
+      }),
+    });
+
+    if (!response.ok) {
+      console.error('[SceneEnrichmentAgent] API error:', response.status);
+      return null;
+    }
+
+    const result = await response.json();
+    const content = result.choices?.[0]?.message?.content || '';
+    
+    const sanitized = sanitizeJsonString(content);
+    const jsonMatch = sanitized.match(/\[[\s\S]*\]/);
+    if (!jsonMatch) {
+      console.error('[SceneEnrichmentAgent] No JSON array found');
+      return null;
+    }
+
+    let sceneAnalysis;
+    try {
+      sceneAnalysis = JSON.parse(jsonMatch[0]);
+    } catch {
+      console.error('[SceneEnrichmentAgent] JSON parse failed');
+      return null;
+    }
+
+    // Update scenes in database with emotional_tone
+    for (const sa of sceneAnalysis) {
+      if (sa.scene_number && sa.emotional_tone) {
+        const matchingScene = scenes.find((s: any) => s.scene_number === sa.scene_number);
+        if (matchingScene) {
+          await supabase
+            .from('scenes')
+            .update({ 
+              emotional_tone: sa.emotional_tone,
+              description: matchingScene.description || sa.brief_summary || null,
+            })
+            .eq('id', matchingScene.id);
+        }
+      }
+    }
+
+    console.log(`[SceneEnrichmentAgent] Enriched ${sceneAnalysis.length} scenes`);
+    
+    // Return sceneAnalysis data to be included in report
+    return sceneAnalysis.map((sa: any) => ({
+      sceneNumber: sa.scene_number,
+      emotionalTone: sa.emotional_tone || 'neutral',
+      dialogueDensity: sa.dialogue_density || 50,
+      actionIntensity: sa.action_intensity || 50,
+      narrativeFunction: sa.narrative_function || 'transition',
+      keyMoment: sa.key_moment || false,
+      briefSummary: sa.brief_summary || undefined,
+    }));
+  } catch (err) {
+    console.error('[SceneEnrichmentAgent] Error:', err);
+    return null;
+  }
+}
+
 async function runStakeholderLensAgent(
   supabase: any,
   apiKey: string,
@@ -3182,7 +3317,8 @@ async function generateReport(
   analysisRunId: string,
   scriptId: string,
   script: any,
-  mode: string = 'deep'
+  mode: string = 'deep',
+  sceneAnalysisData?: any[] | null
 ) {
   const [scoresResult, insightsResult, scenesResult, charsResult, lensWeightsResult, analysisRunResult] = await Promise.all([
     supabase.from('parameter_scores').select('*, parameters(*)').eq('analysis_run_id', analysisRunId),
@@ -3323,6 +3459,7 @@ async function generateReport(
       emotionalTone: s.emotional_tone,
     })),
     agentContent: Object.keys(agentContent).length > 0 ? agentContent : undefined,
+    sceneAnalysis: sceneAnalysisData || undefined,
   };
 
   const topInsights = insights.sort((a: any, b: any) => a.priority - b.priority).slice(0, 3);

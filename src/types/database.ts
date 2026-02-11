@@ -211,6 +211,16 @@ export interface AgentSectionContent {
   talentRequirements?: string;
 }
 
+export interface SceneAnalysisData {
+  sceneNumber: number;
+  emotionalTone: string;
+  dialogueDensity: number;   // 0-100
+  actionIntensity: number;   // 0-100
+  narrativeFunction: 'setup' | 'escalation' | 'climax' | 'resolution' | 'transition';
+  keyMoment: boolean;
+  briefSummary?: string;     // 1-2 sentence summary
+}
+
 export interface ReportData {
   scriptMetadata: {
     title: string;
@@ -229,6 +239,7 @@ export interface ReportData {
   scenes: SceneData[];
   narrativeGraph?: NarrativeGraphData;
   agentContent?: Record<string, AgentSectionContent>;
+  sceneAnalysis?: SceneAnalysisData[];
 }
 
 export type MaturityLevel = 'Weak' | 'Developing' | 'Strong';
