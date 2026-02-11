@@ -8,6 +8,7 @@ import {
   SectionHeader, 
   DiagnosisSummary,
   WeightedParameterList,
+  DevelopmentFocus,
 } from '@/components/report/ui';
 import { InlineMaturity } from '@/components/report/ui/MaturityBadge';
 import { Users } from 'lucide-react';
@@ -105,6 +106,25 @@ export default function CharacterDiagnosis() {
         initiallyExpanded={false}
         defaultVisibleCount={6}
       />
+
+      {/* Development Focus */}
+      {(() => {
+        const items = characterParameters
+          .filter(p => p.score < 70)
+          .sort((a, b) => a.score - b.score)
+          .map(p => ({ title: p.displayName, description: p.rationale || '' }));
+        return items.length > 0 ? (
+          <DevelopmentFocus
+            sectionName="Character"
+            items={items}
+            developmentPath={`${basePath}/development`}
+            relatedSections={[
+              { label: 'Story Diagnosis', path: `${basePath}/story` },
+              { label: 'Craft Diagnosis', path: `${basePath}/craft` },
+            ]}
+          />
+        ) : null;
+      })()}
 
     </div>
   );

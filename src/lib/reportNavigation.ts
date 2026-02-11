@@ -93,7 +93,7 @@ const USAF_NAV_GROUPS: NavGroup[] = [
       { id: 'story-concept', label: 'Concept & Hook', icon: Lightbulb, path: '/story/concept', requiredCategories: ['Concept & Hook'] },
       { id: 'story-structure', label: 'Structure', icon: Building, path: '/story/structure', requiredCategories: ['Structure'] },
       { id: 'story-conflict', label: 'Conflict & Stakes', icon: Zap, path: '/story/conflict', requiredCategories: ['Conflict'] },
-      { id: 'story-focus', label: 'Development Focus', icon: Target, path: '/story/focus' },
+      
     ],
   },
   {
@@ -105,7 +105,7 @@ const USAF_NAV_GROUPS: NavGroup[] = [
       { id: 'character-protagonist', label: 'Protagonist', icon: User, path: '/characters/protagonist', requiredCategories: ['Character'] },
       { id: 'character-antagonist', label: 'Antagonist', icon: UserX, path: '/characters/antagonist', requiredCategories: ['Character'] },
       { id: 'character-cast', label: 'Supporting Cast', icon: Users, path: '/characters/cast', requiredCategories: ['Character'] },
-      { id: 'character-focus', label: 'Development Focus', icon: Target, path: '/characters/focus' },
+      
     ],
   },
   {
@@ -119,7 +119,7 @@ const USAF_NAV_GROUPS: NavGroup[] = [
       { id: 'craft-visual', label: 'Visual Storytelling', icon: Eye, path: '/craft/visual', requiredCategories: ['World & Logic', 'World'] },
       { id: 'craft-emotional', label: 'Emotional Arc', icon: Sparkles, path: '/craft/emotional', requiredCategories: ['Emotional Arc', 'Emotion'] },
       { id: 'craft-scenes', label: 'Scene Economy', icon: Layers, path: '/craft/scenes', requiredCategories: ['Structure'] },
-      { id: 'craft-focus', label: 'Development Focus', icon: Target, path: '/craft/focus' },
+      
     ],
   },
   {
@@ -138,7 +138,7 @@ const USAF_NAV_GROUPS: NavGroup[] = [
       { id: 'commercial-diagnosis', label: 'Commercial Diagnosis', icon: TrendingUp, path: '/commercial', requiredCategories: ['Market', 'Execution'] },
       { id: 'commercial-market', label: 'Market Analysis', icon: TrendingUp, path: '/commercial/market', requiredCategories: ['Market'] },
       { id: 'commercial-production', label: 'Production Viability', icon: Film, path: '/commercial/production', requiredCategories: ['Execution'] },
-      { id: 'commercial-focus', label: 'Development Focus', icon: Target, path: '/commercial/focus' },
+      
     ],
   },
   {
