@@ -53,12 +53,21 @@ export default function ProtagonistAnalysis() {
     ? reportData.categoryScores['Character']
     : (reportData.categoryScores?.['Character'] as { score?: number })?.score || characterScore;
 
-  // Simulated sub-scores
+  // Derive sub-scores from actual parameter data
+  const getParamScore = (keywords: string[]) => {
+    const matched = characterParams.filter(p => 
+      keywords.some(k => p.parameterName?.toLowerCase().includes(k) || p.displayName?.toLowerCase().includes(k))
+    );
+    return matched.length > 0 
+      ? Math.round(matched.reduce((sum, p) => sum + p.score, 0) / matched.length)
+      : Math.round(categoryScore);
+  };
+
   const subScores = {
-    empathy: Math.min(10, categoryScore + (Math.random() - 0.5)),
-    uniqueness: Math.min(10, categoryScore - 0.3 + (Math.random() - 0.3)),
-    arcQuality: Math.min(10, categoryScore + 0.2 + (Math.random() - 0.5)),
-    agency: Math.min(10, categoryScore - 0.1 + (Math.random() - 0.4)),
+    empathy: getParamScore(['empathy', 'relat', 'likeab', 'connect']),
+    uniqueness: getParamScore(['unique', 'original', 'fresh', 'distinct']),
+    arcQuality: getParamScore(['arc', 'transform', 'growth', 'change']),
+    agency: getParamScore(['agency', 'active', 'drive', 'decision']),
   };
 
   const characterInsights = reportData.insights?.filter(i => 
