@@ -44,15 +44,25 @@ export default function AntagonistAnalysis() {
     ? reportData.categoryScores['Conflict']
     : (reportData.categoryScores?.['Conflict'] as { score?: number })?.score || conflictScore;
 
-  // Simulated power breakdown
-  const powerScores = {
-    physical: Math.min(10, categoryScore * 0.9 + Math.random()),
-    psychological: Math.min(10, categoryScore * 1.05 + (Math.random() - 0.5)),
-    tactical: Math.min(10, categoryScore + (Math.random() - 0.3)),
-    dramatic: Math.min(10, categoryScore * 0.95 + (Math.random() - 0.4)),
+  // Derive power scores from actual parameter data
+  const getParamScore = (keywords: string[]) => {
+    const allParams = reportData.parameterScores || [];
+    const matched = allParams.filter(p => 
+      keywords.some(k => p.parameterName?.toLowerCase().includes(k) || p.displayName?.toLowerCase().includes(k))
+    );
+    return matched.length > 0 
+      ? Math.round(matched.reduce((sum, p) => sum + p.score, 0) / matched.length)
+      : Math.round(categoryScore);
   };
 
-  const avgPower = (powerScores.physical + powerScores.psychological + powerScores.tactical + powerScores.dramatic) / 4;
+  const powerScores = {
+    physical: getParamScore(['threat', 'stakes', 'danger', 'physical']),
+    psychological: getParamScore(['psychology', 'manipulat', 'depth', 'complex']),
+    tactical: getParamScore(['tactical', 'strateg', 'intellig', 'plan']),
+    dramatic: getParamScore(['dramatic', 'tension', 'conflict', 'opposition']),
+  };
+
+  const avgPower = Math.round((powerScores.physical + powerScores.psychological + powerScores.tactical + powerScores.dramatic) / 4);
 
   return (
     <div className="space-y-8 max-w-6xl mx-auto">
