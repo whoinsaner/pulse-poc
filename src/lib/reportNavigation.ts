@@ -90,6 +90,7 @@ const USAF_NAV_GROUPS: NavGroup[] = [
     items: [
       { id: 'story-diagnosis', label: 'Story Diagnosis', icon: BookOpen, path: '/story', requiredCategories: ['Concept & Hook', 'Structure', 'Conflict'] },
       { id: 'story-concept', label: 'Concept & Hook', icon: Lightbulb, path: '/story/concept', requiredCategories: ['Concept & Hook'] },
+      { id: 'story-structure', label: 'Structure', icon: Building, path: '/story/structure', requiredCategories: ['Structure'] },
       { id: 'story-conflict', label: 'Conflict & Stakes', icon: Zap, path: '/story/conflict', requiredCategories: ['Conflict'] },
       { id: 'story-focus', label: 'Development Focus', icon: Target, path: '/story/focus' },
     ],

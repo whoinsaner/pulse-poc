@@ -58,6 +58,7 @@ import StoryDiagnosis from "./pages/report/StoryDiagnosis";
 import StoryConceptHook from "./pages/report/StoryConceptHook";
 import StoryConflictStakes from "./pages/report/StoryConflictStakes";
 import StoryDevelopmentFocus from "./pages/report/StoryDevelopmentFocus";
+import StoryStructure from "./pages/report/StoryStructure";
 import CharacterDiagnosis from "./pages/report/CharacterDiagnosis";
 import CraftDiagnosis from "./pages/report/CraftDiagnosis";
 import FormatDiagnosis from "./pages/report/FormatDiagnosis";
@@ -111,6 +112,7 @@ const App = () => (
               <Route index element={<ReportCover />} />
               <Route path="story" element={<StoryDiagnosis />} />
               <Route path="story/concept" element={<StoryConceptHook />} />
+              <Route path="story/structure" element={<StoryStructure />} />
               <Route path="story/conflict" element={<StoryConflictStakes />} />
               <Route path="story/focus" element={<StoryDevelopmentFocus />} />
               <Route path="characters" element={<CharacterDiagnosis />} />
@@ -159,6 +161,7 @@ const App = () => (
               <Route index element={<ReportCover />} />
               <Route path="story" element={<StoryDiagnosis />} />
               <Route path="story/concept" element={<StoryConceptHook />} />
+              <Route path="story/structure" element={<StoryStructure />} />
               <Route path="story/conflict" element={<StoryConflictStakes />} />
               <Route path="story/focus" element={<StoryDevelopmentFocus />} />
               <Route path="characters" element={<CharacterDiagnosis />} />
@@ -201,6 +204,7 @@ const App = () => (
               <Route index element={<ReportCover />} />
               <Route path="story" element={<StoryDiagnosis />} />
               <Route path="story/concept" element={<StoryConceptHook />} />
+              <Route path="story/structure" element={<StoryStructure />} />
               <Route path="story/conflict" element={<StoryConflictStakes />} />
               <Route path="story/focus" element={<StoryDevelopmentFocus />} />
               <Route path="characters" element={<CharacterDiagnosis />} />
@@ -244,6 +248,7 @@ const App = () => (
               <Route index element={<ReportCover />} />
               <Route path="story" element={<StoryDiagnosis />} />
               <Route path="story/concept" element={<StoryConceptHook />} />
+              <Route path="story/structure" element={<StoryStructure />} />
               <Route path="story/conflict" element={<StoryConflictStakes />} />
               <Route path="story/focus" element={<StoryDevelopmentFocus />} />
               <Route path="characters" element={<CharacterDiagnosis />} />
