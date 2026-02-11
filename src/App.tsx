@@ -135,6 +135,7 @@ const App = () => (
               <Route path="craft/visual" element={<CraftVisual />} />
               <Route path="craft/emotional" element={<CraftEmotional />} />
               <Route path="craft/focus" element={<CraftDevelopmentFocus />} />
+              <Route path="craft/scenes" element={<SceneEconomy />} />
               <Route path="format" element={<FormatDiagnosis />} />
               <Route path="comic-format" element={<ComicFormatDiagnosis />} />
               <Route path="commercial" element={<CommercialDiagnosis />} />
@@ -143,7 +144,7 @@ const App = () => (
               <Route path="commercial/focus" element={<CommercialDevelopmentFocus />} />
               <Route path="development" element={<DevelopmentPriorities />} />
               <Route path="development/rewrite" element={<RewritePriorities />} />
-              <Route path="development/scenes" element={<SceneEconomy />} />
+              <Route path="development/scenes" element={<Navigate to="../craft/scenes" replace />} />
               <Route path="scorecard" element={<CompleteScorecard />} />
               <Route path="script" element={<SampleScript />} />
               
@@ -198,13 +199,14 @@ const App = () => (
               <Route path="craft/visual" element={<CraftVisual />} />
               <Route path="craft/emotional" element={<CraftEmotional />} />
               <Route path="craft/focus" element={<CraftDevelopmentFocus />} />
+              <Route path="craft/scenes" element={<SceneEconomy />} />
               <Route path="commercial" element={<CommercialDiagnosis />} />
               <Route path="commercial/market" element={<CommercialMarket />} />
               <Route path="commercial/production" element={<CommercialProduction />} />
               <Route path="commercial/focus" element={<CommercialDevelopmentFocus />} />
               <Route path="development" element={<DevelopmentPriorities />} />
               <Route path="development/rewrite" element={<RewritePriorities />} />
-              <Route path="development/scenes" element={<SceneEconomy />} />
+              <Route path="development/scenes" element={<Navigate to="../craft/scenes" replace />} />
               
               {/* Legacy routes - redirect to consolidated pages */}
               <Route path="concept" element={<Navigate to="/sample-report/story" replace />} />
@@ -255,6 +257,7 @@ const App = () => (
               <Route path="craft/visual" element={<CraftVisual />} />
               <Route path="craft/emotional" element={<CraftEmotional />} />
               <Route path="craft/focus" element={<CraftDevelopmentFocus />} />
+              <Route path="craft/scenes" element={<SceneEconomy />} />
               <Route path="format" element={<ComicFormatDiagnosis />} />
               <Route path="commercial" element={<CommercialDiagnosis />} />
               <Route path="commercial/market" element={<CommercialMarket />} />
@@ -262,7 +265,7 @@ const App = () => (
               <Route path="commercial/focus" element={<CommercialDevelopmentFocus />} />
               <Route path="development" element={<DevelopmentPriorities />} />
               <Route path="development/rewrite" element={<RewritePriorities />} />
-              <Route path="development/scenes" element={<SceneEconomy />} />
+              <Route path="development/scenes" element={<Navigate to="../craft/scenes" replace />} />
               
               {/* Legacy routes - redirect to consolidated pages */}
               <Route path="concept" element={<Navigate to="/sample-comic-report/story" replace />} />
@@ -313,6 +316,7 @@ const App = () => (
               <Route path="craft/visual" element={<CraftVisual />} />
               <Route path="craft/emotional" element={<CraftEmotional />} />
               <Route path="craft/focus" element={<CraftDevelopmentFocus />} />
+              <Route path="craft/scenes" element={<SceneEconomy />} />
               <Route path="format" element={<FormatDiagnosis />} />
               <Route path="commercial" element={<CommercialDiagnosis />} />
               <Route path="commercial/market" element={<CommercialMarket />} />
@@ -320,7 +324,7 @@ const App = () => (
               <Route path="commercial/focus" element={<CommercialDevelopmentFocus />} />
               <Route path="development" element={<DevelopmentPriorities />} />
               <Route path="development/rewrite" element={<RewritePriorities />} />
-              <Route path="development/scenes" element={<SceneEconomy />} />
+              <Route path="development/scenes" element={<Navigate to="../craft/scenes" replace />} />
               
               {/* Legacy routes - redirect to new consolidated pages */}
               <Route path="concept" element={<Navigate to="/sample-web-series-report/story" replace />} />

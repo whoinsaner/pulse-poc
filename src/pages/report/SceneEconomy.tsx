@@ -1,17 +1,17 @@
+import { useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { ReportData, StakeholderLens } from '@/types/database';
 import { 
   SectionHeader, 
   ScoreDisplay, 
   VerdictBox,
-  ScoreBar,
   SubSectionHeader,
   StrengthWeaknessList,
-  RecommendationCard
+  RecommendationCard,
 } from '@/components/report/ui';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Layers, BarChart3, Clock, Scissors } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Layers, BarChart3 } from 'lucide-react';
+import { extractScore } from '@/lib/scoreUtils';
 
 interface ReportContextValue {
   reportData: ReportData;
@@ -20,84 +20,81 @@ interface ReportContextValue {
 }
 
 export default function SceneEconomy() {
-  const { reportData, currentScore } = useOutletContext<ReportContextValue>();
+  const { reportData } = useOutletContext<ReportContextValue>();
 
-  // Get structure-related parameters for economy analysis
-  const economyParams = reportData.parameterScores?.filter(p => 
-    p.category?.toLowerCase().includes('structure') || 
-    p.parameterName?.toLowerCase().includes('pacing') ||
-    p.parameterName?.toLowerCase().includes('economy') ||
-    p.parameterName?.toLowerCase().includes('efficiency')
-  ) || [];
+  // Get real parameters related to pacing, structure, and scene economy
+  const economyParams = useMemo(() => {
+    return (reportData.parameterScores || []).filter(p => {
+      const cat = p.category?.toLowerCase() || '';
+      const name = (p.parameterName || p.displayName || '').toLowerCase();
+      return (
+        cat.includes('structure') ||
+        name.includes('pacing') ||
+        name.includes('economy') ||
+        name.includes('efficiency') ||
+        name.includes('scene') ||
+        name.includes('momentum') ||
+        name.includes('rhythm') ||
+        name.includes('escalation')
+      );
+    });
+  }, [reportData.parameterScores]);
 
-  const economyScore = economyParams.length > 0 
-    ? economyParams.reduce((sum, p) => sum + p.score, 0) / economyParams.length 
-    : reportData.categoryScores?.['Structure'] || currentScore;
+  // Calculate score from real parameters
+  const economyScore = useMemo(() => {
+    if (economyParams.length > 0) {
+      return economyParams.reduce((sum, p) => sum + p.score, 0) / economyParams.length;
+    }
+    const structureScore = reportData.categoryScores?.['Structure'];
+    if (structureScore !== undefined) return extractScore(structureScore);
+    return 0;
+  }, [economyParams, reportData.categoryScores]);
 
-  const categoryScore = typeof reportData.categoryScores?.['Structure'] === 'number'
-    ? reportData.categoryScores['Structure']
-    : (reportData.categoryScores?.['Structure'] as { score?: number })?.score || economyScore;
-
-  // Scene analysis
+  // Real scene data
   const scenes = reportData.scenes || [];
   const totalScenes = scenes.length;
-  const pageCount = reportData.scriptMetadata?.pageCount || 110;
-  const avgSceneLength = totalScenes > 0 ? (pageCount / totalScenes).toFixed(1) : 'N/A';
-  
-  // Estimate scene efficiency
-  const essentialCount = Math.floor(totalScenes * 0.8);
-  const beneficialCount = Math.floor(totalScenes * 0.15);
-  const questionableCount = totalScenes - essentialCount - beneficialCount;
+  const pageCount = reportData.scriptMetadata?.pageCount || 0;
+  const avgSceneLength = totalScenes > 0 ? (pageCount / totalScenes).toFixed(1) : '—';
 
-  // Derived economy metrics - convert 0-100 scale to 0-10 for display
-  const baseScore10 = categoryScore / 10;
-  const economyMetrics = [
-    { label: 'Scene Efficiency', score: Math.min(10, Math.max(0, baseScore10)), description: 'Every scene earns its place' },
-    { label: 'Escalation Logic', score: Math.min(10, Math.max(0, baseScore10 + 0.4)), description: 'Stakes build appropriately' },
-    { label: 'Redundancy Control', score: Math.min(10, Math.max(0, baseScore10 - 0.5)), description: 'Minimal repetitive scenes' },
-    { label: 'Pacing Balance', score: Math.min(10, Math.max(0, baseScore10 + 0.2)), description: 'Action/dialogue rhythm' },
-  ];
+  // Diagnostic buckets from real params
+  const { working, underdeveloped, broken } = useMemo(() => {
+    const w = economyParams.filter(p => p.score >= 70);
+    const u = economyParams.filter(p => p.score >= 40 && p.score < 70);
+    const b = economyParams.filter(p => p.score < 40);
+    return { working: w, underdeveloped: u, broken: b };
+  }, [economyParams]);
 
-  // Act breakdown
-  const act1End = Math.floor(totalScenes * 0.25);
-  const act2End = Math.floor(totalScenes * 0.75);
-  
-  const actAnalysis = [
-    {
-      act: `Act I (Pages 1-${Math.floor(pageCount * 0.25)})`,
-      scenes: act1End,
-      efficiency: Math.min(100, categoryScore * 10 + 5),
-      notes: categoryScore >= 7 ? 'Tight setup, efficient character introductions' : 'Setup could be more efficient',
-    },
-    {
-      act: `Act II-A (Pages ${Math.floor(pageCount * 0.25)}-${Math.floor(pageCount * 0.5)})`,
-      scenes: Math.floor((act2End - act1End) / 2),
-      efficiency: Math.min(100, categoryScore * 9),
-      notes: categoryScore >= 7 ? 'Good momentum through rising action' : 'Some scenes feel redundant',
-    },
-    {
-      act: `Act II-B (Pages ${Math.floor(pageCount * 0.5)}-${Math.floor(pageCount * 0.75)})`,
-      scenes: Math.ceil((act2End - act1End) / 2),
-      efficiency: Math.min(100, categoryScore * 9.5),
-      notes: categoryScore >= 7 ? 'Strong midpoint and complications' : 'Could tighten some sequences',
-    },
-    {
-      act: `Act III (Pages ${Math.floor(pageCount * 0.75)}-${pageCount})`,
-      scenes: totalScenes - act2End,
-      efficiency: Math.min(100, categoryScore * 10 + 8),
-      notes: categoryScore >= 7 ? 'Excellent momentum to climax' : 'Good momentum overall',
-    },
-  ];
-
-  const strengths = economyParams.filter(p => p.score >= 7).map(p => ({
+  const strengths = working.map(p => ({
     text: p.displayName || p.parameterName,
-    detail: p.rationale?.slice(0, 80)
+    detail: p.rationale?.slice(0, 100),
   }));
 
-  const weaknesses = economyParams.filter(p => p.score < 5).map(p => ({
+  const weaknesses = [...broken, ...underdeveloped.slice(0, 3)].map(p => ({
     text: p.displayName || p.parameterName,
-    detail: p.rationale?.slice(0, 80)
+    detail: p.rationale?.slice(0, 100),
   }));
+
+  // Derive top economy metrics from the top 4 relevant params
+  const topMetrics = useMemo(() => {
+    const sorted = [...economyParams].sort((a, b) => b.score - a.score);
+    return sorted.slice(0, 4).map(p => ({
+      label: p.displayName || p.parameterName,
+      score: p.score,
+      description: p.rationale?.split('.')[0] || '',
+    }));
+  }, [economyParams]);
+
+  const getVerdictLabel = (score: number) => {
+    if (score >= 70) return 'Strong Scene Economy';
+    if (score >= 40) return 'Scene Economy Needs Attention';
+    return 'Weak Scene Economy';
+  };
+
+  const mapEffort = (fixCost?: string): 'easy' | 'moderate' | 'difficult' => {
+    if (fixCost === 'Low') return 'easy';
+    if (fixCost === 'High') return 'difficult';
+    return 'moderate';
+  };
 
   return (
     <div className="space-y-8 max-w-6xl mx-auto">
@@ -105,176 +102,135 @@ export default function SceneEconomy() {
         title="Scene Economy"
         subtitle="Analyzing scene efficiency, pacing, and opportunities for tightening"
         icon={Layers}
-        score={categoryScore}
+        score={economyScore}
       />
 
-      {/* Economy Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {economyMetrics.map((metric) => (
-          <Card key={metric.label} className="glass-premium">
-            <CardContent className="pt-6">
-              <ScoreDisplay score={metric.score} maxScore={10} size="md" />
-              <h3 className="font-display font-semibold mt-2">{metric.label}</h3>
-              <p className="text-sm text-muted-foreground">{metric.description}</p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {/* Top Metrics from real params */}
+      {topMetrics.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {topMetrics.map((metric) => (
+            <Card key={metric.label} className="glass-premium">
+              <CardContent className="pt-6">
+                <ScoreDisplay score={metric.score} maxScore={100} size="md" />
+                <h3 className="font-display font-semibold mt-2 text-sm">{metric.label}</h3>
+                <p className="text-xs text-muted-foreground line-clamp-2">{metric.description}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
 
-      {/* Scene Breakdown Overview */}
-      <Card className="glass-premium border-primary/30">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 font-display">
-            <BarChart3 className="h-5 w-5 text-primary" />
-            Scene Breakdown
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            <div className="text-center p-5 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 hover:border-primary/40 transition-all duration-300">
-              <p className="text-4xl font-mono font-bold text-primary glow-gold">{totalScenes}</p>
-              <p className="text-sm text-muted-foreground mt-1">Total Scenes</p>
+      {/* Scene Stats - from real data */}
+      {totalScenes > 0 && (
+        <Card className="glass-premium border-primary/30">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 font-display">
+              <BarChart3 className="h-5 w-5 text-primary" />
+              Scene Overview
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="text-center p-5 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20">
+                <p className="text-4xl font-mono font-bold text-primary">{totalScenes}</p>
+                <p className="text-sm text-muted-foreground mt-1">Total Scenes</p>
+              </div>
+              {pageCount > 0 && (
+                <div className="text-center p-5 rounded-xl bg-gradient-to-br from-chart-3/10 to-chart-3/5 border border-chart-3/20">
+                  <p className="text-4xl font-mono font-bold text-chart-3">{pageCount}</p>
+                  <p className="text-sm text-muted-foreground mt-1">Pages</p>
+                </div>
+              )}
+              <div className="text-center p-5 rounded-xl bg-gradient-to-br from-muted/30 to-muted/10 border border-border/30">
+                <p className="text-4xl font-mono font-bold text-foreground">{avgSceneLength}</p>
+                <p className="text-sm text-muted-foreground mt-1">Avg Pages/Scene</p>
+              </div>
+              <div className="text-center p-5 rounded-xl bg-gradient-to-br from-success/10 to-success/5 border border-success/20">
+                <p className="text-4xl font-mono font-bold text-success">{working.length}</p>
+                <p className="text-sm text-muted-foreground mt-1">Strong Params</p>
+              </div>
             </div>
-            <div className="text-center p-5 rounded-xl bg-gradient-to-br from-success/10 to-success/5 border border-success/20 hover:border-success/40 transition-all duration-300">
-              <p className="text-4xl font-mono font-bold text-success">{essentialCount}</p>
-              <p className="text-sm text-muted-foreground mt-1">Essential</p>
-            </div>
-            <div className="text-center p-5 rounded-xl bg-gradient-to-br from-chart-3/10 to-chart-3/5 border border-chart-3/20 hover:border-chart-3/40 transition-all duration-300">
-              <p className="text-4xl font-mono font-bold text-chart-3">{beneficialCount}</p>
-              <p className="text-sm text-muted-foreground mt-1">Beneficial</p>
-            </div>
-            <div className="text-center p-5 rounded-xl bg-gradient-to-br from-warning/10 to-warning/5 border border-warning/20 hover:border-warning/40 transition-all duration-300">
-              <p className="text-4xl font-mono font-bold text-warning">{questionableCount}</p>
-              <p className="text-sm text-muted-foreground mt-1">Questionable</p>
-            </div>
-            <div className="text-center p-5 rounded-xl bg-gradient-to-br from-muted/30 to-muted/10 border border-border/30 hover:border-border/50 transition-all duration-300">
-              <p className="text-4xl font-mono font-bold text-foreground">{avgSceneLength}</p>
-              <p className="text-sm text-muted-foreground mt-1">Avg Pages</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Verdict */}
       <VerdictBox
-        type={categoryScore >= 7 ? 'success' : categoryScore >= 5 ? 'finding' : 'issue'}
-        title={categoryScore >= 7 ? 'Efficient Scene Structure' : categoryScore >= 5 ? 'Room for Tightening' : 'Scene Economy Issues'}
+        type={economyScore >= 70 ? 'success' : economyScore >= 40 ? 'finding' : 'issue'}
+        title={getVerdictLabel(economyScore)}
         content={
-          categoryScore >= 7 
-            ? `The script is efficiently structured at ${pageCount} pages with ${totalScenes} scenes. Each act maintains good momentum and most scenes justify their presence.`
-            : categoryScore >= 5
-            ? `The script at ${pageCount} pages has opportunities for improvement. Cutting or reworking ${questionableCount} scenes could improve pacing without losing essential content.`
-            : `Scene economy needs attention. Several sequences feel redundant or could be combined. Focus on ensuring every scene advances plot, character, or theme.`
+          economyScore >= 70
+            ? `Scene economy is strong with ${working.length} parameters performing well. The script maintains good structural efficiency across ${totalScenes} scenes.`
+            : economyScore >= 40
+            ? `Scene economy shows potential but ${underdeveloped.length} parameters need attention. Review pacing and structural tightness across the ${totalScenes} scenes.`
+            : `Scene economy needs significant work. ${broken.length} parameters are underperforming. Focus on structural efficiency and pacing.`
         }
       />
-
-      {/* Act-by-Act Analysis */}
-      <Card className="glass-premium p-6">
-        <SubSectionHeader title="Act-by-Act Efficiency" />
-        <div className="space-y-4">
-          {actAnalysis.map((act, idx) => (
-            <div key={idx} className="p-5 rounded-xl bg-gradient-to-r from-muted/20 to-transparent border border-border/30 hover:border-border/50 transition-all duration-300">
-              <div className="flex items-center justify-between mb-3">
-                <h4 className="font-display font-semibold text-foreground">{act.act}</h4>
-                <div className="flex items-center gap-4">
-                  <span className="text-sm font-mono text-muted-foreground">{act.scenes} scenes</span>
-                  <div className="flex items-center gap-3">
-                    <div className="w-28 h-2.5 bg-muted/50 rounded-full overflow-hidden">
-                      <div 
-                        className={cn(
-                          "h-full rounded-full transition-all duration-500",
-                          act.efficiency >= 85 ? 'bg-gradient-to-r from-success/80 to-success' :
-                          act.efficiency >= 75 ? 'bg-gradient-to-r from-chart-3/80 to-chart-3' :
-                          'bg-gradient-to-r from-warning/80 to-warning'
-                        )}
-                        style={{ width: `${act.efficiency}%` }}
-                      />
-                    </div>
-                    <span className={cn(
-                      "text-sm font-mono font-bold",
-                      act.efficiency >= 85 ? 'text-success' :
-                      act.efficiency >= 75 ? 'text-chart-3' :
-                      'text-warning'
-                    )}>{act.efficiency.toFixed(0)}%</span>
-                  </div>
-                </div>
-              </div>
-              <p className="text-sm text-muted-foreground">{act.notes}</p>
-            </div>
-          ))}
-        </div>
-      </Card>
 
       {/* Parameter Breakdown */}
       {economyParams.length > 0 && (
         <Card className="glass-premium p-6">
           <SubSectionHeader title="Economy Parameters" />
-          <div className="space-y-4">
-            {economyParams.slice(0, 8).map((param, index) => (
-              <div key={index}>
-                <ScoreBar 
-                  score={param.score} 
-                  label={param.displayName || param.parameterName}
-                  showValue 
-                />
+          <div className="space-y-3">
+            {economyParams.map((param) => (
+              <div key={param.parameterId} className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border/50">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium">{param.displayName || param.parameterName}</p>
+                  {param.rationale && (
+                    <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{param.rationale}</p>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 shrink-0 ml-4">
+                  <div className="w-20 h-2 bg-muted/50 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all ${
+                        param.score >= 70 ? 'bg-success' : param.score >= 40 ? 'bg-warning' : 'bg-destructive'
+                      }`}
+                      style={{ width: `${param.score}%` }}
+                    />
+                  </div>
+                  <span className="text-sm font-mono font-bold w-8 text-right">{Math.round(param.score)}</span>
+                </div>
               </div>
             ))}
           </div>
         </Card>
       )}
 
-      {/* Strengths & Weaknesses */}
-      {(strengths.length > 0 || weaknesses.length > 0) ? (
+      {/* Strengths & Weaknesses from real data */}
+      {(strengths.length > 0 || weaknesses.length > 0) && (
         <StrengthWeaknessList
-          strengths={strengths.length > 0 ? strengths : [{ text: 'Act III is well-paced' }]}
-          weaknesses={weaknesses.length > 0 ? weaknesses : [{ text: 'Some scenes could be tightened' }]}
-        />
-      ) : (
-        <StrengthWeaknessList
-          strengths={[
-            { text: 'Act III is efficient' },
-            { text: 'Opening sequence wastes no time' },
-            { text: 'Average scene length is appropriate' },
-          ]}
-          weaknesses={[
-            { text: 'Some Act II scenes may be redundant' },
-            { text: 'Exposition could be delivered more efficiently' },
-          ]}
+          strengths={strengths}
+          weaknesses={weaknesses}
         />
       )}
 
-      {/* Recommendations */}
-      <Card className="glass-premium p-6">
-        <SubSectionHeader title="Economy Recommendations" />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {questionableCount > 2 && (
-            <RecommendationCard
-              title="Review Questionable Scenes"
-              description={`${questionableCount} scenes may be redundant or could be combined. Review each for essential contribution.`}
-              priority="high"
-              effort="moderate"
-            />
-          )}
-          <RecommendationCard
-            title="Tighten Act II"
-            description="The second act typically has the most room for improvement. Look for scenes covering the same ground."
-            priority={categoryScore < 7 ? 'high' : 'medium'}
-            effort="moderate"
-          />
-          <RecommendationCard
-            title="Convert Exposition to Action"
-            description="Identify scenes that are primarily expositional and find ways to convey information through action."
-            priority="medium"
-            effort="moderate"
-          />
-          <RecommendationCard
-            title="Combine Similar Scenes"
-            description="Look for adjacent scenes that could be merged without losing essential beats."
-            priority="low"
-            effort="easy"
-          />
-        </div>
-      </Card>
+      {/* Recommendations based on actual weak areas */}
+      {(broken.length > 0 || underdeveloped.length > 0) && (
+        <Card className="glass-premium p-6">
+          <SubSectionHeader title="Economy Recommendations" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {broken.slice(0, 2).map((param) => (
+              <RecommendationCard
+                key={param.parameterId}
+                title={`Fix: ${param.displayName || param.parameterName}`}
+                description={param.rationale?.slice(0, 150) || 'This parameter needs immediate attention.'}
+                priority="high"
+                effort={mapEffort(param.fixCost)}
+              />
+            ))}
+            {underdeveloped.slice(0, 2).map((param) => (
+              <RecommendationCard
+                key={param.parameterId}
+                title={`Improve: ${param.displayName || param.parameterName}`}
+                description={param.rationale?.slice(0, 150) || 'This parameter has room for improvement.'}
+                priority="medium"
+                effort={mapEffort(param.fixCost)}
+              />
+            ))}
+          </div>
+        </Card>
+      )}
     </div>
   );
 }
