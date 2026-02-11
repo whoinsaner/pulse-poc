@@ -168,6 +168,9 @@ export default function Marketability() {
                   label={param.displayName || param.parameterName}
                   showValue 
                 />
+                {param.rationale && (
+                  <p className="text-sm text-muted-foreground mt-1">{param.rationale}</p>
+                )}
               </div>
             ))}
           </div>

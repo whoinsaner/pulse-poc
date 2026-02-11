@@ -164,7 +164,7 @@ function CategoryCard({ title, parameters }: CategoryCardProps) {
                 <span className="text-sm font-mono">{param.score}</span>
               </div>
               {param.rationale && (
-                <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+                <p className="text-xs text-muted-foreground mt-0.5">
                   {param.rationale}
                 </p>
               )}
