@@ -117,6 +117,7 @@ const USAF_NAV_GROUPS: NavGroup[] = [
       { id: 'craft-theme', label: 'Theme & Meaning', icon: Heart, path: '/craft/theme', requiredCategories: ['Theme'] },
       { id: 'craft-visual', label: 'Visual Storytelling', icon: Eye, path: '/craft/visual', requiredCategories: ['World & Logic', 'World'] },
       { id: 'craft-emotional', label: 'Emotional Arc', icon: Sparkles, path: '/craft/emotional', requiredCategories: ['Emotional Arc', 'Emotion'] },
+      { id: 'craft-scenes', label: 'Scene Economy', icon: Layers, path: '/craft/scenes', requiredCategories: ['Structure'] },
       { id: 'craft-focus', label: 'Development Focus', icon: Target, path: '/craft/focus' },
     ],
   },
@@ -146,7 +147,6 @@ const USAF_NAV_GROUPS: NavGroup[] = [
     items: [
       { id: 'development', label: 'Development Priorities', icon: ListTodo, path: '/development' },
       { id: 'development-rewrite', label: 'Rewrite Priorities', icon: ListTodo, path: '/development/rewrite' },
-      { id: 'development-scenes', label: 'Scene Economy', icon: Layers, path: '/development/scenes' },
     ],
   },
   {
