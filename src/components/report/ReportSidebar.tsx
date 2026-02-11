@@ -9,7 +9,6 @@ import {
   Film, 
   Users, 
   Zap, 
-  Sparkles,
   ChevronDown,
   ChevronUp,
 } from 'lucide-react';
@@ -17,7 +16,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ScoreRing } from '@/components/ScoreRing';
-import { LensSelector } from '@/components/LensToggle';
+
 import { StakeholderBadge } from '@/components/StakeholderBadge';
 import { DecisionSignalBadge } from '@/components/report/DecisionSignalBadge';
 import { ExportDialog } from '@/components/report/ExportDialog';
@@ -119,11 +118,6 @@ export function ReportSidebar({
           <nav className="space-y-1">
             {navGroups.map((group) => (
               <div key={group.id} className="mb-2">
-                {!collapsed && (
-                  <span className="px-3 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block">
-                    {group.label}
-                  </span>
-                )}
                 <div className="space-y-0.5">
                   {group.items.map((item, itemIndex) => {
                     const isActive = item.path === currentPath;
@@ -217,19 +211,6 @@ export function ReportSidebar({
             </div>
           )}
 
-          {/* Stakeholder Lens - expanded only */}
-          {!collapsed && !stakeholderLens && (
-            <div className="space-y-2">
-              <h3 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-1">
-                Viewing As
-              </h3>
-              <LensSelector 
-                activeLens={activeLens} 
-                onLensChange={setActiveLens} 
-                compact 
-              />
-            </div>
-          )}
 
           {!collapsed && stakeholderLens && (
             <div className="space-y-2">
@@ -245,27 +226,6 @@ export function ReportSidebar({
             </div>
           )}
 
-          {/* Top Insights - expanded only */}
-          {!collapsed && reportData.insights && reportData.insights.length > 0 && (
-            <div className="space-y-2">
-              <h3 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-1">
-                Top Insights
-              </h3>
-              <div className="space-y-1.5">
-                {reportData.insights.slice(0, 3).map((insight, i) => (
-                  <div 
-                    key={i}
-                    className="p-2.5 rounded-lg bg-muted/30 border border-border/50 hover:border-primary/30 transition-colors"
-                  >
-                    <div className="flex items-start gap-2">
-                      <Sparkles className="h-3 w-3 text-accent-gold mt-0.5 shrink-0" />
-                      <p className="text-xs font-medium line-clamp-2">{insight.title}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       </ScrollArea>
 
