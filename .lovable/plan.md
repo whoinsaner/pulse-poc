@@ -1,45 +1,54 @@
 
+# Merge Development Focus into Parent Diagnosis Pages
 
-# Wire Script Page to Real Extracted Data
+## What Changes
+Each report section (Story, Characters, Craft, Commercial) currently has a separate "Development Focus" sub-page accessible via sidebar navigation. This change merges that content directly into the bottom of each section's main diagnosis page, then removes the standalone pages, nav items, and routes.
 
-## Problem
-The Script page inside the report (`/report/:id/script`) renders the hardcoded `SampleScript` component with demo data ("The Last Signal"), not the actual parsed script. The sidebar Quick Stats show real numbers (91 pages, 74 scenes) while the content area shows sample data (8 scenes, 5 characters) -- a visible mismatch.
+## Affected Sections
+- **Story Diagnosis** -- absorb StoryDevelopmentFocus content
+- **Character Diagnosis** -- absorb CharacterDevelopmentFocus content
+- **Craft Diagnosis** -- already has inline development items (just needs the full `DevelopmentFocus` component added)
+- **Commercial Diagnosis** -- already has inline development items (just needs the full `DevelopmentFocus` component added)
 
-## Solution
-Create a new `ReportScript.tsx` page that uses the existing `ScriptContentViewer` component (which already fetches real scenes, characters, and narrative graphs from the database) and wires it to the report's actual `script_id`.
+## Changes by File
 
-## Changes
+### 1. `src/pages/report/StoryDiagnosis.tsx`
+- Import `DevelopmentFocus` from report UI components
+- Add a `developmentItems` memo that filters story parameters scoring below 70, sorted ascending
+- Render a `DevelopmentFocus` card at the bottom of the page with cross-links to Characters and Craft
 
-### 1. Create `src/pages/report/ReportScript.tsx`
-A new page component that:
-- Gets the `report` object from `useReport()` context (which has `script_id`)
-- Fetches the script metadata (title, genre, page count, logline) from the `scripts` table using `report.script_id`
-- Renders a header with real script metadata (title, genre, page count, script type)
-- Embeds the existing `ScriptContentViewer` component, passing the real `script_id`
-- Shows a loading skeleton while data loads
-- Handles missing script gracefully
+### 2. `src/pages/report/CharacterDiagnosis.tsx`
+- Import `DevelopmentFocus` from report UI components
+- Add a `developmentItems` memo filtering character parameters below 70
+- Render a `DevelopmentFocus` card at the bottom with cross-links to Story and Craft
 
-### 2. Update `src/App.tsx` routing
-Replace the `SampleScript` import on the report script route with the new `ReportScript` component. Only the real report routes change -- sample report routes keep using `SampleScript`.
+### 3. `src/pages/report/CraftDiagnosis.tsx`
+- Already computes `developmentItems` (lines 70-79) but doesn't render them
+- Add a `DevelopmentFocus` card at the bottom using the existing `developmentItems` with cross-links to Story and Characters
 
-Specifically:
-- Line ~149: Change `<Route path="script" element={<SampleScript />} />` inside the `/report/:runId` layout to use `<ReportScript />`
-- Keep `SampleScript` for sample report routes (sample-report, sample-comic-report, etc.)
+### 4. `src/pages/report/CommercialDiagnosis.tsx`
+- Already computes `developmentItems` (lines 71-80) but doesn't render them
+- Add a `DevelopmentFocus` card at the bottom using the existing `developmentItems` with cross-links to Story and Craft
 
-### Technical Details
+### 5. `src/lib/reportNavigation.ts`
+- Remove 4 nav items from `USAF_NAV_GROUPS`:
+  - `story-focus` (line 96)
+  - `character-focus` (line 108)
+  - `craft-focus` (line 122)
+  - `commercial-focus` (line 141)
 
-**Data flow:**
-```text
-ReportLayout (fetches report with script_id)
-  -> ReportScript (reads report from useReport() context)
-    -> fetches script metadata from 'scripts' table
-    -> ScriptContentViewer (fetches scenes, characters, narrative_graphs by script_id)
-```
+### 6. `src/App.tsx`
+- Remove all `*/focus` route registrations (appears in 3 route groups for real reports, sample reports, and comic reports)
+- Remove the imports for `StoryDevelopmentFocus`, `CharacterDevelopmentFocus`, `CraftDevelopmentFocus`, `CommercialDevelopmentFocus`
 
-**Files modified:**
-- `src/pages/report/ReportScript.tsx` -- new file
-- `src/App.tsx` -- swap import on real report route only
+### 7. Delete standalone pages (4 files)
+- `src/pages/report/StoryDevelopmentFocus.tsx`
+- `src/pages/report/CharacterDevelopmentFocus.tsx`
+- `src/pages/report/CraftDevelopmentFocus.tsx`
+- `src/pages/report/CommercialDevelopmentFocus.tsx`
 
-**Files unchanged:**
-- `src/components/ScriptContentViewer.tsx` -- already works with any script_id
-- `src/pages/SampleScript.tsx` -- kept for sample/demo routes
+## Result
+- 4 fewer sidebar nav items
+- 4 fewer routes
+- 4 deleted page files
+- Development focus content appears inline at the bottom of each diagnosis page, keeping all relevant information in one place
