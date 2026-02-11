@@ -53,7 +53,7 @@ export default function ReportNarrative() {
             Visual representation of scene intensity and distribution
           </p>
         </div>
-        <SceneHeatmap scenes={reportData.scenes || []} />
+        <SceneHeatmap scenes={reportData.scenes || []} sceneAnalysis={reportData.sceneAnalysis} />
       </section>
 
       {/* Pacing Analysis */}

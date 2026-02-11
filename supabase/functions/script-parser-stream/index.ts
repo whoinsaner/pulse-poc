@@ -2130,6 +2130,7 @@ function parseTextFormat(content: string): { scenes: Scene[]; characters: Charac
   let currentSceneNumber = 0;
   let currentScene: Scene | null = null;
   let currentPage = 1;
+  let descriptionLines: string[] = [];
   
   // Scene heading patterns - standard + expanded
   const sceneHeadingPattern = /^(?:\d+[A-Z]?\.\s*)?(INT\.|EXT\.|INT\/EXT\.|I\/E\.)\s*(.+?)(?:\s*[-–—]\s*(.+))?$/i;
@@ -2167,9 +2168,18 @@ function parseTextFormat(content: string): { scenes: Scene[]; characters: Charac
       currentPage = Math.max(currentPage, Math.ceil((i + 1) / 55));
     }
     
+    // Helper: finalize previous scene description
+    const finalizeSceneDescription = () => {
+      if (currentScene && descriptionLines.length > 0) {
+        currentScene.description = descriptionLines.join(' ').trim().substring(0, 500);
+      }
+      descriptionLines = [];
+    };
+
     // Standard scene heading (INT./EXT.)
     const sceneMatch = line.match(sceneHeadingPattern);
     if (sceneMatch) {
+      finalizeSceneDescription();
       if (currentScene) currentScene.page_end = currentPage;
       
       currentSceneNumber++;
@@ -2192,6 +2202,7 @@ function parseTextFormat(content: string): { scenes: Scene[]; characters: Charac
     // Hindi scene pattern
     const hindiMatch = line.match(hindiScenePattern);
     if (hindiMatch) {
+      finalizeSceneDescription();
       if (currentScene) currentScene.page_end = currentPage;
       
       currentSceneNumber++;
@@ -2214,6 +2225,7 @@ function parseTextFormat(content: string): { scenes: Scene[]; characters: Charac
     // Numbered scene pattern (SCENE 1:, SC. 2)
     const numberedMatch = line.match(numberedScenePattern);
     if (numberedMatch) {
+      finalizeSceneDescription();
       if (currentScene) currentScene.page_end = currentPage;
       
       currentSceneNumber++;
@@ -2235,6 +2247,7 @@ function parseTextFormat(content: string): { scenes: Scene[]; characters: Charac
     // Location-only pattern (OFFICE - DAY)
     const locationMatch = line.match(locationOnlyPattern);
     if (locationMatch) {
+      finalizeSceneDescription();
       if (currentScene) currentScene.page_end = currentPage;
       
       currentSceneNumber++;
@@ -2251,6 +2264,17 @@ function parseTextFormat(content: string): { scenes: Scene[]; characters: Charac
       };
       scenes.push(currentScene);
       continue;
+    }
+
+    // Accumulate description lines for current scene (action/description text)
+    if (currentScene && line.length > 5) {
+      // Skip lines that look like character cues (ALL CAPS short lines) or transitions
+      const isCharCue = /^[A-Z][A-Z\s\.']{0,35}(\s*\(.*\))?$/.test(line) && line.length < 40;
+      const isTransition = /^(FADE|CUT|DISSOLVE|SMASH|JUMP|TIME|MATCH|IRIS|WIPE)\b/i.test(line);
+      const isParenthetical = /^\(.*\)$/.test(line);
+      if (!isCharCue && !isTransition && !isParenthetical && descriptionLines.join(' ').length < 500) {
+        descriptionLines.push(line);
+      }
     }
     
     // Character detection - must be ALL CAPS, short, followed by dialogue
@@ -2291,6 +2315,10 @@ function parseTextFormat(content: string): { scenes: Scene[]; characters: Charac
     }
   }
   
+  // Finalize last scene description
+  if (currentScene && descriptionLines.length > 0) {
+    currentScene.description = descriptionLines.join(' ').trim().substring(0, 500);
+  }
   if (currentScene) currentScene.page_end = currentPage;
   
   console.log(`[script-parser-stream] parseTextFormat: ${scenes.length} scenes, ${characterMap.size} characters from ${lines.length} lines`);
@@ -2314,6 +2342,7 @@ function parseComicFormat(
   
   let panelNumber = 0;
   let pageNumber = 0;
+  let comicDescLines: string[] = [];
   
   // Seed character map with pre-detected characters from normalization stage
   if (preDetectedCharacters && preDetectedCharacters.length > 0) {
@@ -2387,6 +2416,11 @@ function parseComicFormat(
     for (const pattern of panelPatterns) {
       const match = trimmed.match(pattern);
       if (match) {
+        // Finalize previous panel's description
+        if (scenes.length > 0 && comicDescLines.length > 0) {
+          scenes[scenes.length - 1].description = comicDescLines.join(' ').trim().substring(0, 500);
+          comicDescLines = [];
+        }
         panelNumber++;
         const panelId = match[1];
         scenes.push({
@@ -2450,7 +2484,16 @@ function parseComicFormat(
         }
         characterMap.get(trimmed)!.dialogue_count++;
       }
+      // Accumulate non-dialogue, non-structural lines as panel description
+      if (scenes.length > 0 && trimmed.length > 5 && comicDescLines.join(' ').length < 500) {
+        comicDescLines.push(trimmed);
+      }
     }
+  }
+  
+  // Finalize last panel's description
+  if (scenes.length > 0 && comicDescLines.length > 0) {
+    scenes[scenes.length - 1].description = comicDescLines.join(' ').trim().substring(0, 500);
   }
   
   console.log(`[script-parser-stream] parseComicFormat: ${scenes.length} panels, ${characterMap.size} characters from ${lines.length} lines`);
@@ -2626,7 +2669,8 @@ Return ONLY valid JSON with this exact structure:
       "int_ext": "INT",
       "location": "LOCATION NAME",
       "time_of_day": "DAY",
-      "description": "Brief scene description",
+      "description": "Brief scene description of what happens",
+      "emotional_tone": "tense",
       "page_start": 1,
       "page_end": 2
     }
@@ -2646,6 +2690,8 @@ Rules:
 - Extract EVERY scene heading (INT./EXT. LOCATION - TIME)
 - int_ext must be "INT", "EXT", or "INT/EXT"
 - time_of_day: "DAY", "NIGHT", "DAWN", "DUSK", "MORNING", "EVENING", or null
+- description: Brief summary of the action/events in the scene (1-2 sentences)
+- emotional_tone: One of "tense", "calm", "dramatic", "comedic", "romantic", "suspenseful", "melancholic", "hopeful", "neutral"
 - Extract ALL speaking characters with accurate dialogue counts
 - Estimate page_start/page_end based on script position
 - Expected ~${expectedPages} pages total`
