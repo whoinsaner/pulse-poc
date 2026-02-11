@@ -437,7 +437,7 @@ export interface DiagnosticCounts {
  * Needs Work: score < 65
  */
 /** Extract numeric score from a value that may be a number or {score: number, ...} object */
-function extractScore(value: unknown): number {
+export function extractScore(value: unknown): number {
   if (typeof value === 'number') return value;
   if (value && typeof value === 'object' && 'score' in value) {
     const s = (value as Record<string, unknown>).score;

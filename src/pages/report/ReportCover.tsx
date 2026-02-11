@@ -8,6 +8,7 @@ import {
   getDecisionSignal, 
   getMaturityStage,
   getDiagnosticCategory,
+  extractScore,
 } from '@/lib/scoreUtils';
 import { MaturityBadge } from '@/components/report/ui/MaturityBadge';
 import { CompactDiagnosis } from '@/components/report/ui/DiagnosisSummary';
@@ -70,8 +71,8 @@ export default function ReportCover() {
     
     return NAVIGATION_SECTIONS.map(section => {
       const relevantScores = section.categories
-        .map(cat => categoryScores[cat])
-        .filter(score => score !== undefined);
+        .map(cat => extractScore(categoryScores[cat]))
+        .filter(score => score > 0);
       
       const avgScore = relevantScores.length > 0
         ? relevantScores.reduce((a, b) => a + b, 0) / relevantScores.length
@@ -88,10 +89,10 @@ export default function ReportCover() {
   const formatSection = useMemo(() => {
     const scriptType = metadata?.scriptType;
     if (scriptType === 'web_series') {
-      return { id: 'format', label: 'Web Series', icon: Monitor, path: '/format', score: reportData.categoryScores?.['Web Series'] || 0 };
+      return { id: 'format', label: 'Web Series', icon: Monitor, path: '/format', score: extractScore(reportData.categoryScores?.['Web Series']) };
     }
     if (scriptType === 'micro_drama') {
-      return { id: 'format', label: 'Micro Drama', icon: Smartphone, path: '/format', score: reportData.categoryScores?.['Micro Drama'] || 0 };
+      return { id: 'format', label: 'Micro Drama', icon: Smartphone, path: '/format', score: extractScore(reportData.categoryScores?.['Micro Drama']) };
     }
     if (scriptType === 'comic') {
       // Calculate average comic score from comic-specific categories
