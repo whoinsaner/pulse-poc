@@ -147,7 +147,6 @@ const USAF_NAV_GROUPS: NavGroup[] = [
     applicableTypes: 'all',
     items: [
       { id: 'development', label: 'Development Priorities', icon: ListTodo, path: '/development' },
-      { id: 'development-rewrite', label: 'Rewrite Priorities', icon: ListTodo, path: '/development/rewrite' },
     ],
   },
   {
