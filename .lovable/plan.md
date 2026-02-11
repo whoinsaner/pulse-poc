@@ -1,38 +1,39 @@
 
-# Move "Viewing As" to Header, Remove Top Insights & Group Labels from Sidebar
+# Hide Series Bible from Feature Film Reports
 
-## Changes
+## Problem
+The "Series Bible" navigation item appears for all script types, including standalone feature films where it's irrelevant. A Series Bible covers episodic sustainability, series engine, and repeatability -- concepts that don't apply to one-off films.
 
-### 1. Move "Viewing As" lens selector to the CommandHeader (top nav bar)
+## Solution
+Make the Series Bible nav item conditionally visible only for episodic/serialized script types.
 
-The `LensSelector` dropdown currently lives in the sidebar under a "Viewing As" heading. It will be relocated to the top header bar, positioned to the left of the Export button.
+### Changes
 
-**CommandHeader.tsx changes:**
-- Import `LensSelector` from `@/components/LensToggle`
-- Add `activeLens` and `setActiveLens` props (already available via `activeLens` prop; add `onLensChange` callback prop)
-- Render `<LensSelector>` in the right-side actions area, before the `ExportDialog`
-- Only show when `stakeholderLens` is null (same condition as sidebar)
+**File: `src/lib/reportNavigation.ts`**
 
-**ReportSidebar.tsx changes:**
-- Remove the "Viewing As" section (lines 220-232) including the `LensSelector` import usage in sidebar
-- Keep the "Stakeholder Report" badge section as-is (it shows when viewing a locked stakeholder report)
+In both `ALL_NAV_GROUPS` and `USAF_NAV_GROUPS`, update the Reference group to split items so that "Series Bible" only appears for applicable types. Two approaches:
 
-### 2. Remove Top Insights section from the sidebar
+**Approach chosen**: Add an `applicableTypes` field to the `NavItem` interface (individual items), then filter items by script type in `getNavGroupsForScriptType()`.
 
-Remove the entire "Top Insights" block (lines 248-268) from `ReportSidebar.tsx`. This includes the heading, the insight cards, and the `Sparkles` icon import (if no longer used).
+1. **Add optional `applicableTypes` to `NavItem` interface** -- allows per-item filtering (currently only groups have this field).
 
-### 3. Remove non-clickable group labels from sidebar navigation
+2. **Tag the Series Bible item** with `applicableTypes: ['web_series', 'pilot', 'episode', 'micro_drama']` in both nav group arrays.
 
-Remove the group label headers (e.g., "Story Analysis", "Characters", "Craft") that appear as uppercase text above each nav group. These are non-interactive text elements at lines 122-126. The nav items themselves remain -- only the category headings are removed.
+3. **Update `getNavGroupsForScriptType()`** to also filter out individual items whose `applicableTypes` don't match the current script type, after filtering groups.
 
-## Technical Details
+This is a minimal, surgical change -- no new files, no UI changes, just conditional visibility.
 
-**Files modified:**
-- `src/components/report/CommandHeader.tsx` -- add `LensSelector`, add `onLensChange` prop
-- `src/components/report/ReportSidebar.tsx` -- remove 3 sections (Viewing As, Top Insights, group labels)
-- `src/components/report/ReportLayout.tsx` -- pass `setActiveLens` to `CommandHeader` (it already passes `activeLens`)
+### Technical Detail
 
-**Props flow:**
-- `ReportLayout` already has `activeLens` and `setActiveLens` state
-- `CommandHeader` needs a new `onLensChange` prop mapped to `setActiveLens`
-- The existing `stakeholderLens` null-check gates visibility in the header, same as it did in the sidebar
+```text
+NavItem interface:
+  + applicableTypes?: ScriptType[] | 'all'   (optional, defaults to 'all')
+
+Series Bible item:
+  { id: 'bible', label: 'Series Bible', ..., applicableTypes: ['web_series', 'pilot', 'episode', 'micro_drama'] }
+
+getNavGroupsForScriptType():
+  After filtering groups, also filter each group's items by applicableTypes
+```
+
+One file modified: `src/lib/reportNavigation.ts`
