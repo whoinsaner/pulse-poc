@@ -52,6 +52,7 @@ import SampleWebSeriesReportLayout from "./pages/SampleWebSeriesReport";
 import SampleMicroDramaReportLayout from "./pages/SampleMicroDramaReport";
 import ComicGallery from "./pages/ComicGallery";
 import MicroDramaAnalysis from "./pages/report/MicroDramaAnalysis";
+import ReportScript from "./pages/report/ReportScript";
 // New USAF Redesign Pages
 import ReportCover from "./pages/report/ReportCover";
 import StoryDiagnosis from "./pages/report/StoryDiagnosis";
@@ -146,7 +147,7 @@ const App = () => (
               <Route path="development/rewrite" element={<RewritePriorities />} />
               <Route path="development/scenes" element={<Navigate to="../craft/scenes" replace />} />
               <Route path="scorecard" element={<CompleteScorecard />} />
-              <Route path="script" element={<SampleScript />} />
+              <Route path="script" element={<ReportScript />} />
               
               {/* Legacy routes - redirect to consolidated pages */}
               <Route path="concept" element={<Navigate to="../story" replace />} />
