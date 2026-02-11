@@ -212,9 +212,7 @@ export default function DevelopmentPriorities() {
                   <span className="font-mono text-sm">{param.score}</span>
                 </div>
                 {param.rationale && (
-                  <p className="text-xs text-muted-foreground mt-1 line-clamp-1">
-                    {param.rationale}
-                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">{param.rationale}</p>
                 )}
               </Card>
             ))}
