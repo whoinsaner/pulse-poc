@@ -2,7 +2,6 @@ import { useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { ReportData, StakeholderLens } from '@/types/database';
 import { Card } from '@/components/ui/card';
-import { AgentNarrativePanel } from '@/components/report/AgentNarrativePanel';
 import { 
   SectionHeader, 
   DiagnosisSummary,
@@ -92,13 +91,6 @@ export default function StoryDiagnosis() {
         defaultVisibleCount={6}
       />
 
-      {/* Structure Agent Content (kept inline — no dedicated sub-page) */}
-      {reportData.agentContent?.StructureAgent && (
-        <div>
-          <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">Structure</h3>
-          <AgentNarrativePanel agentName="StructureAgent" content={reportData.agentContent.StructureAgent} />
-        </div>
-      )}
 
       {/* Fallback: Category Deep-Dives (when no agentContent) */}
       {!reportData.agentContent && (
