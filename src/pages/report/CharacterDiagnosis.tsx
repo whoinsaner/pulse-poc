@@ -178,12 +178,8 @@ export default function CharacterDiagnosis() {
         />
       )}
 
-      {/* Section Navigator */}
-      <SectionNavigator
-        sections={NAV_SECTIONS}
-        currentSection="characters"
-        basePath={basePath}
-      />
+
+
     </div>
   );
 }

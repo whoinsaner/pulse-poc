@@ -241,12 +241,8 @@ export default function CraftDiagnosis() {
         />
       )}
 
-      {/* Section Navigator */}
-      <SectionNavigator
-        sections={NAV_SECTIONS}
-        currentSection="craft"
-        basePath={basePath}
-      />
+
+
     </div>
   );
 }

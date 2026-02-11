@@ -157,12 +157,8 @@ export default function StoryDiagnosis() {
         />
       )}
 
-      {/* Section Navigator */}
-      <SectionNavigator
-        sections={NAV_SECTIONS}
-        currentSection="story"
-        basePath={basePath}
-      />
+
+
     </div>
   );
 }

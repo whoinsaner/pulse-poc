@@ -363,12 +363,8 @@ export default function ComicFormatDiagnosis() {
         />
       )}
 
-      {/* Section Navigator */}
-      <SectionNavigator
-        sections={NAV_SECTIONS}
-        currentSection="format"
-        basePath={basePath}
-      />
+
+
     </div>
   );
 }

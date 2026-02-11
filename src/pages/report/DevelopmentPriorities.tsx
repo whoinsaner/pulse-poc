@@ -254,12 +254,8 @@ export default function DevelopmentPriorities() {
         </div>
       </Card>
 
-      {/* Section Navigator */}
-      <SectionNavigator
-        sections={NAV_SECTIONS}
-        currentSection="development"
-        basePath={basePath}
-      />
+
+
     </div>
   );
 }
