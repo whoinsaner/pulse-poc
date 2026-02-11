@@ -212,6 +212,7 @@ export default function ReportLayout() {
           runId={runId!}
           isComic={isComic}
           onShare={handleShare}
+          onLensChange={setActiveLens}
         />
 
         {/* Failed Agents Banner */}

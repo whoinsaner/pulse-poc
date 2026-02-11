@@ -3,6 +3,7 @@ import { Report, ReportData, StakeholderLens, LENS_CONFIG } from '@/types/databa
 import { Button } from '@/components/ui/button';
 import { ExportDialog } from '@/components/report/ExportDialog';
 import { Badge } from '@/components/ui/badge';
+import { LensSelector } from '@/components/LensToggle';
 import { 
   ArrowLeft, 
   Share2,
@@ -27,6 +28,7 @@ interface CommandHeaderProps {
   runId: string;
   isComic: boolean;
   onShare: () => void;
+  onLensChange?: (lens: StakeholderLens) => void;
 }
 
 // Script type icons mapping
@@ -63,6 +65,7 @@ export function CommandHeader({
   runId,
   isComic,
   onShare,
+  onLensChange,
 }: CommandHeaderProps) {
   const navigate = useNavigate();
   
@@ -115,6 +118,12 @@ export function CommandHeader({
               <span className="text-xs font-medium text-primary">
                 {LENS_CONFIG[stakeholderLens].label}
               </span>
+            </div>
+          )}
+
+          {!stakeholderLens && onLensChange && (
+            <div className="hidden sm:block">
+              <LensSelector activeLens={activeLens} onLensChange={onLensChange} compact />
             </div>
           )}
           
