@@ -147,6 +147,7 @@ export function WeightedParameterList({
               key={param.parameterName}
               parameter={param}
               showWeight
+              showRationale
             />
           ))}
         </div>
@@ -159,6 +160,7 @@ export function WeightedParameterList({
                   key={param.parameterName}
                   parameter={param}
                   showWeight
+                  showRationale
                 />
               ))}
             </div>
