@@ -1,39 +1,45 @@
 
-# Hide Series Bible from Feature Film Reports
+
+# Wire Script Page to Real Extracted Data
 
 ## Problem
-The "Series Bible" navigation item appears for all script types, including standalone feature films where it's irrelevant. A Series Bible covers episodic sustainability, series engine, and repeatability -- concepts that don't apply to one-off films.
+The Script page inside the report (`/report/:id/script`) renders the hardcoded `SampleScript` component with demo data ("The Last Signal"), not the actual parsed script. The sidebar Quick Stats show real numbers (91 pages, 74 scenes) while the content area shows sample data (8 scenes, 5 characters) -- a visible mismatch.
 
 ## Solution
-Make the Series Bible nav item conditionally visible only for episodic/serialized script types.
+Create a new `ReportScript.tsx` page that uses the existing `ScriptContentViewer` component (which already fetches real scenes, characters, and narrative graphs from the database) and wires it to the report's actual `script_id`.
 
-### Changes
+## Changes
 
-**File: `src/lib/reportNavigation.ts`**
+### 1. Create `src/pages/report/ReportScript.tsx`
+A new page component that:
+- Gets the `report` object from `useReport()` context (which has `script_id`)
+- Fetches the script metadata (title, genre, page count, logline) from the `scripts` table using `report.script_id`
+- Renders a header with real script metadata (title, genre, page count, script type)
+- Embeds the existing `ScriptContentViewer` component, passing the real `script_id`
+- Shows a loading skeleton while data loads
+- Handles missing script gracefully
 
-In both `ALL_NAV_GROUPS` and `USAF_NAV_GROUPS`, update the Reference group to split items so that "Series Bible" only appears for applicable types. Two approaches:
+### 2. Update `src/App.tsx` routing
+Replace the `SampleScript` import on the report script route with the new `ReportScript` component. Only the real report routes change -- sample report routes keep using `SampleScript`.
 
-**Approach chosen**: Add an `applicableTypes` field to the `NavItem` interface (individual items), then filter items by script type in `getNavGroupsForScriptType()`.
+Specifically:
+- Line ~149: Change `<Route path="script" element={<SampleScript />} />` inside the `/report/:runId` layout to use `<ReportScript />`
+- Keep `SampleScript` for sample report routes (sample-report, sample-comic-report, etc.)
 
-1. **Add optional `applicableTypes` to `NavItem` interface** -- allows per-item filtering (currently only groups have this field).
+### Technical Details
 
-2. **Tag the Series Bible item** with `applicableTypes: ['web_series', 'pilot', 'episode', 'micro_drama']` in both nav group arrays.
-
-3. **Update `getNavGroupsForScriptType()`** to also filter out individual items whose `applicableTypes` don't match the current script type, after filtering groups.
-
-This is a minimal, surgical change -- no new files, no UI changes, just conditional visibility.
-
-### Technical Detail
-
+**Data flow:**
 ```text
-NavItem interface:
-  + applicableTypes?: ScriptType[] | 'all'   (optional, defaults to 'all')
-
-Series Bible item:
-  { id: 'bible', label: 'Series Bible', ..., applicableTypes: ['web_series', 'pilot', 'episode', 'micro_drama'] }
-
-getNavGroupsForScriptType():
-  After filtering groups, also filter each group's items by applicableTypes
+ReportLayout (fetches report with script_id)
+  -> ReportScript (reads report from useReport() context)
+    -> fetches script metadata from 'scripts' table
+    -> ScriptContentViewer (fetches scenes, characters, narrative_graphs by script_id)
 ```
 
-One file modified: `src/lib/reportNavigation.ts`
+**Files modified:**
+- `src/pages/report/ReportScript.tsx` -- new file
+- `src/App.tsx` -- swap import on real report route only
+
+**Files unchanged:**
+- `src/components/ScriptContentViewer.tsx` -- already works with any script_id
+- `src/pages/SampleScript.tsx` -- kept for sample/demo routes
