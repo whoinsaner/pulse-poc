@@ -34,23 +34,23 @@ export function MaturityBadge({
 
   return (
     <div className={cn('flex flex-col', className)}>
-      {/* Progress dots */}
-      <div className={cn('flex items-center', sizeClasses[size])}>
-        {STAGES.map((stage, index) => {
-          const isActive = index <= currentIndex;
-          const isCurrent = index === currentIndex;
-          
-          return (
-            <div key={stage} className="flex items-center">
-              {index === 0 ? null : (
-                <div 
-                  className={cn(
-                    'h-0.5 w-3 sm:w-4',
-                    isActive ? maturity.bgColor.replace('/10', '/40') : 'bg-border'
-                  )} 
-                />
-              )}
-              <div className="relative">
+      {/* Progress bar with dots */}
+      <div className="relative">
+        {/* Track line */}
+        <div className="absolute top-1/2 left-0 right-0 h-0.5 -translate-y-1/2 bg-border" />
+        <div 
+          className={cn('absolute top-1/2 left-0 h-0.5 -translate-y-1/2', maturity.bgColor.replace('/10', '/40'))}
+          style={{ width: `${(currentIndex / (STAGES.length - 1)) * 100}%` }}
+        />
+        
+        {/* Dots */}
+        <div className="relative flex items-center justify-between">
+          {STAGES.map((stage, index) => {
+            const isActive = index <= currentIndex;
+            const isCurrent = index === currentIndex;
+            
+            return (
+              <div key={stage} className="flex items-center justify-center bg-card rounded-full">
                 {isCurrent ? (
                   <CircleDot className={cn(iconSizes[size], maturity.color)} />
                 ) : isActive ? (
@@ -59,13 +59,13 @@ export function MaturityBadge({
                   <Circle className={cn(iconSizes[size], 'text-muted-foreground/40')} />
                 )}
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
 
       {/* Labels */}
-      <div className={cn('flex items-center justify-between mt-1', sizeClasses[size])}>
+      <div className="flex items-center justify-between mt-1.5">
         {STAGES.map((stage, index) => {
           const isCurrent = index === currentIndex;
           const stageLabel = stage.charAt(0).toUpperCase() + stage.slice(1);
@@ -77,7 +77,8 @@ export function MaturityBadge({
                 'text-[10px] sm:text-xs transition-colors',
                 isCurrent ? maturity.color + ' font-medium' : 'text-muted-foreground/60',
                 index === 0 && 'text-left',
-                index === STAGES.length - 1 && 'text-right'
+                index === STAGES.length - 1 && 'text-right',
+                index > 0 && index < STAGES.length - 1 && 'text-center'
               )}
             >
               {stageLabel}
