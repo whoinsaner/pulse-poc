@@ -345,26 +345,53 @@ const App = () => (
               <Route path="narrative" element={<ReportNarrative />} />
             </Route>
             <Route path="/sample-micro-drama-report" element={<SampleMicroDramaReportLayout />}>
-              <Route index element={<ProjectSnapshot />} />
-              <Route path="concept" element={<ConceptHook />} />
-              <Route path="plot" element={<PlotAnalysis />} />
-              <Route path="structure" element={<StructuralEngineering />} />
-              <Route path="protagonist" element={<ProtagonistAnalysis />} />
-              <Route path="antagonist" element={<AntagonistAnalysis />} />
-              <Route path="psychology" element={<CharacterPsychology />} />
-              <Route path="dialogue" element={<DialogueSubtext />} />
-              <Route path="theme" element={<ThemeMoral />} />
-              <Route path="emotional" element={<EmotionalResonance />} />
-              <Route path="micro-drama" element={<MicroDramaAnalysis />} />
-              <Route path="market" element={<Marketability />} />
-              <Route path="production" element={<Production />} />
-              <Route path="audience" element={<AudienceStrategy />} />
-              <Route path="rewrite" element={<RewritePriorities />} />
+              {/* USAF Consolidated Routes */}
+              <Route index element={<ReportCover />} />
+              <Route path="story" element={<StoryDiagnosis />} />
+              <Route path="story/concept" element={<StoryConceptHook />} />
+              <Route path="story/structure" element={<StoryStructure />} />
+              <Route path="story/conflict" element={<StoryConflictStakes />} />
+              <Route path="characters" element={<CharacterDiagnosis />} />
+              <Route path="characters/protagonist" element={<ProtagonistAnalysis />} />
+              <Route path="characters/antagonist" element={<AntagonistAnalysis />} />
+              <Route path="characters/cast" element={<SupportingCast />} />
+              <Route path="craft" element={<CraftDiagnosis />} />
+              <Route path="craft/dialogue" element={<CraftDialogue />} />
+              <Route path="craft/theme" element={<CraftTheme />} />
+              <Route path="craft/visual" element={<CraftVisual />} />
+              <Route path="craft/emotional" element={<CraftEmotional />} />
+              <Route path="craft/scenes" element={<SceneEconomy />} />
+              <Route path="format" element={<FormatDiagnosis />} />
+              <Route path="commercial" element={<CommercialDiagnosis />} />
+              <Route path="commercial/market" element={<CommercialMarket />} />
+              <Route path="commercial/production" element={<CommercialProduction />} />
+              <Route path="development" element={<DevelopmentPriorities />} />
+              <Route path="development/rewrite" element={<RewritePriorities />} />
+              <Route path="development/scenes" element={<Navigate to="../craft/scenes" replace />} />
+              
+              {/* Legacy routes - redirect to USAF equivalents */}
+              <Route path="concept" element={<Navigate to="/sample-micro-drama-report/story" replace />} />
+              <Route path="plot" element={<Navigate to="/sample-micro-drama-report/story" replace />} />
+              <Route path="structure" element={<Navigate to="/sample-micro-drama-report/story" replace />} />
+              <Route path="protagonist" element={<Navigate to="/sample-micro-drama-report/characters" replace />} />
+              <Route path="antagonist" element={<Navigate to="/sample-micro-drama-report/characters" replace />} />
+              <Route path="psychology" element={<Navigate to="/sample-micro-drama-report/characters" replace />} />
+              <Route path="dialogue" element={<Navigate to="/sample-micro-drama-report/craft" replace />} />
+              <Route path="theme" element={<Navigate to="/sample-micro-drama-report/craft" replace />} />
+              <Route path="emotional" element={<Navigate to="/sample-micro-drama-report/craft" replace />} />
+              <Route path="micro-drama" element={<Navigate to="/sample-micro-drama-report/format" replace />} />
+              <Route path="market" element={<Navigate to="/sample-micro-drama-report/commercial" replace />} />
+              <Route path="production" element={<Navigate to="/sample-micro-drama-report/commercial" replace />} />
+              <Route path="audience" element={<Navigate to="/sample-micro-drama-report/commercial" replace />} />
+              <Route path="rewrite" element={<Navigate to="/sample-micro-drama-report/development" replace />} />
+              
+              {/* Reference pages */}
               <Route path="scorecard" element={<CompleteScorecard />} />
               <Route path="bible" element={<SeriesBibleExtract />} />
+              <Route path="script" element={<SampleScript />} />
+              <Route path="narrative" element={<ReportNarrative />} />
               <Route path="analysis" element={<ReportAnalysis />} />
               <Route path="insights" element={<ReportInsights />} />
-              <Route path="characters" element={<ReportCharacters />} />
             </Route>
             <Route path="/comic-gallery" element={<ComicGallery />} />
             <Route path="/team" element={<Team />} />
