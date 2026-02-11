@@ -100,7 +100,11 @@ const USAF_NAV_GROUPS: NavGroup[] = [
     label: 'Characters',
     applicableTypes: 'all',
     items: [
-      { id: 'characters', label: 'Characters', icon: Users, path: '/characters', requiredCategories: ['Character'] },
+      { id: 'character-diagnosis', label: 'Character Diagnosis', icon: Users, path: '/characters', requiredCategories: ['Character'] },
+      { id: 'character-protagonist', label: 'Protagonist', icon: User, path: '/characters/protagonist', requiredCategories: ['Character'] },
+      { id: 'character-antagonist', label: 'Antagonist', icon: UserX, path: '/characters/antagonist', requiredCategories: ['Character'] },
+      { id: 'character-cast', label: 'Supporting Cast', icon: Users, path: '/characters/cast', requiredCategories: ['Character'] },
+      { id: 'character-focus', label: 'Development Focus', icon: Target, path: '/characters/focus' },
     ],
   },
   {
