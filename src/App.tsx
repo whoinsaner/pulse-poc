@@ -62,6 +62,14 @@ import StoryStructure from "./pages/report/StoryStructure";
 import CharacterDiagnosis from "./pages/report/CharacterDiagnosis";
 import CharacterDevelopmentFocus from "./pages/report/CharacterDevelopmentFocus";
 import CraftDiagnosis from "./pages/report/CraftDiagnosis";
+import CraftDialogue from "./pages/report/CraftDialogue";
+import CraftTheme from "./pages/report/CraftTheme";
+import CraftVisual from "./pages/report/CraftVisual";
+import CraftEmotional from "./pages/report/CraftEmotional";
+import CraftDevelopmentFocus from "./pages/report/CraftDevelopmentFocus";
+import CommercialMarket from "./pages/report/CommercialMarket";
+import CommercialProduction from "./pages/report/CommercialProduction";
+import CommercialDevelopmentFocus from "./pages/report/CommercialDevelopmentFocus";
 import FormatDiagnosis from "./pages/report/FormatDiagnosis";
 import ComicFormatDiagnosis from "./pages/report/ComicFormatDiagnosis";
 import CommercialDiagnosis from "./pages/report/CommercialDiagnosis";
@@ -122,10 +130,20 @@ const App = () => (
               <Route path="characters/cast" element={<SupportingCast />} />
               <Route path="characters/focus" element={<CharacterDevelopmentFocus />} />
               <Route path="craft" element={<CraftDiagnosis />} />
+              <Route path="craft/dialogue" element={<CraftDialogue />} />
+              <Route path="craft/theme" element={<CraftTheme />} />
+              <Route path="craft/visual" element={<CraftVisual />} />
+              <Route path="craft/emotional" element={<CraftEmotional />} />
+              <Route path="craft/focus" element={<CraftDevelopmentFocus />} />
               <Route path="format" element={<FormatDiagnosis />} />
               <Route path="comic-format" element={<ComicFormatDiagnosis />} />
               <Route path="commercial" element={<CommercialDiagnosis />} />
+              <Route path="commercial/market" element={<CommercialMarket />} />
+              <Route path="commercial/production" element={<CommercialProduction />} />
+              <Route path="commercial/focus" element={<CommercialDevelopmentFocus />} />
               <Route path="development" element={<DevelopmentPriorities />} />
+              <Route path="development/rewrite" element={<RewritePriorities />} />
+              <Route path="development/scenes" element={<SceneEconomy />} />
               <Route path="scorecard" element={<CompleteScorecard />} />
               <Route path="script" element={<SampleScript />} />
               
@@ -175,8 +193,18 @@ const App = () => (
               <Route path="characters/cast" element={<SupportingCast />} />
               <Route path="characters/focus" element={<CharacterDevelopmentFocus />} />
               <Route path="craft" element={<CraftDiagnosis />} />
+              <Route path="craft/dialogue" element={<CraftDialogue />} />
+              <Route path="craft/theme" element={<CraftTheme />} />
+              <Route path="craft/visual" element={<CraftVisual />} />
+              <Route path="craft/emotional" element={<CraftEmotional />} />
+              <Route path="craft/focus" element={<CraftDevelopmentFocus />} />
               <Route path="commercial" element={<CommercialDiagnosis />} />
+              <Route path="commercial/market" element={<CommercialMarket />} />
+              <Route path="commercial/production" element={<CommercialProduction />} />
+              <Route path="commercial/focus" element={<CommercialDevelopmentFocus />} />
               <Route path="development" element={<DevelopmentPriorities />} />
+              <Route path="development/rewrite" element={<RewritePriorities />} />
+              <Route path="development/scenes" element={<SceneEconomy />} />
               
               {/* Legacy routes - redirect to consolidated pages */}
               <Route path="concept" element={<Navigate to="/sample-report/story" replace />} />
@@ -222,9 +250,19 @@ const App = () => (
               <Route path="characters/cast" element={<SupportingCast />} />
               <Route path="characters/focus" element={<CharacterDevelopmentFocus />} />
               <Route path="craft" element={<CraftDiagnosis />} />
+              <Route path="craft/dialogue" element={<CraftDialogue />} />
+              <Route path="craft/theme" element={<CraftTheme />} />
+              <Route path="craft/visual" element={<CraftVisual />} />
+              <Route path="craft/emotional" element={<CraftEmotional />} />
+              <Route path="craft/focus" element={<CraftDevelopmentFocus />} />
               <Route path="format" element={<ComicFormatDiagnosis />} />
               <Route path="commercial" element={<CommercialDiagnosis />} />
+              <Route path="commercial/market" element={<CommercialMarket />} />
+              <Route path="commercial/production" element={<CommercialProduction />} />
+              <Route path="commercial/focus" element={<CommercialDevelopmentFocus />} />
               <Route path="development" element={<DevelopmentPriorities />} />
+              <Route path="development/rewrite" element={<RewritePriorities />} />
+              <Route path="development/scenes" element={<SceneEconomy />} />
               
               {/* Legacy routes - redirect to consolidated pages */}
               <Route path="concept" element={<Navigate to="/sample-comic-report/story" replace />} />
@@ -270,9 +308,19 @@ const App = () => (
               <Route path="characters/cast" element={<SupportingCast />} />
               <Route path="characters/focus" element={<CharacterDevelopmentFocus />} />
               <Route path="craft" element={<CraftDiagnosis />} />
+              <Route path="craft/dialogue" element={<CraftDialogue />} />
+              <Route path="craft/theme" element={<CraftTheme />} />
+              <Route path="craft/visual" element={<CraftVisual />} />
+              <Route path="craft/emotional" element={<CraftEmotional />} />
+              <Route path="craft/focus" element={<CraftDevelopmentFocus />} />
               <Route path="format" element={<FormatDiagnosis />} />
               <Route path="commercial" element={<CommercialDiagnosis />} />
+              <Route path="commercial/market" element={<CommercialMarket />} />
+              <Route path="commercial/production" element={<CommercialProduction />} />
+              <Route path="commercial/focus" element={<CommercialDevelopmentFocus />} />
               <Route path="development" element={<DevelopmentPriorities />} />
+              <Route path="development/rewrite" element={<RewritePriorities />} />
+              <Route path="development/scenes" element={<SceneEconomy />} />
               
               {/* Legacy routes - redirect to new consolidated pages */}
               <Route path="concept" element={<Navigate to="/sample-web-series-report/story" replace />} />

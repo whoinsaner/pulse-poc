@@ -176,24 +176,6 @@ export default function CommercialDiagnosis() {
         </div>
       </Card>
 
-      {/* Agent Narrative Content */}
-      {reportData.agentContent && (
-        <div className="space-y-6">
-          {reportData.agentContent.MarketAgent && (
-            <div>
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">Market Analysis</h3>
-              <CommercialNarrativePanel content={reportData.agentContent.MarketAgent} />
-            </div>
-          )}
-          {reportData.agentContent.ExecutionAgent && (
-            <div>
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">Production & Execution</h3>
-              <ProductionNarrativePanel content={reportData.agentContent.ExecutionAgent} />
-            </div>
-          )}
-        </div>
-      )}
-
       {/* Diagnosis Summary */}
       <DiagnosisSummary
         parameters={commercialParameters}
@@ -247,20 +229,6 @@ export default function CommercialDiagnosis() {
         initiallyExpanded={false}
         defaultVisibleCount={6}
       />
-
-      {/* Development Focus */}
-      {developmentItems.length > 0 && (
-        <DevelopmentFocus
-          sectionName="Commercial"
-          items={developmentItems}
-          developmentPath={`${basePath}/development`}
-          relatedSections={[
-            { label: 'Story Diagnosis', path: `${basePath}/story` },
-          ]}
-        />
-      )}
-
-
 
     </div>
   );
