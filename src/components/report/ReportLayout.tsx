@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useAuth } from '@/lib/auth';
 import { supabase } from '@/integrations/supabase/client';
@@ -61,6 +61,12 @@ export default function ReportLayout() {
   const [isRetrying, setIsRetrying] = useState(false);
   const [stakeholderLens, setStakeholderLens] = useState<StakeholderLens | null>(null);
   const [exportTriggerRef, setExportTriggerRef] = useState<HTMLButtonElement | null>(null);
+  const mainRef = useRef<HTMLElement>(null);
+
+  // Scroll main content to top on route change
+  useEffect(() => {
+    mainRef.current?.scrollTo(0, 0);
+  }, [location.pathname]);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -262,7 +268,7 @@ export default function ReportLayout() {
           />
 
           {/* Scrollable Content Area */}
-          <main className="flex-1 overflow-auto">
+          <main ref={mainRef} className="flex-1 overflow-auto">
             <div className="p-6 lg:p-8 max-w-6xl mx-auto">
               <Outlet context={contextValue} />
             </div>
