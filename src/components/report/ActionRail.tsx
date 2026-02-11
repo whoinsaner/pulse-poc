@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getReadinessLabel } from '@/lib/scoreUtils';
 
 interface ActionRailProps {
@@ -37,6 +38,7 @@ export function ActionRail({
   currentScore,
   stakeholderLens,
 }: ActionRailProps) {
+  const navigate = useNavigate();
   const [statsExpanded, setStatsExpanded] = useState(true);
   
   const metadata = reportData.scriptMetadata;
@@ -96,34 +98,46 @@ export function ActionRail({
             
             {statsExpanded && (
               <div className="px-3 pb-3 space-y-2">
-                <div className="flex items-center justify-between py-2 border-t border-border/50">
+                <button
+                  onClick={() => navigate('./story')}
+                  className="w-full flex items-center justify-between py-2 border-t border-border/50 hover:bg-muted/50 rounded px-1 transition-colors cursor-pointer"
+                >
                   <div className="flex items-center gap-2">
                     <FileText className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm">Pages</span>
                   </div>
                   <span className="font-mono font-semibold text-sm">{metadata?.pageCount || '—'}</span>
-                </div>
-                <div className="flex items-center justify-between py-2 border-t border-border/50">
+                </button>
+                <button
+                  onClick={() => navigate('./craft')}
+                  className="w-full flex items-center justify-between py-2 border-t border-border/50 hover:bg-muted/50 rounded px-1 transition-colors cursor-pointer"
+                >
                   <div className="flex items-center gap-2">
                     <Film className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm">Scenes</span>
                   </div>
                   <span className="font-mono font-semibold text-sm">{totalScenes}</span>
-                </div>
-                <div className="flex items-center justify-between py-2 border-t border-border/50">
+                </button>
+                <button
+                  onClick={() => navigate('./characters')}
+                  className="w-full flex items-center justify-between py-2 border-t border-border/50 hover:bg-muted/50 rounded px-1 transition-colors cursor-pointer"
+                >
                   <div className="flex items-center gap-2">
                     <Users className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm">Characters</span>
                   </div>
                   <span className="font-mono font-semibold text-sm">{totalCharacters}</span>
-                </div>
-                <div className="flex items-center justify-between py-2 border-t border-border/50">
+                </button>
+                <button
+                  onClick={() => navigate('./story')}
+                  className="w-full flex items-center justify-between py-2 border-t border-border/50 hover:bg-muted/50 rounded px-1 transition-colors cursor-pointer"
+                >
                   <div className="flex items-center gap-2">
                     <Zap className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm">Insights</span>
                   </div>
                   <span className="font-mono font-semibold text-sm">{totalInsights}</span>
-                </div>
+                </button>
               </div>
             )}
           </div>
