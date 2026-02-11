@@ -4,6 +4,7 @@ import { useAuth } from '@/lib/auth';
 import { supabase } from '@/integrations/supabase/client';
 import { Report, StakeholderLens, ReportData, LENS_CONFIG } from '@/types/database';
 import { CommandHeader } from '@/components/report/CommandHeader';
+import { ReportSidebar } from '@/components/report/ReportSidebar';
 import { ActionRail } from '@/components/report/ActionRail';
 import { ExportDialog } from '@/components/report/ExportDialog';
 import { Button } from '@/components/ui/button';
@@ -56,6 +57,7 @@ export default function ReportLayout() {
   const [report, setReport] = useState<Report | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeLens, setActiveLens] = useState<StakeholderLens>('studio_executive');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [agentProgress, setAgentProgress] = useState<AgentProgress | null>(null);
   const [isRetrying, setIsRetrying] = useState(false);
   const [stakeholderLens, setStakeholderLens] = useState<StakeholderLens | null>(null);
@@ -242,8 +244,17 @@ export default function ReportLayout() {
           </div>
         )}
 
-        {/* Main Content with Action Rail */}
+        {/* Main Content with Sidebar + Action Rail */}
         <div className="flex-1 flex">
+          {/* Left Sidebar Navigation */}
+          <ReportSidebar
+            reportData={reportData}
+            currentPath={currentPath}
+            runId={runId!}
+            collapsed={sidebarCollapsed}
+            onToggle={() => setSidebarCollapsed(prev => !prev)}
+          />
+
           {/* Scrollable Content Area */}
           <main className="flex-1 overflow-auto">
             <div className="p-6 lg:p-8 max-w-6xl mx-auto">
