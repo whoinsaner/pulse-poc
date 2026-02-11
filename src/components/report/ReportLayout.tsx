@@ -5,7 +5,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { Report, StakeholderLens, ReportData, LENS_CONFIG } from '@/types/database';
 import { CommandHeader } from '@/components/report/CommandHeader';
 import { ReportSidebar } from '@/components/report/ReportSidebar';
-import { ActionRail } from '@/components/report/ActionRail';
 import { ExportDialog } from '@/components/report/ExportDialog';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -244,15 +243,21 @@ export default function ReportLayout() {
           </div>
         )}
 
-        {/* Main Content with Sidebar + Action Rail */}
+        {/* Main Content with Sidebar */}
         <div className="flex-1 flex">
-          {/* Left Sidebar Navigation */}
+          {/* Left Sidebar (nav + stats + lens) */}
           <ReportSidebar
             reportData={reportData}
             currentPath={currentPath}
             runId={runId!}
+            reportId={report.id}
+            reportTitle={report.title}
             collapsed={sidebarCollapsed}
             onToggle={() => setSidebarCollapsed(prev => !prev)}
+            activeLens={activeLens}
+            setActiveLens={setActiveLens}
+            currentScore={getCurrentScore()}
+            stakeholderLens={stakeholderLens}
           />
 
           {/* Scrollable Content Area */}
@@ -261,17 +266,6 @@ export default function ReportLayout() {
               <Outlet context={contextValue} />
             </div>
           </main>
-
-          {/* Action Rail */}
-          <ActionRail
-            reportData={reportData}
-            reportId={report.id}
-            reportTitle={report.title}
-            activeLens={activeLens}
-            setActiveLens={setActiveLens}
-            currentScore={getCurrentScore()}
-            stakeholderLens={stakeholderLens}
-          />
         </div>
 
         {/* Export Dialog - positioned in bottom-right for accessibility */}
