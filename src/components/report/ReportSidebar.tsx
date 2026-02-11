@@ -268,11 +268,8 @@ export function ReportSidebar({
         </div>
       </ScrollArea>
 
-      {/* Bottom: Export + Collapse */}
-      <div className="p-2 border-t border-border space-y-1">
-        {!collapsed && (
-          <ExportDialog reportId={reportId} reportTitle={reportTitle} />
-        )}
+      {/* Bottom: Collapse toggle */}
+      <div className="p-2 border-t border-border">
         <Button
           variant="ghost"
           size="icon"

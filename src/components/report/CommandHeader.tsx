@@ -105,11 +105,8 @@ export function CommandHeader({
           </div>
         </div>
 
-        {/* Center: Score badge */}
-        <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20">
-          <span className="text-xs text-muted-foreground">Score</span>
-          <span className="font-mono font-bold text-sm text-primary">{Math.round(currentScore)}</span>
-        </div>
+
+
 
         {/* Right: Lens + Actions */}
         <div className="flex items-center gap-2">

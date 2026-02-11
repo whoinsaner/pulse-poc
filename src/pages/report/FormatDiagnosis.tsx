@@ -316,12 +316,8 @@ export default function FormatDiagnosis() {
         />
       )}
 
-      {/* Section Navigator */}
-      <SectionNavigator
-        sections={NAV_SECTIONS}
-        currentSection="format"
-        basePath={basePath}
-      />
+
+
     </div>
   );
 }

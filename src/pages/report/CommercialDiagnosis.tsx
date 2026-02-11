@@ -260,12 +260,8 @@ export default function CommercialDiagnosis() {
         />
       )}
 
-      {/* Section Navigator */}
-      <SectionNavigator
-        sections={NAV_SECTIONS}
-        currentSection="commercial"
-        basePath={basePath}
-      />
+
+
     </div>
   );
 }
