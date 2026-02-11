@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { Report, ReportData, StakeholderLens, LENS_CONFIG } from '@/types/database';
 import { Button } from '@/components/ui/button';
+import { ExportDialog } from '@/components/report/ExportDialog';
 import { Badge } from '@/components/ui/badge';
 import { 
   ArrowLeft, 
@@ -119,6 +120,8 @@ export function CommandHeader({
               </span>
             </div>
           )}
+          
+          <ExportDialog reportId={report.id} reportTitle={report.title} />
           
           <Button variant="outline" size="sm" onClick={onShare} className="gap-2">
             <Share2 className="h-4 w-4" />
