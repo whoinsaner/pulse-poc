@@ -112,7 +112,12 @@ const USAF_NAV_GROUPS: NavGroup[] = [
     label: 'Craft',
     applicableTypes: 'all',
     items: [
-      { id: 'craft', label: 'Craft', icon: Palette, path: '/craft', requiredCategories: ['Dialogue', 'Theme', 'World & Logic', 'Emotional Arc'] },
+      { id: 'craft-diagnosis', label: 'Craft Diagnosis', icon: Palette, path: '/craft', requiredCategories: ['Dialogue', 'Theme', 'World & Logic', 'Emotional Arc'] },
+      { id: 'craft-dialogue', label: 'Dialogue & Subtext', icon: MessageSquare, path: '/craft/dialogue', requiredCategories: ['Dialogue'] },
+      { id: 'craft-theme', label: 'Theme & Meaning', icon: Heart, path: '/craft/theme', requiredCategories: ['Theme'] },
+      { id: 'craft-visual', label: 'Visual Storytelling', icon: Eye, path: '/craft/visual', requiredCategories: ['World & Logic', 'World'] },
+      { id: 'craft-emotional', label: 'Emotional Arc', icon: Sparkles, path: '/craft/emotional', requiredCategories: ['Emotional Arc', 'Emotion'] },
+      { id: 'craft-focus', label: 'Development Focus', icon: Target, path: '/craft/focus' },
     ],
   },
   {
@@ -128,7 +133,10 @@ const USAF_NAV_GROUPS: NavGroup[] = [
     label: 'Production & Market',
     applicableTypes: 'all',
     items: [
-      { id: 'commercial', label: 'Commercial', icon: TrendingUp, path: '/commercial', requiredCategories: ['Market', 'Execution'] },
+      { id: 'commercial-diagnosis', label: 'Commercial Diagnosis', icon: TrendingUp, path: '/commercial', requiredCategories: ['Market', 'Execution'] },
+      { id: 'commercial-market', label: 'Market Analysis', icon: TrendingUp, path: '/commercial/market', requiredCategories: ['Market'] },
+      { id: 'commercial-production', label: 'Production Viability', icon: Film, path: '/commercial/production', requiredCategories: ['Execution'] },
+      { id: 'commercial-focus', label: 'Development Focus', icon: Target, path: '/commercial/focus' },
     ],
   },
   {
@@ -136,7 +144,9 @@ const USAF_NAV_GROUPS: NavGroup[] = [
     label: 'Recommendations',
     applicableTypes: 'all',
     items: [
-      { id: 'development', label: 'Development', icon: ListTodo, path: '/development' },
+      { id: 'development', label: 'Development Priorities', icon: ListTodo, path: '/development' },
+      { id: 'development-rewrite', label: 'Rewrite Priorities', icon: ListTodo, path: '/development/rewrite' },
+      { id: 'development-scenes', label: 'Scene Economy', icon: Layers, path: '/development/scenes' },
     ],
   },
   {
@@ -146,6 +156,7 @@ const USAF_NAV_GROUPS: NavGroup[] = [
     items: [
       { id: 'scorecard', label: 'Scorecard', icon: BarChart3, path: '/scorecard' },
       { id: 'script', label: 'Script', icon: FileText, path: '/script' },
+      { id: 'bible', label: 'Series Bible', icon: BookOpen, path: '/bible', requiredCategories: ['World & Logic', 'Character', 'Theme'] },
     ],
   },
 ];
