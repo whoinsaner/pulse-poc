@@ -55,6 +55,9 @@ import MicroDramaAnalysis from "./pages/report/MicroDramaAnalysis";
 // New USAF Redesign Pages
 import ReportCover from "./pages/report/ReportCover";
 import StoryDiagnosis from "./pages/report/StoryDiagnosis";
+import StoryConceptHook from "./pages/report/StoryConceptHook";
+import StoryConflictStakes from "./pages/report/StoryConflictStakes";
+import StoryDevelopmentFocus from "./pages/report/StoryDevelopmentFocus";
 import CharacterDiagnosis from "./pages/report/CharacterDiagnosis";
 import CraftDiagnosis from "./pages/report/CraftDiagnosis";
 import FormatDiagnosis from "./pages/report/FormatDiagnosis";
@@ -107,6 +110,9 @@ const App = () => (
               {/* USAF Consolidated Routes (primary) */}
               <Route index element={<ReportCover />} />
               <Route path="story" element={<StoryDiagnosis />} />
+              <Route path="story/concept" element={<StoryConceptHook />} />
+              <Route path="story/conflict" element={<StoryConflictStakes />} />
+              <Route path="story/focus" element={<StoryDevelopmentFocus />} />
               <Route path="characters" element={<CharacterDiagnosis />} />
               <Route path="craft" element={<CraftDiagnosis />} />
               <Route path="format" element={<FormatDiagnosis />} />
@@ -152,6 +158,9 @@ const App = () => (
               {/* New USAF Consolidated Routes */}
               <Route index element={<ReportCover />} />
               <Route path="story" element={<StoryDiagnosis />} />
+              <Route path="story/concept" element={<StoryConceptHook />} />
+              <Route path="story/conflict" element={<StoryConflictStakes />} />
+              <Route path="story/focus" element={<StoryDevelopmentFocus />} />
               <Route path="characters" element={<CharacterDiagnosis />} />
               <Route path="craft" element={<CraftDiagnosis />} />
               <Route path="commercial" element={<CommercialDiagnosis />} />
@@ -191,6 +200,9 @@ const App = () => (
               {/* New USAF Consolidated Routes */}
               <Route index element={<ReportCover />} />
               <Route path="story" element={<StoryDiagnosis />} />
+              <Route path="story/concept" element={<StoryConceptHook />} />
+              <Route path="story/conflict" element={<StoryConflictStakes />} />
+              <Route path="story/focus" element={<StoryDevelopmentFocus />} />
               <Route path="characters" element={<CharacterDiagnosis />} />
               <Route path="craft" element={<CraftDiagnosis />} />
               <Route path="format" element={<ComicFormatDiagnosis />} />
@@ -231,6 +243,9 @@ const App = () => (
               {/* New USAF Redesign Routes (consolidated) */}
               <Route index element={<ReportCover />} />
               <Route path="story" element={<StoryDiagnosis />} />
+              <Route path="story/concept" element={<StoryConceptHook />} />
+              <Route path="story/conflict" element={<StoryConflictStakes />} />
+              <Route path="story/focus" element={<StoryDevelopmentFocus />} />
               <Route path="characters" element={<CharacterDiagnosis />} />
               <Route path="craft" element={<CraftDiagnosis />} />
               <Route path="format" element={<FormatDiagnosis />} />

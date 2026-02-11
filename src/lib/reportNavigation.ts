@@ -25,6 +25,7 @@ import {
   Palette,
   BookOpen,
   Monitor,
+  Zap,
   LucideIcon
 } from 'lucide-react';
 import { ScriptType } from '@/types/database';
@@ -87,7 +88,10 @@ const USAF_NAV_GROUPS: NavGroup[] = [
     label: 'Story Analysis',
     applicableTypes: 'all',
     items: [
-      { id: 'story', label: 'Story', icon: BookOpen, path: '/story', requiredCategories: ['Concept & Hook', 'Structure', 'Conflict'] },
+      { id: 'story-diagnosis', label: 'Story Diagnosis', icon: BookOpen, path: '/story', requiredCategories: ['Concept & Hook', 'Structure', 'Conflict'] },
+      { id: 'story-concept', label: 'Concept & Hook', icon: Lightbulb, path: '/story/concept', requiredCategories: ['Concept & Hook'] },
+      { id: 'story-conflict', label: 'Conflict & Stakes', icon: Zap, path: '/story/conflict', requiredCategories: ['Conflict'] },
+      { id: 'story-focus', label: 'Development Focus', icon: Target, path: '/story/focus' },
     ],
   },
   {

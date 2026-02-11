@@ -1,14 +1,12 @@
 import { useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { ReportData, StakeholderLens, AgentSectionContent } from '@/types/database';
+import { ReportData, StakeholderLens } from '@/types/database';
 import { Card } from '@/components/ui/card';
 import { AgentNarrativePanel } from '@/components/report/AgentNarrativePanel';
 import { 
   SectionHeader, 
   DiagnosisSummary,
   WeightedParameterList,
-  DevelopmentFocus,
-  SectionNavigator,
 } from '@/components/report/ui';
 import { InlineMaturity } from '@/components/report/ui/MaturityBadge';
 import { BookOpen } from 'lucide-react';
@@ -34,16 +32,10 @@ const NAV_SECTIONS = [
 
 export default function StoryDiagnosis() {
   const context = useOutletContext<ReportContextValue>();
-  
-  if (!context) {
-    return <div className="text-center py-12 text-muted-foreground">Loading...</div>;
-  }
-
-  const { reportData } = context;
 
   // Filter parameters for story categories
   const storyParameters = useMemo(() => {
-    const params = reportData.parameterScores || [];
+    const params = context?.reportData?.parameterScores || [];
     return params
       .filter(p => STORY_CATEGORIES.includes(p.category))
       .map(p => ({
@@ -53,9 +45,9 @@ export default function StoryDiagnosis() {
         rationale: p.rationale,
         fixCost: p.fixCost as 'Low' | 'Medium' | 'High' | undefined,
         evidence: p.evidence,
-        weight: 1.0, // Default weight, would come from lens config
+        weight: 1.0,
       }));
-  }, [reportData.parameterScores]);
+  }, [context?.reportData?.parameterScores]);
 
   // Calculate section score
   const sectionScore = useMemo(() => {
@@ -63,18 +55,12 @@ export default function StoryDiagnosis() {
     const total = storyParameters.reduce((sum, p) => sum + p.score, 0);
     return Math.round(total / storyParameters.length);
   }, [storyParameters]);
+  
+  if (!context) {
+    return <div className="text-center py-12 text-muted-foreground">Loading...</div>;
+  }
 
-  // Get development focus items (lowest scoring parameters)
-  const developmentItems = useMemo(() => {
-    return storyParameters
-      .filter(p => p.score < 70)
-      .sort((a, b) => a.score - b.score)
-      .slice(0, 2)
-      .map(p => ({
-        title: p.displayName,
-        description: p.rationale || '',
-      }));
-  }, [storyParameters]);
+  const { reportData } = context;
 
   // Get base path from current location
   const basePath = window.location.pathname.split('/story')[0];
@@ -106,27 +92,11 @@ export default function StoryDiagnosis() {
         defaultVisibleCount={6}
       />
 
-      {/* Agent Narrative Content (from agentContent) */}
-      {reportData.agentContent && (
-        <div className="space-y-6">
-          {reportData.agentContent.ConceptAgent && (
-            <div>
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">Concept & Hook</h3>
-              <AgentNarrativePanel agentName="ConceptAgent" content={reportData.agentContent.ConceptAgent} />
-            </div>
-          )}
-          {reportData.agentContent.StructureAgent && (
-            <div>
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">Structure</h3>
-              <AgentNarrativePanel agentName="StructureAgent" content={reportData.agentContent.StructureAgent} />
-            </div>
-          )}
-          {reportData.agentContent.ConflictAgent && (
-            <div>
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">Conflict & Stakes</h3>
-              <AgentNarrativePanel agentName="ConflictAgent" content={reportData.agentContent.ConflictAgent} />
-            </div>
-          )}
+      {/* Structure Agent Content (kept inline — no dedicated sub-page) */}
+      {reportData.agentContent?.StructureAgent && (
+        <div>
+          <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">Structure</h3>
+          <AgentNarrativePanel agentName="StructureAgent" content={reportData.agentContent.StructureAgent} />
         </div>
       )}
 
@@ -144,20 +114,6 @@ export default function StoryDiagnosis() {
           )} />
         </div>
       )}
-
-      {/* Development Focus */}
-      {developmentItems.length > 0 && (
-        <DevelopmentFocus
-          sectionName="Story"
-          items={developmentItems}
-          developmentPath={`${basePath}/development`}
-          relatedSections={[
-            { label: 'Character Diagnosis', path: `${basePath}/characters` },
-          ]}
-        />
-      )}
-
-
 
     </div>
   );

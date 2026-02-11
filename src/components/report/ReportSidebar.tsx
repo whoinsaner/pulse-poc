@@ -125,23 +125,24 @@ export function ReportSidebar({
                   </span>
                 )}
                 <div className="space-y-0.5">
-                  {group.items.map((item) => {
+                  {group.items.map((item, itemIndex) => {
                     const isActive = item.path === currentPath;
                     const Icon = item.icon;
+                    const isSubItem = group.items.length > 1 && itemIndex > 0;
 
                     const button = (
                       <button
                         key={item.id}
                         onClick={() => navigate(`/report/${runId}${item.path}`)}
                         className={cn(
-                          "w-full flex items-center gap-2.5 rounded-lg text-sm font-medium transition-all",
-                          collapsed ? "justify-center px-2 py-2.5" : "px-3 py-2",
+                          "w-full flex items-center gap-2.5 rounded-lg font-medium transition-all",
+                          collapsed ? "justify-center px-2 py-2.5 text-sm" : isSubItem ? "pl-6 pr-3 py-1.5 text-xs" : "px-3 py-2 text-sm",
                           isActive
                             ? "bg-primary text-primary-foreground shadow-sm"
                             : "text-muted-foreground hover:text-foreground hover:bg-muted"
                         )}
                       >
-                        <Icon className="h-4 w-4 shrink-0" />
+                        <Icon className={cn("shrink-0", isSubItem && !collapsed ? "h-3.5 w-3.5" : "h-4 w-4")} />
                         {!collapsed && <span>{item.label}</span>}
                       </button>
                     );
