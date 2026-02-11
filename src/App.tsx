@@ -60,6 +60,7 @@ import StoryConflictStakes from "./pages/report/StoryConflictStakes";
 import StoryDevelopmentFocus from "./pages/report/StoryDevelopmentFocus";
 import StoryStructure from "./pages/report/StoryStructure";
 import CharacterDiagnosis from "./pages/report/CharacterDiagnosis";
+import CharacterDevelopmentFocus from "./pages/report/CharacterDevelopmentFocus";
 import CraftDiagnosis from "./pages/report/CraftDiagnosis";
 import FormatDiagnosis from "./pages/report/FormatDiagnosis";
 import ComicFormatDiagnosis from "./pages/report/ComicFormatDiagnosis";
@@ -116,6 +117,10 @@ const App = () => (
               <Route path="story/conflict" element={<StoryConflictStakes />} />
               <Route path="story/focus" element={<StoryDevelopmentFocus />} />
               <Route path="characters" element={<CharacterDiagnosis />} />
+              <Route path="characters/protagonist" element={<ProtagonistAnalysis />} />
+              <Route path="characters/antagonist" element={<AntagonistAnalysis />} />
+              <Route path="characters/cast" element={<SupportingCast />} />
+              <Route path="characters/focus" element={<CharacterDevelopmentFocus />} />
               <Route path="craft" element={<CraftDiagnosis />} />
               <Route path="format" element={<FormatDiagnosis />} />
               <Route path="comic-format" element={<ComicFormatDiagnosis />} />
@@ -165,6 +170,10 @@ const App = () => (
               <Route path="story/conflict" element={<StoryConflictStakes />} />
               <Route path="story/focus" element={<StoryDevelopmentFocus />} />
               <Route path="characters" element={<CharacterDiagnosis />} />
+              <Route path="characters/protagonist" element={<ProtagonistAnalysis />} />
+              <Route path="characters/antagonist" element={<AntagonistAnalysis />} />
+              <Route path="characters/cast" element={<SupportingCast />} />
+              <Route path="characters/focus" element={<CharacterDevelopmentFocus />} />
               <Route path="craft" element={<CraftDiagnosis />} />
               <Route path="commercial" element={<CommercialDiagnosis />} />
               <Route path="development" element={<DevelopmentPriorities />} />
@@ -208,6 +217,10 @@ const App = () => (
               <Route path="story/conflict" element={<StoryConflictStakes />} />
               <Route path="story/focus" element={<StoryDevelopmentFocus />} />
               <Route path="characters" element={<CharacterDiagnosis />} />
+              <Route path="characters/protagonist" element={<ProtagonistAnalysis />} />
+              <Route path="characters/antagonist" element={<AntagonistAnalysis />} />
+              <Route path="characters/cast" element={<SupportingCast />} />
+              <Route path="characters/focus" element={<CharacterDevelopmentFocus />} />
               <Route path="craft" element={<CraftDiagnosis />} />
               <Route path="format" element={<ComicFormatDiagnosis />} />
               <Route path="commercial" element={<CommercialDiagnosis />} />
@@ -252,6 +265,10 @@ const App = () => (
               <Route path="story/conflict" element={<StoryConflictStakes />} />
               <Route path="story/focus" element={<StoryDevelopmentFocus />} />
               <Route path="characters" element={<CharacterDiagnosis />} />
+              <Route path="characters/protagonist" element={<ProtagonistAnalysis />} />
+              <Route path="characters/antagonist" element={<AntagonistAnalysis />} />
+              <Route path="characters/cast" element={<SupportingCast />} />
+              <Route path="characters/focus" element={<CharacterDevelopmentFocus />} />
               <Route path="craft" element={<CraftDiagnosis />} />
               <Route path="format" element={<FormatDiagnosis />} />
               <Route path="commercial" element={<CommercialDiagnosis />} />

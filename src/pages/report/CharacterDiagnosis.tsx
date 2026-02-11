@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { ReportData, StakeholderLens, AgentSectionContent } from '@/types/database';
+import { ReportData, StakeholderLens } from '@/types/database';
 import { CharacterNarrativePanel } from '@/components/report/AgentNarrativePanel';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -8,13 +8,10 @@ import {
   SectionHeader, 
   DiagnosisSummary,
   WeightedParameterList,
-  DevelopmentFocus,
-  SectionNavigator,
 } from '@/components/report/ui';
 import { InlineMaturity } from '@/components/report/ui/MaturityBadge';
-import { Users, User, UserX, Brain } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { getDiagnosticCategory } from '@/lib/scoreUtils';
+import { Users } from 'lucide-react';
+
 
 interface ReportContextValue {
   reportData: ReportData;
@@ -25,15 +22,6 @@ interface ReportContextValue {
 // Categories that belong to Character diagnosis
 const CHARACTER_CATEGORIES = ['Character'];
 
-// Navigation sections
-const NAV_SECTIONS = [
-  { id: 'cover', label: 'Cover', path: '' },
-  { id: 'story', label: 'Story', path: '/story' },
-  { id: 'characters', label: 'Characters', path: '/characters' },
-  { id: 'craft', label: 'Craft', path: '/craft' },
-  { id: 'commercial', label: 'Commercial', path: '/commercial' },
-  { id: 'development', label: 'Development', path: '/development' },
-];
 
 export default function CharacterDiagnosis() {
   const context = useOutletContext<ReportContextValue>();
@@ -67,17 +55,6 @@ export default function CharacterDiagnosis() {
     return Math.round(total / characterParameters.length);
   }, [characterParameters]);
 
-  // Get development focus items
-  const developmentItems = useMemo(() => {
-    return characterParameters
-      .filter(p => p.score < 70)
-      .sort((a, b) => a.score - b.score)
-      .slice(0, 2)
-      .map(p => ({
-        title: p.displayName,
-        description: p.rationale || '',
-      }));
-  }, [characterParameters]);
 
   // Get characters from report data
   const characters = reportData.characters || [];
@@ -129,57 +106,6 @@ export default function CharacterDiagnosis() {
         defaultVisibleCount={6}
       />
 
-      {/* Character Dimension Deep-Dives */}
-      <div className="grid gap-6">
-        {/* Agency & Arc */}
-        <DimensionCard
-          icon={User}
-          title="Agency & Arc"
-          parameters={characterParameters.filter(p => 
-            p.parameterName.includes('agency') || 
-            p.parameterName.includes('arc') || 
-            p.parameterName.includes('transformation')
-          )}
-        />
-
-        {/* Internal Depth */}
-        <DimensionCard
-          icon={Brain}
-          title="Internal Depth"
-          parameters={characterParameters.filter(p => 
-            p.parameterName.includes('want') || 
-            p.parameterName.includes('need') || 
-            p.parameterName.includes('flaw') ||
-            p.parameterName.includes('empathy')
-          )}
-        />
-
-        {/* Voice & Distinction */}
-        <DimensionCard
-          icon={UserX}
-          title="Voice & Distinction"
-          parameters={characterParameters.filter(p => 
-            p.parameterName.includes('voice') || 
-            p.parameterName.includes('distinction')
-          )}
-        />
-      </div>
-
-      {/* Development Focus */}
-      {developmentItems.length > 0 && (
-        <DevelopmentFocus
-          sectionName="Character"
-          items={developmentItems}
-          developmentPath={`${basePath}/development`}
-          relatedSections={[
-            { label: 'Story Diagnosis', path: `${basePath}/story` },
-            { label: 'Craft Diagnosis', path: `${basePath}/craft` },
-          ]}
-        />
-      )}
-
-
-
     </div>
   );
 }
@@ -225,60 +151,6 @@ function CharacterCard({ character, role }: CharacterCardProps) {
           Arc: {character.arcSummary}
         </p>
       )}
-    </Card>
-  );
-}
-
-// Dimension breakdown card
-interface DimensionCardProps {
-  icon: typeof User;
-  title: string;
-  parameters: Array<{
-    parameterName: string;
-    displayName: string;
-    score: number;
-    rationale?: string;
-  }>;
-}
-
-function DimensionCard({ icon: Icon, title, parameters }: DimensionCardProps) {
-  if (parameters.length === 0) return null;
-
-  const avgScore = Math.round(
-    parameters.reduce((sum, p) => sum + p.score, 0) / parameters.length
-  );
-  const diagnostic = getDiagnosticCategory(avgScore);
-
-  return (
-    <Card className="p-5">
-      <div className="flex items-center gap-3 mb-4">
-        <div className={cn('p-2 rounded-lg', diagnostic.bgColor)}>
-          <Icon className={cn('h-4 w-4', diagnostic.color)} />
-        </div>
-        <div className="flex-1">
-          <h4 className="font-semibold">{title}</h4>
-        </div>
-        <span className={cn('font-mono font-bold text-lg', diagnostic.color)}>
-          {avgScore}
-        </span>
-      </div>
-      <div className="space-y-3">
-        {parameters.map((param) => (
-          <div key={param.parameterName} className="flex items-start gap-3">
-            <div className="flex-1">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">{param.displayName}</span>
-                <span className="text-sm font-mono">{param.score}</span>
-              </div>
-              {param.rationale && (
-                <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
-                  {param.rationale}
-                </p>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
     </Card>
   );
 }
