@@ -83,27 +83,6 @@ export function DevelopmentFocus({
             ))}
           </ul>
 
-          {/* Links */}
-          <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-border/50">
-            <Link 
-              to={developmentPath}
-              className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
-            >
-              {actionFrame ? `View All ${actionFrame.riskFrame.split(' ')[0]} Items` : 'Jump to Rewrite Priorities'}
-              <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
-            
-            {relatedSections.map((section) => (
-              <span key={section.path} className="text-muted-foreground">
-                •
-                <CrossLink 
-                  to={section.path} 
-                  label={section.label}
-                  className="ml-2"
-                />
-              </span>
-            ))}
-          </div>
         </div>
       </div>
     </Card>
