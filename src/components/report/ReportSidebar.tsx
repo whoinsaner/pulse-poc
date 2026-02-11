@@ -5,12 +5,6 @@ import { getUSAFNavGroups } from '@/lib/reportNavigation';
 import { 
   ChevronLeft, 
   ChevronRight, 
-  FileText, 
-  Film, 
-  Users, 
-  Zap, 
-  ChevronDown,
-  ChevronUp,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -21,7 +15,6 @@ import { StakeholderBadge } from '@/components/StakeholderBadge';
 import { DecisionSignalBadge } from '@/components/report/DecisionSignalBadge';
 import { ExportDialog } from '@/components/report/ExportDialog';
 import { getReadinessLabel } from '@/lib/scoreUtils';
-import { useState } from 'react';
 
 interface ReportSidebarProps {
   reportData: ReportData;
@@ -51,14 +44,9 @@ export function ReportSidebar({
   stakeholderLens,
 }: ReportSidebarProps) {
   const navigate = useNavigate();
-  const [statsExpanded, setStatsExpanded] = useState(true);
   const scriptType = reportData.scriptMetadata?.scriptType || 'feature';
   const navGroups = getUSAFNavGroups(scriptType, reportData.categoryScores);
 
-  const metadata = reportData.scriptMetadata;
-  const totalCharacters = reportData.characters?.length || 0;
-  const totalScenes = reportData.scenes?.length || 0;
-  const totalInsights = reportData.insights?.length || 0;
   const readiness = getReadinessLabel(currentScore);
 
   return (
@@ -122,7 +110,7 @@ export function ReportSidebar({
                   {group.items.map((item, itemIndex) => {
                     const isActive = item.path === currentPath;
                     const Icon = item.icon;
-                    const isSubItem = group.items.length > 1 && itemIndex > 0;
+                    const isSubItem = group.id !== 'reference' && group.items.length > 1 && itemIndex > 0;
 
                     const button = (
                       <button
@@ -160,56 +148,7 @@ export function ReportSidebar({
             ))}
           </nav>
 
-          {/* Quick Stats - expanded only */}
-          {!collapsed && (
-            <div className="bg-muted/50 rounded-xl border border-border overflow-hidden">
-              <button
-                onClick={() => setStatsExpanded(!statsExpanded)}
-                className="w-full flex items-center justify-between p-2.5 hover:bg-muted transition-colors"
-              >
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Quick Stats
-                </span>
-                {statsExpanded ? (
-                  <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" />
-                ) : (
-                  <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-                )}
-              </button>
-              {statsExpanded && (
-                <div className="px-2.5 pb-2.5 space-y-1">
-                  <button onClick={() => navigate(`/report/${runId}/story`)} className="w-full flex items-center justify-between py-1.5 border-t border-border/50 hover:bg-muted/50 rounded px-1 transition-colors">
-                    <div className="flex items-center gap-2">
-                      <FileText className="h-3.5 w-3.5 text-muted-foreground" />
-                      <span className="text-xs">Pages</span>
-                    </div>
-                    <span className="font-mono font-semibold text-xs">{metadata?.pageCount || '—'}</span>
-                  </button>
-                  <button onClick={() => navigate(`/report/${runId}/craft`)} className="w-full flex items-center justify-between py-1.5 border-t border-border/50 hover:bg-muted/50 rounded px-1 transition-colors">
-                    <div className="flex items-center gap-2">
-                      <Film className="h-3.5 w-3.5 text-muted-foreground" />
-                      <span className="text-xs">Scenes</span>
-                    </div>
-                    <span className="font-mono font-semibold text-xs">{totalScenes}</span>
-                  </button>
-                  <button onClick={() => navigate(`/report/${runId}/characters`)} className="w-full flex items-center justify-between py-1.5 border-t border-border/50 hover:bg-muted/50 rounded px-1 transition-colors">
-                    <div className="flex items-center gap-2">
-                      <Users className="h-3.5 w-3.5 text-muted-foreground" />
-                      <span className="text-xs">Characters</span>
-                    </div>
-                    <span className="font-mono font-semibold text-xs">{totalCharacters}</span>
-                  </button>
-                  <button onClick={() => navigate(`/report/${runId}/story`)} className="w-full flex items-center justify-between py-1.5 border-t border-border/50 hover:bg-muted/50 rounded px-1 transition-colors">
-                    <div className="flex items-center gap-2">
-                      <Zap className="h-3.5 w-3.5 text-muted-foreground" />
-                      <span className="text-xs">Insights</span>
-                    </div>
-                    <span className="font-mono font-semibold text-xs">{totalInsights}</span>
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
+          {/* Stakeholder section replaces Quick Stats in sidebar */}
 
 
           {!collapsed && stakeholderLens && (
