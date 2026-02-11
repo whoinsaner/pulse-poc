@@ -26,6 +26,7 @@ import {
   BookOpen,
   Monitor,
   Zap,
+  Activity,
   LucideIcon
 } from 'lucide-react';
 import { ScriptType } from '@/types/database';
@@ -119,7 +120,7 @@ const USAF_NAV_GROUPS: NavGroup[] = [
       { id: 'craft-visual', label: 'Visual Storytelling', icon: Eye, path: '/craft/visual', requiredCategories: ['World & Logic', 'World'] },
       { id: 'craft-emotional', label: 'Emotional Arc', icon: Sparkles, path: '/craft/emotional', requiredCategories: ['Emotional Arc', 'Emotion'] },
       { id: 'craft-scenes', label: 'Scene Economy', icon: Layers, path: '/craft/scenes', requiredCategories: ['Structure'] },
-      
+      { id: 'scene-analysis', label: 'Scene Analysis', icon: Activity, path: '/narrative' },
     ],
   },
   {
