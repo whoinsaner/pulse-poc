@@ -304,8 +304,7 @@ export function InProgressAnalysis({ analysis: initialAnalysis, onRetry, onViewP
   
   // Get short label from agent name (e.g., "Concept & Hook" -> "Concept")
   const getShortLabel = (name: string): string => {
-    const firstPart = name.split(' ')[0].replace('&', '').trim();
-    return firstPart.length > 8 ? firstPart.slice(0, 7) + '…' : firstPart;
+    return name.split(' ')[0].replace('&', '').trim();
   };
 
   return (
@@ -460,7 +459,7 @@ export function InProgressAnalysis({ analysis: initialAnalysis, onRetry, onViewP
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-7 gap-2">
+          <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2.5">
             {allApplicableAgents.map((agent) => {
               const progress = agentProgress[agent.id];
               const status = progress?.status;
