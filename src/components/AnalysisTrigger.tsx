@@ -508,14 +508,6 @@ export function AnalysisTrigger({
 
             {!streamingParser.isActive && (
               <>
-                <Button 
-                  onClick={() => initiateAnalysis(true, 'deep')} 
-                  className="w-full" 
-                  variant="outline"
-                >
-                  <AlertTriangle className="h-4 w-4 mr-2 text-amber-500" />
-                  Analyze Anyway (Reduced Accuracy)
-                </Button>
                 <p className="text-xs text-muted-foreground text-center">
                   Analysis will use raw script text as fallback. Results may be less precise.
                 </p>
