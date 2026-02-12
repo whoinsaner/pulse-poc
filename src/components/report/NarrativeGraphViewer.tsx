@@ -1,86 +1,252 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { 
   Network, Users, GitBranch, Maximize2, Minimize2,
-  ZoomIn, ZoomOut, RotateCcw, Info
+  ZoomIn, ZoomOut, RotateCcw, Filter, MessageSquare
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { NarrativeGraphData } from '@/types/database';
+import type { NarrativeGraphData, CharacterData } from '@/types/database';
 
 interface NarrativeGraphViewerProps {
   graphData?: NarrativeGraphData | null;
+  characters?: CharacterData[];
   className?: string;
 }
 
-const NODE_COLORS: Record<string, string> = {
-  character: 'fill-chart-1',
-  scene: 'fill-chart-2',
-  event: 'fill-chart-3',
-  theme: 'fill-chart-4',
-  beat: 'fill-chart-3',
-  act: 'fill-chart-4',
-  sequence: 'fill-chart-5',
-};
+// Known noise labels that aren't real characters
+const NOISE_LABELS = new Set([
+  'TITLE CARD', 'TITLE CARDS', 'CHYRON', 'SUPER', 'SUPERIMPOSE',
+  'V.O.', 'O.S.', 'O.C.', 'CONT\'D', 'CONTINUED',
+  'INTERCUT', 'MONTAGE', 'FLASHBACK', 'END FLASHBACK',
+  'FADE IN', 'FADE OUT', 'CUT TO', 'SMASH CUT',
+  'THE END', 'FIN',
+]);
 
-const NODE_SIZES: Record<string, number> = {
-  character: 24,
-  scene: 18,
-  event: 16,
-  theme: 20,
-  beat: 16,
-  act: 24,
-  sequence: 20,
-};
+// Heuristic: likely not a character if label matches these patterns
+function isLikelyNoise(label: string): boolean {
+  const upper = label.toUpperCase().trim();
+  if (NOISE_LABELS.has(upper)) return true;
+  // Script title used as character
+  if (upper.length > 20) return true;
+  return false;
+}
 
-export function NarrativeGraphViewer({ graphData, className }: NarrativeGraphViewerProps) {
+function isRealCharacter(char: CharacterData): boolean {
+  if (isLikelyNoise(char.name)) return false;
+  // Keep characters with meaningful presence
+  if (char.dialogueCount >= 2 && char.sceneCount >= 1) return true;
+  if (char.sceneCount >= 2) return true;
+  return false;
+}
+
+interface CharacterNode {
+  id: string;
+  name: string;
+  dialogueCount: number;
+  sceneCount: number;
+  description?: string;
+  arcSummary?: string;
+  x: number;
+  y: number;
+  radius: number;
+}
+
+interface CharacterEdge {
+  source: string;
+  target: string;
+  weight: number; // co-occurrence strength
+}
+
+export function NarrativeGraphViewer({ graphData, characters, className }: NarrativeGraphViewerProps) {
   const [activeTab, setActiveTab] = useState<'character' | 'plot'>('character');
   const [zoom, setZoom] = useState(1);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [hoveredNode, setHoveredNode] = useState<string | null>(null);
+  const [showMinorChars, setShowMinorChars] = useState(false);
 
-  // Generate positions for nodes using a simple force-directed-like layout
-  const nodePositions = useMemo(() => {
-    if (!graphData?.nodes?.length) return {};
+  // Build character relationship graph from characters data
+  const characterGraph = useMemo(() => {
+    if (!characters?.length) return { nodes: [], edges: [] };
+
+    const realChars = characters.filter(c => isRealCharacter(c));
     
-    const positions: Record<string, { x: number; y: number }> = {};
+    // Split into major/minor based on dialogue presence
+    const maxDialogue = Math.max(...realChars.map(c => c.dialogueCount || 0), 1);
+    const majorThreshold = maxDialogue * 0.1; // top 90% by dialogue
+    
+    const filteredChars = showMinorChars 
+      ? realChars 
+      : realChars.filter(c => (c.dialogueCount || 0) >= majorThreshold || (c.sceneCount || 0) >= 3);
+
+    if (filteredChars.length === 0) return { nodes: [], edges: [] };
+
     const width = 600;
     const height = 400;
     const centerX = width / 2;
     const centerY = height / 2;
-    
-    // Group nodes by type
-    const nodesByType: Record<string, typeof graphData.nodes> = {};
-    graphData.nodes.forEach(node => {
-      const type = node.type || 'scene';
-      if (!nodesByType[type]) nodesByType[type] = [];
-      nodesByType[type].push(node);
-    });
-    
-    // Position nodes in concentric circles by type
-    let typeIndex = 0;
-    Object.entries(nodesByType).forEach(([, nodes]) => {
-      const radius = 80 + typeIndex * 60;
-      nodes.forEach((node, i) => {
-        const angle = (2 * Math.PI * i) / nodes.length - Math.PI / 2;
-        positions[node.id] = {
-          x: centerX + radius * Math.cos(angle),
-          y: centerY + radius * Math.sin(angle),
-        };
-      });
-      typeIndex++;
-    });
-    
-    return positions;
-  }, [graphData?.nodes]);
 
-  const handleZoomIn = () => setZoom(z => Math.min(z + 0.2, 2));
-  const handleZoomOut = () => setZoom(z => Math.max(z - 0.2, 0.5));
+    // Position using radial layout with importance-based distance from center
+    const sorted = [...filteredChars].sort((a, b) => 
+      (b.dialogueCount || 0) + (b.sceneCount || 0) * 2 - 
+      (a.dialogueCount || 0) - (a.sceneCount || 0) * 2
+    );
+
+    const nodes: CharacterNode[] = sorted.map((char, i) => {
+      const importance = ((char.dialogueCount || 0) + (char.sceneCount || 0) * 3) / 
+        (maxDialogue + Math.max(...realChars.map(c => c.sceneCount || 0), 1) * 3);
+      
+      // Most important character near center, others radiate outward
+      const ringIndex = i === 0 ? 0 : Math.ceil(i / 4);
+      const ringCount = i === 0 ? 1 : Math.min(4, sorted.length - (ringIndex - 1) * 4);
+      const posInRing = i === 0 ? 0 : ((i - 1) % 4);
+      
+      const radius = ringIndex === 0 ? 0 : 80 + ringIndex * 70;
+      const angleOffset = ringIndex * 0.3; // stagger rings
+      const angle = ringIndex === 0 ? 0 : (2 * Math.PI * posInRing) / ringCount + angleOffset;
+      
+      const nodeRadius = Math.max(14, Math.min(32, 14 + importance * 24));
+
+      return {
+        id: char.name,
+        name: char.name,
+        dialogueCount: char.dialogueCount || 0,
+        sceneCount: char.sceneCount || 0,
+        description: char.description,
+        arcSummary: char.arcSummary,
+        x: centerX + radius * Math.cos(angle),
+        y: centerY + radius * Math.sin(angle),
+        radius: nodeRadius,
+      };
+    });
+
+    // Apply simple force repulsion to prevent overlaps
+    for (let iter = 0; iter < 50; iter++) {
+      for (let i = 0; i < nodes.length; i++) {
+        for (let j = i + 1; j < nodes.length; j++) {
+          const dx = nodes[j].x - nodes[i].x;
+          const dy = nodes[j].y - nodes[i].y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const minDist = nodes[i].radius + nodes[j].radius + 40;
+          
+          if (dist < minDist && dist > 0) {
+            const force = (minDist - dist) / dist * 0.3;
+            const fx = dx * force;
+            const fy = dy * force;
+            nodes[i].x -= fx;
+            nodes[i].y -= fy;
+            nodes[j].x += fx;
+            nodes[j].y += fy;
+          }
+        }
+        // Keep in bounds
+        nodes[i].x = Math.max(nodes[i].radius + 30, Math.min(width - nodes[i].radius - 30, nodes[i].x));
+        nodes[i].y = Math.max(nodes[i].radius + 20, Math.min(height - nodes[i].radius - 20, nodes[i].y));
+      }
+    }
+
+    // Infer connections: characters with higher scene counts likely co-occur
+    // Use a simple heuristic: connect characters whose scene ranges overlap
+    const edges: CharacterEdge[] = [];
+    for (let i = 0; i < filteredChars.length; i++) {
+      for (let j = i + 1; j < filteredChars.length; j++) {
+        const a = filteredChars[i];
+        const b = filteredChars[j];
+        // Weight by shared presence (geometric mean of scene counts, normalized)
+        const sharedWeight = Math.sqrt((a.sceneCount || 1) * (b.sceneCount || 1));
+        const maxScene = Math.max(...realChars.map(c => c.sceneCount || 0), 1);
+        const normalizedWeight = sharedWeight / maxScene;
+        
+        // Only connect if both have meaningful presence
+        if ((a.sceneCount || 0) >= 2 && (b.sceneCount || 0) >= 2) {
+          edges.push({
+            source: a.name,
+            target: b.name,
+            weight: normalizedWeight,
+          });
+        } else if ((a.sceneCount || 0) + (b.sceneCount || 0) >= 4) {
+          edges.push({
+            source: a.name,
+            target: b.name,
+            weight: normalizedWeight * 0.5,
+          });
+        }
+      }
+    }
+
+    return { nodes, edges };
+  }, [characters, showMinorChars]);
+
+  // Plot structure from graph data
+  const plotNodes = useMemo(() => {
+    if (!graphData?.nodes?.length) return { nodes: [], edges: [] };
+
+    // Filter to only scene nodes, keep them in order
+    const sceneNodes = graphData.nodes
+      .filter(n => n.type === 'scene' || n.type === 'beat' || n.type === 'act' || n.type === 'sequence')
+      .slice(0, 30); // Limit to first 30 for readability
+
+    const sceneEdges = graphData.edges.filter(e => {
+      const sourceNode = sceneNodes.find(n => n.id === e.source);
+      const targetNode = sceneNodes.find(n => n.id === e.target);
+      return sourceNode && targetNode;
+    });
+
+    const width = 600;
+    const height = 400;
+    const padding = 50;
+
+    // Layout scenes in a flowing grid
+    const cols = Math.ceil(Math.sqrt(sceneNodes.length * 1.5));
+    const rows = Math.ceil(sceneNodes.length / cols);
+    const cellW = (width - padding * 2) / cols;
+    const cellH = (height - padding * 2) / Math.max(rows, 1);
+
+    const positioned = sceneNodes.map((node, i) => {
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      return {
+        ...node,
+        x: padding + col * cellW + cellW / 2,
+        y: padding + row * cellH + cellH / 2,
+        radius: 10,
+      };
+    });
+
+    return { nodes: positioned, edges: sceneEdges };
+  }, [graphData]);
+
+  const handleZoomIn = () => setZoom(z => Math.min(z + 0.2, 2.5));
+  const handleZoomOut = () => setZoom(z => Math.max(z - 0.2, 0.3));
   const handleReset = () => setZoom(1);
 
+  const connectedToHovered = useMemo(() => {
+    if (!hoveredNode) return new Set<string>();
+    const connected = new Set<string>();
+    connected.add(hoveredNode);
+    
+    if (activeTab === 'character') {
+      characterGraph.edges.forEach(e => {
+        if (e.source === hoveredNode) connected.add(e.target);
+        if (e.target === hoveredNode) connected.add(e.source);
+      });
+    } else {
+      plotNodes.edges.forEach(e => {
+        if (e.source === hoveredNode) connected.add(e.target);
+        if (e.target === hoveredNode) connected.add(e.source);
+      });
+    }
+    return connected;
+  }, [hoveredNode, activeTab, characterGraph.edges, plotNodes.edges]);
+
+  const hasCharacterData = characters && characters.filter(c => isRealCharacter(c)).length > 0;
+  const hasPlotData = graphData && graphData.nodes?.length > 0;
+
   // Empty state
-  if (!graphData || !graphData.nodes?.length) {
+  if (!hasCharacterData && !hasPlotData) {
     return (
       <Card className={cn('bg-card/50 border-border/50', className)}>
         <CardContent className="flex flex-col items-center justify-center py-12">
@@ -97,7 +263,164 @@ export function NarrativeGraphViewer({ graphData, className }: NarrativeGraphVie
     );
   }
 
-  const renderGraph = () => {
+  const renderCharacterGraph = () => {
+    const { nodes, edges } = characterGraph;
+    if (nodes.length === 0) {
+      return (
+        <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+          <Users className="h-8 w-8 mb-2 opacity-50" />
+          <p className="text-sm">No significant characters found</p>
+        </div>
+      );
+    }
+
+    const width = 600;
+    const height = 400;
+    const maxDialogue = Math.max(...nodes.map(n => n.dialogueCount), 1);
+
+    return (
+      <svg
+        viewBox={`0 0 ${width} ${height}`}
+        className="w-full h-full"
+        style={{ transform: `scale(${zoom})`, transformOrigin: 'center' }}
+      >
+        {/* Render edges */}
+        <g className="edges">
+          {edges.map((edge, i) => {
+            const source = nodes.find(n => n.id === edge.source);
+            const target = nodes.find(n => n.id === edge.target);
+            if (!source || !target) return null;
+
+            const isHighlighted = hoveredNode && 
+              (edge.source === hoveredNode || edge.target === hoveredNode);
+            const isDimmed = hoveredNode && !isHighlighted;
+            
+            const opacity = isDimmed ? 0.05 : Math.max(0.15, Math.min(0.6, edge.weight));
+            const strokeWidth = isDimmed ? 0.5 : Math.max(1, Math.min(3, edge.weight * 4));
+
+            return (
+              <line
+                key={i}
+                x1={source.x}
+                y1={source.y}
+                x2={target.x}
+                y2={target.y}
+                className={cn(
+                  isHighlighted ? 'stroke-chart-1' : 'stroke-muted-foreground'
+                )}
+                strokeWidth={isHighlighted ? strokeWidth + 1 : strokeWidth}
+                opacity={opacity}
+                strokeDasharray={edge.weight < 0.3 ? '4 4' : undefined}
+              />
+            );
+          })}
+        </g>
+
+        {/* Render nodes */}
+        <g className="nodes">
+          {nodes.map(node => {
+            const isHovered = hoveredNode === node.id;
+            const isConnected = connectedToHovered.has(node.id);
+            const isDimmed = hoveredNode && !isConnected;
+            const dialogueRatio = node.dialogueCount / maxDialogue;
+            
+            // Color intensity based on dialogue count
+            const fillOpacity = isDimmed ? 0.15 : Math.max(0.5, dialogueRatio);
+
+            return (
+              <g 
+                key={node.id} 
+                className="cursor-pointer transition-opacity"
+                onMouseEnter={() => setHoveredNode(node.id)}
+                onMouseLeave={() => setHoveredNode(null)}
+                opacity={isDimmed ? 0.3 : 1}
+              >
+                {/* Glow ring on hover */}
+                {isHovered && (
+                  <circle
+                    cx={node.x}
+                    cy={node.y}
+                    r={node.radius + 6}
+                    className="fill-chart-1/10 stroke-chart-1/30"
+                    strokeWidth={2}
+                  />
+                )}
+                
+                {/* Main circle */}
+                <circle
+                  cx={node.x}
+                  cy={node.y}
+                  r={node.radius}
+                  className="stroke-background"
+                  strokeWidth={2}
+                  fill={`hsl(var(--chart-1) / ${fillOpacity})`}
+                />
+
+                {/* Dialogue count indicator */}
+                {node.dialogueCount > 0 && (
+                  <text
+                    x={node.x}
+                    y={node.y + 4}
+                    className="fill-chart-1-foreground text-[9px] font-bold pointer-events-none"
+                    textAnchor="middle"
+                    opacity={isDimmed ? 0.3 : 0.9}
+                  >
+                    {node.dialogueCount}
+                  </text>
+                )}
+
+                {/* Name label */}
+                <text
+                  x={node.x}
+                  y={node.y + node.radius + 14}
+                  className="fill-foreground text-[11px] font-medium pointer-events-none"
+                  textAnchor="middle"
+                  opacity={isDimmed ? 0.3 : 1}
+                >
+                  {node.name.length > 14 ? node.name.slice(0, 14) + '…' : node.name}
+                </text>
+
+                {/* Scene count badge */}
+                {isHovered && (
+                  <g>
+                    <rect
+                      x={node.x - 45}
+                      y={node.y - node.radius - 28}
+                      width={90}
+                      height={20}
+                      rx={4}
+                      className="fill-popover stroke-border"
+                      strokeWidth={1}
+                    />
+                    <text
+                      x={node.x}
+                      y={node.y - node.radius - 15}
+                      className="fill-popover-foreground text-[9px] pointer-events-none"
+                      textAnchor="middle"
+                    >
+                      {node.sceneCount} scenes · {node.dialogueCount} lines
+                    </text>
+                  </g>
+                )}
+              </g>
+            );
+          })}
+        </g>
+      </svg>
+    );
+  };
+
+  const renderPlotGraph = () => {
+    const { nodes, edges } = plotNodes;
+    if (nodes.length === 0) {
+      return (
+        <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+          <GitBranch className="h-8 w-8 mb-2 opacity-50" />
+          <p className="text-sm">No plot structure data available</p>
+        </div>
+      );
+    }
+
     const width = 600;
     const height = 400;
 
@@ -107,92 +430,70 @@ export function NarrativeGraphViewer({ graphData, className }: NarrativeGraphVie
         className="w-full h-full"
         style={{ transform: `scale(${zoom})`, transformOrigin: 'center' }}
       >
-        <defs>
-          <marker
-            id="arrowhead"
-            markerWidth="10"
-            markerHeight="7"
-            refX="9"
-            refY="3.5"
-            orient="auto"
-          >
-            <polygon
-              points="0 0, 10 3.5, 0 7"
-              className="fill-muted-foreground/50"
-            />
-          </marker>
-        </defs>
+        {/* Edges */}
+        <g>
+          {edges.map((edge, i) => {
+            const source = nodes.find(n => n.id === edge.source);
+            const target = nodes.find(n => n.id === edge.target);
+            if (!source || !target) return null;
 
-        {/* Render edges */}
-        <g className="edges">
-          {graphData.edges.map((edge, i) => {
-            const sourcePos = nodePositions[edge.source];
-            const targetPos = nodePositions[edge.target];
-            if (!sourcePos || !targetPos) return null;
-
-            const dx = targetPos.x - sourcePos.x;
-            const dy = targetPos.y - sourcePos.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            
-            // Offset to not overlap with node circles
-            const sourceNode = graphData.nodes.find(n => n.id === edge.source);
-            const targetNode = graphData.nodes.find(n => n.id === edge.target);
-            const sourceRadius = NODE_SIZES[sourceNode?.type || 'character'] / 2;
-            const targetRadius = NODE_SIZES[targetNode?.type || 'character'] / 2;
-            
-            const offsetX = (dx / dist) || 0;
-            const offsetY = (dy / dist) || 0;
+            const isHighlighted = hoveredNode && 
+              (edge.source === hoveredNode || edge.target === hoveredNode);
+            const isDimmed = hoveredNode && !isHighlighted;
 
             return (
-              <g key={i}>
-                <line
-                  x1={sourcePos.x + offsetX * sourceRadius}
-                  y1={sourcePos.y + offsetY * sourceRadius}
-                  x2={targetPos.x - offsetX * targetRadius}
-                  y2={targetPos.y - offsetY * targetRadius}
-                  className="stroke-muted-foreground/30"
-                  strokeWidth={1}
-                  markerEnd="url(#arrowhead)"
-                />
-                {edge.type && (
-                  <text
-                    x={(sourcePos.x + targetPos.x) / 2}
-                    y={(sourcePos.y + targetPos.y) / 2 - 5}
-                    className="fill-muted-foreground text-[8px]"
-                    textAnchor="middle"
-                  >
-                    {edge.type}
-                  </text>
-                )}
-              </g>
+              <line
+                key={i}
+                x1={source.x}
+                y1={source.y}
+                x2={target.x}
+                y2={target.y}
+                className={isHighlighted ? 'stroke-chart-2' : 'stroke-muted-foreground/30'}
+                strokeWidth={isHighlighted ? 2 : 1}
+                opacity={isDimmed ? 0.1 : 0.6}
+              />
             );
           })}
         </g>
 
-        {/* Render nodes */}
-        <g className="nodes">
-          {graphData.nodes.map(node => {
-            const pos = nodePositions[node.id];
-            if (!pos) return null;
+        {/* Nodes */}
+        <g>
+          {nodes.map((node: any) => {
+            const isHovered = hoveredNode === node.id;
+            const isConnected = connectedToHovered.has(node.id);
+            const isDimmed = hoveredNode && !isConnected;
 
-            const size = NODE_SIZES[node.type] || 18;
-            const colorClass = NODE_COLORS[node.type] || 'fill-chart-2';
+            // Extract short label
+            const shortLabel = node.label
+              .replace(/^PAGE\s*/i, 'P')
+              .replace(/\s*-\s*PANEL\s*/i, '.')
+              .replace(/^(P\d+\.\d+).*/, '$1');
 
             return (
-              <g key={node.id} className="cursor-pointer hover:opacity-80 transition-opacity">
+              <g
+                key={node.id}
+                className="cursor-pointer"
+                onMouseEnter={() => setHoveredNode(node.id)}
+                onMouseLeave={() => setHoveredNode(null)}
+                opacity={isDimmed ? 0.2 : 1}
+              >
                 <circle
-                  cx={pos.x}
-                  cy={pos.y}
-                  r={size / 2}
-                  className={cn(colorClass, 'stroke-background stroke-2')}
+                  cx={node.x}
+                  cy={node.y}
+                  r={node.radius}
+                  className={cn(
+                    'stroke-background stroke-2',
+                    isHovered ? 'fill-chart-2' : 'fill-chart-2/60'
+                  )}
                 />
                 <text
-                  x={pos.x}
-                  y={pos.y + size / 2 + 12}
-                  className="fill-foreground text-[10px] font-medium"
+                  x={node.x}
+                  y={node.y + node.radius + 12}
+                  className="fill-foreground text-[8px] pointer-events-none"
                   textAnchor="middle"
+                  opacity={isDimmed ? 0.3 : 0.8}
                 >
-                  {node.label.length > 12 ? node.label.slice(0, 12) + '...' : node.label}
+                  {shortLabel.length > 8 ? shortLabel.slice(0, 8) : shortLabel}
                 </text>
               </g>
             );
@@ -202,12 +503,8 @@ export function NarrativeGraphViewer({ graphData, className }: NarrativeGraphVie
     );
   };
 
-  const stats = {
-    nodes: graphData.nodes.length,
-    edges: graphData.edges.length,
-    acts: graphData.nodes.filter(n => n.type === 'act').length,
-    scenes: graphData.nodes.filter(n => n.type === 'scene').length,
-  };
+  const realCharCount = characters?.filter(c => isRealCharacter(c)).length || 0;
+  const totalCharCount = characters?.length || 0;
 
   return (
     <Card className={cn(
@@ -218,102 +515,130 @@ export function NarrativeGraphViewer({ graphData, className }: NarrativeGraphVie
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-chart-2/10">
-              <Network className="h-5 w-5 text-chart-2" />
+            <div className="p-2 rounded-lg bg-chart-1/10">
+              <Network className="h-5 w-5 text-chart-1" />
             </div>
             <div>
-              <CardTitle className="text-lg">Narrative Graph</CardTitle>
+              <CardTitle className="text-lg">Character Network</CardTitle>
               <CardDescription>
-                Visual representation of story relationships
+                Interactive map of character relationships and story structure
               </CardDescription>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" onClick={handleZoomOut}>
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="icon" onClick={handleZoomOut} className="h-8 w-8">
               <ZoomOut className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={handleZoomIn}>
+            <Button variant="ghost" size="icon" onClick={handleZoomIn} className="h-8 w-8">
               <ZoomIn className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={handleReset}>
+            <Button variant="ghost" size="icon" onClick={handleReset} className="h-8 w-8">
               <RotateCcw className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => setIsExpanded(!isExpanded)}>
+            <Button variant="ghost" size="icon" onClick={() => setIsExpanded(!isExpanded)} className="h-8 w-8">
               {isExpanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
             </Button>
           </div>
         </div>
 
         {/* Stats */}
-        <div className="flex items-center gap-2 mt-3">
+        <div className="flex items-center gap-2 mt-3 flex-wrap">
           <Badge variant="secondary" className="text-xs">
             <Users className="h-3 w-3 mr-1" />
-            {stats.nodes} Nodes
+            {realCharCount} Characters
           </Badge>
+          {totalCharCount > realCharCount && (
+            <Badge variant="outline" className="text-xs text-muted-foreground">
+              <Filter className="h-3 w-3 mr-1" />
+              {totalCharCount - realCharCount} filtered
+            </Badge>
+          )}
           <Badge variant="secondary" className="text-xs">
             <GitBranch className="h-3 w-3 mr-1" />
-            {stats.edges} Connections
+            {characterGraph.edges.length} Connections
           </Badge>
         </div>
       </CardHeader>
 
       <CardContent>
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'character' | 'plot')}>
-          <TabsList className="grid w-full grid-cols-2 mb-4">
-            <TabsTrigger value="character" className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Character Relations
-            </TabsTrigger>
-            <TabsTrigger value="plot" className="flex items-center gap-2">
-              <GitBranch className="h-4 w-4" />
-              Plot Structure
-            </TabsTrigger>
-          </TabsList>
+          <div className="flex items-center justify-between mb-4">
+            <TabsList className="grid grid-cols-2 w-auto">
+              <TabsTrigger value="character" className="flex items-center gap-2 px-4">
+                <Users className="h-4 w-4" />
+                Character Network
+              </TabsTrigger>
+              <TabsTrigger value="plot" className="flex items-center gap-2 px-4">
+                <GitBranch className="h-4 w-4" />
+                Scene Flow
+              </TabsTrigger>
+            </TabsList>
+
+            {activeTab === 'character' && (
+              <Button
+                variant={showMinorChars ? 'secondary' : 'outline'}
+                size="sm"
+                className="text-xs"
+                onClick={() => setShowMinorChars(!showMinorChars)}
+              >
+                <Filter className="h-3 w-3 mr-1" />
+                {showMinorChars ? 'All Characters' : 'Major Only'}
+              </Button>
+            )}
+          </div>
 
           <TabsContent value="character" className="mt-0">
             <div className={cn(
               'relative bg-muted/20 rounded-lg border border-border/50 overflow-hidden',
-              isExpanded ? 'h-[calc(100vh-250px)]' : 'h-[400px]'
+              isExpanded ? 'h-[calc(100vh-280px)]' : 'h-[400px]'
             )}>
-              {renderGraph()}
+              {renderCharacterGraph()}
             </div>
           </TabsContent>
 
           <TabsContent value="plot" className="mt-0">
             <div className={cn(
               'relative bg-muted/20 rounded-lg border border-border/50 overflow-hidden',
-              isExpanded ? 'h-[calc(100vh-250px)]' : 'h-[400px]'
+              isExpanded ? 'h-[calc(100vh-280px)]' : 'h-[400px]'
             )}>
-              {renderGraph()}
+              {renderPlotGraph()}
             </div>
           </TabsContent>
         </Tabs>
 
         {/* Legend */}
-        <div className="flex items-center gap-4 mt-4 p-3 rounded-lg bg-muted/30 border border-border/50">
-          <div className="flex items-center gap-2">
-            <Info className="h-4 w-4 text-muted-foreground" />
-            <span className="text-xs text-muted-foreground">Legend:</span>
-          </div>
+        <div className="flex items-center justify-between mt-4 p-3 rounded-lg bg-muted/30 border border-border/50">
           <div className="flex items-center gap-4 text-xs">
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded-full bg-chart-1" />
-              <span>Character</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded-full bg-chart-2" />
-              <span>Scene</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded-full bg-chart-3" />
-              <span>Event</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded-full bg-chart-4" />
-              <span>Theme</span>
-            </div>
+            {activeTab === 'character' ? (
+              <>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-6 h-6 rounded-full bg-chart-1/80" />
+                  <span className="text-muted-foreground">Major character</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-4 h-4 rounded-full bg-chart-1/40" />
+                  <span className="text-muted-foreground">Minor character</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <MessageSquare className="h-3 w-3 text-muted-foreground" />
+                  <span className="text-muted-foreground">Number = dialogue lines</span>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3 h-3 rounded-full bg-chart-2" />
+                  <span className="text-muted-foreground">Scene / Panel</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-8 h-px bg-muted-foreground/40" />
+                  <span className="text-muted-foreground">Sequence flow</span>
+                </div>
+              </>
+            )}
           </div>
+          <span className="text-[10px] text-muted-foreground">Hover to explore</span>
         </div>
       </CardContent>
     </Card>
