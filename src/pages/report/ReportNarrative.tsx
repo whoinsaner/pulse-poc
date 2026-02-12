@@ -125,7 +125,7 @@ export default function ReportNarrative() {
             Interactive visualization of character relationships and plot connections
           </p>
         </div>
-        <NarrativeGraphViewer graphData={narrativeGraph} />
+        <NarrativeGraphViewer graphData={narrativeGraph} characters={reportData.characters} />
       </section>
     </div>
   );
