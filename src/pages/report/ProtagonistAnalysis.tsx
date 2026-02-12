@@ -1,19 +1,14 @@
 import { useOutletContext } from 'react-router-dom';
 import { ReportData, StakeholderLens } from '@/types/database';
 import { ParameterBreakdown } from '@/components/report/ParameterBreakdown';
+import { AgentNarrativePanel, CharacterNarrativePanel } from '@/components/report/AgentNarrativePanel';
 import { Card } from '@/components/ui/card';
 import { 
   SectionHeader, 
   SubSectionHeader,
-  VerdictBox, 
-  ScoreBar,
-  ScoreDisplay,
   StrengthWeaknessList,
-  RecommendationCard,
-  QuoteCallout
 } from '@/components/report/ui';
-import { User, Heart, Target, Zap, Brain, TrendingUp } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { User } from 'lucide-react';
 import { extractScore } from '@/lib/scoreUtils';
 import { useStakeholderFiltering } from '@/hooks/useStakeholderFiltering';
 import { StakeholderFilterNotice } from '@/components/report/StakeholderFilterNotice';
@@ -27,10 +22,8 @@ interface ReportContextValue {
 
 export default function ProtagonistAnalysis() {
   const { reportData, currentScore, stakeholderLens } = useOutletContext<ReportContextValue>();
-  
   const { isFiltered, filterParameters, getFilterStats } = useStakeholderFiltering({ stakeholderLens });
   
-  // Find the protagonist (character with most dialogue/scenes)
   const characters = reportData.characters || [];
   const protagonist = characters.length > 0 
     ? characters.reduce((prev, current) => 
@@ -38,7 +31,6 @@ export default function ProtagonistAnalysis() {
       )
     : null;
 
-  // Get character-related parameters
   const characterParams = reportData.parameterScores?.filter(p => 
     p.category?.toLowerCase().includes('character') || 
     p.parameterName?.toLowerCase().includes('protagonist') ||
@@ -47,49 +39,23 @@ export default function ProtagonistAnalysis() {
     p.parameterName?.toLowerCase().includes('empathy')
   ) || [];
 
-  const characterScore = characterParams.length > 0 
-    ? characterParams.reduce((sum, p) => sum + p.score, 0) / characterParams.length 
-    : extractScore(reportData.categoryScores?.['Character']) || currentScore;
+  const categoryScore = extractScore(reportData.categoryScores?.['Character']) || 
+    (characterParams.length > 0 
+      ? characterParams.reduce((sum, p) => sum + p.score, 0) / characterParams.length 
+      : currentScore);
 
-  const categoryScore = extractScore(reportData.categoryScores?.['Character']) || characterScore;
+  const agentContent = reportData.agentContent?.CharacterAgent;
 
-  // Derive sub-scores from actual parameter data
-  const getParamScore = (keywords: string[]) => {
-    const matched = characterParams.filter(p => 
-      keywords.some(k => p.parameterName?.toLowerCase().includes(k) || p.displayName?.toLowerCase().includes(k))
-    );
-    return matched.length > 0 
-      ? Math.round(matched.reduce((sum, p) => sum + p.score, 0) / matched.length)
-      : Math.round(categoryScore);
-  };
-
-  const subScores = {
-    empathy: getParamScore(['empathy', 'relat', 'likeab', 'connect']),
-    uniqueness: getParamScore(['unique', 'original', 'fresh', 'distinct']),
-    arcQuality: getParamScore(['arc', 'transform', 'growth', 'change']),
-    agency: getParamScore(['agency', 'active', 'drive', 'decision']),
-  };
-
-  const characterInsights = reportData.insights?.filter(i => 
-    i.category?.toLowerCase().includes('character') ||
-    i.title?.toLowerCase().includes('protagonist') ||
-    i.title?.toLowerCase().includes('character')
-  ) || [];
-
-  // AI-generated recommendations from CharacterAgent
-  const agentRecs = reportData.agentContent?.CharacterAgent?.recommendations || [];
-
-  const strengths = characterParams.filter(p => p.score >= 7).map(p => ({
+  const strengths = characterParams.filter(p => p.score >= 70).map(p => ({
     text: p.displayName || p.parameterName,
     detail: p.rationale?.slice(0, 80)
   }));
 
-  const weaknesses = characterParams.filter(p => p.score < 5).map(p => ({
+  const weaknesses = characterParams.filter(p => p.score < 50).map(p => ({
     text: p.displayName || p.parameterName,
     detail: p.rationale?.slice(0, 80)
   }));
 
-  // Filter parameters based on stakeholder lens
   const filteredCharacterParams = filterParameters(characterParams);
   const filterStats = getFilterStats(characterParams);
 
@@ -102,7 +68,6 @@ export default function ProtagonistAnalysis() {
         score={categoryScore}
       />
 
-      {/* Stakeholder Filter Notice */}
       {isFiltered && stakeholderLens && (
         <StakeholderFilterNotice 
           stakeholderLens={stakeholderLens}
@@ -111,44 +76,12 @@ export default function ProtagonistAnalysis() {
         />
       )}
 
-      {/* Score Overview */}
-      <div className="grid md:grid-cols-4 gap-4">
-        <Card className="glass-premium p-5 text-center">
-          <Heart className="h-5 w-5 mx-auto mb-2 text-destructive" />
-          <p className="text-sm text-muted-foreground mb-1">Empathy Score</p>
-          <ScoreDisplay score={subScores.empathy} size="sm" showLabel={false} />
-        </Card>
-        <Card className="glass-premium p-5 text-center">
-          <Zap className="h-5 w-5 mx-auto mb-2 text-chart-4" />
-          <p className="text-sm text-muted-foreground mb-1">Uniqueness</p>
-          <ScoreDisplay score={subScores.uniqueness} size="sm" showLabel={false} />
-        </Card>
-        <Card className="glass-premium p-5 text-center">
-          <TrendingUp className="h-5 w-5 mx-auto mb-2 text-chart-3" />
-          <p className="text-sm text-muted-foreground mb-1">Arc Quality</p>
-          <ScoreDisplay score={subScores.arcQuality} size="sm" showLabel={false} />
-        </Card>
-        <Card className="glass-premium p-5 text-center">
-          <Target className="h-5 w-5 mx-auto mb-2 text-primary" />
-          <p className="text-sm text-muted-foreground mb-1">Overall</p>
-          <ScoreDisplay score={categoryScore} size="sm" />
-        </Card>
-      </div>
+      {/* Agent Narrative with character extras (protagonist profile, etc.) */}
+      {agentContent ? (
+        <CharacterNarrativePanel content={agentContent} />
+      ) : null}
 
-      {/* Core Finding */}
-      <VerdictBox
-        type={categoryScore >= 7 ? 'success' : categoryScore >= 5 ? 'finding' : 'issue'}
-        title={categoryScore >= 7 ? 'Strong Protagonist Foundation' : categoryScore >= 5 ? 'Protagonist Needs Development' : 'Critical Character Issues'}
-        content={
-          categoryScore >= 7 
-            ? 'The protagonist is well-constructed with clear motivations, relatable flaws, and a meaningful transformation arc.'
-            : categoryScore >= 5
-            ? 'Core character elements are present but need deepening. Focus on internal conflict and clearer motivation.'
-            : 'The protagonist lacks essential elements for audience connection. Address fundamental character construction.'
-        }
-      />
-
-      {/* Character Fundamentals */}
+      {/* Character Fundamentals from parsed data */}
       {protagonist && (
         <Card className="glass-premium p-6">
           <SubSectionHeader title="Character Fundamentals" />
@@ -200,91 +133,13 @@ export default function ProtagonistAnalysis() {
         </Card>
       )}
 
-      {/* Character Arc Breakdown */}
-      <Card className="glass-premium p-6">
-        <SubSectionHeader title="Character Arc Breakdown" />
-        <div className="space-y-6">
-          <div className="grid md:grid-cols-3 gap-4">
-            {[
-              { act: 'Act I', phase: 'Ordinary World', desc: 'Establishing the protagonist\'s status quo and introducing their flaw/need' },
-              { act: 'Act II', phase: 'Tests & Transformation', desc: 'Character faces challenges that force growth and self-reflection' },
-              { act: 'Act III', phase: 'New Self', desc: 'Protagonist demonstrates change through climactic choices' },
-            ].map((phase, index) => (
-              <div key={index} className="p-4 rounded-lg bg-muted/30 border border-border/50">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className={cn(
-                    "w-2 h-2 rounded-full",
-                    index === 0 ? "bg-chart-1" : index === 1 ? "bg-chart-2" : "bg-chart-3"
-                  )} />
-                  <span className="font-display font-semibold">{phase.act}</span>
-                </div>
-                <p className="text-sm font-medium mb-1">{phase.phase}</p>
-                <p className="text-xs text-muted-foreground">{phase.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </Card>
-
       {/* Parameter Scores */}
       <ParameterBreakdown title="Character Parameters" parameters={filteredCharacterParams} />
 
       {/* Strengths & Weaknesses */}
       {(strengths.length > 0 || weaknesses.length > 0) && (
-        <StrengthWeaknessList
-          strengths={strengths}
-          weaknesses={weaknesses}
-        />
+        <StrengthWeaknessList strengths={strengths} weaknesses={weaknesses} />
       )}
-
-      {/* Recommendations */}
-      <Card className="glass-premium p-6">
-        <SubSectionHeader title="Protagonist Recommendations" />
-        <div className="space-y-3">
-          {agentRecs.length > 0 ? (
-            agentRecs.map((rec, i) => {
-              const effortMap: Record<string, 'easy' | 'moderate' | 'difficult'> = { easy: 'easy', moderate: 'moderate', hard: 'difficult', difficult: 'difficult' };
-              return (
-                <RecommendationCard
-                  key={i}
-                  title={rec.title}
-                  description={rec.description}
-                  priority={rec.priority || 'medium'}
-                  effort={effortMap[rec.effort || 'moderate'] || 'moderate'}
-                />
-              );
-            })
-          ) : (
-            <>
-              {subScores.empathy < 7 && (
-                <RecommendationCard
-                  title="Increase Empathy Connection"
-                  description="Add moments of vulnerability or relatability that help audiences root for the protagonist."
-                  priority={subScores.empathy < 5 ? 'critical' : 'high'}
-                  effort="moderate"
-                  impact="Stronger audience investment"
-                />
-              )}
-              {subScores.agency < 6 && (
-                <RecommendationCard
-                  title="Strengthen Character Agency"
-                  description="Ensure the protagonist drives the plot through active choices rather than reacting to events."
-                  priority="high"
-                  effort="moderate"
-                />
-              )}
-              {subScores.arcQuality < 7 && (
-                <RecommendationCard
-                  title="Clarify Character Transformation"
-                  description="Make the internal change more visible through contrasting behavior in Act I vs Act III."
-                  priority="medium"
-                  effort="easy"
-                />
-              )}
-            </>
-          )}
-        </div>
-      </Card>
     </div>
   );
 }
