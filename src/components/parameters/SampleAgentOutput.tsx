@@ -25,10 +25,10 @@ const AGENT_COLORS: Record<string, string> = {
   MarketAgent: "bg-orange-500/10 text-orange-500 border-orange-500/20",
   ExecutionAgent: "bg-rose-500/10 text-rose-500 border-rose-500/20",
   // Comic-specific agents
-  ComicVisualAgent: "bg-indigo-500/10 text-indigo-500 border-indigo-500/20",
-  ComicDialogueAgent: "bg-teal-500/10 text-teal-500 border-teal-500/20",
-  ComicPacingAgent: "bg-lime-500/10 text-lime-500 border-lime-500/20",
-  ComicArtDirectionAgent: "bg-fuchsia-500/10 text-fuchsia-500 border-fuchsia-500/20",
+  PanelFlowAgent: "bg-indigo-500/10 text-indigo-500 border-indigo-500/20",
+  LetteringBalloonAgent: "bg-teal-500/10 text-teal-500 border-teal-500/20",
+  PageTurnImpactAgent: "bg-lime-500/10 text-lime-500 border-lime-500/20",
+  ArtScriptSynergyAgent: "bg-fuchsia-500/10 text-fuchsia-500 border-fuchsia-500/20",
 };
 
 const SAMPLE_OUTPUTS: Record<string, { parameter: string; output: object }> = {
@@ -257,7 +257,7 @@ const SAMPLE_OUTPUTS: Record<string, { parameter: string; output: object }> = {
     }
   },
   // Comic-specific agent outputs
-  ComicVisualAgent: {
+  PanelFlowAgent: {
     parameter: "visual_storytelling",
     output: {
       score: 8.0,
@@ -277,7 +277,7 @@ const SAMPLE_OUTPUTS: Record<string, { parameter: string; output: object }> = {
       ]
     }
   },
-  ComicDialogueAgent: {
+  LetteringBalloonAgent: {
     parameter: "balloon_efficiency",
     output: {
       score: 7.4,
@@ -297,7 +297,7 @@ const SAMPLE_OUTPUTS: Record<string, { parameter: string; output: object }> = {
       ]
     }
   },
-  ComicPacingAgent: {
+  PageTurnImpactAgent: {
     parameter: "panel_to_panel_flow",
     output: {
       score: 8.3,
@@ -317,7 +317,7 @@ const SAMPLE_OUTPUTS: Record<string, { parameter: string; output: object }> = {
       ]
     }
   },
-  ComicArtDirectionAgent: {
+  ArtScriptSynergyAgent: {
     parameter: "artist_guidance",
     output: {
       score: 7.8,
