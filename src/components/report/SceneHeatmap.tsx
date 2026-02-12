@@ -2,9 +2,11 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SceneData, SceneAnalysisData } from '@/types/database';
 import { cn } from '@/lib/utils';
-import { Flame, MessageSquare, Zap, Info, Sparkles } from 'lucide-react';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Flame, MessageSquare, Zap, Info, Sparkles, FileText, MapPin, Clock, ExternalLink } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
 
 interface SceneHeatmapProps {
   scenes: SceneData[];
@@ -197,59 +199,109 @@ export function SceneHeatmap({ scenes, sceneAnalysis }: SceneHeatmapProps) {
 
         {/* Heatmap grid */}
         <div className="p-6 rounded-2xl bg-card border border-border">
-          <TooltipProvider>
-            <div className="flex flex-wrap gap-1">
-              {sceneMetrics.map(({ scene, metrics }, index) => {
-                const value = metrics[activeMetric];
-                const isActBreak = index === act1End || index === act2End;
-                
-                return (
-                  <Tooltip key={scene.sceneNumber}>
-                    <TooltipTrigger asChild>
-                      <div
-                        className={cn(
-                          'relative w-8 h-12 sm:w-10 sm:h-14 rounded cursor-pointer transition-all duration-200',
-                          getIntensityColor(value, activeMetric),
-                          hoveredScene === scene.sceneNumber && 'ring-2 ring-primary scale-110 z-10',
-                          isActBreak && 'ml-4'
+          <div className="flex flex-wrap gap-1">
+            {sceneMetrics.map(({ scene, metrics }, index) => {
+              const value = metrics[activeMetric];
+              const isActBreak = index === act1End || index === act2End;
+              
+              return (
+                <Popover key={scene.sceneNumber}>
+                  <PopoverTrigger asChild>
+                    <div
+                      className={cn(
+                        'relative w-8 h-12 sm:w-10 sm:h-14 rounded cursor-pointer transition-all duration-200',
+                        getIntensityColor(value, activeMetric),
+                        hoveredScene === scene.sceneNumber && 'ring-2 ring-primary scale-110 z-10',
+                        isActBreak && 'ml-4'
+                      )}
+                      onMouseEnter={() => setHoveredScene(scene.sceneNumber)}
+                      onMouseLeave={() => setHoveredScene(null)}
+                    >
+                      <span className="absolute inset-0 flex items-center justify-center text-xs font-medium opacity-60">
+                        {scene.sceneNumber}
+                      </span>
+                    </div>
+                  </PopoverTrigger>
+                  <PopoverContent side="top" className="w-72 p-0" align="center">
+                    <div className="p-4 space-y-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <p className="font-semibold text-sm">Scene {scene.sceneNumber}</p>
+                          <p className="text-xs text-muted-foreground font-mono mt-0.5 line-clamp-2">{scene.heading}</p>
+                        </div>
+                        {scene.pageStart && (
+                          <Badge variant="outline" className="text-[10px] shrink-0">
+                            pg. {scene.pageStart}{scene.pageEnd && scene.pageEnd !== scene.pageStart ? `-${scene.pageEnd}` : ''}
+                          </Badge>
                         )}
-                        onMouseEnter={() => setHoveredScene(scene.sceneNumber)}
-                        onMouseLeave={() => setHoveredScene(null)}
+                      </div>
+
+                      <div className="flex flex-wrap gap-1.5">
+                        {scene.intExt && (
+                          <Badge variant="secondary" className="text-[10px] gap-1">
+                            <MapPin className="h-2.5 w-2.5" />
+                            {scene.intExt}
+                          </Badge>
+                        )}
+                        {scene.timeOfDay && (
+                          <Badge variant="secondary" className="text-[10px] gap-1">
+                            <Clock className="h-2.5 w-2.5" />
+                            {scene.timeOfDay}
+                          </Badge>
+                        )}
+                        {scene.emotionalTone && (
+                          <Badge variant="outline" className="text-[10px]">
+                            {scene.emotionalTone}
+                          </Badge>
+                        )}
+                        {metrics.isAnalyzed && (
+                          <Badge variant="outline" className="text-[10px] gap-1 text-chart-2 border-chart-2/30">
+                            <Sparkles className="h-2.5 w-2.5" /> AI
+                          </Badge>
+                        )}
+                      </div>
+
+                      {scene.description && (
+                        <p className="text-xs text-muted-foreground line-clamp-2">{scene.description}</p>
+                      )}
+
+                      <div className="space-y-2 pt-1 border-t border-border">
+                        <div className="flex items-center gap-2">
+                          <Flame className="h-3 w-3 text-chart-4 shrink-0" />
+                          <span className="text-[10px] text-muted-foreground w-12">Emotion</span>
+                          <Progress value={metrics.emotional} className="h-1.5 flex-1" />
+                          <span className="text-[10px] font-medium w-7 text-right">{metrics.emotional}%</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <MessageSquare className="h-3 w-3 text-chart-2 shrink-0" />
+                          <span className="text-[10px] text-muted-foreground w-12">Dialogue</span>
+                          <Progress value={metrics.dialogue} className="h-1.5 flex-1" />
+                          <span className="text-[10px] font-medium w-7 text-right">{metrics.dialogue}%</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Zap className="h-3 w-3 text-chart-3 shrink-0" />
+                          <span className="text-[10px] text-muted-foreground w-12">Action</span>
+                          <Progress value={metrics.action} className="h-1.5 flex-1" />
+                          <span className="text-[10px] font-medium w-7 text-right">{metrics.action}%</span>
+                        </div>
+                      </div>
+
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full text-xs gap-1.5 h-7"
                         onClick={() => navigate(`../script?scene=${scene.sceneNumber}`)}
                       >
-                        <span className="absolute inset-0 flex items-center justify-center text-xs font-medium opacity-60">
-                          {scene.sceneNumber}
-                        </span>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent side="top" className="max-w-xs">
-                      <div className="space-y-2">
-                        <p className="font-semibold">Scene {scene.sceneNumber}</p>
-                        <p className="text-xs text-muted-foreground truncate">{scene.heading}</p>
-                        <div className="grid grid-cols-3 gap-2 text-xs">
-                          <div className="text-center">
-                            <Flame className="h-3 w-3 mx-auto mb-1 text-chart-4" />
-                            <p className="font-medium">{metrics.emotional}%</p>
-                          </div>
-                          <div className="text-center">
-                            <MessageSquare className="h-3 w-3 mx-auto mb-1 text-chart-2" />
-                            <p className="font-medium">{metrics.dialogue}%</p>
-                          </div>
-                          <div className="text-center">
-                            <Zap className="h-3 w-3 mx-auto mb-1 text-chart-3" />
-                            <p className="font-medium">{metrics.action}%</p>
-                          </div>
-                        </div>
-                        {scene.emotionalTone && (
-                          <p className="text-xs italic">Tone: {scene.emotionalTone}</p>
-                        )}
-                      </div>
-                    </TooltipContent>
-                  </Tooltip>
-                );
-              })}
-            </div>
-          </TooltipProvider>
+                        <FileText className="h-3 w-3" />
+                        View in Script
+                        <ExternalLink className="h-2.5 w-2.5 ml-auto opacity-50" />
+                      </Button>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              );
+            })}
+          </div>
 
           {/* Legend */}
           <div className="mt-8 flex items-center justify-center gap-8">
