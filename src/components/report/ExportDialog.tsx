@@ -14,15 +14,20 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { Download, FileJson, FileText, Loader2, FileType } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { ReportData, StakeholderLens, ScriptType } from '@/types/database';
+import { generateFullReportPDF } from '@/lib/fullReportPdfGenerator';
 
 interface ExportDialogProps {
   reportId: string;
   reportTitle: string;
+  reportData?: ReportData | null;
+  activeLens?: StakeholderLens;
+  scriptType?: ScriptType;
 }
 
 type ExportFormat = 'json' | 'summary' | 'full' | 'pdf';
 
-export function ExportDialog({ reportId, reportTitle }: ExportDialogProps) {
+export function ExportDialog({ reportId, reportTitle, reportData, activeLens = 'studio_executive', scriptType = 'feature' }: ExportDialogProps) {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [exporting, setExporting] = useState<ExportFormat | null>(null);
@@ -33,7 +38,7 @@ export function ExportDialog({ reportId, reportTitle }: ExportDialogProps) {
       format: 'pdf' as ExportFormat,
       icon: FileType,
       title: 'PDF Report',
-      description: 'Print-ready document with formatted analysis and scores',
+      description: 'Full book-style PDF with TOC, agent narratives, and all sections',
       badge: 'Recommended',
     },
     {
@@ -66,6 +71,19 @@ export function ExportDialog({ reportId, reportTitle }: ExportDialogProps) {
     setExporting(format);
     
     try {
+      // PDF: generate client-side if we have reportData
+      if (format === 'pdf' && reportData) {
+        const blob = await generateFullReportPDF(reportData, reportTitle, activeLens, scriptType);
+        downloadBlob(blob, getFilename('pdf'));
+        toast({
+          title: 'Export Complete',
+          description: 'Your full PDF report has been downloaded.',
+        });
+        setOpen(false);
+        return;
+      }
+
+      // Fallback to edge function for non-PDF or when reportData missing
       const { data, error } = await supabase.functions.invoke('export-report', {
         body: { reportId, format }
       });
@@ -78,7 +96,7 @@ export function ExportDialog({ reportId, reportTitle }: ExportDialogProps) {
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
         downloadBlob(blob, filename);
       } else if (format === 'pdf') {
-        // PDF is returned as base64
+        // Fallback PDF from edge function
         if (data.pdf) {
           const binaryString = atob(data.pdf);
           const bytes = new Uint8Array(binaryString.length);
@@ -88,7 +106,6 @@ export function ExportDialog({ reportId, reportTitle }: ExportDialogProps) {
           const blob = new Blob([bytes], { type: 'application/pdf' });
           downloadBlob(blob, filename);
         } else {
-          // Fallback to markdown if PDF not available
           const blob = new Blob([data.content], { type: 'text/markdown' });
           downloadBlob(blob, filename.replace('.pdf', '.md'));
           toast({

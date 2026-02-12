@@ -197,7 +197,7 @@ export function ActionRail({
 
       {/* Bottom Actions */}
       <div className="p-4 border-t border-border bg-card">
-        <ExportDialog reportId={reportId} reportTitle={reportTitle} />
+        <ExportDialog reportId={reportId} reportTitle={reportTitle} reportData={reportData} activeLens={activeLens} scriptType={reportData?.scriptMetadata?.scriptType} />
       </div>
     </aside>
   );
