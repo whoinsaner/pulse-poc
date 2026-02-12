@@ -1,10 +1,9 @@
 import { useOutletContext } from 'react-router-dom';
 import { ReportData, StakeholderLens, LENS_CONFIG } from '@/types/database';
 import { Card } from '@/components/ui/card';
-import { SectionHeader, SubSectionHeader, ScoreDisplay, ScoreBar, ScoreBadge, VerdictBox } from '@/components/report/ui';
-import { BarChart3, TrendingUp, TrendingDown, Target } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { extractScore } from '@/lib/scoreUtils';
+import { SectionHeader, SubSectionHeader, ScoreBar, ScoreBadge, VerdictBox } from '@/components/report/ui';
+import { BarChart3, TrendingUp, TrendingDown } from 'lucide-react';
+import { extractScore, getDecisionSignal } from '@/lib/scoreUtils';
 
 interface ReportContextValue {
   reportData: ReportData;
@@ -26,28 +25,36 @@ export default function CompleteScorecard() {
   const topStrengths = [...parameterScores].sort((a, b) => b.score - a.score).slice(0, 5);
   const topWeaknesses = [...parameterScores].sort((a, b) => a.score - b.score).slice(0, 5);
 
-  const getVerdict = () => {
-    if (currentScore >= 75) return { label: 'Strong Greenlight Candidate', type: 'success' as const };
-    if (currentScore >= 65) return { label: 'Recommend with Revisions', type: 'finding' as const };
-    if (currentScore >= 50) return { label: 'Development Needed', type: 'warning' as const };
-    return { label: 'Significant Work Required', type: 'error' as const };
-  };
-  const verdict = getVerdict();
+  const decision = getDecisionSignal(currentScore);
+
+  // Pull real executive summary from agent content
+  const executiveSummary = (() => {
+    const agents = reportData.agentContent || {};
+    for (const key of ['OverviewAgent', 'ExecutiveAgent', 'StoryAgent']) {
+      if (agents[key]?.verdict) return agents[key].verdict;
+    }
+    for (const content of Object.values(agents)) {
+      if (content?.verdict) return content.verdict;
+    }
+    return reportData.scriptMetadata?.logline || null;
+  })();
 
   return (
-    <div className="space-y-8 max-w-6xl mx-auto">
-      <SectionHeader title="Complete Scorecard" subtitle="Comprehensive score breakdown and analysis summary" icon={BarChart3} score={currentScore} />
+    <div className="space-y-8">
+      <SectionHeader 
+        title="Complete Scorecard" 
+        subtitle={`${decision.label} · Viewing as ${LENS_CONFIG[activeLens].label}`}
+        icon={BarChart3} 
+        score={currentScore} 
+      />
 
-      <Card className="p-6 text-center">
-        <p className="text-sm text-muted-foreground mb-2">Final Assessment</p>
-        <ScoreDisplay score={currentScore} size="xl" />
-        <p className={cn("mt-4 text-lg font-semibold", verdict.type === 'success' ? 'text-success' : verdict.type === 'finding' ? 'text-chart-4' : 'text-warning')}>
-          {verdict.label}
-        </p>
-        <p className="text-sm text-muted-foreground mt-1">Viewing as {LENS_CONFIG[activeLens].label}</p>
-      </Card>
-
-      <VerdictBox type={verdict.type} title="Executive Summary" content={reportData.scriptMetadata?.logline || 'Analysis complete. Review category breakdowns for detailed insights.'} />
+      {executiveSummary && (
+        <VerdictBox 
+          type={decision.signal === 'go' ? 'success' : decision.signal === 'iterate' ? 'finding' : 'error'} 
+          title="Executive Summary" 
+          content={executiveSummary} 
+        />
+      )}
 
       <Card className="p-6">
         <SubSectionHeader title="Category Breakdown" />
