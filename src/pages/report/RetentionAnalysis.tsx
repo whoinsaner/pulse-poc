@@ -1,11 +1,8 @@
 import { useOutletContext } from 'react-router-dom';
 import { ReportData, StakeholderLens } from '@/types/database';
 import { AgentNarrativePanel } from '@/components/report/AgentNarrativePanel';
-
-import { Card } from '@/components/ui/card';
 import { SectionHeader, WeightedParameterList } from '@/components/report/ui';
 import { BarChart3 } from 'lucide-react';
-import { cn } from '@/lib/utils';
 
 interface ReportContextValue {
   reportData: ReportData;
@@ -16,7 +13,7 @@ export default function RetentionAnalysis() {
   const { reportData } = useOutletContext<ReportContextValue>();
 
   // Get retention/pacing related parameters
-  const retentionParams = reportData.parameterScores?.filter(p => 
+  const retentionParams = reportData.parameterScores?.filter(p =>
     p.parameterName?.toLowerCase().includes('retention') ||
     p.parameterName?.toLowerCase().includes('pacing') ||
     p.parameterName?.toLowerCase().includes('engagement') ||
@@ -30,8 +27,8 @@ export default function RetentionAnalysis() {
     : 0;
 
   // Agent content
-  const agentContent = reportData.agentContent?.StructureAgent || reportData.agentContent?.ConflictAgent;
-  const agentName = reportData.agentContent?.StructureAgent ? 'StructureAgent' : 'ConflictAgent';
+  const agentContent = reportData.agentContent?.StructureAgent || reportData.agentContent?.WebSeriesAgent;
+  const agentName = reportData.agentContent?.StructureAgent ? 'StructureAgent' : 'WebSeriesAgent';
 
   return (
     <div className="space-y-8">
@@ -47,26 +44,6 @@ export default function RetentionAnalysis() {
         <AgentNarrativePanel agentName={agentName} content={agentContent} />
       )}
 
-      {/* Overall Retention Score */}
-      {retentionScore > 0 && (
-        <Card className="p-8 bg-gradient-to-br from-chart-4/5 via-card to-success/5">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h3 className="text-2xl font-bold mb-1">Retention Score</h3>
-              <p className="text-muted-foreground">Based on pacing and engagement parameters</p>
-            </div>
-            <div className={cn(
-              "text-5xl font-bold",
-              retentionScore >= 70 ? "text-success" :
-              retentionScore >= 50 ? "text-chart-4" :
-              "text-warning"
-            )}>
-              {Math.round(retentionScore)}
-            </div>
-          </div>
-        </Card>
-      )}
-
       {/* Parameter Breakdown */}
       <WeightedParameterList
         parameters={retentionParams.map(p => ({ ...p, weight: 1.0 }))}
@@ -74,13 +51,6 @@ export default function RetentionAnalysis() {
         initiallyExpanded={true}
         defaultVisibleCount={8}
       />
-
-      {/* Fallback when no data */}
-      {retentionParams.length === 0 && !agentContent && (
-        <Card className="p-8 text-center text-muted-foreground">
-          <p>No retention analysis data available for this report. Run an analysis to generate retention metrics.</p>
-        </Card>
-      )}
     </div>
   );
 }
