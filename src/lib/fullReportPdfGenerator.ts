@@ -1002,6 +1002,9 @@ function renderTocPage(doc: jsPDF, toc: TocEntry[], pageNum: PageCounter): void 
       doc.setFontSize(FONTS.small);
       doc.setTextColor(...COLORS.textLight);
       doc.text(`${entry.page}`, MARGINS.left + cw, y, { align: 'right' });
+      // Clickable link over the entire TOC line
+      const lineH0 = FONTS.h3 * 0.4;
+      doc.link(MARGINS.left, y - lineH0, cw, lineH0 + 2, { pageNumber: entry.page });
       y += 7;
     } else {
       doc.setFontSize(FONTS.body);
@@ -1010,6 +1013,9 @@ function renderTocPage(doc: jsPDF, toc: TocEntry[], pageNum: PageCounter): void 
       doc.text(entry.title, MARGINS.left + 8, y);
       doc.setTextColor(...COLORS.textLight);
       doc.text(`${entry.page}`, MARGINS.left + cw, y, { align: 'right' });
+      // Clickable link over the entire TOC line
+      const lineH1 = FONTS.body * 0.4;
+      doc.link(MARGINS.left + 8, y - lineH1, cw - 8, lineH1 + 2, { pageNumber: entry.page });
       y += 6;
     }
   }
