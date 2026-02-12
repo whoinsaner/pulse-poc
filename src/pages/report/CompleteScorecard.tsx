@@ -26,9 +26,9 @@ export default function CompleteScorecard() {
   const topWeaknesses = [...parameterScores].sort((a, b) => a.score - b.score).slice(0, 5);
 
   const getVerdict = () => {
-    if (currentScore >= 8) return { label: 'Strong Greenlight Candidate', type: 'success' as const };
-    if (currentScore >= 6.5) return { label: 'Recommend with Revisions', type: 'finding' as const };
-    if (currentScore >= 5) return { label: 'Development Needed', type: 'warning' as const };
+    if (currentScore >= 75) return { label: 'Strong Greenlight Candidate', type: 'success' as const };
+    if (currentScore >= 65) return { label: 'Recommend with Revisions', type: 'finding' as const };
+    if (currentScore >= 50) return { label: 'Development Needed', type: 'warning' as const };
     return { label: 'Significant Work Required', type: 'error' as const };
   };
   const verdict = getVerdict();
