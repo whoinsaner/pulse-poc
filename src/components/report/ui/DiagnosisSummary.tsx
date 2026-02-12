@@ -81,7 +81,7 @@ export function DiagnosisSummary({
             </div>
             <div className="flex-1 min-w-0">
               <h4 className="font-display font-semibold tracking-tight text-success">Verdict</h4>
-              <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{verdict}</p>
+              <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{displayVerdict}</p>
             </div>
           </div>
         </div>
