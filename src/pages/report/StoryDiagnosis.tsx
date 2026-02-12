@@ -2,6 +2,8 @@ import { useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { ReportData, StakeholderLens } from '@/types/database';
 import { Progress } from '@/components/ui/progress';
+import { cn } from '@/lib/utils';
+import { getScoreBarColor, getDiagnosticCategory } from '@/lib/scoreUtils';
 import { Card } from '@/components/ui/card';
 import { 
   SectionHeader, 
@@ -169,9 +171,9 @@ function CategoryCard({ title, parameters }: CategoryCardProps) {
             </div>
             <div className="flex items-center gap-3 shrink-0 pt-0.5">
               <div className="w-24">
-                <Progress value={param.score} className="h-2.5" />
+                <Progress value={param.score} indicatorClassName={getScoreBarColor(param.score)} className="h-2.5" />
               </div>
-              <span className="font-mono font-bold text-base tabular-nums w-8 text-right">
+              <span className={cn('font-mono font-bold text-base tabular-nums w-8 text-right', getDiagnosticCategory(param.score).color)}>
                 {param.score}
               </span>
             </div>
