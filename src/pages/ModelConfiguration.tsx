@@ -60,6 +60,13 @@ interface AgentMapping {
   config_id: string | null;
 }
 
+interface AgentConfig {
+  agent_name: string;
+  display_name: string;
+  category: string;
+  is_active: boolean;
+}
+
 const AVAILABLE_MODELS = [
   // Premium tier - best reasoning and capability
   { id: 'google/gemini-2.5-pro', name: 'Gemini 2.5 Pro', tier: 'premium', description: 'Top-tier reasoning, multimodal' },
@@ -75,22 +82,8 @@ const AVAILABLE_MODELS = [
   { id: 'openai/gpt-5-nano', name: 'GPT-5 Nano', tier: 'economy', description: 'Speed optimized' },
 ];
 
-const AGENT_NAMES = [
-  'concept_hook',
-  'plot_structure',
-  'character_protagonist',
-  'character_antagonist',
-  'character_supporting',
-  'character_psychology',
-  'dialogue_subtext',
-  'theme_moral',
-  'visual_storytelling',
-  'emotional_resonance',
-  'marketability',
-  'production',
-  'audience_strategy',
-  'scene_economy',
-];
+// Agent categories for grouping in the UI
+const AGENT_CATEGORY_ORDER = ['system', 'analysis', 'comic', 'meta', 'enrichment', 'micro_drama', 'web_series', 'audio'];
 
 export default function ModelConfiguration() {
   const navigate = useNavigate();
@@ -98,6 +91,7 @@ export default function ModelConfiguration() {
   const { toast } = useToast();
 
   const [configurations, setConfigurations] = useState<ModelConfiguration[]>([]);
+  const [agentConfigs, setAgentConfigs] = useState<AgentConfig[]>([]);
   const [mappings, setMappings] = useState<AgentMapping[]>([]);
   const [selectedConfig, setSelectedConfig] = useState<ModelConfiguration | null>(null);
   const [loading, setLoading] = useState(true);
@@ -105,7 +99,7 @@ export default function ModelConfiguration() {
   const [showNewConfigDialog, setShowNewConfigDialog] = useState(false);
   const [newConfigName, setNewConfigName] = useState('');
   const [newConfigDescription, setNewConfigDescription] = useState('');
-  const [editedMappings, setEditedMappings] = useState<Record<string, { model: string; temperature: number }>>({});
+  const [editedMappings, setEditedMappings] = useState<Record<string, { model: string; temperature: number }>>({}); 
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -129,6 +123,17 @@ export default function ModelConfiguration() {
   const fetchConfigurations = async () => {
     setLoading(true);
     try {
+      // Fetch agent configs from DB
+      const { data: agents, error: agentError } = await supabase
+        .from('agent_configurations')
+        .select('agent_name, display_name, category, is_active')
+        .eq('is_system', true)
+        .order('category')
+        .order('display_name');
+
+      if (agentError) throw agentError;
+      setAgentConfigs((agents || []) as AgentConfig[]);
+
       const { data: configs, error: configError } = await supabase
         .from('model_configurations')
         .select('*')
@@ -141,7 +146,7 @@ export default function ModelConfiguration() {
       if (configs && configs.length > 0) {
         const defaultConfig = configs.find(c => c.is_default) || configs[0];
         setSelectedConfig(defaultConfig);
-        await fetchMappings(defaultConfig.id);
+        await fetchMappings(defaultConfig.id, (agents || []) as AgentConfig[]);
       }
     } catch (error) {
       console.error('Error fetching configurations:', error);
@@ -155,7 +160,8 @@ export default function ModelConfiguration() {
     }
   };
 
-  const fetchMappings = async (configId: string) => {
+  const fetchMappings = async (configId: string, agents?: AgentConfig[]) => {
+    const agentList = agents || agentConfigs;
     try {
       const { data, error } = await supabase
         .from('agent_model_mappings')
@@ -165,14 +171,24 @@ export default function ModelConfiguration() {
       if (error) throw error;
       setMappings(data || []);
 
-      // Initialize edited mappings
+      // Initialize edited mappings from all known agents
       const edited: Record<string, { model: string; temperature: number }> = {};
-      AGENT_NAMES.forEach(agent => {
-        const existing = data?.find(m => m.agent_name === agent);
-        edited[agent] = {
+      // Include agents from DB
+      agentList.forEach(agent => {
+        const existing = data?.find(m => m.agent_name === agent.agent_name);
+        edited[agent.agent_name] = {
           model: existing?.model || 'google/gemini-3-flash-preview',
           temperature: existing?.temperature ?? 0.7,
         };
+      });
+      // Also include any mappings that exist in DB but aren't in agent_configurations
+      data?.forEach(m => {
+        if (!edited[m.agent_name]) {
+          edited[m.agent_name] = {
+            model: m.model,
+            temperature: m.temperature ?? 0.7,
+          };
+        }
       });
       setEditedMappings(edited);
     } catch (error) {
@@ -182,7 +198,7 @@ export default function ModelConfiguration() {
 
   const handleSelectConfig = async (config: ModelConfiguration) => {
     setSelectedConfig(config);
-    await fetchMappings(config.id);
+    await fetchMappings(config.id, agentConfigs);
   };
 
   const handleCreateConfig = async () => {
@@ -211,15 +227,15 @@ export default function ModelConfiguration() {
       setNewConfigDescription('');
 
       // Initialize with default mappings using Gemini 3 Flash Preview
-      const defaultMappings = AGENT_NAMES.map(agent => ({
-        agent_name: agent,
+      const defaultMappings = agentConfigs.map(agent => ({
+        agent_name: agent.agent_name,
         model: 'google/gemini-3-flash-preview',
         temperature: 0.7,
         config_id: data.id,
       }));
 
       await supabase.from('agent_model_mappings').insert(defaultMappings);
-      await fetchMappings(data.id);
+      await fetchMappings(data.id, agentConfigs);
 
       toast({
         title: 'Configuration created',
@@ -494,8 +510,20 @@ export default function ModelConfiguration() {
             <CardContent>
               <ScrollArea className="h-[500px] pr-4">
                 <div className="space-y-3">
-                  {AGENT_NAMES.map((agent) => {
-                    const mapping = editedMappings[agent] || { model: 'google/gemini-3-flash-preview', temperature: 0.7 };
+                  {Object.entries(editedMappings)
+                    .sort(([a], [b]) => {
+                      const agentA = agentConfigs.find(ac => ac.agent_name === a);
+                      const agentB = agentConfigs.find(ac => ac.agent_name === b);
+                      const catOrder = (cat: string) => AGENT_CATEGORY_ORDER.indexOf(cat);
+                      const catA = catOrder(agentA?.category || 'analysis');
+                      const catB = catOrder(agentB?.category || 'analysis');
+                      if (catA !== catB) return catA - catB;
+                      return (agentA?.display_name || a).localeCompare(agentB?.display_name || b);
+                    })
+                    .map(([agent, mapping]) => {
+                    const agentConfig = agentConfigs.find(ac => ac.agent_name === agent);
+                    const displayName = agentConfig?.display_name || agent.replace(/Agent$/, '').replace(/([A-Z])/g, ' $1').trim();
+                    const category = agentConfig?.category || 'unknown';
                     const modelInfo = AVAILABLE_MODELS.find(m => m.id === mapping.model);
 
                     return (
@@ -504,9 +532,8 @@ export default function ModelConfiguration() {
                         className="flex items-center gap-4 p-3 rounded-lg border border-border bg-card/50"
                       >
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm truncate">
-                            {agent.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
-                          </p>
+                          <p className="font-medium text-sm truncate">{displayName}</p>
+                          <p className="text-[10px] text-muted-foreground font-mono">{agent}</p>
                         </div>
                         <Select
                           value={mapping.model}
