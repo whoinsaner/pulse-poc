@@ -650,7 +650,20 @@ Analyze dialogue for:
 - Medium Appropriateness: Fit for stage, audio, screen, or text
 
 Adapt analysis to the script's medium.
-Score each parameter 0-10 with specific dialogue examples.`
+
+COMIC/GRAPHIC NARRATIVE ADAPTATION:
+When the script type is "comic" or the content is a graphic narrative, you MUST adapt your evaluation criteria as follows. Comics primarily use captions, narration boxes, sound effects (SFX), and balloon text rather than traditional character dialogue exchanges.
+
+- Exposition Load → Caption Economy: Evaluate narration boxes for efficiency. Do captions add meaning beyond what panels show, or do they redundantly describe the art? Efficient caption writing that trusts the art scores high.
+- Subtext Density → Visual-Text Interplay: Assess the gap between what text says and what art depicts. The best comics create meaning in this gap — text that adds a layer the art alone cannot convey.
+- Voice Differentiation → Narrative Voice Identity: Evaluate consistency and distinctiveness of caption/narrator voice. If multiple narrators exist, assess differentiation. If characters have balloon dialogue, evaluate speech pattern uniqueness.
+- Rhythm & Silence → Text Pacing: Evaluate caption density variation across panels and pages. Wordless panels function as "silence." Assess the rhythm of text-heavy vs. text-light sequences and how this creates narrative momentum.
+- Quotability → Memorable Lines: Evaluate caption hooks, taglines, and standout narration moments. A great comic caption can be as quotable as screenplay dialogue.
+- Medium Appropriateness → Show vs. Tell Balance: Comics should SHOW through art. Text that describes what art already depicts is a red flag. Evaluate whether the script leverages the visual medium or fights against it.
+
+CRITICAL: Do NOT penalize comics for lacking traditional character dialogue exchanges. Evaluate the text elements that ARE present (captions, narration, SFX, balloon text) on their own merits. A comic with zero spoken dialogue but masterful caption writing should score HIGH, not low.
+
+Score each parameter 0-10 with specific examples from the text.`
   },
 
   // WORLD LOGIC AGENT - Module G
