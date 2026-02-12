@@ -167,7 +167,7 @@ export function PacingAnalysis({ scenes, totalPages }: PacingAnalysisProps) {
               </div>
 
               {/* Rhythm bars */}
-              <div className="relative h-48 flex items-end gap-0.5">
+              <div className="relative h-48 flex gap-px">
                 {analysisData.scenes.map(({ scene, duration, pace }, i) => {
                   const height = (duration / analysisData.maxDuration) * 100;
                   const colors = getPaceColor(pace);
@@ -176,7 +176,7 @@ export function PacingAnalysis({ scenes, totalPages }: PacingAnalysisProps) {
                   return (
                     <div
                       key={scene.sceneNumber}
-                      className="flex-1 relative group"
+                      className="flex-1 relative group flex flex-col justify-end"
                       onMouseEnter={() => setHoveredScene(scene.sceneNumber)}
                       onMouseLeave={() => setHoveredScene(null)}
                     >
