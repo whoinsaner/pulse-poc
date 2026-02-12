@@ -9,7 +9,7 @@ import {
   Loader2, Play, CheckCircle, XCircle, Clock, Zap, 
   Lightbulb, Layers, Users, Swords, Sparkles, MessageSquare,
   Globe, Heart, TrendingUp, Wrench, Palette, LayoutGrid, 
-  BookOpen, PenTool, AlertTriangle, PlayCircle, MonitorPlay
+  BookOpen, PenTool, AlertTriangle, PlayCircle, MonitorPlay, ScanSearch
 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
@@ -49,6 +49,10 @@ const COMIC_AGENTS = [
 
 const WEB_SERIES_AGENTS = [
   { name: 'WebSeriesAgent', label: 'Web Series', module: 'WS', icon: MonitorPlay },
+];
+
+const ENRICHMENT_AGENTS = [
+  { name: 'SceneEnrichmentAgent', label: 'Scene Enrichment', module: 'SE', icon: ScanSearch },
 ];
 
 const SYNTHESIS_AGENTS = [
@@ -94,7 +98,7 @@ export function AnalysisTrigger({
   // Get agents based on selected stakeholder
   const getActiveAgents = () => {
     const agentNames = getAgentsForStakeholder(selectedStakeholder, isComic);
-    const allAgents = [...USAF_AGENTS, ...formatSpecificAgents, ...SYNTHESIS_AGENTS];
+    const allAgents = [...USAF_AGENTS, ...formatSpecificAgents, ...ENRICHMENT_AGENTS, ...SYNTHESIS_AGENTS];
     return allAgents.filter(a => agentNames.includes(a.name));
   };
   
@@ -629,6 +633,31 @@ export function AnalysisTrigger({
           </div>
         </div>
       )}
+
+      {/* Enrichment Agents */}
+      <div className="space-y-3">
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+          Scene Enrichment
+        </p>
+        <div className="grid grid-cols-1 gap-2">
+          {ENRICHMENT_AGENTS.map((agent) => {
+            const progress = agentProgress[agent.name];
+            return (
+              <div
+                key={agent.name}
+                className={cn(
+                  'flex items-center gap-2 p-3 rounded-lg border transition-all duration-300',
+                  getAgentStatusClass(progress?.status)
+                )}
+              >
+                {getAgentIcon(agent, progress?.status)}
+                <span className="text-sm font-medium">{agent.label}</span>
+                <span className="text-[9px] opacity-60 ml-auto">Module {agent.module}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
 
       {/* Synthesis Agents */}
       <div className="space-y-3">
