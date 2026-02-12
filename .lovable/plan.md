@@ -1,84 +1,54 @@
 
-# Remove Redundant Information from Report Pages
 
-## Problem
-Multiple report pages display the same information twice through different components, creating visual clutter and confusing stakeholders.
+# Fix Comic Format Diagnosis Page Issues
 
-## Redundancies Found
+## Issues Found
 
-### 1. CharacterDiagnosis -- DOUBLE verdict + working/broken/underdeveloped (Critical)
-- `DiagnosisSummary` renders: Verdict + What's Working + What's Broken + Underdeveloped (from parameter scores)
-- `CharacterNarrativePanel` (which wraps `AgentNarrativePanel`) renders: Verdict + What's Working + What's Broken + Underdeveloped (from agent content)
-- **Result**: Two verdict boxes and two sets of 3-column grids stacked on the same page
+### 1. Inconsistent Bullet Points
+Currently, bullets (orange dots) only appear next to parameters that have `weight >= 1.2` (core tier). This creates an inconsistent look where some cards show bullets and others don't. The fix is to remove the conditional bullet entirely since the weight tier distinction is already communicated by the CORE badge on the card header.
 
-### 2. Sub-pages showing full AgentNarrativePanel for CharacterAgent (4 pages)
-The `AgentNarrativePanel` for CharacterAgent shows verdict, working/broken/underdeveloped, key quotes, deep dive, AND recommendations. When sub-pages also render their own page-specific content from the same agent data, it creates duplication:
+### 2. "+N more" Not Clickable
+The "+N more" text at line 337 is a plain `<p>` tag with no click handler. It needs to become a button that expands to show all parameters in that metric group.
 
-- **ProtagonistAnalysis**: `CharacterNarrativePanel` already shows protagonist profile, then the page renders its own "Character Fundamentals" card from the same data
-- **AntagonistAnalysis**: `AgentNarrativePanel` shows the full CharacterAgent output (verdict, working/broken, etc.), then the page shows its own antagonist profile card from the same `agentContent.antagonistProfile`
-- **SupportingCast**: `AgentNarrativePanel` renders supporting cast list, then the page renders its own "AI-Analyzed Supporting Cast" section from `agentContent.supportingCast`
-- **CharacterPsychology**: `AgentNarrativePanel` renders CharacterAgent output, then the page renders "Want vs Need" and "Flaw & Arc" sections from the same `agentContent.protagonistProfile`
+### 3. Issue Structure Parameter Filtering
+The "Issue Structure" card filter at lines 200-204 uses:
+```
+p.category === 'Comic Structure' ||
+p.parameterName.includes('issue') ||
+p.parameterName.includes('arc_structure')
+```
+The `parameterName.includes('issue')` pattern is problematic -- it can match unrelated parameters from other categories that happen to mention "issue" in their name, while the actual Comic Structure parameter (`structural_modularity`) is already matched by the `category === 'Comic Structure'` check. The filter should rely solely on the category match for correctness.
 
-### 3. StrengthWeaknessList on sub-pages (10 pages)
-The `StrengthWeaknessList` component (showing "What Works" / "Needs Improvement") is redundant with `WeightedParameterList` on the same page. Both display the same parameters -- one as scored cards, the other as a split strengths/weaknesses view. Affected pages:
-- ConceptHook, ThemeMoral, EmotionalResonance, DialogueSubtext, VisualStorytelling
-- Production, Marketability, AudienceStrategy, StructuralEngineering, PlotAnalysis, SceneEconomy
+Similarly, other metric groups have overlapping filters (e.g., "Visual Storytelling" matches both `category === 'Comic Visuals'` AND `parameterName.includes('panel')`, which could pull in parameters from other categories). All groups should filter primarily by category.
 
-### 4. SceneEconomy -- triple redundancy
-- Top metrics cards show top 4 parameter scores
-- VerdictBox summarizes the same working/broken counts
-- WeightedParameterList shows all parameters with scores
-- StrengthWeaknessList shows the same split again
-- RecommendationCards repeat rationale text from broken/underdeveloped params
+## Technical Plan
 
-### 5. StrengthWeaknessList uses legacy `glass-premium` class
-Lines 28 and 56 of `StrengthWeaknessList.tsx` still use `glass-premium`, contradicting the standardization done earlier.
+### File: `src/pages/report/ComicFormatDiagnosis.tsx`
 
-## Plan
+**A. Remove conditional bullets (lines 322-335)**
+- Remove the weight tier check and bullet dot
+- Show all parameter names consistently without bullets
 
-### Fix 1: CharacterDiagnosis -- remove AgentNarrativePanel
-Remove the `CharacterNarrativePanel` from CharacterDiagnosis. The `DiagnosisSummary` already provides the verdict and 3-column diagnosis grid. The character cards fallback section should remain as unique content.
+**B. Make "+N more" expandable (lines 320-338)**
+- Add a `expandedGroups` state tracking which group IDs are expanded
+- Change the `group.params.slice(0, 4)` to conditionally show all params when expanded
+- Replace the `<p>` tag with a clickable `<button>` that toggles the expanded state
 
-### Fix 2: Sub-pages -- strip redundant sections from AgentNarrativePanel usage
-For character sub-pages, instead of rendering the full `AgentNarrativePanel` (which dumps everything), render only the page-specific agent content:
+**C. Fix metric group filters (lines 114-206)**
+- Simplify each group to filter by category only (remove `parameterName.includes(...)` patterns)
+- Visual Storytelling: `p.category === 'Comic Visuals'`
+- Lettering and Dialogue: `p.category === 'Comic Dialogue'`
+- Pacing and Rhythm: `p.category === 'Comic Pacing'`
+- Art-Script Synergy: `p.category === 'Comic Collaboration'`
+- Visual Characters: `p.category === 'Comic Characters'`
+- Production Pipeline: `p.category === 'Comic Production'`
+- Comic Market: `p.category === 'Comic Market'`
+- Issue Structure: `p.category === 'Comic Structure'`
 
-- **ProtagonistAnalysis**: Remove `CharacterNarrativePanel`. Keep only the page's own "Character Fundamentals" card (which shows parsed character data). If agent content has deep dive or key quotes relevant to protagonist, extract just those.
-- **AntagonistAnalysis**: Remove `AgentNarrativePanel`. Keep the page's own antagonist profile card and power breakdown.
-- **SupportingCast**: Remove `AgentNarrativePanel`. Keep the page's own supporting cast table and relationship map. Remove the duplicate "AI-Analyzed Supporting Cast" card since the table below covers it.
-- **CharacterPsychology**: Remove `AgentNarrativePanel`. Keep the page's own psychology pillars, want/need, and flaw/arc sections.
-
-### Fix 3: Remove StrengthWeaknessList from all sub-pages
-Remove `StrengthWeaknessList` from all 10+ sub-pages listed above. The `WeightedParameterList` already shows every parameter with its score, rationale, and weight tier -- the strengths/weaknesses split adds no new information.
-
-### Fix 4: Clean up SceneEconomy
-- Remove VerdictBox (redundant with parameter data)
-- Remove StrengthWeaknessList (redundant)
-- Remove RecommendationCards (redundant -- rationale is already in WeightedParameterList)
-- Keep: SectionHeader, Scene Stats card, WeightedParameterList
-
-### Fix 5: Remove glass-premium from StrengthWeaknessList component
-Update lines 28 and 56 of `StrengthWeaknessList.tsx` to remove `glass-premium` class. (This component will still be used by other parts of the app even after removal from report sub-pages.)
+This ensures each parameter appears in exactly one group based on its assigned category, preventing duplicates and missing entries.
 
 ## Files to Edit
-
 | File | Change |
 |------|--------|
-| `CharacterDiagnosis.tsx` | Remove `CharacterNarrativePanel` import and usage |
-| `ProtagonistAnalysis.tsx` | Remove `CharacterNarrativePanel`, keep character fundamentals |
-| `AntagonistAnalysis.tsx` | Remove `AgentNarrativePanel`, keep antagonist profile + power grid |
-| `SupportingCast.tsx` | Remove `AgentNarrativePanel`, remove duplicate AI supporting cast card |
-| `CharacterPsychology.tsx` | Remove `AgentNarrativePanel`, keep pillars + want/need + flaw/arc |
-| `ConceptHook.tsx` | Remove `StrengthWeaknessList` |
-| `ThemeMoral.tsx` | Remove `StrengthWeaknessList` |
-| `EmotionalResonance.tsx` | Remove `StrengthWeaknessList` |
-| `DialogueSubtext.tsx` | Remove `StrengthWeaknessList` |
-| `VisualStorytelling.tsx` | Remove `StrengthWeaknessList` |
-| `Production.tsx` | Remove `StrengthWeaknessList` |
-| `Marketability.tsx` | Remove `StrengthWeaknessList` |
-| `AudienceStrategy.tsx` | Remove `StrengthWeaknessList` |
-| `StructuralEngineering.tsx` | Remove `StrengthWeaknessList` |
-| `PlotAnalysis.tsx` | Remove `StrengthWeaknessList` |
-| `SceneEconomy.tsx` | Remove VerdictBox, StrengthWeaknessList, RecommendationCards |
-| `StrengthWeaknessList.tsx` | Remove `glass-premium` from 2 locations |
+| `src/pages/report/ComicFormatDiagnosis.tsx` | Remove conditional bullets, make "+N more" expandable, fix category filters |
 
-Total: 17 files edited. No new components needed. No database changes.
