@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { ReportData, StakeholderLens } from '@/types/database';
+import { Progress } from '@/components/ui/progress';
 import { Card } from '@/components/ui/card';
 import { 
   SectionHeader, 
@@ -155,19 +156,24 @@ function CategoryCard({ title, parameters }: CategoryCardProps) {
         <h4 className="font-semibold">{title}</h4>
         <span className="font-mono font-bold text-sm">{avgScore}</span>
       </div>
-      <div className="space-y-3">
+      <div className="space-y-2">
         {parameters.slice(0, 4).map((param) => (
-          <div key={param.parameterName} className="flex items-start gap-3">
-            <div className="flex-1">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">{param.displayName}</span>
-                <span className="text-sm font-mono">{param.score}</span>
-              </div>
+          <div key={param.parameterName} className="flex items-start gap-4 p-4 rounded-xl border border-border bg-card">
+            <div className="flex-1 min-w-0">
+              <h4 className="font-semibold text-sm text-foreground">{param.displayName}</h4>
               {param.rationale && (
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
                   {param.rationale}
                 </p>
               )}
+            </div>
+            <div className="flex items-center gap-3 shrink-0 pt-0.5">
+              <div className="w-24">
+                <Progress value={param.score} className="h-2.5" />
+              </div>
+              <span className="font-mono font-bold text-base tabular-nums w-8 text-right">
+                {param.score}
+              </span>
             </div>
           </div>
         ))}
