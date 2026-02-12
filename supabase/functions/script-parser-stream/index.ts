@@ -1930,7 +1930,69 @@ serve(async (req) => {
           char.scene_count = Math.max(1, Math.ceil(char.dialogue_count / 5));
         });
         
-        const characters = Array.from(allCharacters.values());
+        // Post-processing: filter out non-character entries (locations, props, transitions, meta)
+        const locationWords = new Set([
+          'ROOM', 'STREET', 'ROAD', 'LANE', 'LANES', 'HALL', 'HALLWAY', 'CORRIDOR',
+          'BEDROOM', 'BATHROOM', 'KITCHEN', 'OFFICE', 'CELLAR', 'BASEMENT', 'ATTIC',
+          'ROOFTOP', 'TERRACE', 'BALCONY', 'GARDEN', 'COURTYARD', 'PARKING', 'GARAGE',
+          'HOSPITAL', 'TEMPLE', 'CHURCH', 'SCHOOL', 'COLLEGE', 'STATION', 'MARKET',
+          'SHOP', 'STORE', 'BAR', 'RESTAURANT', 'HOTEL', 'HOUSE', 'HOME', 'BUILDING',
+          'APARTMENT', 'FLAT', 'FLOOR', 'GATE', 'DOOR', 'WINDOW', 'STAIRS', 'STAIRCASE',
+          'ENTRANCE', 'EXIT', 'VILLAGE', 'TOWN', 'CITY', 'JUNGLE', 'FOREST', 'FIELD',
+          'FARM', 'BRIDGE', 'RIVER', 'LAKE', 'POND', 'WELL', 'CAVE', 'HILL', 'MOUNTAIN',
+          'SQUARE', 'CORNER', 'SPOT', 'AREA', 'PLACE', 'SIDE', 'ALLEY', 'PATH',
+          'BACKYARD', 'PASSAGE', 'OUTSKIRTS', 'CENTRE', 'CENTER',
+        ]);
+        const isLocationLike = (name: string): boolean => {
+          const words = name.split(/\s+/);
+          // If any word is a known location word, it's likely a location
+          if (words.some(w => locationWords.has(w))) return true;
+          // Patterns like "ADJECTIVE + LOCATION"
+          if (/^(ANOTHER|DESERTED|NARROW|DARK|OLD|NEW|SMALL|BIG|EMPTY|BUSY|CROWDED|SAME|NEARBY|LONE|PEACEFUL|INSIDE|OUTSIDE)\s/i.test(name)) return true;
+          // Contains possessive + location (RUDRA'S LIBRARY)
+          if (/'.S\s+(ROOM|HOUSE|SHOP|LIBRARY|OFFICE|PLACE|HOME|BEDROOM|BATHROOM|KITCHEN|LAB|STUDIO|DEN|LAIR)/i.test(name)) return true;
+          return false;
+        };
+        const nonCharacterPatterns = [
+          /^(INT|EXT|INTERIOR|EXTERIOR)\b/i,
+          /^(FADE|CUT|DISSOLVE|SMASH|JUMP|MATCH|IRIS|WIPE)\s*(IN|OUT|TO|FROM)?$/i,
+          /^(MOMENTS?\s+LATER|LATER\s+THAT|NEXT\s+(DAY|MORNING|NIGHT)|SAME\s+TIME|CONTINUOUS|MEANWHILE)$/i,
+          /^(WRITTEN\s+BY|DIRECTED\s+BY|END\s+CREDITS?|TITLE\s+CARD|CREDITS?|THE\s+END)$/i,
+          /^(HER|HIS|THEIR|ITS)\s+(POV|VOICE|HAND|FACE|EYES|BACK|SIDE)$/i,
+          /^(CLOSE\s+ON|ANGLE\s+ON|WIDE\s+ON|BACK\s+TO|INSERT|SUPER|MONTAGE|INTERCUT|FLASHBACK)$/i,
+          /^(A\s+FUN|A\s+SONG|A\s+BEAT|A\s+MOMENT|A\s+PAUSE)/i,
+          /^(PARKED|MOVING|SPEEDING)\s+(CAR|BIKE|TRUCK|BUS|VEHICLE|TEMPO|AUTO)/i,
+          /^(BIKE|CAR|TRUCK|BUS|VEHICLE|TEMPO|AUTO|PHONE|LETTER|NOTE|SIGN|BOARD)\s*(ON|IN|AT|BY)?\s/i,
+          /^(EK|DO|TEEN|CHAR|PAANCH|CHHEH|SAAT|AATH|NAU|DAS)\s+(SAAL|DIN|RAAT|GHANTE|MAHINE|HAFTE)/i,
+          /^(DOOSRI|TEESRI|CHAUTHI|PAANCHVI)\s+(RAAT|SUBAH|SHAAM|DIN)/i,
+          /^(ALL\s+THREE|ALL\s+FOUR|EVERYONE|EVERYBODY|CROWD|GROUP|PEOPLE|BOTH)$/i,
+          /\.\s*$/,  // Ends with period (likely a sentence, not a character name)
+          /^(STREE|SHAMSHAAN)$/i,  // Script-specific title/location
+        ];
+        const isNonCharacter = (name: string): boolean => {
+          if (isLocationLike(name)) return true;
+          if (nonCharacterPatterns.some(p => p.test(name))) return true;
+          // Single generic words that aren't names
+          const genericSingles = new Set([
+            'INSIDE', 'OUTSIDE', 'UPSTAIRS', 'DOWNSTAIRS', 'NEARBY', 'ELSEWHERE',
+            'BIKE', 'CAR', 'PHONE', 'TEMPO', 'PASSAGE', 'CELLAR',
+          ]);
+          if (genericSingles.has(name)) return true;
+          return false;
+        };
+        
+        const filteredCharacters = new Map<string, Character>();
+        allCharacters.forEach((char, name) => {
+          if (!isNonCharacter(name)) {
+            filteredCharacters.set(name, char);
+          }
+        });
+        const removedCount = allCharacters.size - filteredCharacters.size;
+        if (removedCount > 0) {
+          console.log(`[script-parser-stream] Filtered ${removedCount} non-character entries (locations/props/transitions)`);
+        }
+        
+        const characters = Array.from(filteredCharacters.values());
         
         sendSSE(controller, 'progress', { 
           stage: 'characters', 
