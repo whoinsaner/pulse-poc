@@ -40,6 +40,7 @@ import {
   Info,
   AlertTriangle,
   FileSearch,
+  RotateCcw,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -104,6 +105,8 @@ export default function Scripts() {
   const [addingScript, setAddingScript] = useState<string | null>(null);
   const [previewScript, setPreviewScript] = useState<SampleScriptData | null>(null);
   const [showExtractionDialog, setShowExtractionDialog] = useState(false);
+  const [stuckRuns, setStuckRuns] = useState<Record<string, string>>({}); // scriptId -> analysisRunId
+  const [resumingScript, setResumingScript] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -114,6 +117,7 @@ export default function Scripts() {
   useEffect(() => {
     if (currentOrganization) {
       fetchScripts();
+      fetchStuckRuns();
     }
   }, [currentOrganization]);
 
@@ -152,6 +156,71 @@ export default function Scripts() {
       setScripts(data as Script[]);
     }
     setIsLoading(false);
+  };
+
+  const fetchStuckRuns = async () => {
+    if (!currentOrganization) return;
+    
+    // Find analysis runs stuck in 'processing' for more than 5 minutes
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+    
+    const { data, error } = await supabase
+      .from('analysis_runs')
+      .select('id, script_id, created_at')
+      .eq('status', 'processing')
+      .lt('created_at', fiveMinutesAgo)
+      .order('created_at', { ascending: false });
+
+    if (!error && data) {
+      const map: Record<string, string> = {};
+      for (const run of data) {
+        // Only keep the most recent stuck run per script
+        if (!map[run.script_id]) {
+          map[run.script_id] = run.id;
+        }
+      }
+      setStuckRuns(map);
+    }
+  };
+
+  const handleResumeAnalysis = async (script: Script) => {
+    const runId = stuckRuns[script.id];
+    if (!runId) return;
+
+    setResumingScript(script.id);
+    try {
+      const { error: invokeError } = await supabase.functions.invoke('analyze-script', {
+        body: {
+          scriptId: script.id,
+          analysisRunId: runId,
+          mode: 'deep',
+          resume: true,
+        },
+      });
+
+      if (invokeError) throw invokeError;
+
+      toast({
+        title: 'Analysis resumed',
+        description: `Resuming analysis for "${script.title}". Failed and interrupted agents will be re-run.`,
+      });
+
+      // Remove from stuck runs
+      setStuckRuns(prev => {
+        const next = { ...prev };
+        delete next[script.id];
+        return next;
+      });
+    } catch (err) {
+      console.error('Resume error:', err);
+      toast({
+        title: 'Resume failed',
+        description: err instanceof Error ? err.message : 'Failed to resume analysis',
+        variant: 'destructive',
+      });
+    } finally {
+      setResumingScript(null);
+    }
   };
 
   const fetchRelatedCounts = async (scriptId: string) => {
@@ -397,6 +466,22 @@ export default function Scripts() {
                           <FileSearch className="h-4 w-4 mr-2" />
                           Run Extraction
                         </DropdownMenuItem>
+                        {stuckRuns[script.id] && (
+                          <DropdownMenuItem 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleResumeAnalysis(script);
+                            }}
+                            disabled={resumingScript === script.id}
+                          >
+                            {resumingScript === script.id ? (
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            ) : (
+                              <RotateCcw className="h-4 w-4 mr-2" />
+                            )}
+                            Resume Stuck Analysis
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem onClick={(e) => {
                           e.stopPropagation();
                           setSelectedScript(script);
@@ -448,6 +533,13 @@ export default function Scripts() {
                     <p className="mt-3 text-sm text-muted-foreground line-clamp-2">
                       {script.logline}
                     </p>
+                  )}
+
+                  {stuckRuns[script.id] && (
+                    <div className="mt-3 flex items-center gap-2 text-xs text-amber-600 dark:text-amber-400">
+                      <AlertTriangle className="h-3.5 w-3.5" />
+                      <span>Analysis stuck — use menu to resume</span>
+                    </div>
                   )}
                 </CardContent>
               </Card>
