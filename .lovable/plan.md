@@ -1,78 +1,56 @@
 
-# Add Sample Series Script with Bible + Sample Series Report
+# Fix `extractScore` Usage Across the Board
 
-## Overview
-Add a TV series pilot sample script and a comprehensive sample report to the library, showcasing the Series Bible Extract feature. This gives users a demo of how Pulse analyzes serialized TV content.
+## Problem
+Category scores are stored as objects (`{score: 85, maturity: 'Strong'}`) but many files still read them as raw numbers. This causes scores to display as `0`, `NaN`, or `[object Object]`. Two files were already fixed (`ReportCover.tsx`, `ComicFormatDiagnosis.tsx`), but the same bug exists in **10+ other files**.
 
-## What Gets Created
+## Files to Fix
 
-### 1. Sample Series Script Data (`src/data/sampleSeriesScript.ts`)
-A new pilot script with rich series-appropriate content. The script will be a serialized drama pilot (e.g., a crime/conspiracy thriller) that naturally lends itself to series bible extraction -- world rules, recurring characters, tonal guardrails, and serialization engine.
+### 1. Direct raw access (will show 0 or wrong values)
 
-Exports:
-- `SAMPLE_SERIES_SCRIPT` -- metadata (title, logline, genre, scriptType: 'pilot', pageCount)
-- `SAMPLE_SERIES_SCENES` -- scene breakdowns with emotional tones
-- `SAMPLE_SERIES_CHARACTERS` -- cast with relationships, arc summaries, and dialogue counts
+| File | Current Code | Fix |
+|------|-------------|-----|
+| `src/components/report/AgentAnalysisGrid.tsx` | `categoryScores[category] \|\| 0` | Use `extractScore(categoryScores[category])` |
+| `src/components/report/RiskMap.tsx` | `categoryScores['Character'] \|\| 60` (typed as `Record<string, number>`) | Change type to `Record<string, unknown>`, use `extractScore()` with fallbacks |
+| `src/lib/sampleReportPdfGenerator.ts` | `categoryScores['Character'] \|\| 60` | Use `extractScore()` with fallbacks |
 
-### 2. Sample Series Report Data (`src/data/sampleSeriesReport.ts`)
-A full report data file following the same pattern as `sampleReport.ts` and `sampleWebSeriesReport.ts`. This includes:
-- All 10 core USAF agent parameter scores (~60 parameters)
-- Category scores across all 10 modules
-- Lens scores for all stakeholder perspectives
-- Rich insights (strengths, opportunities, risks)
-- Characters, scenes, and narrative graph
-- Series-relevant scores that feed the Series Bible Extract view (world logic, theme, character arc parameters)
+### 2. Verbose inline typeof checks (working but should use extractScore for consistency)
 
-Exports:
-- `SAMPLE_SERIES_REPORT_DATA` -- full ReportData object
-- `SAMPLE_SERIES_REPORT` -- Report object with executive summary
+These files have a correct but verbose pattern. Replace with `extractScore()`:
 
-### 3. Sample Series Report Layout Page (`src/pages/SampleSeriesReport.tsx`)
-A layout component following the exact pattern of `SampleWebSeriesReport.tsx`:
-- Creates a context provider for the report
-- Uses `SampleCommandHeader` and `SampleReportSidebar`
-- Renders `Outlet` for child routes
-- Sets `scriptType` to `'pilot'` so the sidebar shows the "Series Bible" nav item
+| File | Category Key |
+|------|-------------|
+| `src/pages/report/ConceptHook.tsx` | `'Concept & Hook'` |
+| `src/pages/report/ProtagonistAnalysis.tsx` | `'Character'` |
+| `src/pages/report/EmotionalResonance.tsx` | `'Emotional Arc'` |
+| `src/pages/report/Production.tsx` | `'Execution'` |
+| `src/pages/report/VisualStorytelling.tsx` | `'World & Logic'` |
+| `src/pages/report/ThemeMoral.tsx` | `'Theme'` |
+| `src/pages/report/StructuralEngineering.tsx` | `'Structure'` |
+| `src/pages/report/Marketability.tsx` | `'Market'` |
+| `src/pages/report/DialogueSubtext.tsx` | `'Dialogue'` |
+| `src/pages/report/SupportingCast.tsx` | `'Character'` |
+| `src/pages/report/AudienceStrategy.tsx` | `'Market'` |
+| `src/pages/report/AntagonistAnalysis.tsx` | `'Conflict'` |
+| `src/pages/report/ReportOverview.tsx` | All categories |
+| `src/pages/report/CompleteScorecard.tsx` | All categories |
 
-### 4. Sample Series Script Page (`src/pages/SampleSeriesScript.tsx`)
-A dedicated script viewer for the series sample, following the `SampleComicScript.tsx` pattern. Displays the script content, scenes, and characters.
+### 3. Fallback line also broken in Production.tsx and others
 
-### 5. Add to Sample Scripts Library (`src/data/sampleScripts.ts`)
-Add the new series pilot to the `SAMPLE_SCRIPTS` array so it appears in the scripts library.
+Line like `reportData.categoryScores?.['Execution'] || currentScore` also reads raw objects. These fallback lines need `extractScore()` too.
 
-### 6. Routes (`src/App.tsx`)
-Add new routes:
-- `/sample-series-report` -- layout with all USAF consolidated child routes (story, characters, craft, commercial, development, scorecard, bible, script)
-- `/sample-series-script` -- standalone script viewer
+## Approach
 
-The `/sample-series-report/bible` route will render `SeriesBibleExtract`, which already handles pilot/episode types with the Series Engine section.
-
-## Pipeline Support
-The analysis pipeline already fully supports `pilot` and `episode` script types:
-- All 10 core USAF agents run for these types
-- The `SeriesBibleExtract` page is already wired up in the nav for pilot/episode types via `reportNavigation.ts`
-- No pipeline changes needed -- just sample data to demonstrate it
-
-## Files Changed
-| File | Action |
-|------|--------|
-| `src/data/sampleSeriesScript.ts` | New -- script data with scenes and characters |
-| `src/data/sampleSeriesReport.ts` | New -- full report data with 60+ parameter scores |
-| `src/pages/SampleSeriesReport.tsx` | New -- report layout page |
-| `src/pages/SampleSeriesScript.tsx` | New -- script viewer page |
-| `src/data/sampleScripts.ts` | Edit -- add series pilot to SAMPLE_SCRIPTS array and update SampleScriptData type |
-| `src/App.tsx` | Edit -- add routes for sample-series-report and sample-series-script |
+For each file:
+1. Import `extractScore` from `@/lib/scoreUtils`
+2. Replace raw `categoryScores[key]` access or verbose `typeof` checks with `extractScore(categoryScores[key])`
+3. Keep fallback values (e.g., `|| currentScore`) where they exist
 
 ## Technical Details
 
-### Script Concept
-Working title: **"The Compound"** -- a conspiracy thriller pilot about a journalist who infiltrates a secretive desert commune only to discover it's a front for a shadowy government experiment. Strong series bible potential: fixed world rules (the compound's structure, hierarchy), tonal guardrails (paranoid thriller), character trajectories (infiltrator to true believer tension), and series engine (weekly revelations about the experiment).
+The `extractScore` function (already in `src/lib/scoreUtils.ts`) handles both formats:
+- If value is a number, returns it directly
+- If value is an object with `.score`, extracts the number
+- Otherwise returns 0
 
-### Report Scores Profile
-The pilot format will score:
-- High on Concept/Hook (~87), Character (~85), World & Logic (~88)
-- Medium on Structure (~80), Market (~78)
-- The Series Bible Extract will have rich world rules (fixed vs flexible), clear character arcs, and strong series engine scores
-
-### No Database or Edge Function Changes
-This is purely frontend sample data. The analysis pipeline already handles pilot scripts correctly through the existing agent orchestration.
+Total files changed: ~17 files (3 broken + 14 verbose/inconsistent)
