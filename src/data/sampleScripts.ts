@@ -3991,6 +3991,82 @@ They say the truth will set you free. But first, it has to break you.
 TEXT: "Flatline returns next Wednesday."
 
 END OF EPISODE`
+  },
+  {
+    id: 'series-pilot',
+    title: 'The Compound',
+    genre: 'Conspiracy Thriller',
+    scriptType: 'pilot',
+    logline: 'A journalist infiltrates a secretive desert commune only to discover it\'s a front for a shadowy government experiment that could rewrite human consciousness.',
+    pageCount: 62,
+    content: `FADE IN:
+
+EXT. MOJAVE DESERT - DAWN
+
+An endless expanse of cracked earth. A single road cuts through the heat shimmer. A rusted sign reads: "EDEN SPRINGS - PRIVATE COMMUNITY - NO TRESPASSING."
+
+ELENA CROSS (32), lean, watchful, drives a beat-up sedan. Press credentials tucked under the visor. She pulls over, checks her phone — no signal. Expected.
+
+ELENA (V.O.)
+Three journalists tried to get inside Eden Springs. Two came back with nothing. One didn't come back at all.
+
+She pulls a worn photo from the glovebox: a young man, smiling. Written on the back: "Danny. Last known location."
+
+ELENA (V.O.) (CONT'D)
+My brother joined eight months ago. Stopped calling after two weeks.
+
+She starts the car. Drives toward the compound.
+
+EXT. THE COMPOUND - MAIN GATE - MORNING
+
+A surprisingly modern facility behind weathered adobe walls. Solar panels glint on every roof.
+
+SENTRY
+Name and purpose.
+
+ELENA
+Elena Marsh. I'm here for the New Beginnings orientation.
+
+INT. ORIENTATION HALL - DAY
+
+DR. LENA VOSS (55), silver-streaked hair, serene authority, takes the stage.
+
+VOSS
+You came here broken. That's not a judgment — it's a diagnosis. Eden Springs has three rules. One: trust the process. Two: trust each other. Three: trust yourself last.
+
+She scans the room. Her eyes linger on Elena.
+
+VOSS (CONT'D)
+Your instincts got you here. They're not to be trusted.
+
+INT. ELENA'S ROOM - NIGHT
+
+Through the window: a group of RESIDENTS being escorted toward the research wing. They walk in perfect unison. Among them — DANNY CROSS (27), gaunt, distant.
+
+ELENA
+(whispered)
+Danny...
+
+INT. ELENA'S ROOM - NIGHT (LATER)
+
+SARAH OKAFOR (40s) enters, agitated.
+
+SARAH
+They deleted other things too. Memories. My daughter's middle name. The color of my first car. My wedding day.
+
+She hands Elena a crumpled document.
+
+SARAH (CONT'D)
+They're not healing us. They're testing on us.
+
+Elena reads it. Project name: THRESHOLD. Department of Defense.
+
+ELENA (V.O.)
+Everything they told you is a lie.
+
+SMASH CUT TO BLACK.
+
+END OF PILOT`
   }
 ];
 

@@ -49,6 +49,8 @@ import SampleScript from "./pages/SampleScript";
 import SampleComicReportLayout from "./pages/SampleComicReport";
 import SampleComicScript from "./pages/SampleComicScript";
 import SampleWebSeriesReportLayout from "./pages/SampleWebSeriesReport";
+import SampleSeriesReportLayout from "./pages/SampleSeriesReport";
+import SampleSeriesScript from "./pages/SampleSeriesScript";
 import SampleMicroDramaReportLayout from "./pages/SampleMicroDramaReport";
 import ComicGallery from "./pages/ComicGallery";
 import MicroDramaAnalysis from "./pages/report/MicroDramaAnalysis";
@@ -353,6 +355,39 @@ const App = () => (
               <Route path="scorecard" element={<CompleteScorecard />} />
               <Route path="bible" element={<SeriesBibleExtract />} />
               <Route path="script" element={<SampleScript />} />
+              <Route path="analysis" element={<ReportAnalysis />} />
+              <Route path="insights" element={<ReportInsights />} />
+              <Route path="narrative" element={<ReportNarrative />} />
+            </Route>
+            <Route path="/sample-series-script" element={<SampleSeriesScript />} />
+            <Route path="/sample-series-report" element={<SampleSeriesReportLayout />}>
+              {/* USAF Consolidated Routes */}
+              <Route index element={<ReportCover />} />
+              <Route path="story" element={<StoryDiagnosis />} />
+              <Route path="story/concept" element={<StoryConceptHook />} />
+              <Route path="story/structure" element={<StoryStructure />} />
+              <Route path="story/conflict" element={<StoryConflictStakes />} />
+              <Route path="characters" element={<CharacterDiagnosis />} />
+              <Route path="characters/protagonist" element={<ProtagonistAnalysis />} />
+              <Route path="characters/antagonist" element={<AntagonistAnalysis />} />
+              <Route path="characters/cast" element={<SupportingCast />} />
+              <Route path="craft" element={<CraftDiagnosis />} />
+              <Route path="craft/dialogue" element={<CraftDialogue />} />
+              <Route path="craft/theme" element={<CraftTheme />} />
+              <Route path="craft/visual" element={<CraftVisual />} />
+              <Route path="craft/emotional" element={<CraftEmotional />} />
+              <Route path="craft/scenes" element={<SceneEconomy />} />
+              <Route path="commercial" element={<CommercialDiagnosis />} />
+              <Route path="commercial/market" element={<CommercialMarket />} />
+              <Route path="commercial/production" element={<CommercialProduction />} />
+              <Route path="development" element={<DevelopmentPriorities />} />
+              <Route path="development/rewrite" element={<RewritePriorities />} />
+              <Route path="development/scenes" element={<Navigate to="../craft/scenes" replace />} />
+              
+              {/* Reference pages */}
+              <Route path="scorecard" element={<CompleteScorecard />} />
+              <Route path="bible" element={<SeriesBibleExtract />} />
+              <Route path="script" element={<SampleSeriesScript />} />
               <Route path="analysis" element={<ReportAnalysis />} />
               <Route path="insights" element={<ReportInsights />} />
               <Route path="narrative" element={<ReportNarrative />} />
