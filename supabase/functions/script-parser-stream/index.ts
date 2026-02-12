@@ -1968,6 +1968,10 @@ serve(async (req) => {
           /^(ALL\s+THREE|ALL\s+FOUR|EVERYONE|EVERYBODY|CROWD|GROUP|PEOPLE|BOTH)$/i,
           /\.\s*$/,  // Ends with period (likely a sentence, not a character name)
           /^(STREE|SHAMSHAAN)$/i,  // Script-specific title/location
+          // Prepositional phrases - not character names
+          /^(AT|IN|ON|BY|TO|FROM|NEAR|BEHIND|BESIDE|UNDER|OVER|ABOVE|BELOW|ACROSS|ALONG|AROUND|THROUGH|INTO|ONTO|UPON|WITHIN|OUTSIDE|INSIDE|BETWEEN|BEYOND|BENEATH|AMONG|AGAINST|BEFORE|AFTER|DURING|WITHOUT|TOWARD|TOWARDS)\s+/i,
+          // Articles + noun phrases - not character names  
+          /^(THE|A|AN)\s+/i,
         ];
         const isNonCharacter = (name: string): boolean => {
           if (isLocationLike(name)) return true;
@@ -1976,8 +1980,19 @@ serve(async (req) => {
           const genericSingles = new Set([
             'INSIDE', 'OUTSIDE', 'UPSTAIRS', 'DOWNSTAIRS', 'NEARBY', 'ELSEWHERE',
             'BIKE', 'CAR', 'PHONE', 'TEMPO', 'PASSAGE', 'CELLAR',
+            'STAND', 'WALL', 'GATE', 'DOOR', 'WINDOW', 'STAIRS', 'STEP',
+            'CONCESSION', 'ASSISTANT', 'ANNOUNCER', 'NARRATOR', 'VOICE',
           ]);
           if (genericSingles.has(name)) return true;
+          // Multi-word names where all words are common English nouns/adjectives (not proper names)
+          const commonWords = new Set([
+            'CONCESSION', 'STAND', 'WALL', 'GATE', 'DOOR', 'SIDE', 'TOP', 'BOTTOM',
+            'FRONT', 'BACK', 'LEFT', 'RIGHT', 'UPPER', 'LOWER', 'MAIN', 'OLD', 'NEW',
+            'BIG', 'SMALL', 'DARK', 'LIGHT', 'OPEN', 'CLOSED', 'BROKEN', 'EMPTY',
+            'FLOWER', 'WATER', 'FIRE', 'SMOKE', 'RAIN', 'WIND', 'DUST', 'MUD',
+          ]);
+          const nameWords = name.split(/\s+/);
+          if (nameWords.length >= 2 && nameWords.every(w => commonWords.has(w))) return true;
           return false;
         };
         
