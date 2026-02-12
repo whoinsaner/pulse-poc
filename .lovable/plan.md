@@ -1,51 +1,78 @@
 
+# Add Sample Series Script with Bible + Sample Series Report
 
-# Review: Comic-Specific Adaptation Needs Across All Core USAF Agents
+## Overview
+Add a TV series pilot sample script and a comprehensive sample report to the library, showcasing the Series Bible Extract feature. This gives users a demo of how Pulse analyzes serialized TV content.
 
-## Summary
+## What Gets Created
 
-After reviewing all 10 core agents (Modules A-J), the DialogueAgent (F) has already been updated. Of the remaining 9, **5 agents need meaningful comic adaptations**, 2 need minor tweaks, and 2 are already universal enough.
+### 1. Sample Series Script Data (`src/data/sampleSeriesScript.ts`)
+A new pilot script with rich series-appropriate content. The script will be a serialized drama pilot (e.g., a crime/conspiracy thriller) that naturally lends itself to series bible extraction -- world rules, recurring characters, tonal guardrails, and serialization engine.
 
-## Agent-by-Agent Assessment
+Exports:
+- `SAMPLE_SERIES_SCRIPT` -- metadata (title, logline, genre, scriptType: 'pilot', pageCount)
+- `SAMPLE_SERIES_SCENES` -- scene breakdowns with emotional tones
+- `SAMPLE_SERIES_CHARACTERS` -- cast with relationships, arc summaries, and dialogue counts
 
-### Already Done
-| Agent | Status |
-|-------|--------|
-| **DialogueAgent (F)** | Adapted -- caption economy, visual-text interplay, narrative voice identity |
+### 2. Sample Series Report Data (`src/data/sampleSeriesReport.ts`)
+A full report data file following the same pattern as `sampleReport.ts` and `sampleWebSeriesReport.ts`. This includes:
+- All 10 core USAF agent parameter scores (~60 parameters)
+- Category scores across all 10 modules
+- Lens scores for all stakeholder perspectives
+- Rich insights (strengths, opportunities, risks)
+- Characters, scenes, and narrative graph
+- Series-relevant scores that feed the Series Bible Extract view (world logic, theme, character arc parameters)
 
-### High Priority -- Significant Comic Adaptation Needed
+Exports:
+- `SAMPLE_SERIES_REPORT_DATA` -- full ReportData object
+- `SAMPLE_SERIES_REPORT` -- Report object with executive summary
 
-| Agent | Why It Needs Adaptation | Key Changes |
-|-------|------------------------|-------------|
-| **StructureAgent (B)** | Assumes act-based screenplay structure. Comics use issue arcs, page-turn pacing, and spread-based rhythm. | Reinterpret "Midpoint Transformation" as mid-issue pivot; "Drop-off Risk" as page-turn engagement drops; "Structural Symmetry" as issue-level pacing balance |
-| **CharacterAgent (C)** | "Performative Range" assumes actors. Comic characters are conveyed through visual design cues in script directions, not performance. | Drop actor-centric language; evaluate character through visual description clarity, design distinctiveness, and expression scripting; "Agency Level" should account for visual action beats |
-| **EmotionalArcAgent (H)** | "Emotional Timing" assumes scene-based pacing. Comics deliver emotion through splash pages, wordless sequences, and page-turn reveals. | Reinterpret timing as page-based; "Catharsis Strength" as visual reveal impact; "Fatigue vs Variety" as panel density variation |
-| **MarketAgent (I)** | "Platform Fit" references theatrical/streaming. Comics have entirely different distribution (single issues, trades, webtoon, digital-first). | Add comic platforms; "Audience Fit" should reference comic reader demographics; "IP Expansion Potential" should note transmedia from comics |
-| **ExecutionAgent (J)** | "Production Complexity" assumes film production. Comic production means art complexity, page count, and coloring. | "Talent Dependency" becomes artist dependency; "Technical Dependency" becomes print/digital format needs; "Schedule Risk" becomes pages-per-month feasibility |
+### 3. Sample Series Report Layout Page (`src/pages/SampleSeriesReport.tsx`)
+A layout component following the exact pattern of `SampleWebSeriesReport.tsx`:
+- Creates a context provider for the report
+- Uses `SampleCommandHeader` and `SampleReportSidebar`
+- Renders `Outlet` for child routes
+- Sets `scriptType` to `'pilot'` so the sidebar shows the "Series Bible" nav item
 
-### Low Priority -- Minor Tweaks
+### 4. Sample Series Script Page (`src/pages/SampleSeriesScript.tsx`)
+A dedicated script viewer for the series sample, following the `SampleComicScript.tsx` pattern. Displays the script content, scenes, and characters.
 
-| Agent | Why | Suggested Change |
-|-------|-----|-----------------|
-| **ThemeAgent (E)** | "Symbol/Motif Consistency" should emphasize visual symbols (recurring imagery, color scripting) not just dialogue-based themes | Add note about evaluating visual motif cues described in panel directions |
-| **ConceptAgent (A)** | Mostly universal, but "Hook Clarity" could note that comics use cover art and visual hooks | Add brief note about visual hook potential |
+### 5. Add to Sample Scripts Library (`src/data/sampleScripts.ts`)
+Add the new series pilot to the `SAMPLE_SCRIPTS` array so it appears in the scripts library.
 
-### No Changes Needed
+### 6. Routes (`src/App.tsx`)
+Add new routes:
+- `/sample-series-report` -- layout with all USAF consolidated child routes (story, characters, craft, commercial, development, scorecard, bible, script)
+- `/sample-series-script` -- standalone script viewer
 
-| Agent | Why |
-|-------|-----|
-| **ConflictAgent (D)** | Conflict evaluation is genuinely medium-agnostic. The parameters work as-is for comics. |
-| **WorldLogicAgent (G)** | World consistency, spatial logic, and plausibility apply identically to comics. No adaptation needed. |
+The `/sample-series-report/bible` route will render `SeriesBibleExtract`, which already handles pilot/episode types with the Series Engine section.
 
-## Implementation
+## Pipeline Support
+The analysis pipeline already fully supports `pilot` and `episode` script types:
+- All 10 core USAF agents run for these types
+- The `SeriesBibleExtract` page is already wired up in the nav for pilot/episode types via `reportNavigation.ts`
+- No pipeline changes needed -- just sample data to demonstrate it
 
-All changes go in one file: `supabase/functions/analyze-script/index.ts`
+## Files Changed
+| File | Action |
+|------|--------|
+| `src/data/sampleSeriesScript.ts` | New -- script data with scenes and characters |
+| `src/data/sampleSeriesReport.ts` | New -- full report data with 60+ parameter scores |
+| `src/pages/SampleSeriesReport.tsx` | New -- report layout page |
+| `src/pages/SampleSeriesScript.tsx` | New -- script viewer page |
+| `src/data/sampleScripts.ts` | Edit -- add series pilot to SAMPLE_SCRIPTS array and update SampleScriptData type |
+| `src/App.tsx` | Edit -- add routes for sample-series-report and sample-series-script |
 
-For each agent needing adaptation, the pattern is identical to what was done for DialogueAgent: append a `COMIC/GRAPHIC NARRATIVE ADAPTATION:` block to the end of the existing system prompt. This block activates only when the script type is "comic" (which is already passed in context). No other files change.
+## Technical Details
 
-### Estimated scope
-- 5 high-priority agent prompt updates
-- 2 low-priority agent prompt tweaks
-- 1 edge function redeployment
-- No UI changes, no database changes
+### Script Concept
+Working title: **"The Compound"** -- a conspiracy thriller pilot about a journalist who infiltrates a secretive desert commune only to discover it's a front for a shadowy government experiment. Strong series bible potential: fixed world rules (the compound's structure, hierarchy), tonal guardrails (paranoid thriller), character trajectories (infiltrator to true believer tension), and series engine (weekly revelations about the experiment).
 
+### Report Scores Profile
+The pilot format will score:
+- High on Concept/Hook (~87), Character (~85), World & Logic (~88)
+- Medium on Structure (~80), Market (~78)
+- The Series Bible Extract will have rich world rules (fixed vs flexible), clear character arcs, and strong series engine scores
+
+### No Database or Edge Function Changes
+This is purely frontend sample data. The analysis pipeline already handles pilot scripts correctly through the existing agent orchestration.
