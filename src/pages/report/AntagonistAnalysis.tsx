@@ -1,6 +1,6 @@
 import { useOutletContext } from 'react-router-dom';
 import { ReportData, StakeholderLens } from '@/types/database';
-import { ParameterBreakdown } from '@/components/report/ParameterBreakdown';
+
 import { Card } from '@/components/ui/card';
 import { 
   SectionHeader, 
@@ -9,7 +9,8 @@ import {
   ScoreBar,
   ScoreDisplay,
   RecommendationCard,
-  QuoteCallout
+  QuoteCallout,
+  WeightedParameterList,
 } from '@/components/report/ui';
 import { AgentNarrativePanel } from '@/components/report/AgentNarrativePanel';
 import { UserX, Shield, Brain, Zap, Target, Sword } from 'lucide-react';
@@ -83,7 +84,7 @@ export default function AntagonistAnalysis() {
   const antagonistName = antagonistProfile?.name || antagonistCharacter?.name || 'Antagonist';
 
   return (
-    <div className="space-y-8 max-w-6xl mx-auto">
+    <div className="space-y-8">
       <SectionHeader
         title="Antagonist Analysis"
         subtitle="Evaluating the opposition's power, motivation, and dramatic function"
@@ -102,27 +103,27 @@ export default function AntagonistAnalysis() {
 
       {/* Power Breakdown */}
       <div className="grid md:grid-cols-5 gap-4">
-        <Card className="glass-premium p-5 text-center">
+        <Card className="p-5 text-center">
           <Sword className="h-5 w-5 mx-auto mb-2 text-destructive" />
           <p className="text-sm text-muted-foreground mb-1">Physical</p>
           <ScoreDisplay score={powerScores.physical} size="sm" showLabel={false} />
         </Card>
-        <Card className="glass-premium p-5 text-center">
+        <Card className="p-5 text-center">
           <Brain className="h-5 w-5 mx-auto mb-2 text-chart-6" />
           <p className="text-sm text-muted-foreground mb-1">Psychological</p>
           <ScoreDisplay score={powerScores.psychological} size="sm" showLabel={false} />
         </Card>
-        <Card className="glass-premium p-5 text-center">
+        <Card className="p-5 text-center">
           <Target className="h-5 w-5 mx-auto mb-2 text-chart-4" />
           <p className="text-sm text-muted-foreground mb-1">Tactical</p>
           <ScoreDisplay score={powerScores.tactical} size="sm" showLabel={false} />
         </Card>
-        <Card className="glass-premium p-5 text-center">
+        <Card className="p-5 text-center">
           <Zap className="h-5 w-5 mx-auto mb-2 text-chart-2" />
           <p className="text-sm text-muted-foreground mb-1">Dramatic</p>
           <ScoreDisplay score={powerScores.dramatic} size="sm" showLabel={false} />
         </Card>
-        <Card className="glass-premium p-5 text-center bg-primary/5 border-primary/20">
+        <Card className="p-5 text-center bg-primary/5 border-primary/20">
           <Shield className="h-5 w-5 mx-auto mb-2 text-primary" />
           <p className="text-sm text-muted-foreground mb-1">Overall</p>
           <ScoreDisplay score={avgPower} size="sm" />
@@ -139,7 +140,7 @@ export default function AntagonistAnalysis() {
 
       {/* Antagonist Profile from AI */}
       {antagonistProfile && (
-        <Card className="glass-premium p-6">
+        <Card className="p-6">
           <SubSectionHeader title={`${antagonistProfile.name} — Antagonist Profile`} />
           <div className="grid md:grid-cols-2 gap-6">
             <div className="space-y-4">
@@ -164,7 +165,7 @@ export default function AntagonistAnalysis() {
 
       {/* Fallback: Character data when no AI profile */}
       {!antagonistProfile && antagonistCharacter && (
-        <Card className="glass-premium p-6">
+        <Card className="p-6">
           <SubSectionHeader title="Antagonist Profile" />
           <div className="grid md:grid-cols-2 gap-6">
             <div className="space-y-4">
@@ -203,10 +204,15 @@ export default function AntagonistAnalysis() {
       )}
 
       {/* Conflict Parameters */}
-      <ParameterBreakdown title="Conflict Parameters" parameters={filteredConflictParams} maxVisible={6} />
+      <WeightedParameterList
+        parameters={filteredConflictParams.map(p => ({ ...p, weight: 1.0 }))}
+        title="Conflict Parameters"
+        initiallyExpanded={true}
+        defaultVisibleCount={6}
+      />
 
       {/* Recommendations — AI-first, fallback to template */}
-      <Card className="glass-premium p-6">
+      <Card className="p-6">
         <SubSectionHeader title="Antagonist Recommendations" />
         <div className="space-y-3">
           {agentRecs.length > 0 ? (

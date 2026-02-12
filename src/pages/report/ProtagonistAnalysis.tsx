@@ -1,12 +1,13 @@
 import { useOutletContext } from 'react-router-dom';
 import { ReportData, StakeholderLens } from '@/types/database';
-import { ParameterBreakdown } from '@/components/report/ParameterBreakdown';
+
 import { AgentNarrativePanel, CharacterNarrativePanel } from '@/components/report/AgentNarrativePanel';
 import { Card } from '@/components/ui/card';
 import { 
   SectionHeader, 
   SubSectionHeader,
   StrengthWeaknessList,
+  WeightedParameterList,
 } from '@/components/report/ui';
 import { User } from 'lucide-react';
 import { extractScore } from '@/lib/scoreUtils';
@@ -60,7 +61,7 @@ export default function ProtagonistAnalysis() {
   const filterStats = getFilterStats(characterParams);
 
   return (
-    <div className="space-y-8 max-w-6xl mx-auto">
+    <div className="space-y-8">
       <SectionHeader
         title="Protagonist Analysis"
         subtitle="Deep dive into the main character's construction, arc, and audience connection"
@@ -83,7 +84,7 @@ export default function ProtagonistAnalysis() {
 
       {/* Character Fundamentals from parsed data */}
       {protagonist && (
-        <Card className="glass-premium p-6">
+        <Card className="p-6">
           <SubSectionHeader title="Character Fundamentals" />
           <div className="grid md:grid-cols-2 gap-6">
             <div className="space-y-4">
@@ -134,7 +135,12 @@ export default function ProtagonistAnalysis() {
       )}
 
       {/* Parameter Scores */}
-      <ParameterBreakdown title="Character Parameters" parameters={filteredCharacterParams} />
+      <WeightedParameterList
+        parameters={filteredCharacterParams.map(p => ({ ...p, weight: 1.0 }))}
+        title="Character Parameters"
+        initiallyExpanded={true}
+        defaultVisibleCount={8}
+      />
 
       {/* Strengths & Weaknesses */}
       {(strengths.length > 0 || weaknesses.length > 0) && (

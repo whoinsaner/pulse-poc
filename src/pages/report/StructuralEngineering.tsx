@@ -1,12 +1,13 @@
 import { useOutletContext } from 'react-router-dom';
 import { ReportData, StakeholderLens } from '@/types/database';
-import { ParameterBreakdown } from '@/components/report/ParameterBreakdown';
+
 import { AgentNarrativePanel } from '@/components/report/AgentNarrativePanel';
 import { Card } from '@/components/ui/card';
 import { 
   SectionHeader, 
   SubSectionHeader,
   StrengthWeaknessList,
+  WeightedParameterList,
 } from '@/components/report/ui';
 import { Building } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -51,7 +52,7 @@ export default function StructuralEngineering() {
   }));
 
   return (
-    <div className="space-y-8 max-w-6xl mx-auto">
+    <div className="space-y-8">
       <SectionHeader
         title="Structural Engineering"
         subtitle="Analyzing act construction, beat timing, and narrative architecture"
@@ -65,7 +66,7 @@ export default function StructuralEngineering() {
       )}
 
       {/* Structural Identity */}
-      <Card className="glass-premium p-6">
+      <Card className="p-6">
         <SubSectionHeader title="Structural Identity" />
         <div className="grid md:grid-cols-2 gap-6">
           <div>
@@ -89,7 +90,12 @@ export default function StructuralEngineering() {
       </Card>
 
       {/* Parameter Breakdown */}
-      <ParameterBreakdown title="Structure Parameters" parameters={structureParams} />
+      <WeightedParameterList
+        parameters={structureParams.map(p => ({ ...p, weight: 1.0 }))}
+        title="Structure Parameters"
+        initiallyExpanded={true}
+        defaultVisibleCount={8}
+      />
 
       {/* Strengths & Weaknesses */}
       {(strengths.length > 0 || weaknesses.length > 0) && (

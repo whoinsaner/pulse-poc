@@ -1,11 +1,11 @@
 import { useOutletContext } from 'react-router-dom';
 import { ReportData, StakeholderLens } from '@/types/database';
-import { ParameterBreakdown } from '@/components/report/ParameterBreakdown';
 import { AgentNarrativePanel, CommercialNarrativePanel } from '@/components/report/AgentNarrativePanel';
 import { 
   SectionHeader, 
   SubSectionHeader,
   StrengthWeaknessList,
+  WeightedParameterList,
 } from '@/components/report/ui';
 import { Card } from '@/components/ui/card';
 import { Target } from 'lucide-react';
@@ -45,7 +45,7 @@ export default function AudienceStrategy() {
   }));
 
   return (
-    <div className="space-y-8 max-w-6xl mx-auto">
+    <div className="space-y-8">
       <SectionHeader
         title="Audience Strategy"
         subtitle="Defining target audience, marketing approach, and release positioning"
@@ -59,7 +59,12 @@ export default function AudienceStrategy() {
       )}
 
       {/* Parameter Breakdown */}
-      <ParameterBreakdown title="Audience Parameters" parameters={audienceParams} />
+      <WeightedParameterList
+        parameters={audienceParams.map(p => ({ ...p, weight: 1.0 }))}
+        title="Audience Parameters"
+        initiallyExpanded={true}
+        defaultVisibleCount={8}
+      />
 
       {/* Strengths & Weaknesses */}
       {(strengths.length > 0 || weaknesses.length > 0) && (

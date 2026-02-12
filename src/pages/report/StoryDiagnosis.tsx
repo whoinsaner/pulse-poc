@@ -1,9 +1,6 @@
 import { useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { ReportData, StakeholderLens } from '@/types/database';
-import { Progress } from '@/components/ui/progress';
-import { cn } from '@/lib/utils';
-import { getScoreBarColor, getDiagnosticCategory } from '@/lib/scoreUtils';
 import { Card } from '@/components/ui/card';
 import { 
   SectionHeader, 
@@ -96,20 +93,6 @@ export default function StoryDiagnosis() {
       />
 
 
-      {/* Fallback: Category Deep-Dives (when no agentContent) */}
-      {!reportData.agentContent && (
-        <div className="grid gap-6">
-          <CategoryCard title="Concept & Hook" parameters={storyParameters.filter(p => 
-            p.parameterName.includes('concept') || p.parameterName.includes('hook') || p.parameterName.includes('familiarity') || p.parameterName.includes('franchise')
-          )} />
-          <CategoryCard title="Structure" parameters={storyParameters.filter(p => 
-            p.parameterName.includes('structure') || p.parameterName.includes('inciting') || p.parameterName.includes('escalation') || p.parameterName.includes('climax') || p.parameterName.includes('setup') || p.parameterName.includes('scene_necessity') || p.parameterName.includes('pacing')
-          )} />
-          <CategoryCard title="Conflict" parameters={storyParameters.filter(p => 
-            p.parameterName.includes('conflict') || p.parameterName.includes('stakes') || p.parameterName.includes('obstacle') || p.parameterName.includes('tension')
-          )} />
-        </div>
-      )}
 
       {/* Development Focus */}
       {(() => {
@@ -131,51 +114,5 @@ export default function StoryDiagnosis() {
       })()}
 
     </div>
-  );
-}
-
-// Helper component for category breakdowns
-interface CategoryCardProps {
-  title: string;
-  parameters: Array<{
-    parameterName: string;
-    displayName: string;
-    score: number;
-    rationale?: string;
-  }>;
-}
-
-function CategoryCard({ title, parameters }: CategoryCardProps) {
-  if (parameters.length === 0) return null;
-
-  const avgScore = Math.round(
-    parameters.reduce((sum, p) => sum + p.score, 0) / parameters.length
-  );
-
-  return (
-    <Card className="p-5">
-      <div className="flex items-center justify-between mb-4">
-        <h4 className="font-semibold">{title}</h4>
-        <span className={cn('font-mono font-bold text-sm', getDiagnosticCategory(avgScore).color)}>{avgScore}</span>
-      </div>
-      <div className="space-y-5">
-        {parameters.slice(0, 4).map((param) => (
-          <div key={param.parameterName} className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <h4 className="font-semibold text-sm text-foreground">{param.displayName}</h4>
-              <span className={cn('font-mono font-bold text-sm tabular-nums', getDiagnosticCategory(param.score).color)}>
-                {param.score} <span className="text-muted-foreground font-normal">/ 100</span>
-              </span>
-            </div>
-            <Progress value={param.score} indicatorClassName={getScoreBarColor(param.score)} className="h-2.5" />
-            {param.rationale && (
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                {param.rationale}
-              </p>
-            )}
-          </div>
-        ))}
-      </div>
-    </Card>
   );
 }

@@ -1,9 +1,9 @@
 import { useOutletContext } from 'react-router-dom';
 import { ReportData, StakeholderLens } from '@/types/database';
 import { AgentNarrativePanel } from '@/components/report/AgentNarrativePanel';
-import { ParameterBreakdown } from '@/components/report/ParameterBreakdown';
+
 import { Card } from '@/components/ui/card';
-import { SectionHeader } from '@/components/report/ui';
+import { SectionHeader, WeightedParameterList } from '@/components/report/ui';
 import { BarChart3 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -34,7 +34,7 @@ export default function RetentionAnalysis() {
   const agentName = reportData.agentContent?.StructureAgent ? 'StructureAgent' : 'ConflictAgent';
 
   return (
-    <div className="space-y-8 max-w-6xl mx-auto">
+    <div className="space-y-8">
       <SectionHeader
         title="Retention Curve Design"
         subtitle="Viewer engagement maintenance through runtime with strategic attention resets"
@@ -68,7 +68,12 @@ export default function RetentionAnalysis() {
       )}
 
       {/* Parameter Breakdown */}
-      <ParameterBreakdown title="Retention Parameters" parameters={retentionParams} />
+      <WeightedParameterList
+        parameters={retentionParams.map(p => ({ ...p, weight: 1.0 }))}
+        title="Retention Parameters"
+        initiallyExpanded={true}
+        defaultVisibleCount={8}
+      />
 
       {/* Fallback when no data */}
       {retentionParams.length === 0 && !agentContent && (

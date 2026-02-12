@@ -1,13 +1,14 @@
 import { useOutletContext } from 'react-router-dom';
 import { ReportData, StakeholderLens } from '@/types/database';
-import { ParameterBreakdown } from '@/components/report/ParameterBreakdown';
+
 import { AgentNarrativePanel } from '@/components/report/AgentNarrativePanel';
 import { Card } from '@/components/ui/card';
 import { 
   SectionHeader, 
   SubSectionHeader,
   StrengthWeaknessList,
-  QuoteCallout
+  QuoteCallout,
+  WeightedParameterList,
 } from '@/components/report/ui';
 import { Lightbulb } from 'lucide-react';
 import { extractScore } from '@/lib/scoreUtils';
@@ -55,7 +56,7 @@ export default function ConceptHook() {
   }));
 
   return (
-    <div className="space-y-8 max-w-6xl mx-auto">
+    <div className="space-y-8">
       <SectionHeader
         title="Concept & Hook"
         subtitle="Evaluating the core idea, marketability, and pitch potential"
@@ -80,7 +81,12 @@ export default function ConceptHook() {
       )}
 
       {/* Parameter Scores */}
-      <ParameterBreakdown title="Concept Parameters" parameters={conceptParams} />
+      <WeightedParameterList
+        parameters={conceptParams.map(p => ({ ...p, weight: 1.0 }))}
+        title="Concept Parameters"
+        initiallyExpanded={true}
+        defaultVisibleCount={8}
+      />
 
       {/* Strengths & Weaknesses */}
       {(strengths.length > 0 || weaknesses.length > 0) && (

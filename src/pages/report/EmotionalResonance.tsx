@@ -1,11 +1,12 @@
 import { useOutletContext } from 'react-router-dom';
 import { ReportData, StakeholderLens } from '@/types/database';
-import { ParameterBreakdown } from '@/components/report/ParameterBreakdown';
+
 import { AgentNarrativePanel } from '@/components/report/AgentNarrativePanel';
 import { 
   SectionHeader, 
   SubSectionHeader,
   StrengthWeaknessList,
+  WeightedParameterList,
 } from '@/components/report/ui';
 import { Card } from '@/components/ui/card';
 import { Sparkles } from 'lucide-react';
@@ -53,7 +54,7 @@ export default function EmotionalResonance() {
   ) || [];
 
   return (
-    <div className="space-y-8 max-w-6xl mx-auto">
+    <div className="space-y-8">
       <SectionHeader
         title="Emotional Resonance"
         subtitle="Analyzing audience emotional journey, cathartic moments, and connection potential"
@@ -82,7 +83,12 @@ export default function EmotionalResonance() {
       )}
 
       {/* Parameter Breakdown */}
-      <ParameterBreakdown title="Emotional Parameters" parameters={emotionalParams} />
+      <WeightedParameterList
+        parameters={emotionalParams.map(p => ({ ...p, weight: 1.0 }))}
+        title="Emotional Parameters"
+        initiallyExpanded={true}
+        defaultVisibleCount={8}
+      />
 
       {/* Strengths & Weaknesses */}
       {(strengths.length > 0 || weaknesses.length > 0) && (

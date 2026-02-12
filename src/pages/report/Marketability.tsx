@@ -1,10 +1,11 @@
 import { useOutletContext } from 'react-router-dom';
 import { ReportData, StakeholderLens } from '@/types/database';
-import { ParameterBreakdown } from '@/components/report/ParameterBreakdown';
+
 import { CommercialNarrativePanel } from '@/components/report/AgentNarrativePanel';
 import { 
   SectionHeader, 
   StrengthWeaknessList,
+  WeightedParameterList,
 } from '@/components/report/ui';
 import { TrendingUp } from 'lucide-react';
 import { extractScore } from '@/lib/scoreUtils';
@@ -51,7 +52,7 @@ export default function Marketability() {
   const filterStats = getFilterStats(marketParams);
 
   return (
-    <div className="space-y-8 max-w-6xl mx-auto">
+    <div className="space-y-8">
       <SectionHeader
         title="Marketability Analysis"
         subtitle="Evaluating commercial viability, audience appeal, and distribution potential"
@@ -73,7 +74,12 @@ export default function Marketability() {
       )}
 
       {/* Parameter Breakdown */}
-      <ParameterBreakdown title="Market Parameters" parameters={filteredMarketParams} />
+      <WeightedParameterList
+        parameters={filteredMarketParams.map(p => ({ ...p, weight: 1.0 }))}
+        title="Market Parameters"
+        initiallyExpanded={true}
+        defaultVisibleCount={8}
+      />
 
       {/* Strengths & Weaknesses */}
       {(strengths.length > 0 || weaknesses.length > 0) && (

@@ -1,11 +1,12 @@
 import { useOutletContext } from 'react-router-dom';
 import { ReportData, StakeholderLens } from '@/types/database';
-import { ParameterBreakdown } from '@/components/report/ParameterBreakdown';
+
 import { ProductionNarrativePanel } from '@/components/report/AgentNarrativePanel';
 import { 
   SectionHeader, 
   SubSectionHeader,
   StrengthWeaknessList,
+  WeightedParameterList,
 } from '@/components/report/ui';
 import { Card } from '@/components/ui/card';
 import { Film } from 'lucide-react';
@@ -58,7 +59,7 @@ export default function Production() {
   const filterStats = getFilterStats(productionParams);
 
   return (
-    <div className="space-y-8 max-w-6xl mx-auto">
+    <div className="space-y-8">
       <SectionHeader
         title="Production Analysis"
         subtitle="Evaluating budget requirements, location needs, and production feasibility"
@@ -80,7 +81,7 @@ export default function Production() {
       )}
 
       {/* Production Overview */}
-      <Card className="glass-premium p-6">
+      <Card className="p-6">
         <SubSectionHeader title="Production Requirements" />
         <div className="grid md:grid-cols-4 gap-4 mb-6">
           <div className="p-5 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 text-center">
@@ -103,7 +104,12 @@ export default function Production() {
       </Card>
 
       {/* Parameter Breakdown */}
-      <ParameterBreakdown title="Production Parameters" parameters={filteredProductionParams} />
+      <WeightedParameterList
+        parameters={filteredProductionParams.map(p => ({ ...p, weight: 1.0 }))}
+        title="Production Parameters"
+        initiallyExpanded={true}
+        defaultVisibleCount={8}
+      />
 
       {/* Strengths & Weaknesses */}
       {(strengths.length > 0 || weaknesses.length > 0) && (
