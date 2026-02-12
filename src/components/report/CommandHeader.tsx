@@ -125,48 +125,8 @@ export function CommandHeader({
         {/* Right: Quick Stats + Lens + Actions */}
         <div className="flex items-center gap-2">
           {/* Quick Stats Pill */}
-          <Popover open={statsOpen} onOpenChange={setStatsOpen}>
-            <PopoverTrigger asChild>
-              <button className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted border border-border hover:bg-muted/80 transition-colors">
-                <BarChart3 className="h-3.5 w-3.5 text-muted-foreground" />
-                <span className="text-xs font-medium text-foreground">
-                  {metadata?.pageCount || '—'}p · {totalScenes}s · {totalCharacters}c
-                </span>
-              </button>
-            </PopoverTrigger>
-            <PopoverContent align="end" className="w-56 p-2">
-              <div className="space-y-1">
-                <button onClick={() => { navigate(`/report/${runId}/story`); setStatsOpen(false); }} className="w-full flex items-center justify-between py-2 px-2.5 hover:bg-muted rounded-lg transition-colors">
-                  <div className="flex items-center gap-2">
-                    <FileText className="h-3.5 w-3.5 text-muted-foreground" />
-                    <span className="text-sm">Pages</span>
-                  </div>
-                  <span className="font-mono font-semibold text-sm">{metadata?.pageCount || '—'}</span>
-                </button>
-                <button onClick={() => { navigate(`/report/${runId}/craft`); setStatsOpen(false); }} className="w-full flex items-center justify-between py-2 px-2.5 hover:bg-muted rounded-lg transition-colors">
-                  <div className="flex items-center gap-2">
-                    <Film className="h-3.5 w-3.5 text-muted-foreground" />
-                    <span className="text-sm">Scenes</span>
-                  </div>
-                  <span className="font-mono font-semibold text-sm">{totalScenes}</span>
-                </button>
-                <button onClick={() => { navigate(`/report/${runId}/characters`); setStatsOpen(false); }} className="w-full flex items-center justify-between py-2 px-2.5 hover:bg-muted rounded-lg transition-colors">
-                  <div className="flex items-center gap-2">
-                    <Users className="h-3.5 w-3.5 text-muted-foreground" />
-                    <span className="text-sm">Characters</span>
-                  </div>
-                  <span className="font-mono font-semibold text-sm">{totalCharacters}</span>
-                </button>
-                <button onClick={() => { navigate(`/report/${runId}/story`); setStatsOpen(false); }} className="w-full flex items-center justify-between py-2 px-2.5 hover:bg-muted rounded-lg transition-colors">
-                  <div className="flex items-center gap-2">
-                    <Zap className="h-3.5 w-3.5 text-muted-foreground" />
-                    <span className="text-sm">Insights</span>
-                  </div>
-                  <span className="font-mono font-semibold text-sm">{totalInsights}</span>
-                </button>
-              </div>
-            </PopoverContent>
-          </Popover>
+
+
 
           {stakeholderLens && (
             <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20">
