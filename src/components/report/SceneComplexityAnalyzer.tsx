@@ -114,10 +114,10 @@ function analyzeSceneComplexity(
 ): ComplexityMetrics {
   const hasAI = !!aiData;
   
-  const dialogueDensity = hasAI ? aiData.dialogueDensity : estimateDialogue(scene);
-  const actionIntensity = hasAI ? aiData.actionIntensity : estimateAction(scene);
-  const technicalRequirements = hasAI ? aiData.technicalRequirements : estimateTechnical(scene);
-  const vfxPotential = hasAI ? aiData.vfxPotential : estimateVfx(scene);
+  const dialogueDensity = hasAI && aiData.dialogueDensity != null ? aiData.dialogueDensity : estimateDialogue(scene);
+  const actionIntensity = hasAI && aiData.actionIntensity != null ? aiData.actionIntensity : estimateAction(scene);
+  const technicalRequirements = hasAI && aiData.technicalRequirements != null ? aiData.technicalRequirements : estimateTechnical(scene);
+  const vfxPotential = hasAI && aiData.vfxPotential != null ? aiData.vfxPotential : estimateVfx(scene);
   const locationComplexity = hasAI && aiData.locationComplexity != null ? aiData.locationComplexity : estimateLocation(scene);
 
   const overallComplexity = Math.round(
