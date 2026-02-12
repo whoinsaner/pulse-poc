@@ -2006,6 +2006,7 @@ serve(async (req) => {
     const isMicroDrama = scriptType === 'micro_drama';
     const isInteractive = ['game_narrative', 'interactive_fiction'].includes(scriptType);
     const isAudio = ['audio_drama', 'podcast_fiction'].includes(scriptType);
+    const isEpisodic = ['web_series', 'pilot', 'episode', 'micro_drama'].includes(scriptType);
     
     // Agent categories
     const systemAgents = ['IntakeNormalizerAgent', 'ScriptTypeClassifierAgent', 'ClassifierArbitrationAgent', 'MultiTypeBlendingAgent'];
@@ -2015,7 +2016,8 @@ serve(async (req) => {
     const microDramaAgents = ['MicroDramaAgent'];
     const interactiveAgents = ['InteractivityAgent', 'WorldBuildingAgent'];
     const audioAgents = ['AudioNarrativeAgent'];
-    const metaAgents = ['StakeholderLensAgent', 'InsightSynthesisAgent', 'SeriesBibleAgent'];
+    const metaAgents = ['StakeholderLensAgent', 'InsightSynthesisAgent'];
+    const seriesBibleAgents = ['SeriesBibleAgent'];
     
     // Stakeholder-specific agent mappings
     const STAKEHOLDER_AGENTS: Record<string, string[]> = {
@@ -2039,7 +2041,8 @@ serve(async (req) => {
       activeAgentNames = [
         ...systemAgents,
         ...STAKEHOLDER_AGENTS[stakeholderLens],
-        ...metaAgents
+        ...metaAgents,
+        ...(isEpisodic ? seriesBibleAgents : [])
       ];
       
       // Add comic agents if relevant for this stakeholder
@@ -2063,6 +2066,7 @@ serve(async (req) => {
       if (isMicroDrama) activeAgentNames.push(...microDramaAgents);
       if (isInteractive) activeAgentNames.push(...interactiveAgents);
       if (isAudio) activeAgentNames.push(...audioAgents);
+      if (isEpisodic) activeAgentNames.push(...seriesBibleAgents);
       
       activeAgentNames.push(...metaAgents);
     }
