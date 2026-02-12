@@ -1,56 +1,38 @@
 
-# Fix `extractScore` Usage Across the Board
+# Use Scene Enrichment Data for Pacing Analysis
 
-## Problem
-Category scores are stored as objects (`{score: 85, maturity: 'Strong'}`) but many files still read them as raw numbers. This causes scores to display as `0`, `NaN`, or `[object Object]`. Two files were already fixed (`ReportCover.tsx`, `ComicFormatDiagnosis.tsx`), but the same bug exists in **10+ other files**.
+## Overview
+Update the PacingAnalysis component to use AI-analyzed `sceneAnalysis` data (dialogue density, action intensity, narrative function) instead of page-duration heuristics. This makes the chart meaningful for comics (where all scenes span ~1 page) and leverages the Scene Enrichment Agent output.
 
-## Files to Fix
+## Changes
 
-### 1. Direct raw access (will show 0 or wrong values)
+### 1. Update `ReportNarrative.tsx`
+- Pass `reportData.sceneAnalysis` as a new prop to `PacingAnalysis`.
 
-| File | Current Code | Fix |
-|------|-------------|-----|
-| `src/components/report/AgentAnalysisGrid.tsx` | `categoryScores[category] \|\| 0` | Use `extractScore(categoryScores[category])` |
-| `src/components/report/RiskMap.tsx` | `categoryScores['Character'] \|\| 60` (typed as `Record<string, number>`) | Change type to `Record<string, unknown>`, use `extractScore()` with fallbacks |
-| `src/lib/sampleReportPdfGenerator.ts` | `categoryScores['Character'] \|\| 60` | Use `extractScore()` with fallbacks |
+### 2. Refactor `PacingAnalysis.tsx`
 
-### 2. Verbose inline typeof checks (working but should use extractScore for consistency)
+**Props**: Add `sceneAnalysis?: SceneAnalysisData[]` prop.
 
-These files have a correct but verbose pattern. Replace with `extractScore()`:
+**Data source logic**:
+- When `sceneAnalysis` is available, compute a **composite intensity score** per scene: `(dialogueDensity + actionIntensity) / 2` (0-100 scale).
+- Use `narrativeFunction` from the AI data to drive pace categorization instead of duration thresholds:
+  - `climax` / `escalation` = fast
+  - `setup` / `transition` = slow  
+  - `resolution` = medium
+- Fall back to the existing page-duration heuristic when `sceneAnalysis` is absent.
 
-| File | Category Key |
-|------|-------------|
-| `src/pages/report/ConceptHook.tsx` | `'Concept & Hook'` |
-| `src/pages/report/ProtagonistAnalysis.tsx` | `'Character'` |
-| `src/pages/report/EmotionalResonance.tsx` | `'Emotional Arc'` |
-| `src/pages/report/Production.tsx` | `'Execution'` |
-| `src/pages/report/VisualStorytelling.tsx` | `'World & Logic'` |
-| `src/pages/report/ThemeMoral.tsx` | `'Theme'` |
-| `src/pages/report/StructuralEngineering.tsx` | `'Structure'` |
-| `src/pages/report/Marketability.tsx` | `'Market'` |
-| `src/pages/report/DialogueSubtext.tsx` | `'Dialogue'` |
-| `src/pages/report/SupportingCast.tsx` | `'Character'` |
-| `src/pages/report/AudienceStrategy.tsx` | `'Market'` |
-| `src/pages/report/AntagonistAnalysis.tsx` | `'Conflict'` |
-| `src/pages/report/ReportOverview.tsx` | All categories |
-| `src/pages/report/CompleteScorecard.tsx` | All categories |
+**Rhythm Timeline bars**: Height driven by composite intensity (0-100) instead of page duration.
 
-### 3. Fallback line also broken in Production.tsx and others
+**Pacing Flow SVG**: Y-axis driven by composite intensity instead of duration.
 
-Line like `reportData.categoryScores?.['Execution'] || currentScore` also reads raw objects. These fallback lines need `extractScore()` too.
+**Distribution histogram**: Bucket by intensity score instead of page count.
 
-## Approach
+**Quick stats**: Update labels from "Avg Pages/Scene" to "Avg Intensity" when using AI data. Show an "AI Analyzed" badge vs "Estimated" badge (matching the pattern from SceneHeatmap).
 
-For each file:
-1. Import `extractScore` from `@/lib/scoreUtils`
-2. Replace raw `categoryScores[key]` access or verbose `typeof` checks with `extractScore(categoryScores[key])`
-3. Keep fallback values (e.g., `|| currentScore`) where they exist
+**Tooltips**: Show dialogue density and action intensity values alongside the composite score when AI data is available.
 
-## Technical Details
+### 3. Technical Details
 
-The `extractScore` function (already in `src/lib/scoreUtils.ts`) handles both formats:
-- If value is a number, returns it directly
-- If value is an object with `.score`, extracts the number
-- Otherwise returns 0
-
-Total files changed: ~17 files (3 broken + 14 verbose/inconsistent)
+- The `SceneAnalysisData` type already has all needed fields: `dialogueDensity` (0-100), `actionIntensity` (0-100), `narrativeFunction`, `emotionalTone`.
+- Match scenes by `sceneNumber` between `SceneData[]` and `SceneAnalysisData[]`.
+- No database or backend changes required -- this is purely a frontend visualization improvement.
