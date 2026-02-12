@@ -1,91 +1,93 @@
 
-# Fix Comic Agent Parameter Alignment
 
-## Root Cause
+# Add Missing Comic Parameters
 
-The 4 comic agents in the edge function (`analyze-script`) are configured to score parameters that **don't exist** in the `parameters` database table. This means:
+## Summary
 
-- The agents produce `agentContent` (narrative analysis) correctly -- this works fine
-- But the parameter **scores** are never stored because the parameter names don't match any rows in the `parameters` table
+6 of the old parameter concepts represent genuinely distinct analysis dimensions not covered by the current 13 comic parameters. Adding them brings comic coverage to 19 parameters across the 4 existing categories.
 
-### The Mismatch
+## New Parameters to Add
 
-| Agent | Edge Function Parameters (scored) | Database Parameters (actual) |
-|-------|----------------------------------|------------------------------|
-| PanelFlowAgent | `sequential_storytelling_integrity`, `panel_economy`, `page_architecture` | `panel_composition`, `page_layout`, `action_clarity`, `visual_storytelling` |
-| LetteringBalloonAgent | `dialogue_load`, `balloon_engineering`, `reading_flow` | `balloon_efficiency`, `caption_voice`, `sound_effects` |
-| PageTurnImpactAgent | `emotional_payload_per_page`, `structural_modularity`, `page_turn_reveals` | `cliffhangers`, `issue_structure`, `panel_to_panel_flow` |
-| ArtScriptSynergyAgent | `art_writing_synergy`, `character_visual_identity`, `collaboration_readiness`, `production_pipeline_awareness`, `market_publishing_alignment` | `artist_guidance`, `reference_clarity`, `style_consistency` |
+### PanelFlowAgent (Comic Visuals) -- add 1
 
-The database has 13 comic parameters across 4 categories (`Comic Visuals`, `Comic Dialogue`, `Comic Pacing`, `Comic Art Direction`), but the agents reference 14 completely different parameter names that don't exist in the table.
+| Name | Display Name | Description |
+|------|-------------|-------------|
+| `panel_economy` | Panel Economy | Efficient use of panels with no wasted or redundant panels diluting impact |
 
-## Fix Strategy
+### LetteringBalloonAgent (Comic Dialogue) -- add 3
 
-**Option A (Recommended):** Update the agent configurations and edge function hardcoded definitions to use the parameter names that already exist in the `parameters` table. This aligns agents with the database schema.
+| Name | Display Name | Description |
+|------|-------------|-------------|
+| `dialogue_load` | Dialogue Load | Appropriate dialogue density per page avoiding overcrowded panels |
+| `balloon_engineering` | Balloon Engineering | Strategic balloon placement, sizing, and tail direction for readability |
+| `reading_flow` | Reading Flow | Natural eye-path guiding readers within and across panels |
 
-**Option B:** Add the 14 missing parameters to the database and remove the 13 unused ones. This is riskier because it changes the scoring schema.
+### PageTurnImpactAgent (Comic Pacing) -- add 1
 
-Going with **Option A**:
+| Name | Display Name | Description |
+|------|-------------|-------------|
+| `emotional_payload_per_page` | Emotional Payload | Emotional impact density and weight distribution across pages |
 
-### Step 1: Update Agent Parameter Mappings in Edge Function
+### ArtScriptSynergyAgent (Comic Art Direction) -- add 1
 
-Remap each agent in `supabase/functions/analyze-script/index.ts` to use the correct database parameter names:
+| Name | Display Name | Description |
+|------|-------------|-------------|
+| `character_visual_identity` | Character Visual Identity | Distinct, memorable visual cues scripted for each character |
 
-- **PanelFlowAgent**: `panel_composition`, `page_layout`, `visual_storytelling`, `action_clarity`
-  - Category: Comic Visuals
-- **LetteringBalloonAgent**: `balloon_efficiency`, `caption_voice`, `sound_effects`
-  - Category: Comic Dialogue
-- **PageTurnImpactAgent**: `panel_to_panel_flow`, `cliffhangers`, `issue_structure`
-  - Category: Comic Pacing
-- **ArtScriptSynergyAgent**: `artist_guidance`, `reference_clarity`, `style_consistency`
-  - Category: Comic Art Direction
+## Excluded (already covered elsewhere)
 
-### Step 2: Update Agent Configurations in Database
+- `production_pipeline_awareness` -- too niche / production-ops territory
+- `market_publishing_alignment` -- covered by core MarketAgent (platform_fit, commercial_viability)
+- `sequential_storytelling_integrity` -- covered by visual_storytelling
+- `page_architecture` -- covered by page_layout
+- `page_turn_reveals` -- covered by cliffhangers
+- `structural_modularity` -- covered by issue_structure
+- `art_writing_synergy` -- covered by artist_guidance
+- `collaboration_readiness` -- overlaps artist_guidance; borderline, excluded to avoid bloat
 
-Sync the `agent_configurations` table to match:
+## Implementation Steps
+
+### Step 1: Insert new parameters into database
+
+Insert 6 new rows into the `parameters` table via migration (since RLS blocks inserts):
 
 ```sql
-UPDATE agent_configurations 
-SET parameters = ARRAY['panel_composition','page_layout','visual_storytelling','action_clarity']
-WHERE agent_name = 'PanelFlowAgent';
-
-UPDATE agent_configurations 
-SET parameters = ARRAY['balloon_efficiency','caption_voice','sound_effects']
-WHERE agent_name = 'LetteringBalloonAgent';
-
-UPDATE agent_configurations 
-SET parameters = ARRAY['panel_to_panel_flow','cliffhangers','issue_structure']
-WHERE agent_name = 'PageTurnImpactAgent';
-
-UPDATE agent_configurations 
-SET parameters = ARRAY['artist_guidance','reference_clarity','style_consistency']
-WHERE agent_name = 'ArtScriptSynergyAgent';
+INSERT INTO public.parameters (name, display_name, description, category, agent_source, default_weight)
+VALUES
+  ('panel_economy', 'Panel Economy', 'Efficient use of panels with no wasted or redundant panels diluting impact', 'Comic Visuals', 'PanelFlowAgent', 1.0),
+  ('dialogue_load', 'Dialogue Load', 'Appropriate dialogue density per page avoiding overcrowded panels', 'Comic Dialogue', 'LetteringBalloonAgent', 1.0),
+  ('balloon_engineering', 'Balloon Engineering', 'Strategic balloon placement, sizing, and tail direction for readability', 'Comic Dialogue', 'LetteringBalloonAgent', 1.0),
+  ('reading_flow', 'Reading Flow', 'Natural eye-path guiding readers within and across panels', 'Comic Dialogue', 'LetteringBalloonAgent', 1.0),
+  ('emotional_payload_per_page', 'Emotional Payload', 'Emotional impact density and weight distribution across pages', 'Comic Pacing', 'PageTurnImpactAgent', 1.0),
+  ('character_visual_identity', 'Character Visual Identity', 'Distinct, memorable visual cues scripted for each character', 'Comic Art Direction', 'ArtScriptSynergyAgent', 1.0);
 ```
 
-### Step 3: Update Agent System Prompts
+### Step 2: Update agent_configurations parameters arrays
 
-Adjust the system prompts in the edge function to reference the correct parameter names and descriptions so the AI scores them properly.
+Add the new parameter names to each agent's `parameters` array in the `agent_configurations` table.
 
-### Step 4: Update Comic Page Components
+### Step 3: Update edge function agent definitions
 
-Update the filter logic in the 4 comic page components to match the actual database categories:
+In `supabase/functions/analyze-script/index.ts`, add the new parameters to each agent's `parameters` array and update the system prompts to instruct the AI to score them.
 
-- `ComicPanelFlow.tsx`: Filter by `category === 'Comic Visuals'`
-- `ComicLettering.tsx`: Filter by `category === 'Comic Dialogue'`
-- `ComicPageTurns.tsx`: Filter by `category === 'Comic Pacing'`
-- `ComicArtSynergy.tsx`: Filter by `category === 'Comic Art Direction'`
+### Step 4: Update scriptFramework.ts
 
-### Step 5: Re-run Moksh Analysis
+Add the 6 new parameters to the framework definition so the sync mechanism recognizes them.
 
-After deploying the fix, the Moksh analysis needs to be re-run to generate proper parameter scores with the correct names.
+### Step 5: Re-run analysis
+
+After deployment, re-run the Moksh comic analysis to generate scores for all 19 parameters.
 
 ## Files Changed
 
 | File | Change |
 |------|--------|
-| `supabase/functions/analyze-script/index.ts` | Update 4 comic agent parameter arrays and system prompts |
-| `agent_configurations` table (migration) | Sync parameter arrays to match database |
-| `src/pages/report/ComicPanelFlow.tsx` | Fix category filter to `Comic Visuals` |
-| `src/pages/report/ComicLettering.tsx` | Fix category filter to `Comic Dialogue` |
-| `src/pages/report/ComicPageTurns.tsx` | Fix category filter to `Comic Pacing` |
-| `src/pages/report/ComicArtSynergy.tsx` | Fix category filter to `Comic Art Direction` |
+| New migration SQL | Insert 6 parameter rows |
+| `agent_configurations` table | Update parameter arrays for 4 agents |
+| `supabase/functions/analyze-script/index.ts` | Add 6 params to agent definitions and prompts |
+| `src/lib/scriptFramework.ts` | Add 6 new parameter definitions |
+
+## Result
+
+Comic analysis grows from 13 to 19 parameters, covering all meaningful dimensions from both the original and revised parameter sets. No frontend page changes needed -- the pages already filter by category and will automatically display the new parameters.
+
