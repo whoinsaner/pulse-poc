@@ -182,7 +182,7 @@ export function CommandHeader({
             </div>
           )}
           
-          <ExportDialog reportId={report.id} reportTitle={report.title} />
+          <ExportDialog reportId={report.id} reportTitle={report.title} reportData={reportData} activeLens={activeLens} scriptType={reportData?.scriptMetadata?.scriptType} />
           
           <Button variant="outline" size="sm" onClick={onShare} className="gap-2">
             <Share2 className="h-4 w-4" />
