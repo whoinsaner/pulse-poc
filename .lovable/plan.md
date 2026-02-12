@@ -1,37 +1,109 @@
 
 
-# Standardize Series Bible Page Styling
+# Add SeriesBibleAgent to the Analysis Pipeline
 
 ## Problem
-The Series Bible page uses custom, one-off card layouts (gradient headers, colored border boxes, inline score grids, hardcoded bullet lists) that don't match the clean, standardized pattern used by other report pages like Story Diagnosis, Character Diagnosis, etc.
+The Series Bible page currently stitches together data from other agents' parameter scores, but critical narrative content is hardcoded or derived with generic fallbacks:
+- **World Rules**: Fixed/Flexible labels are parameter display names, not actual story rules
+- **Tonal Guardrails "Avoid"**: Hardcoded as "Camp, slapstick, tonal whiplash"
+- **Series Engine**: Reset/Accumulate bullet points are static strings ("New case/problem/conflict", "Guest characters", etc.)
+- **Character Trajectories**: Start/End badges are generic -- no actual arc data
 
-## Standard Pattern (used by all other diagnosis pages)
-Every report sub-page follows this structure:
-1. **SectionHeader** -- title, subtitle, icon, score, InlineMaturity badge
-2. **DiagnosisSummary** -- 3-column grid (Working / Broken / Underdeveloped)
-3. **WeightedParameterList** -- collapsible parameter cards with scores and rationale
-4. **DevelopmentFocus** -- low-scoring items with links to related sections
+## Solution
+Add a **SeriesBibleAgent** as a synthesis agent that runs after the core analysis agents, reads their outputs, and produces structured bible-specific content. This follows the same pattern as the existing InsightSynthesisAgent.
 
-## What Will Change
+## Changes Required
 
-The Series Bible page will be refactored to follow this exact pattern:
+### 1. Framework Definition (`src/lib/scriptFramework.ts`)
+Add `SeriesBibleAgent` to the `META_AGENTS` array:
+- **id**: `SeriesBibleAgent`
+- **category**: `meta`
+- **parameters**: `['bible_premise_clarity', 'bible_world_rules', 'bible_tonal_consistency', 'bible_character_trajectories', 'bible_series_engine']`
+- **reportSections**: `['Series Bible']`
+- **applicableScriptTypes**: `'all'` (bible-relevant data exists for all script types, though series engine section is episodic-only)
 
-1. **SectionHeader** stays mostly as-is, but add `InlineMaturity` badge (matching other pages). Remove the "Copy Summary" button from the header (move it to a small action at the bottom).
-2. **Replace all custom cards** (Core Premise, World Rules, Tonal Guardrails, Character Trajectories, Series Engine) with a single `DiagnosisSummary` component that auto-generates the Working/Broken/Underdeveloped columns from parameter scores.
-3. **Replace inline ScoreBar lists** with a `WeightedParameterList` that groups all Series Bible-relevant parameters into a single collapsible breakdown.
-4. **Add DevelopmentFocus** at the bottom for low-scoring parameters, linking to related sections (Story, Character, Format).
-5. **Keep the "Copy Summary" action** as a small card/button at the very bottom of the page.
+### 2. Parameter Definitions (`src/lib/parameterDefinitions.ts`)
+Add 5 new parameters under a "Series Bible" category:
+- `bible_premise_clarity` -- How clearly the core premise is defined for a writers' room bible
+- `bible_world_rules` -- How well the world's fixed vs. flexible rules are documented
+- `bible_tonal_consistency` -- Clarity of tonal guardrails and genre boundaries
+- `bible_character_trajectories` -- Clarity of character transformation arcs for the series
+- `bible_series_engine` -- Strength of episodic engine (reset vs. accumulate logic)
 
-## Technical Details
+All with `agentSource: 'SeriesBibleAgent'`, weight `0.8`, and `applicableScriptTypes: 'all'`.
 
-### File: `src/pages/report/SeriesBibleExtract.tsx`
+### 3. Edge Function Agent Definition (`supabase/functions/analyze-script/index.ts`)
 
-- Remove imports: `ScoreBar`, `VerdictBox`, `Badge`, `Lock`, `Unlock`, `ArrowRight`, `Sparkles`, `Globe`, `Palette`, `Repeat`, `User`
-- Add imports: `DiagnosisSummary`, `WeightedParameterList`, `DevelopmentFocus`, `InlineMaturity` (matching StoryDiagnosis pattern)
-- Consolidate all parameter filtering (premise, world, tone, arc, series) into a single combined list mapped to `WeightedParameterList` format (with `parameterName`, `displayName`, `score`, `rationale`, `weight`)
-- Replace the entire JSX body with the standard 4-section layout
-- Keep the `generatePlainTextSummary` and clipboard logic, but render it as a minimal footer card instead of the current "Quick Reference Export" block
+**3a. Add `SeriesBibleAgent` to the AGENTS object:**
+- Category: `meta`
+- Parameters: the 5 bible parameters
+- System prompt instructs it to synthesize from existing agent outputs (ConceptAgent, WorldLogicAgent, ThemeAgent, CharacterAgent, MarketAgent) and produce:
+  - Parameter scores for all 5 bible parameters
+  - A specialized `sectionContent` with structured fields
 
-### Visual Result
-The page will look identical to Story Diagnosis, Character Diagnosis, and other standardized pages -- clean cards, consistent spacing, no custom colored borders or gradient headers.
+**3b. Add `sectionContent` instructions via `getSectionContentInstructions`:**
+New case for `SeriesBibleAgent` returning structured fields:
+```
+"verdict": "...",
+"whatWorks": [...],
+"whatsBroken": [...],
+"whatsUnderdeveloped": [...],
+"deepDive": "...",
+"recommendations": [...],
+"corePremise": { "logline": "...", "hook": "...", "genre": "..." },
+"worldRules": { "fixed": ["..."], "flexible": ["..."] },
+"tonalGuardrails": { "genre": "...", "tone": "...", "avoid": ["..."] },
+"characterTrajectories": [{ "name": "...", "startState": "...", "endState": "...", "arc": "..." }],
+"seriesEngine": { "reset": ["..."], "accumulate": ["..."] }
+```
 
+**3c. Add to `SectionContent` interface:**
+Add the new fields (`corePremise`, `worldRules`, `tonalGuardrails`, `characterTrajectories`, `seriesEngine`) as optional properties.
+
+**3d. Add to `SYNTHESIS_AGENTS` set:**
+So it gets an upgraded model tier for reliable output.
+
+**3e. Add to agent orchestration (agent list building):**
+Add `SeriesBibleAgent` to the `metaAgents` array so it runs for all script types.
+
+### 4. Series Bible Page (`src/pages/report/SeriesBibleExtract.tsx`)
+Update the UI to consume real data from `agentContent.SeriesBibleAgent`:
+
+- **Core Premise card**: Use `bibleContent.corePremise.logline` and `bibleContent.corePremise.hook` instead of fallbacks
+- **World Rules card**: Use `bibleContent.worldRules.fixed` and `bibleContent.worldRules.flexible` arrays instead of deriving from parameter names
+- **Tonal Guardrails card**: Use `bibleContent.tonalGuardrails.avoid` instead of the hardcoded "Camp, slapstick, tonal whiplash"
+- **Character Trajectories card**: Use `bibleContent.characterTrajectories` array with real `name`, `startState`, `endState` fields instead of generic Start/End badges
+- **Series Engine card**: Use `bibleContent.seriesEngine.reset` and `bibleContent.seriesEngine.accumulate` instead of static strings
+- Retain graceful fallbacks to the existing parameter-derived approach when `agentContent.SeriesBibleAgent` is not available (backward compatibility with older reports)
+
+### 5. Parameter Sync (`src/lib/parameterSync.ts`)
+No changes needed -- it already imports from `parameterDefinitions.ts` dynamically.
+
+### 6. Agent Sync (`src/lib/agentSync.ts`)
+No changes needed -- it already imports `ALL_AGENTS` from `scriptFramework.ts` and auto-syncs on mount.
+
+## Data Flow
+
+```text
+Core Agents (Concept, World, Theme, Character, Market)
+        |
+        v  (agent_progress.sectionContent)
+SeriesBibleAgent (reads existing agent outputs + script context)
+        |
+        v  (agent_progress.SeriesBibleAgent.sectionContent)
+generateReport() collects into agentContent
+        |
+        v  (full_report_data.agentContent.SeriesBibleAgent)
+SeriesBibleExtract.tsx reads structured bible fields
+```
+
+## Backward Compatibility
+- Existing reports without `SeriesBibleAgent` data continue to work -- the page falls back to the current parameter-derived approach
+- The agent auto-syncs to the database via the existing sync mechanism
+- New parameters auto-seed via the existing parameter sync mechanism
+
+## Files Modified
+1. `src/lib/scriptFramework.ts` -- Add SeriesBibleAgent definition
+2. `src/lib/parameterDefinitions.ts` -- Add 5 bible parameters
+3. `supabase/functions/analyze-script/index.ts` -- Add agent prompt, sectionContent instructions, orchestration
+4. `src/pages/report/SeriesBibleExtract.tsx` -- Consume real agentContent data with fallbacks
