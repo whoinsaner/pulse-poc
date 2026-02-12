@@ -38,7 +38,7 @@ interface AgentNarrativePanelProps {
  * Falls back gracefully when fields are missing.
  */
 export function AgentNarrativePanel({ agentName, content, className }: AgentNarrativePanelProps) {
-  const [showDeepDive, setShowDeepDive] = useState(false);
+  const [showDeepDive, setShowDeepDive] = useState(true);
 
   return (
     <div className={cn('space-y-4', className)}>
