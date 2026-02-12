@@ -2336,26 +2336,38 @@ serve(async (req) => {
             console.log('[analyze-script] Skipping StakeholderLensAgent (already completed)');
           }
 
-          // Run scene enrichment with timeout protection (non-blocking, skip if completed)
-          let sceneAnalysisData = null;
+          // Generate report first (scene enrichment runs separately after)
+          await generateReport(supabase, analysisRunId, scriptId, script, mode, null);
+
+          // Fire off scene enrichment as a separate function call with its own timeout budget
           if (currentProgress['SceneEnrichmentAgent']?.status !== 'completed') {
             try {
-              sceneAnalysisData = await withTimeout(
-                runSceneEnrichmentAgent(supabase, lovableApiKey, scriptId, scriptContext, qualityMode, analysisRunId),
-                SCENE_ENRICHMENT_TIMEOUT_MS,
-                'SceneEnrichmentAgent'
-              );
+              const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+              const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+              console.log('[analyze-script] Triggering scene-enrichment function...');
+              const enrichResponse = await fetch(`${supabaseUrl}/functions/v1/scene-enrichment`, {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${supabaseAnonKey}`,
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  scriptId,
+                  analysisRunId,
+                  qualityMode,
+                  scriptContext: scriptContext.substring(0, 60000),
+                }),
+              });
+              const enrichResult = await enrichResponse.json();
+              console.log('[analyze-script] Scene enrichment triggered:', enrichResult.status);
             } catch (err) {
-              const errMsg = err instanceof Error ? err.message : String(err);
-              console.error('[analyze-script] SceneEnrichment timed out or failed:', errMsg);
-              await updateAgentProgress(supabase, analysisRunId, 'SceneEnrichmentAgent', 'failed', errMsg);
+              console.error('[analyze-script] Failed to trigger scene-enrichment:', err instanceof Error ? err.message : err);
+              await updateAgentProgress(supabase, analysisRunId, 'SceneEnrichmentAgent', 'failed', 
+                'Failed to trigger scene-enrichment function');
             }
           } else {
             console.log('[analyze-script] Skipping SceneEnrichmentAgent (already completed)');
           }
-
-          // Generate report (always runs, even if scene enrichment failed)
-          await generateReport(supabase, analysisRunId, scriptId, script, mode, sceneAnalysisData);
 
           // Update final status
           const failedAgents = agentResults.filter(r => !r.success);
