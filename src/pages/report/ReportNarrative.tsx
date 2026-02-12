@@ -1,10 +1,13 @@
 import { useOutletContext } from 'react-router-dom';
-import { ReportData, StakeholderLens } from '@/types/database';
+import { useState, useEffect } from 'react';
+import { ReportData, StakeholderLens, NarrativeGraphData } from '@/types/database';
 import { NarrativeTimeline } from '@/components/report/NarrativeTimeline';
 import { SceneHeatmap } from '@/components/report/SceneHeatmap';
 import { PacingAnalysis } from '@/components/report/PacingAnalysis';
 import { SceneComplexityAnalyzer } from '@/components/report/SceneComplexityAnalyzer';
 import { NarrativeGraphViewer } from '@/components/report/NarrativeGraphViewer';
+import { supabase } from '@/integrations/supabase/client';
+import { useReport } from '@/components/report/ReportLayout';
 
 interface ReportContextValue {
   reportData: ReportData;
@@ -14,6 +17,34 @@ interface ReportContextValue {
 
 export default function ReportNarrative() {
   const { reportData } = useOutletContext<ReportContextValue>();
+  const { report } = useReport();
+  const [narrativeGraph, setNarrativeGraph] = useState<NarrativeGraphData | undefined>(
+    reportData.narrativeGraph
+  );
+
+  // Fetch narrative graph from dedicated table if not in report data
+  useEffect(() => {
+    if (reportData.narrativeGraph) return;
+    if (!report?.script_id) return;
+
+    async function fetchGraph() {
+      const { data, error } = await supabase
+        .from('narrative_graphs')
+        .select('nodes, edges')
+        .eq('script_id', report!.script_id)
+        .limit(1)
+        .maybeSingle();
+
+      if (!error && data) {
+        setNarrativeGraph({
+          nodes: data.nodes as unknown as NarrativeGraphData['nodes'],
+          edges: data.edges as unknown as NarrativeGraphData['edges'],
+        });
+      }
+    }
+
+    fetchGraph();
+  }, [report?.script_id, reportData.narrativeGraph]);
 
   return (
     <div className="space-y-12 max-w-7xl mx-auto">
@@ -40,7 +71,7 @@ export default function ReportNarrative() {
         </div>
         <NarrativeTimeline 
           scenes={reportData.scenes || []} 
-          narrativeGraph={reportData.narrativeGraph}
+          narrativeGraph={narrativeGraph}
           totalPages={reportData.scriptMetadata?.pageCount}
         />
       </section>
@@ -94,7 +125,7 @@ export default function ReportNarrative() {
             Interactive visualization of character relationships and plot connections
           </p>
         </div>
-        <NarrativeGraphViewer graphData={reportData.narrativeGraph} />
+        <NarrativeGraphViewer graphData={narrativeGraph} />
       </section>
     </div>
   );
