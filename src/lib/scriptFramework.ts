@@ -460,7 +460,7 @@ export const ENRICHMENT_AGENTS: AgentDefinition[] = [
     name: 'Scene Enrichment',
     category: 'enrichment',
     description: 'Analyzes each scene for emotional tone, dialogue density, action intensity, technical requirements, VFX potential, and narrative function',
-    parameters: ['dialogue_density', 'action_intensity', 'technical_requirements', 'vfx_potential', 'emotional_tone', 'narrative_function'],
+    parameters: ['dialogue_density', 'action_intensity', 'technical_requirements', 'vfx_potential', 'location_complexity', 'emotional_tone', 'narrative_function'],
     reportSections: ['Scene Complexity', 'Pacing Analysis', 'Scene Heatmap'],
     applicableScriptTypes: 'all',
     color: 'bg-cyan-500/10 text-cyan-500 border-cyan-500/30',
