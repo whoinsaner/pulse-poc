@@ -460,7 +460,7 @@ export function InProgressAnalysis({ analysis: initialAnalysis, onRetry, onViewP
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-6 sm:grid-cols-10 lg:grid-cols-12 gap-1.5">
+          <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-7 gap-2">
             {allApplicableAgents.map((agent) => {
               const progress = agentProgress[agent.id];
               const status = progress?.status;
@@ -472,7 +472,7 @@ export function InProgressAnalysis({ analysis: initialAnalysis, onRetry, onViewP
                 <div
                   key={agent.id}
                   className={cn(
-                    'relative flex flex-col items-center gap-0.5 p-1.5 rounded-lg border transition-all group',
+                    'relative flex flex-col items-center gap-1 p-2.5 rounded-lg border transition-all group',
                     getAgentStatusClass(status, timedOut),
                     canRetry && 'cursor-pointer hover:ring-2 hover:ring-primary/50'
                   )}
@@ -480,16 +480,16 @@ export function InProgressAnalysis({ analysis: initialAnalysis, onRetry, onViewP
                   title={`${agent.name}: ${timedOut ? 'timed out' : status || 'pending'}\nCategory: ${agent.category}\nParams: ${agent.parameters.slice(0, 3).join(', ')}${agent.parameters.length > 3 ? '...' : ''}`}
                 >
                   {isRetryingThis ? (
-                    <Loader2 className="h-3 w-3 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
                     getAgentIcon(agent, status, timedOut)
                   )}
-                  <span className="text-[9px] font-medium truncate w-full text-center">
+                  <span className="text-[11px] font-semibold leading-tight text-center w-full" style={{ wordBreak: 'break-word' }}>
                     {getShortLabel(agent.name)}
                   </span>
                   
                   {/* Parameter count badge */}
-                  <span className="text-[8px] text-muted-foreground">
+                  <span className="text-[10px] text-muted-foreground">
                     {agent.parameters.length}p
                   </span>
                   
