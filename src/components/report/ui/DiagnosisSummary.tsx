@@ -1,9 +1,7 @@
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { getDiagnosticCategory, getFixCostColor, getFixCostBg } from '@/lib/scoreUtils';
-import { CheckCircle, AlertCircle, XCircle, ArrowRight, ChevronDown, ChevronUp } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { Badge } from '@/components/ui/badge';
+import { CheckCircle, AlertCircle, XCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { StakeholderLens } from '@/types/database';
 import { translateTerm } from '@/lib/stakeholderVocabulary';
 
@@ -60,47 +58,47 @@ export function DiagnosisSummary({
 
   return (
     <div className={cn('space-y-4', className)}>
-      {/* What's Working */}
-      {working.length > 0 && (
-        <DiagnosisSection
-          icon={CheckCircle}
-          title="What's Working"
-          items={working}
-          colorClass="text-success"
-          bgClass="bg-success/5"
-          borderClass="border-success/20"
-        />
-      )}
-
-      {/* What's Structurally Broken */}
-      <DiagnosisSection
-        icon={XCircle}
-        title="What's Structurally Broken"
-        items={broken}
-        colorClass="text-destructive"
-        bgClass="bg-destructive/5"
-        borderClass="border-destructive/20"
-        showFixCost
-        showLink
-        emptyMessage="No structural issues found"
-      />
-
-      {/* What's Underdeveloped */}
-      <DiagnosisSection
-        icon={AlertCircle}
-        title="What's Underdeveloped"
-        items={underdeveloped}
-        colorClass="text-chart-4"
-        bgClass="bg-chart-4/5"
-        borderClass="border-chart-4/20"
-        showFixCost
-        emptyMessage="No underdeveloped areas found"
-      />
-
-      {/* Empty state */}
-      {parameters.length === 0 && (
+      {parameters.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
           <p>No parameters available for diagnosis.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* What's Working */}
+          <DiagnosisSection
+            icon={CheckCircle}
+            title="What's Working"
+            items={working}
+            colorClass="text-success"
+            bgClass="bg-success/5"
+            borderClass="border-l-4 border-l-success border border-success/20"
+            emptyMessage="No strengths identified yet"
+          />
+
+          {/* What's Broken */}
+          <DiagnosisSection
+            icon={XCircle}
+            title="What's Broken"
+            items={broken}
+            colorClass="text-destructive"
+            bgClass="bg-destructive/5"
+            borderClass="border-l-4 border-l-destructive border border-destructive/20"
+            showFixCost
+            showLink
+            emptyMessage="No structural issues found"
+          />
+
+          {/* Underdeveloped */}
+          <DiagnosisSection
+            icon={AlertCircle}
+            title="Underdeveloped"
+            items={underdeveloped}
+            colorClass="text-chart-4"
+            bgClass="bg-chart-4/5"
+            borderClass="border-l-4 border-l-chart-4 border border-chart-4/20"
+            showFixCost
+            emptyMessage="No underdeveloped areas found"
+          />
         </div>
       )}
     </div>
@@ -138,52 +136,27 @@ function DiagnosisSection({
   const remainingCount = items.length - INITIAL_VISIBLE_COUNT;
 
   return (
-    <div className={cn('rounded-xl border p-4', bgClass, borderClass)}>
+    <div className={cn('rounded-xl p-4', bgClass, borderClass)}>
       <div className="flex items-center gap-2 mb-3">
         <Icon className={cn('h-4 w-4', colorClass)} />
-        <h4 className={cn('text-sm font-semibold', colorClass)}>{title}</h4>
-        <Badge variant="secondary" className="text-xs ml-auto">
-          {items.length}
-        </Badge>
+        <h4 className={cn('text-sm font-bold', colorClass)}>{title}</h4>
       </div>
       
       {items.length === 0 && emptyMessage ? (
         <p className="text-sm text-muted-foreground italic">{emptyMessage}</p>
       ) : (
-      <ul className="space-y-2">
+      <ul className="space-y-3">
         {visibleItems.map((item) => (
-          <li key={item.parameterName} className="flex items-start gap-3">
-            <span className="text-sm flex-1">
-              <span className="font-medium">{item.displayName}</span>
-              {item.rationale && (
-                <span className="text-muted-foreground"> — {item.rationale}</span>
-              )}
+          <li key={item.parameterName} className="flex items-start gap-2">
+            <Icon className={cn('h-3.5 w-3.5 mt-1 shrink-0', colorClass)} />
+            <span className="text-sm text-muted-foreground">
+              {item.rationale || item.displayName}
               {item.evidence?.[0]?.quote && (
-                <span className="block text-xs text-muted-foreground italic mt-1">
-                  "{item.evidence[0].quote}"
+                <span className="block text-xs italic mt-1">
+                  (evidence: {item.evidence[0].quote})
                 </span>
               )}
             </span>
-            
-            <div className="flex items-center gap-2 shrink-0">
-              {showFixCost && item.fixCost && (
-                <Badge 
-                  variant="outline" 
-                  className={cn('text-[10px]', getFixCostColor(item.fixCost), getFixCostBg(item.fixCost))}
-                >
-                  Fix: {item.fixCost}
-                </Badge>
-              )}
-              
-              {showLink && item.linkTo && (
-                <Link 
-                  to={item.linkTo}
-                  className="text-primary hover:underline flex items-center gap-1 text-xs"
-                >
-                  <ArrowRight className="h-3 w-3" />
-                </Link>
-              )}
-            </div>
           </li>
         ))}
       </ul>
