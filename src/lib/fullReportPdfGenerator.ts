@@ -7,6 +7,19 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { ReportData, StakeholderLens, LENS_CONFIG, ScriptType, AgentSectionContent, ParameterScoreData } from '@/types/database';
 import { getUSAFNavGroups, getScriptTypeLabel, isComicType, isWebSeriesType } from '@/lib/reportNavigation';
+import { extractScore } from '@/lib/scoreUtils';
+
+/** Safely convert a narrative item (string or {content, evidence} object) to a display string */
+function toDisplayString(item: unknown): string {
+  if (typeof item === 'string') return item;
+  if (item && typeof item === 'object') {
+    const obj = item as Record<string, unknown>;
+    if (typeof obj.content === 'string') return obj.content;
+    if (typeof obj.text === 'string') return obj.text;
+    try { return JSON.stringify(item); } catch { return String(item); }
+  }
+  return String(item);
+}
 
 // ============= CONSTANTS =============
 
@@ -361,7 +374,7 @@ function renderAgentNarrative(
       doc.setTextColor(...COLORS.text);
       for (const item of content.whatWorks) {
         y = checkBreak(doc, y, 6, pageNum, sectionName);
-        const lines = wrapText(doc, `✓  ${item}`, cw - 5);
+        const lines = wrapText(doc, `+ ${toDisplayString(item)}`, cw - 5);
         lines.forEach(line => { doc.text(line, MARGINS.left + 3, y); y += 5; });
         y += 1;
       }
@@ -381,7 +394,7 @@ function renderAgentNarrative(
       doc.setTextColor(...COLORS.text);
       for (const item of content.whatsBroken) {
         y = checkBreak(doc, y, 6, pageNum, sectionName);
-        const lines = wrapText(doc, `✗  ${item}`, cw - 5);
+        const lines = wrapText(doc, `x ${toDisplayString(item)}`, cw - 5);
         lines.forEach(line => { doc.text(line, MARGINS.left + 3, y); y += 5; });
         y += 1;
       }
@@ -401,7 +414,7 @@ function renderAgentNarrative(
       doc.setTextColor(...COLORS.text);
       for (const item of content.whatsUnderdeveloped) {
         y = checkBreak(doc, y, 6, pageNum, sectionName);
-        const lines = wrapText(doc, `◦  ${item}`, cw - 5);
+        const lines = wrapText(doc, `- ${toDisplayString(item)}`, cw - 5);
         lines.forEach(line => { doc.text(line, MARGINS.left + 3, y); y += 5; });
         y += 1;
       }
@@ -663,14 +676,15 @@ function renderParameterCards(
 
 function renderDiagnosisOverview(
   doc: jsPDF, y: number, categories: string[],
-  categoryScores: Record<string, number>,
+  categoryScores: Record<string, unknown>,
   pageNum: PageCounter, sectionName: string
 ): number {
   const cw = getContentWidth(doc);
 
   for (const cat of categories) {
-    const score = categoryScores[cat];
-    if (score === undefined) continue;
+    const raw = categoryScores[cat];
+    if (raw === undefined) continue;
+    const score = extractScore(raw);
 
     y = checkBreak(doc, y, 12, pageNum, sectionName);
 
