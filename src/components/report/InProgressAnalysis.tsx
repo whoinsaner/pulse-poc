@@ -304,7 +304,7 @@ export function InProgressAnalysis({ analysis: initialAnalysis, onRetry, onViewP
   
   // Get short label from agent name (e.g., "Concept & Hook" -> "Concept")
   const getShortLabel = (name: string): string => {
-    return name.split(' ')[0].replace('&', '').trim();
+    return name;
   };
 
   return (
