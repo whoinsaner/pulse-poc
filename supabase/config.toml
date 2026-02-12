@@ -14,3 +14,6 @@ verify_jwt = false
 
 [functions.generate-stakeholder-report]
 verify_jwt = false
+
+[functions.scene-enrichment]
+verify_jwt = false
