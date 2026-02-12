@@ -1,78 +1,78 @@
 
 
-# Wire Micro Drama Sub-Page and Standardize Styling
+# Wire MicroDramaAgent + Fix Pilot/Episode Pipeline Gaps
 
-## Overview
-Wire the orphaned `MicroDramaAnalysis.tsx` into the report system (navigation, routing, PDF export), standardize its styling to match the report pattern, and ensure it consumes real pipeline data. Also update `FormatDiagnosis.tsx` to properly handle `pilot`/`episode` types.
+## Summary
+
+After auditing all touchpoints, here are the gaps found and the fixes needed.
+
+## Gap Analysis
+
+### 1. AnalysisTrigger -- MicroDramaAgent Not Dispatched (CRITICAL)
+The `getFormatSpecificAgents()` function (line 112-116) only handles `comic` and `web_series`. Micro drama falls through to an empty array, so `MicroDramaAgent` never appears in the UI panel and never gets counted.
+
+### 2. Edge Function -- MicroDramaAgent Not Dispatched (CRITICAL)
+In `supabase/functions/analyze-script/index.ts` (lines 2035-2044), the comprehensive analysis block adds agents for comic, web series, interactive, and audio -- but there is no `isMicroDrama` check. The `MicroDramaAgent` is defined in the AGENTS map (line 1226) but never added to `activeAgentNames`, so it is **never actually run**.
+
+### 3. getCategoriesForScriptType Missing Micro Drama
+In `reportNavigation.ts` (line 330-366), `getCategoriesForScriptType` returns base categories for micro_drama scripts but never adds `'Micro Drama'` to the list. This affects category-based filtering.
+
+### 4. getAgentCountForScriptType Incomplete
+In `reportNavigation.ts` (line 396-399), specialized agent count is hardcoded to only handle comic (4). Web series (1) and micro drama (1) are not counted.
+
+### 5. PDF Export -- Pilot/Episode Gets No Format Section
+In `fullReportPdfGenerator.ts` (lines 1133-1178), the format part is only rendered for comic, web_series, and micro_drama. Pilots and episodes (which have a Format Diagnosis nav item and page) get nothing in the PDF.
+
+### 6. Stakeholder Config -- MicroDramaAgent Not in Stakeholder Mappings
+In the edge function's `STAKEHOLDER_AGENTS` (lines 2003-2013), no stakeholder lens includes `MicroDramaAgent`. So stakeholder-specific runs on micro drama scripts will skip it entirely.
 
 ## Changes
 
-### 1. Add Navigation Item (`src/lib/reportNavigation.ts`)
-- Add a new nav item under the `format` group:
+### File 1: `src/components/AnalysisTrigger.tsx`
+- Add `MICRO_DRAMA_AGENTS` array (similar to `WEB_SERIES_AGENTS`):
   ```
-  { id: 'format-micro-drama', label: 'Micro Drama Deep Dive', icon: Smartphone, path: '/format/micro-drama', applicableTypes: ['micro_drama'] }
+  const MICRO_DRAMA_AGENTS = [
+    { name: 'MicroDramaAgent', label: 'Micro Drama', module: 'MD', icon: Smartphone },
+  ];
   ```
-- Place it after the web series items (line 138) and before the Series Bible item.
+- Update `getFormatSpecificAgents()` to include a check for `scriptType === 'micro_drama'` returning `MICRO_DRAMA_AGENTS`
+- Import `Smartphone` icon (already imported at line 12 -- verify)
 
-### 2. Add Route (`src/App.tsx`)
-- Add route in the main report layout (after line 155):
+### File 2: `supabase/functions/analyze-script/index.ts`
+- Add `microDramaAgents` constant: `const microDramaAgents = ['MicroDramaAgent'];`
+- Add `isMicroDrama` check: `const isMicroDrama = scriptType === 'micro_drama';`
+- In the comprehensive block (line 2042), add: `if (isMicroDrama) activeAgentNames.push(...microDramaAgents);`
+- In the stakeholder block, add micro drama agent for relevant stakeholders (ott_platform, investor, producer, writer)
+- Update the log line to include `micro_drama: ${isMicroDrama}`
+
+### File 3: `src/lib/reportNavigation.ts`
+- In `getCategoriesForScriptType`, add a micro drama check returning `[...baseCategories, 'Micro Drama']`
+- In `getAgentCountForScriptType`, update specialized count logic:
+  - comic: 4, web_series: 1, micro_drama: 1, others: 0
+
+### File 4: `src/lib/fullReportPdfGenerator.ts`
+- After the micro_drama block (line 1178), add a pilot/episode block:
   ```
-  <Route path="format/micro-drama" element={<MicroDramaAnalysis />} />
+  else if (scriptType === 'pilot' || scriptType === 'episode') {
+    renderPartDivider(doc, pageNum, 'PART IV', 'FORMAT ANALYSIS', toc);
+    const formatSections = [
+      { id: 'format', title: 'Format Diagnosis', subtitle: 'Structure and pacing for pilot/episode format' },
+    ];
+    for (const sec of formatSections) { ... }
+  }
   ```
-- Add the same route in the sample micro drama report section (after line 415).
-- `MicroDramaAnalysis` is already imported (line 56).
+- Update `marketPartNum` on line 1181 to also include pilot/episode in the "PART V" condition
 
-### 3. Add PDF Export Mappings (`src/lib/fullReportPdfGenerator.ts`)
-
-**SECTION_AGENT_MAP** (line 91): Add:
-```
-'format-micro-drama': ['MicroDramaFormatAgent'],
-```
-
-**SECTION_CATEGORY_MAP** (line 116): Add:
-```
-'format-micro-drama': ['Micro Drama'],
-```
-
-**Micro drama PDF branch** (lines 1163-1168): Expand from a single page to two pages:
-```
-renderPartDivider(doc, pageNum, 'PART IV', 'MICRO DRAMA FORMAT', toc);
-
-const microDramaSections = [
-  { id: 'format', title: 'Format Diagnosis', subtitle: 'Micro drama format overview' },
-  { id: 'format-micro-drama', title: 'Micro Drama Deep Dive', subtitle: 'Hook velocity, cliff density, and scroll-stop optimization' },
-];
-
-for (const sec of microDramaSections) {
-  y = newPage(doc, pageNum, sec.title);
-  toc.push({ title: sec.title, page: pageNum.value, level: 1 });
-  y = renderSection(doc, y, sec.id, sec.title, sec.subtitle, data, pageNum);
-}
-```
-
-### 4. Standardize `MicroDramaAnalysis.tsx` Styling
-Rewrite the page to follow the standard report pattern while preserving all unique content:
-
-- **SectionHeader**: "Micro Drama Deep Dive" with Smartphone icon and computed average score
-- **AgentNarrativePanel**: from `MicroDramaFormatAgent` agent content
-- **Format Context Card**: Keep the vertical-first context card but remove gradient background, use standard `bg-primary/5 border-primary/20` styling
-- **Failure Pattern Warnings**: Keep the critical failure pattern card (unique content), use standard card styling
-- **WeightedParameterList**: Replace the three custom parameter grids (max weight, high weight, standard) with a single `WeightedParameterList` component, filtering `parameterScores` by `category === 'Micro Drama'`. The weight tiers (2.0x, 1.5x, 1.0x) will be shown via the existing weight tier badges in the parameter list
-- **Remove**: The "Micro Drama Best Practices" static tips card (hardcoded content, same pattern removed from web series)
-- **Remove**: `max-w-7xl mx-auto` wrapper, use `space-y-8` root
-- **Remove**: Custom inline progress bars and gradient card backgrounds
-
-New imports: `SectionHeader`, `WeightedParameterList` from `@/components/report/ui`, `AgentNarrativePanel` from `@/components/report/AgentNarrativePanel`.
-
-### 5. Update `FormatDiagnosis.tsx` for Pilot/Episode Types
-Currently returns empty content for pilot/episode because `formatCategory` is null. Fix:
-- For `pilot` and `episode`, set `formatCategory` to `null` but instead of showing "No format-specific analysis", render a minimal page with `SectionHeader` and the generic `WeightedParameterList` showing all parameters (no category filter), since these types don't have dedicated format parameters but still benefit from seeing the Format Diagnosis overview.
-- Alternatively, since `FormatDiagnosis` is only visible in the nav for types listed in `applicableTypes` (which includes `pilot` and `episode`), update the fallback to show a useful message: "Format analysis covers structure and pacing specific to [Pilot/Episode] format."
+### File 5: No changes needed
+- `MicroDramaAnalysis.tsx` -- already properly wired (uses `MicroDramaFormatAgent` agent content, filters by `'Micro Drama'` category, uses standard report UI components)
+- `FormatDiagnosis.tsx` -- already handles pilot/episode gracefully with a simplified view
+- `App.tsx` routes -- `format/micro-drama` route already exists at line 156
+- `reportNavigation.ts` nav items -- micro drama and pilot/episode already listed in the format group
+- PDF agent/category maps -- `format-micro-drama` already mapped at lines 92 and 118
 
 ## Files Modified
-1. `src/lib/reportNavigation.ts` -- Add micro drama nav item
-2. `src/App.tsx` -- Add route for `format/micro-drama`
-3. `src/lib/fullReportPdfGenerator.ts` -- Add agent/category mappings, expand PDF micro drama section
-4. `src/pages/report/MicroDramaAnalysis.tsx` -- Standardize to report pattern with real data
-5. `src/pages/report/FormatDiagnosis.tsx` -- Handle pilot/episode types gracefully
+1. `src/components/AnalysisTrigger.tsx` -- Add MicroDramaAgent to the analysis panel
+2. `supabase/functions/analyze-script/index.ts` -- Wire MicroDramaAgent into agent dispatch
+3. `src/lib/reportNavigation.ts` -- Add Micro Drama category, fix agent counts
+4. `src/lib/fullReportPdfGenerator.ts` -- Add pilot/episode format section to PDF
 
