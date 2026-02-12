@@ -2089,10 +2089,10 @@ serve(async (req) => {
       
       existingProgress = (existingRun?.agent_progress as typeof existingProgress) || {};
       
-      // Filter to only failed or pending agents
+      // Filter to only failed, pending, or running (interrupted) agents — skip completed ones
       const agentsToRetry = agentsToRun.filter(([agentName]) => {
         const progress = existingProgress[agentName];
-        return !progress || progress.status === 'failed' || progress.status === 'pending';
+        return !progress || progress.status === 'failed' || progress.status === 'pending' || progress.status === 'running';
       });
       
       console.log(`[analyze-script] Resume mode: retrying ${agentsToRetry.length} of ${agentsToRun.length} agents`);
@@ -2302,37 +2302,56 @@ serve(async (req) => {
             );
           }
 
-          // Run synthesis agents with timeout protection
-          await withTimeout(
-            runInsightSynthesis(supabase, lovableApiKey, analysisRunId, scriptContext, qualityMode),
-            AGENT_CALL_TIMEOUT_MS,
-            'InsightSynthesisAgent'
-          ).catch(err => {
-            console.error('[analyze-script] InsightSynthesis timed out or failed:', err.message);
-            updateAgentProgress(supabase, analysisRunId, 'InsightSynthesisAgent', 'failed', err.message);
-          });
+          // Run synthesis agents with timeout protection (skip if already completed on resume)
+          const { data: currentRun } = await supabase
+            .from('analysis_runs')
+            .select('agent_progress')
+            .eq('id', analysisRunId)
+            .single();
+          const currentProgress = (currentRun?.agent_progress || {}) as Record<string, any>;
 
-          await withTimeout(
-            runStakeholderLensAgent(supabase, lovableApiKey, analysisRunId),
-            AGENT_CALL_TIMEOUT_MS,
-            'StakeholderLensAgent'
-          ).catch(err => {
-            console.error('[analyze-script] StakeholderLens timed out or failed:', err.message);
-            updateAgentProgress(supabase, analysisRunId, 'StakeholderLensAgent', 'failed', err.message);
-          });
+          if (currentProgress['InsightSynthesisAgent']?.status !== 'completed') {
+            await withTimeout(
+              runInsightSynthesis(supabase, lovableApiKey, analysisRunId, scriptContext, qualityMode),
+              AGENT_CALL_TIMEOUT_MS,
+              'InsightSynthesisAgent'
+            ).catch(err => {
+              console.error('[analyze-script] InsightSynthesis timed out or failed:', err.message);
+              updateAgentProgress(supabase, analysisRunId, 'InsightSynthesisAgent', 'failed', err.message);
+            });
+          } else {
+            console.log('[analyze-script] Skipping InsightSynthesisAgent (already completed)');
+          }
 
-          // Run scene enrichment with timeout protection (non-blocking)
+          if (currentProgress['StakeholderLensAgent']?.status !== 'completed') {
+            await withTimeout(
+              runStakeholderLensAgent(supabase, lovableApiKey, analysisRunId),
+              AGENT_CALL_TIMEOUT_MS,
+              'StakeholderLensAgent'
+            ).catch(err => {
+              console.error('[analyze-script] StakeholderLens timed out or failed:', err.message);
+              updateAgentProgress(supabase, analysisRunId, 'StakeholderLensAgent', 'failed', err.message);
+            });
+          } else {
+            console.log('[analyze-script] Skipping StakeholderLensAgent (already completed)');
+          }
+
+          // Run scene enrichment with timeout protection (non-blocking, skip if completed)
           let sceneAnalysisData = null;
-          try {
-            sceneAnalysisData = await withTimeout(
-              runSceneEnrichmentAgent(supabase, lovableApiKey, scriptId, scriptContext, qualityMode, analysisRunId),
-              SCENE_ENRICHMENT_TIMEOUT_MS,
-              'SceneEnrichmentAgent'
-            );
-          } catch (err) {
-            const errMsg = err instanceof Error ? err.message : String(err);
-            console.error('[analyze-script] SceneEnrichment timed out or failed:', errMsg);
-            await updateAgentProgress(supabase, analysisRunId, 'SceneEnrichmentAgent', 'failed', errMsg);
+          if (currentProgress['SceneEnrichmentAgent']?.status !== 'completed') {
+            try {
+              sceneAnalysisData = await withTimeout(
+                runSceneEnrichmentAgent(supabase, lovableApiKey, scriptId, scriptContext, qualityMode, analysisRunId),
+                SCENE_ENRICHMENT_TIMEOUT_MS,
+                'SceneEnrichmentAgent'
+              );
+            } catch (err) {
+              const errMsg = err instanceof Error ? err.message : String(err);
+              console.error('[analyze-script] SceneEnrichment timed out or failed:', errMsg);
+              await updateAgentProgress(supabase, analysisRunId, 'SceneEnrichmentAgent', 'failed', errMsg);
+            }
+          } else {
+            console.log('[analyze-script] Skipping SceneEnrichmentAgent (already completed)');
           }
 
           // Generate report (always runs, even if scene enrichment failed)
@@ -2557,6 +2576,13 @@ async function runStandardAnalysis(
         await updateAgentProgress(supabase, analysisRunId, agentName, 'running', undefined, modelConfig.model);
 
         const result = await runAgent(apiKey, agentName, promptConfig, scriptContext, parameterMap, modelConfig);
+
+        // Delete any existing scores from this agent for this run (prevents duplicates on resume)
+        await supabase
+          .from('parameter_scores')
+          .delete()
+          .eq('analysis_run_id', analysisRunId)
+          .eq('agent_name', agentName);
 
         for (const score of result.scores) {
           if (!score.parameterId) continue;
