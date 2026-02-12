@@ -129,6 +129,10 @@ const USAF_NAV_GROUPS: NavGroup[] = [
     applicableTypes: ['comic', 'web_series', 'micro_drama'],
     items: [
       { id: 'format', label: 'Format', icon: Layers, path: '/format' },
+      { id: 'format-panel-flow', label: 'Panel Flow', icon: Layers, path: '/format/panel-flow', applicableTypes: ['comic'] },
+      { id: 'format-lettering', label: 'Lettering & Dialogue', icon: MessageSquare, path: '/format/lettering', applicableTypes: ['comic'] },
+      { id: 'format-page-turns', label: 'Page Turns', icon: BookOpen, path: '/format/page-turns', applicableTypes: ['comic'] },
+      { id: 'format-art-synergy', label: 'Art-Script Synergy', icon: Palette, path: '/format/art-synergy', applicableTypes: ['comic'] },
     ],
   },
   {

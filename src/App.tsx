@@ -72,7 +72,12 @@ import CommercialMarket from "./pages/report/CommercialMarket";
 import CommercialProduction from "./pages/report/CommercialProduction";
 
 import FormatDiagnosis from "./pages/report/FormatDiagnosis";
+import FormatRouter from "./pages/report/FormatRouter";
 import ComicFormatDiagnosis from "./pages/report/ComicFormatDiagnosis";
+import ComicPanelFlow from "./pages/report/ComicPanelFlow";
+import ComicLettering from "./pages/report/ComicLettering";
+import ComicPageTurns from "./pages/report/ComicPageTurns";
+import ComicArtSynergy from "./pages/report/ComicArtSynergy";
 import CommercialDiagnosis from "./pages/report/CommercialDiagnosis";
 import DevelopmentPriorities from "./pages/report/DevelopmentPriorities";
 import Reports from "./pages/Reports";
@@ -137,8 +142,12 @@ const App = () => (
               <Route path="craft/emotional" element={<CraftEmotional />} />
               <Route path="craft/focus" element={<Navigate to="../craft" replace />} />
               <Route path="craft/scenes" element={<SceneEconomy />} />
-              <Route path="format" element={<FormatDiagnosis />} />
+              <Route path="format" element={<FormatRouter />} />
               <Route path="comic-format" element={<ComicFormatDiagnosis />} />
+              <Route path="format/panel-flow" element={<ComicPanelFlow />} />
+              <Route path="format/lettering" element={<ComicLettering />} />
+              <Route path="format/page-turns" element={<ComicPageTurns />} />
+              <Route path="format/art-synergy" element={<ComicArtSynergy />} />
               <Route path="commercial" element={<CommercialDiagnosis />} />
               <Route path="commercial/market" element={<CommercialMarket />} />
               <Route path="commercial/production" element={<CommercialProduction />} />
@@ -253,6 +262,10 @@ const App = () => (
               <Route path="craft/emotional" element={<CraftEmotional />} />
               <Route path="craft/scenes" element={<SceneEconomy />} />
               <Route path="format" element={<ComicFormatDiagnosis />} />
+              <Route path="format/panel-flow" element={<ComicPanelFlow />} />
+              <Route path="format/lettering" element={<ComicLettering />} />
+              <Route path="format/page-turns" element={<ComicPageTurns />} />
+              <Route path="format/art-synergy" element={<ComicArtSynergy />} />
               <Route path="commercial" element={<CommercialDiagnosis />} />
               <Route path="commercial/market" element={<CommercialMarket />} />
               <Route path="commercial/production" element={<CommercialProduction />} />
