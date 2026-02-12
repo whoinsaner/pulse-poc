@@ -1,5 +1,6 @@
 import { useOutletContext } from 'react-router-dom';
 import { ReportData, StakeholderLens } from '@/types/database';
+import { ParameterBreakdown } from '@/components/report/ParameterBreakdown';
 import { Card } from '@/components/ui/card';
 import { 
   SectionHeader, 
@@ -202,25 +203,7 @@ export default function AntagonistAnalysis() {
       )}
 
       {/* Conflict Parameters */}
-      {filteredConflictParams.length > 0 && (
-        <Card className="glass-premium p-6">
-          <SubSectionHeader title="Conflict Parameters" />
-          <div className="space-y-4">
-            {filteredConflictParams.slice(0, 6).map((param, index) => (
-              <div key={index}>
-                <ScoreBar 
-                  score={param.score} 
-                  label={param.displayName || param.parameterName}
-                  showValue 
-                />
-                {param.rationale && (
-                  <p className="text-sm text-muted-foreground mt-1">{param.rationale}</p>
-                )}
-              </div>
-            ))}
-          </div>
-        </Card>
-      )}
+      <ParameterBreakdown title="Conflict Parameters" parameters={filteredConflictParams} maxVisible={6} />
 
       {/* Recommendations — AI-first, fallback to template */}
       <Card className="glass-premium p-6">

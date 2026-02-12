@@ -1,5 +1,6 @@
 import { useOutletContext } from 'react-router-dom';
 import { ReportData, StakeholderLens } from '@/types/database';
+import { ParameterBreakdown } from '@/components/report/ParameterBreakdown';
 import { 
   SectionHeader, 
   ScoreDisplay, 
@@ -100,25 +101,7 @@ export default function EmotionalResonance() {
       />
 
       {/* Parameter Breakdown */}
-      {emotionalParams.length > 0 && (
-        <Card className="p-6">
-          <SubSectionHeader title="Emotional Parameters" />
-          <div className="space-y-4">
-            {emotionalParams.slice(0, 8).map((param, index) => (
-              <div key={index}>
-                <ScoreBar 
-                  score={param.score} 
-                  label={param.displayName || param.parameterName}
-                  showValue 
-                />
-                {param.rationale && (
-                  <p className="text-sm text-muted-foreground mt-1">{param.rationale}</p>
-                )}
-              </div>
-            ))}
-          </div>
-        </Card>
-      )}
+      <ParameterBreakdown title="Emotional Parameters" parameters={emotionalParams} />
 
       {/* Emotional Insights */}
       {emotionalInsights.length > 0 && (

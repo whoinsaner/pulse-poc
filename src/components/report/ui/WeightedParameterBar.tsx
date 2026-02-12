@@ -1,7 +1,6 @@
 import { cn } from '@/lib/utils';
 import { getWeightTier, getScoreBarColor, getDiagnosticCategory } from '@/lib/scoreUtils';
 import { Progress } from '@/components/ui/progress';
-import { Circle, CircleDot } from 'lucide-react';
 import {
   Collapsible,
   CollapsibleContent,
@@ -37,44 +36,42 @@ export function WeightedParameterBar({
   const diagnostic = getDiagnosticCategory(parameter.score);
 
   return (
-    <div className={cn(
-      'flex items-start gap-4 p-4 rounded-xl border border-border bg-card',
-      className
-    )}>
-      {/* Left: Title + Rationale */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
+    <div className={cn('space-y-1.5', className)}>
+      {/* Row 1: Title + Score */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 min-w-0">
           {showWeight && weightTier.multiplierLabel && (
             <span className={cn('text-[10px] uppercase font-semibold shrink-0', weightTier.color)}>
               {weightTier.tier === 'core' ? 'CORE' : 'Polish'}
             </span>
           )}
-          <h4 className="font-semibold text-sm text-foreground">{parameter.displayName}</h4>
+          <h4 className="font-semibold text-sm text-foreground truncate">{parameter.displayName}</h4>
         </div>
-        {showRationale && parameter.rationale && (
-          <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
-            {parameter.rationale}
-          </p>
-        )}
-      </div>
-
-      {/* Right: Score bar + number */}
-      <div className="flex items-center gap-3 shrink-0 pt-0.5">
-        <div className="w-24">
-          <Progress 
-            value={parameter.score} 
-            indicatorClassName={scoreColor}
-            className={cn(
-              'h-2.5',
-              weightTier.tier === 'core' && 'h-3',
-              weightTier.tier === 'polish' && 'h-2 opacity-70'
-            )}
-          />
-        </div>
-        <span className={cn('font-mono font-bold text-base tabular-nums w-8 text-right', diagnostic.color)}>
-          {Math.round(parameter.score)}
+        <span className={cn('font-mono font-bold text-sm tabular-nums shrink-0 ml-3', diagnostic.color)}>
+          {Math.round(parameter.score)} <span className="text-muted-foreground font-normal">/ 100</span>
         </span>
       </div>
+
+      {/* Row 2: Full-width progress bar */}
+      <Progress
+        value={parameter.score}
+        indicatorClassName={cn(
+          scoreColor,
+          weightTier.tier === 'polish' && 'opacity-70'
+        )}
+        className={cn(
+          'h-2.5',
+          weightTier.tier === 'core' && 'h-3',
+          weightTier.tier === 'polish' && 'h-2'
+        )}
+      />
+
+      {/* Row 3: Rationale */}
+      {showRationale && parameter.rationale && (
+        <p className="text-sm text-muted-foreground leading-relaxed">
+          {parameter.rationale}
+        </p>
+      )}
     </div>
   );
 }
@@ -130,7 +127,7 @@ export function WeightedParameterList({
           </div>
         </CollapsibleTrigger>
 
-        <div className="mt-3 space-y-2">
+        <div className="mt-3 space-y-5">
           {visibleParams.map((param) => (
             <WeightedParameterBar
               key={param.parameterName}
@@ -143,7 +140,7 @@ export function WeightedParameterList({
 
         {hiddenParams.length > 0 && (
           <CollapsibleContent>
-            <div className="mt-2 space-y-2">
+            <div className="mt-5 space-y-5">
               {hiddenParams.map((param) => (
                 <WeightedParameterBar
                   key={param.parameterName}

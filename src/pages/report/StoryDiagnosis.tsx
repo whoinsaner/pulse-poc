@@ -156,27 +156,23 @@ function CategoryCard({ title, parameters }: CategoryCardProps) {
     <Card className="p-5">
       <div className="flex items-center justify-between mb-4">
         <h4 className="font-semibold">{title}</h4>
-        <span className="font-mono font-bold text-sm">{avgScore}</span>
+        <span className={cn('font-mono font-bold text-sm', getDiagnosticCategory(avgScore).color)}>{avgScore}</span>
       </div>
-      <div className="space-y-2">
+      <div className="space-y-5">
         {parameters.slice(0, 4).map((param) => (
-          <div key={param.parameterName} className="flex items-start gap-4 p-4 rounded-xl border border-border bg-card">
-            <div className="flex-1 min-w-0">
+          <div key={param.parameterName} className="space-y-1.5">
+            <div className="flex items-center justify-between">
               <h4 className="font-semibold text-sm text-foreground">{param.displayName}</h4>
-              {param.rationale && (
-                <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
-                  {param.rationale}
-                </p>
-              )}
-            </div>
-            <div className="flex items-center gap-3 shrink-0 pt-0.5">
-              <div className="w-24">
-                <Progress value={param.score} indicatorClassName={getScoreBarColor(param.score)} className="h-2.5" />
-              </div>
-              <span className={cn('font-mono font-bold text-base tabular-nums w-8 text-right', getDiagnosticCategory(param.score).color)}>
-                {param.score}
+              <span className={cn('font-mono font-bold text-sm tabular-nums', getDiagnosticCategory(param.score).color)}>
+                {param.score} <span className="text-muted-foreground font-normal">/ 100</span>
               </span>
             </div>
+            <Progress value={param.score} indicatorClassName={getScoreBarColor(param.score)} className="h-2.5" />
+            {param.rationale && (
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                {param.rationale}
+              </p>
+            )}
           </div>
         ))}
       </div>

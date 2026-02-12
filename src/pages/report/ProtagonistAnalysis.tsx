@@ -1,5 +1,6 @@
 import { useOutletContext } from 'react-router-dom';
 import { ReportData, StakeholderLens } from '@/types/database';
+import { ParameterBreakdown } from '@/components/report/ParameterBreakdown';
 import { Card } from '@/components/ui/card';
 import { 
   SectionHeader, 
@@ -226,25 +227,7 @@ export default function ProtagonistAnalysis() {
       </Card>
 
       {/* Parameter Scores */}
-      {filteredCharacterParams.length > 0 && (
-        <Card className="glass-premium p-6">
-          <SubSectionHeader title="Character Parameters" />
-          <div className="space-y-4">
-            {filteredCharacterParams.slice(0, 8).map((param, index) => (
-              <div key={index}>
-                <ScoreBar 
-                  score={param.score} 
-                  label={param.displayName || param.parameterName}
-                  showValue 
-                />
-                {param.rationale && (
-                  <p className="text-sm text-muted-foreground mt-1">{param.rationale}</p>
-                )}
-              </div>
-            ))}
-          </div>
-        </Card>
-      )}
+      <ParameterBreakdown title="Character Parameters" parameters={filteredCharacterParams} />
 
       {/* Strengths & Weaknesses */}
       {(strengths.length > 0 || weaknesses.length > 0) && (
