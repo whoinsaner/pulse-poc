@@ -25,7 +25,7 @@ export function StrengthWeaknessList({
       className
     )}>
       {strengths.length > 0 && (
-        <div className="glass-premium rounded-xl border-l-4 border-l-success p-5 transition-all duration-300 hover:shadow-lg hover:shadow-success/10">
+        <div className="rounded-xl border border-border bg-card border-l-4 border-l-success p-5 transition-all duration-300 hover:shadow-lg hover:shadow-success/10">
           <div className="flex items-center gap-3 mb-5">
             <div className="p-2 rounded-lg bg-success/10">
               <TrendingUp className="h-5 w-5 text-success" />
@@ -53,7 +53,7 @@ export function StrengthWeaknessList({
       )}
       
       {weaknesses.length > 0 && (
-        <div className="glass-premium rounded-xl border-l-4 border-l-destructive p-5 transition-all duration-300 hover:shadow-lg hover:shadow-destructive/10">
+        <div className="rounded-xl border border-border bg-card border-l-4 border-l-destructive p-5 transition-all duration-300 hover:shadow-lg hover:shadow-destructive/10">
           <div className="flex items-center gap-3 mb-5">
             <div className="p-2 rounded-lg bg-destructive/10">
               <TrendingDown className="h-5 w-5 text-destructive" />

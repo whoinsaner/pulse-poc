@@ -5,7 +5,6 @@ import { AgentNarrativePanel } from '@/components/report/AgentNarrativePanel';
 import { 
   SectionHeader, 
   SubSectionHeader,
-  StrengthWeaknessList,
   WeightedParameterList,
 } from '@/components/report/ui';
 import { Card } from '@/components/ui/card';
@@ -36,16 +35,6 @@ export default function EmotionalResonance() {
       : currentScore);
 
   const agentContent = reportData.agentContent?.EmotionalArcAgent;
-
-  const strengths = emotionalParams.filter(p => p.score >= 70).map(p => ({
-    text: p.displayName || p.parameterName,
-    detail: p.rationale?.slice(0, 80)
-  }));
-
-  const weaknesses = emotionalParams.filter(p => p.score < 50).map(p => ({
-    text: p.displayName || p.parameterName,
-    detail: p.rationale?.slice(0, 80)
-  }));
 
   const emotionalInsights = reportData.insights?.filter(i => 
     i.category?.toLowerCase().includes('emotion') ||
@@ -89,11 +78,6 @@ export default function EmotionalResonance() {
         initiallyExpanded={true}
         defaultVisibleCount={8}
       />
-
-      {/* Strengths & Weaknesses */}
-      {(strengths.length > 0 || weaknesses.length > 0) && (
-        <StrengthWeaknessList strengths={strengths} weaknesses={weaknesses} />
-      )}
     </div>
   );
 }

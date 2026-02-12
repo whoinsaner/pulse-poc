@@ -5,7 +5,7 @@ import { AgentNarrativePanel } from '@/components/report/AgentNarrativePanel';
 import { 
   SectionHeader, 
   SubSectionHeader,
-  StrengthWeaknessList,
+  
   WeightedParameterList,
 } from '@/components/report/ui';
 import { Card } from '@/components/ui/card';
@@ -39,16 +39,6 @@ export default function VisualStorytelling() {
 
   const scenes = reportData.scenes || [];
   const uniqueLocations = new Set(scenes.map(s => s.location).filter(Boolean));
-
-  const strengths = visualParams.filter(p => p.score >= 70).map(p => ({
-    text: p.displayName || p.parameterName,
-    detail: p.rationale?.slice(0, 80)
-  }));
-
-  const weaknesses = visualParams.filter(p => p.score < 50).map(p => ({
-    text: p.displayName || p.parameterName,
-    detail: p.rationale?.slice(0, 80)
-  }));
 
   return (
     <div className="space-y-8">
@@ -105,10 +95,6 @@ export default function VisualStorytelling() {
         defaultVisibleCount={8}
       />
 
-      {/* Strengths & Weaknesses */}
-      {(strengths.length > 0 || weaknesses.length > 0) && (
-        <StrengthWeaknessList strengths={strengths} weaknesses={weaknesses} />
-      )}
     </div>
   );
 }

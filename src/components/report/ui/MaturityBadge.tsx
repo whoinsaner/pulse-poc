@@ -106,12 +106,18 @@ interface InlineMaturityProps {
 export function InlineMaturity({ score, className }: InlineMaturityProps) {
   const maturity = getMaturityStage(score);
 
-  return;
-
-
-
-
-
+  return (
+    <span className={cn(
+      "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium",
+      maturity.color === 'success' && "bg-success/10 text-success",
+      maturity.color === 'chart-4' && "bg-chart-4/10 text-chart-4",
+      maturity.color === 'warning' && "bg-warning/10 text-warning",
+      maturity.color === 'destructive' && "bg-destructive/10 text-destructive",
+      className
+    )}>
+      {maturity.label}
+    </span>
+  );
 
 
 

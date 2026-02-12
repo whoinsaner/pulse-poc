@@ -1,10 +1,10 @@
 import { useOutletContext } from 'react-router-dom';
 import { ReportData, StakeholderLens } from '@/types/database';
-import { AgentNarrativePanel, CommercialNarrativePanel } from '@/components/report/AgentNarrativePanel';
+import { CommercialNarrativePanel } from '@/components/report/AgentNarrativePanel';
 import { 
   SectionHeader, 
   SubSectionHeader,
-  StrengthWeaknessList,
+  
   WeightedParameterList,
 } from '@/components/report/ui';
 import { Card } from '@/components/ui/card';
@@ -34,16 +34,6 @@ export default function AudienceStrategy() {
 
   const agentContent = reportData.agentContent?.MarketAgent;
 
-  const strengths = audienceParams.filter(p => p.score >= 70).map(p => ({
-    text: p.displayName || p.parameterName,
-    detail: p.rationale?.slice(0, 80)
-  }));
-
-  const weaknesses = audienceParams.filter(p => p.score < 50).map(p => ({
-    text: p.displayName || p.parameterName,
-    detail: p.rationale?.slice(0, 80)
-  }));
-
   return (
     <div className="space-y-8">
       <SectionHeader
@@ -66,10 +56,6 @@ export default function AudienceStrategy() {
         defaultVisibleCount={8}
       />
 
-      {/* Strengths & Weaknesses */}
-      {(strengths.length > 0 || weaknesses.length > 0) && (
-        <StrengthWeaknessList strengths={strengths} weaknesses={weaknesses} />
-      )}
     </div>
   );
 }

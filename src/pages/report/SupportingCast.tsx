@@ -1,6 +1,6 @@
 import { useOutletContext } from 'react-router-dom';
 import { ReportData, StakeholderLens } from '@/types/database';
-import { AgentNarrativePanel } from '@/components/report/AgentNarrativePanel';
+
 import { Card } from '@/components/ui/card';
 import { 
   SectionHeader, 
@@ -59,27 +59,6 @@ export default function SupportingCast() {
         icon={Users}
         score={categoryScore}
       />
-
-      {/* Agent Narrative */}
-      {agentContent && (
-        <AgentNarrativePanel agentName="CharacterAgent" content={agentContent} />
-      )}
-
-      {/* Agent supporting cast data */}
-      {agentContent?.supportingCast && agentContent.supportingCast.length > 0 && (
-        <Card className="p-6">
-          <SubSectionHeader title="AI-Analyzed Supporting Cast" />
-          <div className="grid md:grid-cols-2 gap-3">
-            {agentContent.supportingCast.map((c, i) => (
-              <Card key={i} className="p-4">
-                <div className="font-medium">{c.name}</div>
-                <div className="text-sm text-muted-foreground">{c.role}</div>
-                {c.impact && <div className="text-xs text-muted-foreground mt-1">{c.impact}</div>}
-              </Card>
-            ))}
-          </div>
-        </Card>
-      )}
 
       {/* Cast Overview */}
       <div className="grid md:grid-cols-4 gap-4">

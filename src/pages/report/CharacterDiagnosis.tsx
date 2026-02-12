@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { ReportData, StakeholderLens } from '@/types/database';
-import { CharacterNarrativePanel } from '@/components/report/AgentNarrativePanel';
+
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { 
@@ -26,16 +26,11 @@ const CHARACTER_CATEGORIES = ['Character'];
 
 export default function CharacterDiagnosis() {
   const context = useOutletContext<ReportContextValue>();
-  
-  if (!context) {
-    return <div className="text-center py-12 text-muted-foreground">Loading...</div>;
-  }
-
-  const { reportData } = context;
+  const reportData = context?.reportData;
 
   // Filter parameters for character categories
   const characterParameters = useMemo(() => {
-    const params = reportData.parameterScores || [];
+    const params = reportData?.parameterScores || [];
     return params
       .filter(p => CHARACTER_CATEGORIES.includes(p.category))
       .map(p => ({
@@ -58,10 +53,14 @@ export default function CharacterDiagnosis() {
 
 
   // Get characters from report data
-  const characters = reportData.characters || [];
+  const characters = reportData?.characters || [];
 
   // Get base path
   const basePath = window.location.pathname.split('/characters')[0];
+
+  if (!context) {
+    return <div className="text-center py-12 text-muted-foreground">Loading...</div>;
+  }
 
   return (
     <div className="space-y-8">
@@ -82,13 +81,8 @@ export default function CharacterDiagnosis() {
         developmentLink={`${basePath}/development`}
       />
 
-      {/* Agent Narrative Content */}
-      {reportData.agentContent?.CharacterAgent && (
-        <CharacterNarrativePanel content={reportData.agentContent.CharacterAgent} />
-      )}
-
-      {/* Fallback: Character Cards */}
-      {!reportData.agentContent?.CharacterAgent && characters.length > 0 && (
+      {/* Character Cards */}
+      {characters.length > 0 && (
         <div className="space-y-4">
           <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Key Characters</h3>
           <div className="grid md:grid-cols-2 gap-4">

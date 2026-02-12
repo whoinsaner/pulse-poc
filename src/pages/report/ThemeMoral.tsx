@@ -5,7 +5,6 @@ import { AgentNarrativePanel } from '@/components/report/AgentNarrativePanel';
 import { 
   SectionHeader, 
   SubSectionHeader,
-  StrengthWeaknessList,
   WeightedParameterList,
 } from '@/components/report/ui';
 import { Card } from '@/components/ui/card';
@@ -35,16 +34,6 @@ export default function ThemeMoral() {
       : currentScore);
 
   const agentContent = reportData.agentContent?.ThemeAgent;
-
-  const strengths = themeParams.filter(p => p.score >= 70).map(p => ({
-    text: p.displayName || p.parameterName,
-    detail: p.rationale?.slice(0, 80)
-  }));
-
-  const weaknesses = themeParams.filter(p => p.score < 50).map(p => ({
-    text: p.displayName || p.parameterName,
-    detail: p.rationale?.slice(0, 80)
-  }));
 
   const themeInsights = reportData.insights?.filter(i => 
     i.category?.toLowerCase().includes('theme') ||
@@ -88,11 +77,6 @@ export default function ThemeMoral() {
         initiallyExpanded={true}
         defaultVisibleCount={8}
       />
-
-      {/* Strengths & Weaknesses */}
-      {(strengths.length > 0 || weaknesses.length > 0) && (
-        <StrengthWeaknessList strengths={strengths} weaknesses={weaknesses} />
-      )}
     </div>
   );
 }
