@@ -362,6 +362,13 @@ export function getCategoriesForScriptType(scriptType: ScriptType | undefined): 
     ];
   }
 
+  if (scriptType === 'micro_drama') {
+    return [
+      ...baseCategories,
+      'Micro Drama',
+    ];
+  }
+
   return baseCategories;
 }
 
@@ -395,6 +402,6 @@ export function isWebSeriesType(scriptType: ScriptType | undefined): boolean {
  */
 export function getAgentCountForScriptType(scriptType: ScriptType | undefined): { core: number; specialized: number; total: number } {
   const core = 10; // Always 10 core agents
-  const specialized = isComicType(scriptType) ? 4 : 0; // 4 comic-specific agents
+  const specialized = isComicType(scriptType) ? 4 : isWebSeriesType(scriptType) ? 1 : scriptType === 'micro_drama' ? 1 : 0;
   return { core, specialized, total: core + specialized };
 }
