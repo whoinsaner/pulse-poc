@@ -137,7 +137,7 @@ export function AnalysisTrigger({
   
   // Get count of active core agents
   const getActiveAgentCount = (agents: typeof USAF_AGENTS) => {
-    return agents.filter(a => isAgentActiveForStakeholder(a.name, selectedStakeholder, isComic, isWebSeries)).length;
+    return agents.filter(a => isAgentActiveForStakeholder(a.name, selectedStakeholder, isComic, isWebSeries, isMicroDrama)).length;
   };
   
   // Get parameter count for current selection
@@ -658,7 +658,7 @@ export function AnalysisTrigger({
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
           {USAF_AGENTS.map((agent) => {
             const progress = agentProgress[agent.name];
-            const isActive = isAgentActiveForStakeholder(agent.name, selectedStakeholder, isComic, isWebSeries);
+            const isActive = isAgentActiveForStakeholder(agent.name, selectedStakeholder, isComic, isWebSeries, isMicroDrama);
             return (
               <div
                 key={agent.name}
@@ -695,7 +695,7 @@ export function AnalysisTrigger({
           )}>
             {formatSpecificAgents.map((agent) => {
               const progress = agentProgress[agent.name];
-              const isActive = isAgentActiveForStakeholder(agent.name, selectedStakeholder, isComic, isWebSeries);
+              const isActive = isAgentActiveForStakeholder(agent.name, selectedStakeholder, isComic, isWebSeries, isMicroDrama);
               return (
                 <div
                   key={agent.name}
