@@ -2243,7 +2243,7 @@ serve(async (req) => {
         await runStakeholderLensAgent(supabase, lovableApiKey, analysisRunId);
 
         // Run scene enrichment agent
-        const sceneAnalysisData = await runSceneEnrichmentAgent(supabase, lovableApiKey, scriptId, scriptContext, qualityMode);
+        const sceneAnalysisData = await runSceneEnrichmentAgent(supabase, lovableApiKey, scriptId, scriptContext, qualityMode, analysisRunId);
 
         // Generate report (includes sceneAnalysis data)
         await generateReport(supabase, analysisRunId, scriptId, script, mode, sceneAnalysisData);
@@ -3254,10 +3254,15 @@ async function runSceneEnrichmentAgent(
   apiKey: string,
   scriptId: string,
   scriptContext: string,
-  qualityMode: QualityMode = 'balanced'
+  qualityMode: QualityMode = 'balanced',
+  analysisRunId?: string
 ) {
   console.log('[SceneEnrichmentAgent] Starting scene enrichment...');
   
+  if (analysisRunId) {
+    await updateAgentProgress(supabase, analysisRunId, 'SceneEnrichmentAgent', 'running');
+  }
+
   try {
     // Fetch existing scenes
     const { data: scenes, error: scenesError } = await supabase
@@ -3268,30 +3273,53 @@ async function runSceneEnrichmentAgent(
     
     if (scenesError || !scenes || scenes.length === 0) {
       console.log('[SceneEnrichmentAgent] No scenes to enrich');
+      if (analysisRunId) {
+        await updateAgentProgress(supabase, analysisRunId, 'SceneEnrichmentAgent', 'completed');
+      }
       return null;
     }
 
-    const sceneList = scenes.map((s: any) => 
-      `Scene ${s.scene_number}: ${s.heading}${s.description ? ' - ' + s.description.substring(0, 200) : ''}`
-    ).join('\n');
+    const modelConfig = await getAgentModelConfig(supabase, 'SceneEnrichmentAgent', qualityMode);
+    const MAX_RETRIES = modelConfig.maxRetries || 3;
+    
+    // Batch scenes to avoid token limits (max ~40 scenes per batch)
+    const BATCH_SIZE = 40;
+    const batches: any[][] = [];
+    for (let i = 0; i < scenes.length; i += BATCH_SIZE) {
+      batches.push(scenes.slice(i, i + BATCH_SIZE));
+    }
 
-    const prompt = `You are SceneEnrichmentAgent. Analyze each scene from this script and produce per-scene metrics.
+    console.log(`[SceneEnrichmentAgent] Processing ${scenes.length} scenes in ${batches.length} batch(es)`);
+    
+    const allSceneAnalysis: any[] = [];
+
+    for (let batchIdx = 0; batchIdx < batches.length; batchIdx++) {
+      const batch = batches[batchIdx];
+      const sceneList = batch.map((s: any) => 
+        `Scene ${s.scene_number}: ${s.heading}${s.description ? ' - ' + s.description.substring(0, 200) : ''}${s.location ? ' [' + s.location + ']' : ''}${s.int_ext ? ' (' + s.int_ext + ')' : ''}`
+      ).join('\n');
+
+      const prompt = `You are SceneEnrichmentAgent. Analyze each scene from this script and produce per-scene metrics.
 
 SCRIPT CONTEXT:
 ${scriptContext.substring(0, 60000)}
 
-SCENES TO ANALYZE:
+SCENES TO ANALYZE (batch ${batchIdx + 1}/${batches.length}):
 ${sceneList}
 
 For each scene, evaluate:
-- emotional_tone: One of "tense", "calm", "dramatic", "comedic", "romantic", "suspenseful", "melancholic", "hopeful", "neutral"
-- dialogue_density: 0-100 (how dialogue-heavy the scene is)
-- action_intensity: 0-100 (how much physical action/movement)
+- emotional_tone: One of "tense", "calm", "dramatic", "comedic", "romantic", "suspenseful", "melancholic", "hopeful", "exciting", "neutral"
+- dialogue_density: 0-100 (how dialogue-heavy the scene is. 0=no dialogue, 100=entirely dialogue)
+- action_intensity: 0-100 (how much physical action/movement. 0=static, 100=intense action)
 - narrative_function: One of "setup", "escalation", "climax", "resolution", "transition"
 - key_moment: true if this is a pivotal/turning point scene
 - brief_summary: 1-2 sentence summary of what happens
 
-Return ONLY a valid JSON array:
+SCORING GUIDE:
+- dialogue_density: 0-20 = mostly visual/action, 20-50 = mixed, 50-80 = dialogue-heavy, 80-100 = almost entirely dialogue
+- action_intensity: 0-20 = static/contemplative, 20-50 = moderate movement, 50-80 = significant action, 80-100 = intense action sequence
+
+Return ONLY a valid JSON array with one object per scene:
 [
   {
     "scene_number": 1,
@@ -3304,50 +3332,97 @@ Return ONLY a valid JSON array:
   }
 ]`;
 
-    const modelConfig = await getAgentModelConfig(supabase, 'SceneEnrichmentAgent', qualityMode);
+      let batchResult: any[] | null = null;
+      let lastError: Error | null = null;
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: modelConfig.model || 'google/gemini-2.5-flash',
-        messages: [
-          { role: 'system', content: 'You are SceneEnrichmentAgent, analyzing individual scenes for emotional tone, pacing, and narrative function. Return ONLY valid JSON arrays.' },
-          { role: 'user', content: prompt }
-        ],
-        max_tokens: 16000,
-        temperature: 0.2,
-      }),
-    });
+      for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+        try {
+          if (attempt > 0) {
+            const delay = modelConfig.retryDelayMs * Math.pow(2, attempt - 1);
+            console.log(`[SceneEnrichmentAgent] Batch ${batchIdx + 1} retry ${attempt}/${MAX_RETRIES}, waiting ${delay}ms`);
+            await new Promise(r => setTimeout(r, delay));
+          }
 
-    if (!response.ok) {
-      console.error('[SceneEnrichmentAgent] API error:', response.status);
+          console.log(`[SceneEnrichmentAgent] Batch ${batchIdx + 1}/${batches.length}, attempt ${attempt + 1}, model: ${modelConfig.model}`);
+
+          const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${apiKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: modelConfig.model || 'google/gemini-2.5-flash',
+              messages: [
+                { role: 'system', content: 'You are SceneEnrichmentAgent, analyzing individual scenes for emotional tone, dialogue density, action intensity, and narrative function. Return ONLY valid JSON arrays. Be precise with metrics — use the full 0-100 range based on actual scene content.' },
+                { role: 'user', content: prompt }
+              ],
+            }),
+          });
+
+          if (response.status === 429) {
+            console.log('[SceneEnrichmentAgent] Rate limited (429)');
+            if (attempt === MAX_RETRIES) throw new Error('Rate limited after all retries');
+            continue;
+          }
+
+          if (!response.ok) {
+            throw new Error(`API error: ${response.status}`);
+          }
+
+          const result = await response.json();
+          const content = result.choices?.[0]?.message?.content || '';
+          
+          if (!content || content.trim().length === 0) {
+            throw new Error('Empty response from AI');
+          }
+
+          const sanitized = sanitizeJsonString(content);
+          const jsonMatch = sanitized.match(/\[[\s\S]*\]/);
+          if (!jsonMatch) {
+            throw new Error('No JSON array found in response');
+          }
+
+          try {
+            batchResult = JSON.parse(jsonMatch[0]);
+          } catch (parseErr) {
+            const braceResult = extractBalancedJson(sanitized);
+            if (braceResult) {
+              const arrayMatch = braceResult.match(/\[[\s\S]*\]/);
+              if (arrayMatch) {
+                batchResult = JSON.parse(arrayMatch[0]);
+              }
+            }
+            if (!batchResult) {
+              throw new Error(`JSON parse error: ${parseErr}`);
+            }
+          }
+
+          break; // Success
+        } catch (err) {
+          lastError = err instanceof Error ? err : new Error(String(err));
+          console.error(`[SceneEnrichmentAgent] Batch ${batchIdx + 1} attempt ${attempt + 1} failed:`, lastError.message);
+          if (attempt === MAX_RETRIES) break;
+        }
+      }
+
+      if (batchResult && Array.isArray(batchResult)) {
+        allSceneAnalysis.push(...batchResult);
+      } else {
+        console.error(`[SceneEnrichmentAgent] Batch ${batchIdx + 1} failed after all retries:`, lastError?.message);
+      }
+    }
+
+    if (allSceneAnalysis.length === 0) {
+      console.error('[SceneEnrichmentAgent] All batches failed');
+      if (analysisRunId) {
+        await updateAgentProgress(supabase, analysisRunId, 'SceneEnrichmentAgent', 'failed', 'All scene analysis batches failed');
+      }
       return null;
     }
 
-    const result = await response.json();
-    const content = result.choices?.[0]?.message?.content || '';
-    
-    const sanitized = sanitizeJsonString(content);
-    const jsonMatch = sanitized.match(/\[[\s\S]*\]/);
-    if (!jsonMatch) {
-      console.error('[SceneEnrichmentAgent] No JSON array found');
-      return null;
-    }
-
-    let sceneAnalysis;
-    try {
-      sceneAnalysis = JSON.parse(jsonMatch[0]);
-    } catch {
-      console.error('[SceneEnrichmentAgent] JSON parse failed');
-      return null;
-    }
-
-    // Update scenes in database with emotional_tone
-    for (const sa of sceneAnalysis) {
+    // Update scenes in database with enriched data
+    for (const sa of allSceneAnalysis) {
       if (sa.scene_number && sa.emotional_tone) {
         const matchingScene = scenes.find((s: any) => s.scene_number === sa.scene_number);
         if (matchingScene) {
@@ -3362,20 +3437,27 @@ Return ONLY a valid JSON array:
       }
     }
 
-    console.log(`[SceneEnrichmentAgent] Enriched ${sceneAnalysis.length} scenes`);
+    console.log(`[SceneEnrichmentAgent] Enriched ${allSceneAnalysis.length}/${scenes.length} scenes`);
     
+    if (analysisRunId) {
+      await updateAgentProgress(supabase, analysisRunId, 'SceneEnrichmentAgent', 'completed');
+    }
+
     // Return sceneAnalysis data to be included in report
-    return sceneAnalysis.map((sa: any) => ({
+    return allSceneAnalysis.map((sa: any) => ({
       sceneNumber: sa.scene_number,
       emotionalTone: sa.emotional_tone || 'neutral',
-      dialogueDensity: sa.dialogue_density || 50,
-      actionIntensity: sa.action_intensity || 50,
+      dialogueDensity: typeof sa.dialogue_density === 'number' ? Math.max(0, Math.min(100, sa.dialogue_density)) : 50,
+      actionIntensity: typeof sa.action_intensity === 'number' ? Math.max(0, Math.min(100, sa.action_intensity)) : 50,
       narrativeFunction: sa.narrative_function || 'transition',
       keyMoment: sa.key_moment || false,
       briefSummary: sa.brief_summary || undefined,
     }));
   } catch (err) {
     console.error('[SceneEnrichmentAgent] Error:', err);
+    if (analysisRunId) {
+      await updateAgentProgress(supabase, analysisRunId, 'SceneEnrichmentAgent', 'failed', err instanceof Error ? err.message : 'Unknown error');
+    }
     return null;
   }
 }
