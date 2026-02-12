@@ -4067,6 +4067,446 @@ Everything they told you is a lie.
 SMASH CUT TO BLACK.
 
 END OF PILOT`
+  },
+  {
+    id: 'avengers-endgame',
+    title: 'Avengers: Endgame',
+    genre: 'Action/Sci-Fi',
+    scriptType: 'feature',
+    logline: 'After the devastating events of Infinity War, the remaining Avengers assemble once more to reverse Thanos\'s actions and restore balance to the universe.',
+    pageCount: 136,
+    content: `AVENGERS: ENDGAME
+
+Christopher Markus & Stephen McFeely
+
+                                Adapted Screenplay
+
+EXT. BARTON HOME - DAY
+
+CLOSE ON: A HOUSE-ARREST ANKLE BRACELET.
+
+                    CLINT BARTON (O.S.)
+          Okay, you see where you're going?
+          Let's work on how to get there.
+
+Pan up to find...CLINT BARTON, with his daughter, LILA,
+coaching her as she notches an arrow in her bow.
+
+                    CLINT BARTON (CONT'D)
+          Okay, good...tip down...bow arm
+          out...three fingers-
+
+                       LILA BARTON
+          Why three?
+
+                    CLINT BARTON
+          'Cause two's not enough and four's
+          too much-
+
+                    LAURA BARTON (O.S.)
+          You guys want mustard or mayo, or
+          both?
+
+CLINT TURNS. IN THE FIELD BEHIND THEM, his wife, LAURA
+BARTON sets up a picnic as COOPER and NATHANIEL play soccer.
+
+                    LILA BARTON
+          Who puts mayo on a hot dog?
+
+                     CLINT BARTON
+          We'll both have mustard, hon!
+              (to Lila)
+          Okay. Draw back, deep breath...
+
+She lets loose. THUD! HER ARROW HITS NEAR THE BULLS-EYE.
+
+                    CLINT BARTON (CONT'D)
+          Good job, Hawkeye. Go get your
+          arrow.
+
+                    LAURA BARTON (O.S.)
+          Enough murder practice! Soup's on!
+
+                    CLINT BARTON
+          One sec, babe. Be right there!
+          We're gonna kill some hot dogs.
+          We're hungry.
+
+But when he turns back...LILA IS GONE. The bow and arrow lie
+at his feet. He stares.
+
+                         CLINT BARTON (CONT'D)
+             Lila? Babe, did you see Lila-
+
+He turns to his wife, BUT SHE'S GONE. So are the boys. The
+soccer ball rolls to a stop near the picnic blanket.
+
+NO ONE CAN BE SEEN FOR A HUNDRED YARDS IN ALL DIRECTIONS.
+
+                         CLINT BARTON (CONT'D)
+             Guys? Guys, come on...
+
+Clint walks toward the field, dread growing.
+
+                         CLINT BARTON (CONT'D)
+             Laura?
+
+Clint breaks into a panicked run.
+
+                         CLINT BARTON (CONT'D)
+             LAURA!
+
+CLINT MELTS DOWN, SPINNING AROUND, FRANTIC...
+
+MARVEL FLIP
+
+EXT. SPACE - NIGHT
+
+BLACKNESS.
+
+TITLE: "TWENTY-TWO DAYS LATER."
+
+Soon, THE BENATAR tumbles past, adrift...
+
+INT. BENATAR, GALLEY - NIGHT
+
+TONY STARK and NEBULA play table-top football. She wins.
+
+                        TONY
+                 (offering his hand)
+             Good sport. Have fun?
+
+Nebula studies his hand, confused. Finally she shakes.
+
+                       NEBULA
+             It was fun.
+
+INT. BENATAR, FLIGHT DECK - NIGHT
+
+Tony, thin and haggard, kneels in front of HIS BROKEN IRON
+MAN HELMET. He hits a switch. A light blinks.
+
+TONY'S RECORDING: he stares directly into the "camera."
+
+                    TONY
+          This thing on? Hey, Ms. Potts.
+          Pep. If you find this recording,
+          don't post it on social media.
+          It's going to be a real tearjerker.
+
+EXT. SPACE - NIGHT
+
+THE BENATAR sparks, adrift.
+
+                    TONY (O.S.)
+          I don't know if you're ever going
+          to see these. I don't even know if
+          you're still...God, I hope so.
+          Today's day twenty-one, no...twenty-
+          two.
+
+INT. BENATAR, GALLEY - FLASHBACK
+
+NEBULA lasers shut Tony's infected wound.
+
+                    TONY (O.S.)
+          You know, if it wasn't for the
+          existential terror of staring into
+          the literal void of space, I'd say
+          I'm feeling a little better today.
+          Infection's run its course, thanks
+          to the Blue Meanie back there.
+          You'd like her. She's very
+          practical. And only a tiny bit
+          sadistic.
+
+INT. BENATAR, GALLEY - FLASHBACK
+
+TONY AND NEBULA MEND THE EMPTY FUEL CELLS UNDER THE FLOOR.
+
+                    TONY (O.S.)
+          The fuel cells were cracked during
+          battle, but we figured out a way to
+          reverse the ion charge. Bought
+          ourselves about 48 hours of flight
+          time. Problem is that was
+          about...49 hours ago.
+
+EXT. SPACE - NIGHT
+
+FROM HIGH OVERHEAD, WE WATCH THE BENATAR DRIFT IN SPACE.
+
+                    TONY (O.S.)
+          Which means, we're dead in the
+          water. A thousand light years from
+          the nearest 7-11.
+
+INT. BENATAR, GALLEY - FLASHBACK
+
+Tony hands Nebula the last of A PURPLE POWDER. She pushes it
+back to him.
+
+                    TONY (O.S.)
+          Most of the quote-unquote 'food'
+          and potable water ran out two weeks
+          ago.
+
+INT. BENATAR, FLIGHT DECK - NIGHT
+
+Tony stands on the flight deck, one hand resting on the
+glass, staring into the unknown.
+
+                    TONY
+          Pep, I know I said no more
+          surprises. But, I gotta say, I was
+          really hoping to pull off one last
+          one. But it looks like...well, you
+          know what it looks like.
+
+INT. BENATAR, FLIGHT DECK - NIGHT
+
+Back to now. Tony records his thoughts into his helmet.
+
+                    TONY
+          Don't feel bad about this. I mean,
+          actually, if you grovel for a
+          couple weeks, and then move on with
+          enormous guilt...I should probably
+          lie down for a minute, rest my
+          eyes. Please know, when I drift
+          off, it will be like every day
+          lately. I'm fine, totally fine.
+          I'm going to dream about you. It's
+          always you.
+
+Tony switches the helmet off.
+
+                                                 TIME CUT:
+
+NEBULA finds TONY SPRAWLED ON THE FLOOR.
+
+                                                 TIME CUT:
+
+Nebula helps Tony into Quill's chair. Tony slumps,
+completely still. Nebula gives him his privacy.
+
+Move in on Tony's face as...A LIGHT SLOWLY GROWS BRIGHTER.
+Soon, the entire flight deck glows as bright as a sun.
+
+Nebula appears from the galley, shading her eyes. Tony's
+eyelids flutter. Finally, he opens them to see...
+
+CAPTAIN MARVEL (CAROL DANVERS) hovering in space.
+
+INT. AVENGERS COMPOUND, BATHROOM - NIGHT
+
+STEVE ROGERS shaves.
+
+He studies himself in the mirror, exhausted. He's about to
+tap his razor in the sink's standing water, when...
+
+THE WATER RIPPLES. Steve stares a beat, puzzled. Then the
+lamp catches his eye...SWAYING GENTLY.
+
+Just then, a sound roars overhead. Steve turns...
+
+EXT. AVENGERS COMPOUND - NIGHT
+
+THE MOON HANGS HUGE OVER THE EARTH. Then the silhouette of
+THE BENATAR races past, propelled by CAROL DANVERS.
+
+Below...STEVE ROGERS, BRUCE BANNER, AND NATASHA ROMANOV watch
+a flying woman guide the ship to the ground.
+
+Behind them, PEPPER POTTS walks up to the group.
+
+                                                   TIME CUT:
+
+Steve races up as NEBULA helps Tony down the ramp.
+
+                    TONY
+          I couldn't stop him.
+
+                    STEVE
+          Neither could we.
+
+                    TONY
+          I lost the kid.
+
+                     STEVE
+              (unable to say it all)
+          We...lost...
+
+                    TONY
+          Is Pepper...?
+
+JUST THEN, PEPPER POTTS THROWS HERSELF INTO TONY'S ARMS.
+
+                    PEPPER POTTS
+          Stay here, you stay right here-
+
+                    TONY
+          I'm not going anywhere.
+
+NEARBY, NEBULA watches the sad humans. ROCKET SITS BESIDE
+HER, GRATEFUL. She rests a hand on his furry head.
+
+INT. AVENGERS COMPOUND, WORKSHOP - DAY
+
+RHODEY, TONY, STEVE, NATASHA, AND CAROL watch...
+
+A HOLO-DISPLAY ROTATING THROUGH FACES OF PEOPLE WE'VE LOST:
+WANDA. VISION. BUCKY. T'CHALLA. MARIA HILL.
+
+                    RHODEY
+          It's been twenty-three days since
+          Thanos came to Earth.
+
+TONY, weak, sits in a hi-tech wheelchair, IV dripping into
+his arm. He stares, taking in the loss:
+
+SAM WILSON. SECRETARY ROSS. SHARON CARTER. SCOTT LANG.
+HOPE VAN DYNE. HANK PYM. NICK FURY.
+
+At Fury, Carol bites back emotion.
+
+                    NATASHA
+          World governments are in pieces, as
+          you can imagine. But the parts
+          that still work are trying to take
+          a census. It looks like he did
+          what he said he was going to do.
+
+JANE FOSTER. ERIK SELVIG. WONG. DR. STRANGE. THE BARTON
+FAMILY. QUILL. DRAX. MANTIS. GROOT. PETER PARKER.
+
+Finally, Tony looks away. RHODEY turns it off.
+
+                    NATASHA (CONT'D)
+          Thanos wiped out fifty percent of
+          all the living creatures on Earth.
+
+                    CAROL DANVERS
+          Not just Earth.
+
+                    RHODEY
+          You sure about that?
+
+                    CAROL DANVERS
+          You never have to ask me that.
+
+                    TONY
+          Where is he now?
+
+                    STEVE
+          We don't know. He just opened a
+          portal and walked through.
+
+Tony looks out to see...THOR on the patio.
+
+                    TONY
+          What's his deal?
+
+                    ROCKET (O.S.)
+          He's pissed.
+
+Tony turns to see Rocket for the first time.
+
+                    ROCKET (CONT'D)
+          He thinks he failed. Which, of
+          course, he did. But there's a lot
+          of that going around, ain't there?
+
+                    TONY
+          Until this second, I literally
+          thought you were a Build-a-Bear.
+
+                    STEVE
+          We've been hunting Thanos for three
+          weeks - deep space scans,
+          satellites - we got nothing. Tony,
+          you fought him-
+
+                    TONY
+          Who told you that? I didn't fight
+          him, he wiped my face with a planet
+          while a Bleecker Street magician
+          gave away the store. There was no
+          fight because he's not beatable.
+
+                    STEVE
+          Did he give you anything to go on?
+          Clues, coordinates-
+
+Tony stares, lost, barely acknowledging Steve.
+
+                    TONY
+          I saw this coming, few years back.
+          Didn't wanna believe. I thought I
+          was dreaming...
+
+                    STEVE
+          Tony, I need you to focus-
+
+                    TONY
+          And I needed you, as in past tense.
+          That trumps what you need. It's
+          too late, buddy. You know what I
+          need?
+
+Tony turns to everyone, slightly unstable.
+
+                     TONY (CONT'D)
+          I need a shave and a burger, not a
+          bowl of soup.
+              (stands)
+          And I believe I remember telling
+          all of you, alive and otherwise,
+          that we needed a suit of armor
+          around the world, whether it
+          impacted our precious freedoms or
+          not-
+
+                    STEVE
+          But that didn't work out, did it?
+
+                    TONY
+          I said we'd lose, you said we'd "do
+          that together, too." Guess what,
+          Cap, we lost, and you weren't
+          there. But that's what we do,
+          right? Our best work after the
+          fact? We're the "Avengers", not
+          the "Pre-vengers-"
+
+                    RHODEY
+          Tony, take it easy...
+
+                     TONY
+          I've got nothing for ya, Cap. No
+          coordinates, no clues, no
+          strategies, no options. Zero, zip,
+          nada. No trust.
+              (rips out RT)
+          Here. You take this. You find
+          him, you put this on, and hide.
+              (drops to his knees)
+          I'm fine!
+
+Tony COLLAPSES. Rhodey catches him.
+
+INT. AVENGERS COMPOUND, CORRIDOR - DAY
+
+CAROL, STEVE, AND NATASHA stare through GLASS DOORS at TONY
+IN A HOSPITAL BED, PEPPER AND BANNER AT HIS SIDE.
+
+RHODEY STEPS OUT OF THE HOSPITAL ROOM.
+
+                    RHODEY
+          Bruce gave him a sedative. Should
+          be out the rest of the day.
+
+END OF EXCERPT`
   }
 ];
 
