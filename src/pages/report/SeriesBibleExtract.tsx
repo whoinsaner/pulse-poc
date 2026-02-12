@@ -184,7 +184,7 @@ export default function SeriesBibleExtract() {
   const overallScore = (premiseScore + worldScore + toneScore + arcScore) / 4;
 
   return (
-    <div className="space-y-8 max-w-6xl mx-auto">
+    <div className="space-y-8">
       <SectionHeader
         title="Series Bible Extract"
         subtitle="World rules, character trajectories, and tonal guardrails"
@@ -203,7 +203,7 @@ export default function SeriesBibleExtract() {
       </SectionHeader>
 
       {/* Core Premise Box */}
-      <Card className="glass-premium overflow-hidden">
+      <Card className="bg-card border border-border overflow-hidden">
         <div className="bg-gradient-to-r from-primary/10 to-primary/5 p-6 border-b border-border/50">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
@@ -238,9 +238,9 @@ export default function SeriesBibleExtract() {
       </Card>
 
       {/* World Rules & Constraints */}
-      <Card className="glass-premium p-6">
+      <Card className="bg-card border border-border p-6">
         <SubSectionHeader 
-          title="World Rules & Constraints" 
+          title="World Rules & Constraints"
           subtitle="What's fixed vs. what can change"
           score={worldScore}
         />
@@ -301,9 +301,9 @@ export default function SeriesBibleExtract() {
       </Card>
 
       {/* Tonal Guardrails */}
-      <Card className="glass-premium p-6">
+      <Card className="bg-card border border-border p-6">
         <SubSectionHeader 
-          title="Tonal Guardrails" 
+          title="Tonal Guardrails"
           subtitle="Genre expectations and tonal boundaries"
           score={toneScore}
         />
@@ -353,9 +353,9 @@ export default function SeriesBibleExtract() {
       </Card>
 
       {/* Character Trajectories */}
-      <Card className="glass-premium p-6">
+      <Card className="bg-card border border-border p-6">
         <SubSectionHeader 
-          title="Character Trajectories" 
+          title="Character Trajectories"
           subtitle="Start → End transformation arcs"
           score={arcScore}
         />
@@ -390,7 +390,7 @@ export default function SeriesBibleExtract() {
 
       {/* Series Engine (Episodic Only) */}
       {isEpisodicFormat && (
-        <Card className="glass-premium p-6 border-2 border-chart-5/30">
+        <Card className="bg-card border border-border p-6">
           <div className="flex items-center gap-3 mb-4">
             <div className="flex items-center justify-center h-10 w-10 rounded-xl bg-chart-5/20">
               <Repeat className="h-5 w-5 text-chart-5" />
@@ -465,7 +465,7 @@ export default function SeriesBibleExtract() {
       )}
 
       {/* Quick Reference Footer */}
-      <Card className="glass-premium p-6 bg-muted/20">
+      <Card className="bg-card border border-border p-6">
         <div className="flex items-center justify-between">
           <div>
             <h4 className="font-display font-semibold">Quick Reference Export</h4>
