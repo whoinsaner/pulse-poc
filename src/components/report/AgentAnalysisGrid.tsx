@@ -16,12 +16,12 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ParameterScoreData, ScriptType } from '@/types/database';
-import { getScoreTailwindColor, getScoreTailwindBg, getScoreBarColor } from '@/lib/scoreUtils';
+import { getScoreTailwindColor, getScoreTailwindBg, getScoreBarColor, extractScore } from '@/lib/scoreUtils';
 import { isComicType, getAgentCountForScriptType } from '@/lib/reportNavigation';
 
 interface AgentAnalysisGridProps {
   parameterScores: ParameterScoreData[];
-  categoryScores: Record<string, number>;
+  categoryScores: Record<string, unknown>;
   scriptType?: ScriptType;
 }
 
@@ -54,7 +54,7 @@ export function AgentAnalysisGrid({ parameterScores, categoryScores, scriptType 
 
   // Get score from categoryScores (already 0-100 scale)
   const getAgentScore = (category: string): number => {
-    return categoryScores[category] || 0;
+    return extractScore(categoryScores[category]);
   };
 
   const getAgentParameters = (category: string): ParameterScoreData[] => {
@@ -170,19 +170,19 @@ export function AgentAnalysisGrid({ parameterScores, categoryScores, scriptType 
         <div className="mt-16 grid sm:grid-cols-3 gap-6">
           <div className="p-6 rounded-2xl bg-card border border-border text-center">
             <p className="text-4xl font-bold gradient-text mb-2">
-              {Math.round(Object.values(categoryScores).reduce((a, b) => a + b, 0) / Object.values(categoryScores).length)}
+              {Math.round(Object.values(categoryScores).map(extractScore).reduce((a, b) => a + b, 0) / Object.values(categoryScores).length)}
             </p>
             <p className="text-muted-foreground">Average Score</p>
           </div>
           <div className="p-6 rounded-2xl bg-card border border-border text-center">
             <p className="text-4xl font-bold text-success mb-2">
-              {Object.values(categoryScores).filter(s => s >= 70).length}
+              {Object.values(categoryScores).map(extractScore).filter(s => s >= 70).length}
             </p>
             <p className="text-muted-foreground">Strong Categories</p>
           </div>
           <div className="p-6 rounded-2xl bg-card border border-border text-center">
             <p className="text-4xl font-bold text-warning mb-2">
-              {Object.values(categoryScores).filter(s => s < 50).length}
+              {Object.values(categoryScores).map(extractScore).filter(s => s < 50).length}
             </p>
             <p className="text-muted-foreground">Needs Attention</p>
           </div>

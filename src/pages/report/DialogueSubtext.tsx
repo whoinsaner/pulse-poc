@@ -13,6 +13,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { MessageSquare, Quote, Layers } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { extractScore } from '@/lib/scoreUtils';
 import { useStakeholderFiltering } from '@/hooks/useStakeholderFiltering';
 import { StakeholderFilterNotice } from '@/components/report/StakeholderFilterNotice';
 
@@ -38,11 +39,9 @@ export default function DialogueSubtext() {
 
   const dialogueScore = dialogueParams.length > 0 
     ? dialogueParams.reduce((sum, p) => sum + p.score, 0) / dialogueParams.length 
-    : reportData.categoryScores?.['Dialogue'] || currentScore;
+    : extractScore(reportData.categoryScores?.['Dialogue']) || currentScore;
 
-  const categoryScore = typeof reportData.categoryScores?.['Dialogue'] === 'number'
-    ? reportData.categoryScores['Dialogue']
-    : (reportData.categoryScores?.['Dialogue'] as { score?: number })?.score || dialogueScore;
+  const categoryScore = extractScore(reportData.categoryScores?.['Dialogue']) || dialogueScore;
 
   // Characters for voice analysis
   const characters = reportData.characters || [];

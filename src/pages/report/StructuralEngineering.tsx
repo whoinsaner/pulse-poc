@@ -13,6 +13,7 @@ import {
 } from '@/components/report/ui';
 import { Building, Layers, GitBranch, Target, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { extractScore } from '@/lib/scoreUtils';
 
 interface ReportContextValue {
   reportData: ReportData;
@@ -34,11 +35,9 @@ export default function StructuralEngineering() {
 
   const structureScore = structureParams.length > 0 
     ? structureParams.reduce((sum, p) => sum + p.score, 0) / structureParams.length 
-    : reportData.categoryScores?.['Structure'] || currentScore;
+    : extractScore(reportData.categoryScores?.['Structure']) || currentScore;
 
-  const categoryScore = typeof reportData.categoryScores?.['Structure'] === 'number'
-    ? reportData.categoryScores['Structure']
-    : (reportData.categoryScores?.['Structure'] as { score?: number })?.score || structureScore;
+  const categoryScore = extractScore(reportData.categoryScores?.['Structure']) || structureScore;
 
   // Scene analysis for pacing
   const scenes = reportData.scenes || [];

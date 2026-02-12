@@ -13,6 +13,7 @@ import {
 } from '@/components/report/ui';
 import { Lightbulb, Zap, Target, TrendingUp, MessageSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { extractScore } from '@/lib/scoreUtils';
 
 interface ReportContextValue {
   reportData: ReportData;
@@ -35,11 +36,9 @@ export default function ConceptHook() {
 
   const conceptScore = conceptParams.length > 0 
     ? conceptParams.reduce((sum, p) => sum + p.score, 0) / conceptParams.length 
-    : reportData.categoryScores?.['Concept & Hook'] || currentScore;
+    : extractScore(reportData.categoryScores?.['Concept & Hook']) || currentScore;
 
-  const categoryScore = typeof reportData.categoryScores?.['Concept & Hook'] === 'number'
-    ? reportData.categoryScores['Concept & Hook']
-    : (reportData.categoryScores?.['Concept & Hook'] as { score?: number })?.score || conceptScore;
+  const categoryScore = extractScore(reportData.categoryScores?.['Concept & Hook']) || conceptScore;
 
   // Get related insights
   const conceptInsights = reportData.insights?.filter(i => 

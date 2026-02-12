@@ -12,6 +12,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Heart, BookOpen, Scale } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { extractScore } from '@/lib/scoreUtils';
 
 interface ReportContextValue {
   reportData: ReportData;
@@ -33,11 +34,9 @@ export default function ThemeMoral() {
 
   const themeScore = themeParams.length > 0 
     ? themeParams.reduce((sum, p) => sum + p.score, 0) / themeParams.length 
-    : reportData.categoryScores?.['Theme'] || currentScore;
+    : extractScore(reportData.categoryScores?.['Theme']) || currentScore;
 
-  const categoryScore = typeof reportData.categoryScores?.['Theme'] === 'number'
-    ? reportData.categoryScores['Theme']
-    : (reportData.categoryScores?.['Theme'] as { score?: number })?.score || themeScore;
+  const categoryScore = extractScore(reportData.categoryScores?.['Theme']) || themeScore;
 
   // Derived theme metrics
   const themeMetrics = [

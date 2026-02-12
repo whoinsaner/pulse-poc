@@ -12,6 +12,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Eye, Camera, Palette, Film } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { extractScore } from '@/lib/scoreUtils';
 
 interface ReportContextValue {
   reportData: ReportData;
@@ -34,11 +35,9 @@ export default function VisualStorytelling() {
 
   const visualScore = visualParams.length > 0 
     ? visualParams.reduce((sum, p) => sum + p.score, 0) / visualParams.length 
-    : reportData.categoryScores?.['World & Logic'] || currentScore;
+    : extractScore(reportData.categoryScores?.['World & Logic']) || currentScore;
 
-  const categoryScore = typeof reportData.categoryScores?.['World & Logic'] === 'number'
-    ? reportData.categoryScores['World & Logic']
-    : (reportData.categoryScores?.['World & Logic'] as { score?: number })?.score || visualScore;
+  const categoryScore = extractScore(reportData.categoryScores?.['World & Logic']) || visualScore;
 
   // Scene analysis for location data
   const scenes = reportData.scenes || [];

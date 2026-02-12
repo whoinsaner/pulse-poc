@@ -12,6 +12,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Film, DollarSign, MapPin, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { extractScore } from '@/lib/scoreUtils';
 import { useStakeholderFiltering } from '@/hooks/useStakeholderFiltering';
 import { StakeholderFilterNotice } from '@/components/report/StakeholderFilterNotice';
 
@@ -38,11 +39,9 @@ export default function Production() {
 
   const productionScore = productionParams.length > 0 
     ? productionParams.reduce((sum, p) => sum + p.score, 0) / productionParams.length 
-    : reportData.categoryScores?.['Execution'] || currentScore;
+    : extractScore(reportData.categoryScores?.['Execution']) || currentScore;
 
-  const categoryScore = typeof reportData.categoryScores?.['Execution'] === 'number'
-    ? reportData.categoryScores['Execution']
-    : (reportData.categoryScores?.['Execution'] as { score?: number })?.score || productionScore;
+  const categoryScore = extractScore(reportData.categoryScores?.['Execution']) || productionScore;
 
   // Scene and location analysis
   const scenes = reportData.scenes || [];

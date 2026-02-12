@@ -12,6 +12,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { TrendingUp, Target, Globe } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { extractScore } from '@/lib/scoreUtils';
 import { useStakeholderFiltering } from '@/hooks/useStakeholderFiltering';
 import { StakeholderFilterNotice } from '@/components/report/StakeholderFilterNotice';
 
@@ -38,11 +39,9 @@ export default function Marketability() {
 
   const marketScore = marketParams.length > 0 
     ? marketParams.reduce((sum, p) => sum + p.score, 0) / marketParams.length 
-    : reportData.categoryScores?.['Market'] || currentScore;
+    : extractScore(reportData.categoryScores?.['Market']) || currentScore;
 
-  const categoryScore = typeof reportData.categoryScores?.['Market'] === 'number'
-    ? reportData.categoryScores['Market']
-    : (reportData.categoryScores?.['Market'] as { score?: number })?.score || marketScore;
+  const categoryScore = extractScore(reportData.categoryScores?.['Market']) || marketScore;
 
   // Script metadata for context
   const scriptMeta = reportData.scriptMetadata;
