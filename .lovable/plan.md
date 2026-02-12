@@ -1,51 +1,56 @@
-# Wire Web Series Sub-Pages Under Format Diagnosis
+
+# Wire Web Series Sub-Pages to Real Data and Standardize Styling
 
 ## Problem
+1. **WebSeriesAnalysis.tsx** uses a completely custom layout (centered header, custom card grid, inline progress bars, hardcoded "Optimization Tips") that doesn't match the standardized report pattern used across all other pages.
+2. **RetentionAnalysis.tsx** and **HooksAnalysis.tsx** are closer to standard but have some inconsistencies (custom score cards, gradient backgrounds).
+3. The PDF export references a non-existent `WebSeriesFormatAgent` -- the actual agent is `WebSeriesAgent`.
+4. All three pages use keyword-based parameter filtering instead of category-based filtering like the rest of the report.
 
-Comics have 4 dedicated sub-pages under Format Diagnosis (Panel Flow, Lettering, Page Turns, Art-Script Synergy), but web series has **none**. Three fully-built web series pages exist but are orphaned -- their routes just redirect to `/format`:
-
-- `WebSeriesAnalysis.tsx` -- 13-parameter digital series evaluation with episode length tiers
-- `RetentionAnalysis.tsx` -- Retention curve design and engagement metrics
-- `HooksAnalysis.tsx` -- Hook efficiency and shareability scoring
-
-These pages are data-driven and ready to use but inaccessible from the sidebar.
-
-## Solution
-
-Add 3 web series sub-pages to the Format navigation group, mirroring the comic pattern. Wire the routes to point to the existing pages instead of redirecting.
+## Standardized Pattern (from CraftDialogue, StoryConceptHook, etc.)
+Every sub-page follows this structure:
+```text
+<div className="space-y-8">
+  <SectionHeader title=... subtitle=... icon=... score=... />
+  <AgentNarrativePanel /> (if agent content exists)
+  <WeightedParameterList /> (all parameters for this section)
+</div>
+```
+No custom grids, no gradient cards, no hardcoded tips. Data comes from `parameterScores` filtered by `category` and `agentContent` keyed by agent name.
 
 ## Changes
 
-### 1. Navigation Config (`src/lib/reportNavigation.ts`)
+### 1. Fix PDF Export Agent Mapping (`src/lib/fullReportPdfGenerator.ts`)
+- Change `'format-web-series': ['WebSeriesFormatAgent']` to `'format-web-series': ['WebSeriesAgent']`
+- The actual agent is `WebSeriesAgent`, not `WebSeriesFormatAgent`
 
-Add 3 new nav items under the Format group, after the comic-specific items:
+### 2. Rewrite WebSeriesAnalysis.tsx to Standard Pattern
+Replace the entire custom layout with the standardized structure:
+- **SectionHeader**: "Web Series Deep Dive" with episode length badge in subtitle
+- **AgentNarrativePanel**: from `reportData.agentContent?.WebSeriesAgent`
+- **Episode Length Context**: Keep as a simple Card showing the length class and weight modifiers (this is unique, valuable content)
+- **Failure Pattern Warnings**: Keep as a Card when failures are detected (unique content)
+- **WeightedParameterList**: All `Web Series` category parameters, using category-based filtering (`p.category === 'Web Series'`) instead of the `WEB_SERIES_PARAMETERS` import
+- **Remove**: The custom 3-column parameter card grid with inline progress bars
+- **Remove**: The hardcoded "Web Series Optimization" tips card (static content)
+- Remove `max-w-7xl mx-auto` wrapper, use `space-y-8` root
 
-- **Web Series Deep Dive** (`/format/web-series`) -- `applicableTypes: ['web_series']`
-- **Retention Curves** (`/format/retention`) -- `applicableTypes: ['web_series']`
-- **Hook Efficiency** (`/format/hooks`) -- `applicableTypes: ['web_series']`
+### 3. Rewrite RetentionAnalysis.tsx to Standard Pattern
+- **SectionHeader**: "Retention Curves" with BarChart3 icon
+- **AgentNarrativePanel**: from `StructureAgent` or `WebSeriesAgent`
+- **WeightedParameterList**: Filter parameters by keywords `retention`, `pacing`, `engagement`, `momentum` (keep existing filter since there's no dedicated retention category)
+- **Remove**: The custom gradient "Retention Score" card (score is already in SectionHeader)
+- **Remove**: The redundant fallback card (WeightedParameterList handles empty state)
 
-### 2. Route Definitions (`src/App.tsx`)
+### 4. Rewrite HooksAnalysis.tsx to Standard Pattern
+- **SectionHeader**: "Hook Efficiency" with Zap icon
+- **AgentNarrativePanel**: from `ConceptAgent` or `WebSeriesAgent`
+- **WeightedParameterList**: Filter parameters by keywords `hook`, `share`, `viral`, `opening`, `attention`
+- **Remove**: The custom gradient score cards for the first 2 params (redundant with parameter list)
+- **Remove**: Unused `ScoreDisplay` import
 
-Replace the 3 redirect routes with actual page renders:
-
-- `format/web-series` renders `WebSeriesAnalysis` (instead of redirecting to `/format`)
-- `format/retention` renders `RetentionAnalysis` (instead of redirecting to `/format`)
-- `format/hooks` renders `HooksAnalysis` (instead of redirecting to `/format`)
-
-Keep the old top-level redirect routes (`/web-series`, `/retention`, `/hooks`) as-is for backward compatibility with bookmarks.
-
-### 3. PDF Export Mapping (`src/lib/fullReportPdfGenerator.ts`)
-
-Add section-to-agent and section-to-category mappings for the new section IDs:
-
-- `format-web-series`: agents `['WebSeriesFormatAgent']`, categories `['Web Series']`
-- `format-retention`: agents `['StructureAgent', 'ConflictAgent']`, categories `['Web Series']`
-- `format-hooks`: agents `['ConceptAgent']`, categories `['Web Series']`
-
-### Files Modified
-
-1. `src/lib/reportNavigation.ts` -- Add 3 nav items
-2. `src/App.tsx` -- Wire 3 sub-routes under format
-3. `src/lib/fullReportPdfGenerator.ts` -- Add PDF export mappings
-
-Ensure all touchpoints across the system are addressed and the report pages are powered by real data produced by the pipeline. 
+## Files Modified
+1. `src/lib/fullReportPdfGenerator.ts` -- Fix agent name mapping
+2. `src/pages/report/WebSeriesAnalysis.tsx` -- Standardize to report pattern, keep episode length and failure pattern cards
+3. `src/pages/report/RetentionAnalysis.tsx` -- Standardize to report pattern
+4. `src/pages/report/HooksAnalysis.tsx` -- Standardize to report pattern
