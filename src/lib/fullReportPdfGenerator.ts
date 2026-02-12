@@ -23,6 +23,17 @@ function toDisplayString(item: unknown): string {
 
 // ============= CONSTANTS =============
 
+// Internal categories/parameters hidden from user-facing exports
+const HIDDEN_CATEGORIES = new Set(['System']);
+const INTERNAL_PARAMETER_NAMES = new Set([
+  'arbitration_required', 'blend_complexity', 'classification_confidence',
+  'final_confidence', 'input_completeness', 'normalization_quality',
+  'type_clarity', 'weight_adjustments', 'confidence_shift',
+  'decision_transparency', 'evolution_detected', 'improvements_detected',
+  'reclassification_recommended', 'regressions_detected', 'trace_completeness',
+  'readiness_score',
+]);
+
 const COLORS = {
   primary: [99, 102, 241] as [number, number, number],
   primaryLight: [224, 231, 255] as [number, number, number],
@@ -738,7 +749,8 @@ function renderExecutiveSummary(
     doc.text('Category Breakdown', MARGINS.left, y);
     y += 8;
 
-    y = renderDiagnosisOverview(doc, y, Object.keys(data.categoryScores), data.categoryScores, pageNum, sectionName);
+    const filteredCategories = Object.keys(data.categoryScores).filter(c => !HIDDEN_CATEGORIES.has(c));
+    y = renderDiagnosisOverview(doc, y, filteredCategories, data.categoryScores, pageNum, sectionName);
     y += 6;
   }
 
@@ -819,7 +831,9 @@ function renderCompleteScorecardAppendix(
   const sectionName = 'Complete Scorecard';
   y = renderSectionTitle(doc, y, 'Complete Scorecard', 'All parameters with scores');
 
-  const params = [...(data.parameterScores || [])].sort((a, b) => b.score - a.score);
+  const params = [...(data.parameterScores || [])]
+    .filter(p => !HIDDEN_CATEGORIES.has(p.category) && !INTERNAL_PARAMETER_NAMES.has(p.parameterName))
+    .sort((a, b) => b.score - a.score);
   if (params.length === 0) return y;
 
   const tableData = params.map(p => [

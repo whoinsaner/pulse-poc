@@ -25,7 +25,7 @@ interface ExportDialogProps {
   scriptType?: ScriptType;
 }
 
-type ExportFormat = 'json' | 'summary' | 'full' | 'pdf';
+type ExportFormat = 'json' | 'summary' | 'pdf';
 
 export function ExportDialog({ reportId, reportTitle, reportData, activeLens = 'studio_executive', scriptType = 'feature' }: ExportDialogProps) {
   const { toast } = useToast();
@@ -45,13 +45,7 @@ export function ExportDialog({ reportId, reportTitle, reportData, activeLens = '
       format: 'summary' as ExportFormat,
       icon: FileText,
       title: 'Executive Summary',
-      description: 'Concise overview with key scores and insights',
-    },
-    {
-      format: 'full' as ExportFormat,
-      icon: FileText,
-      title: 'Full Report',
-      description: 'Comprehensive analysis with all parameters and evidence',
+      description: 'Concise overview with key scores and insights (PDF)',
     },
     {
       format: 'json' as ExportFormat,
@@ -63,7 +57,7 @@ export function ExportDialog({ reportId, reportTitle, reportData, activeLens = '
 
   const getFilename = (format: ExportFormat) => {
     const base = customFilename.trim() || sanitizeFilename(reportTitle);
-    const extension = format === 'json' ? 'json' : format === 'pdf' ? 'pdf' : 'md';
+    const extension = format === 'json' ? 'json' : 'pdf';
     return `${base}_${format}.${extension}`;
   };
 
@@ -95,37 +89,98 @@ export function ExportDialog({ reportId, reportTitle, reportData, activeLens = '
       if (format === 'json') {
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
         downloadBlob(blob, filename);
-      } else if (format === 'pdf') {
-        // Fallback PDF from edge function
-        if (data.pdf) {
-          const binaryString = atob(data.pdf);
-          const bytes = new Uint8Array(binaryString.length);
-          for (let i = 0; i < binaryString.length; i++) {
-            bytes[i] = binaryString.charCodeAt(i);
-          }
-          const blob = new Blob([bytes], { type: 'application/pdf' });
-          downloadBlob(blob, filename);
-        } else {
-          // Convert markdown to a simple text-based PDF instead of raw .md
-          const { jsPDF } = await import('jspdf');
-          const fallbackDoc = new jsPDF({ unit: 'mm', format: 'a4' });
-          const lines = fallbackDoc.splitTextToSize(data.content || '', 170);
-          let fy = 20;
-          for (const line of lines) {
-            if (fy > 275) { fallbackDoc.addPage(); fy = 20; }
-            fallbackDoc.text(line, 20, fy);
-            fy += 5;
-          }
-          fallbackDoc.save(filename.replace(/\.\w+$/, '.pdf'));
-        }
       } else {
-        const blob = new Blob([data.content], { type: 'text/markdown' });
-        downloadBlob(blob, filename);
+        // Summary format — convert markdown to PDF
+        const { jsPDF } = await import('jspdf');
+        const summaryDoc = new jsPDF({ unit: 'mm', format: 'a4' });
+        const content = data.content || '';
+        const pw = summaryDoc.internal.pageSize.getWidth();
+
+        // Title
+        summaryDoc.setFontSize(18);
+        summaryDoc.setFont('helvetica', 'bold');
+        summaryDoc.text(data.title || reportTitle, 20, 25);
+        summaryDoc.setDrawColor(99, 102, 241);
+        summaryDoc.setLineWidth(0.8);
+        summaryDoc.line(20, 30, 60, 30);
+
+        // Body
+        summaryDoc.setFontSize(10);
+        summaryDoc.setFont('helvetica', 'normal');
+        let sy = 38;
+        const contentLines = content.split('\n');
+        for (const rawLine of contentLines) {
+          const trimmed = rawLine.trim();
+          if (!trimmed) { sy += 4; continue; }
+
+          // Handle markdown headers
+          if (trimmed.startsWith('####')) {
+            sy += 3;
+            summaryDoc.setFontSize(11);
+            summaryDoc.setFont('helvetica', 'bold');
+            const headerText = trimmed.replace(/^#{1,4}\s*/, '').replace(/\*\*/g, '');
+            if (sy > 275) { summaryDoc.addPage(); sy = 20; }
+            summaryDoc.text(headerText, 20, sy);
+            sy += 6;
+            summaryDoc.setFontSize(10);
+            summaryDoc.setFont('helvetica', 'normal');
+            continue;
+          }
+          if (trimmed.startsWith('###')) {
+            sy += 4;
+            summaryDoc.setFontSize(12);
+            summaryDoc.setFont('helvetica', 'bold');
+            const headerText = trimmed.replace(/^#{1,3}\s*/, '').replace(/\*\*/g, '');
+            if (sy > 275) { summaryDoc.addPage(); sy = 20; }
+            summaryDoc.text(headerText, 20, sy);
+            sy += 7;
+            summaryDoc.setFontSize(10);
+            summaryDoc.setFont('helvetica', 'normal');
+            continue;
+          }
+          if (trimmed.startsWith('##')) {
+            sy += 5;
+            summaryDoc.setFontSize(14);
+            summaryDoc.setFont('helvetica', 'bold');
+            const headerText = trimmed.replace(/^#{1,2}\s*/, '').replace(/\*\*/g, '');
+            if (sy > 275) { summaryDoc.addPage(); sy = 20; }
+            summaryDoc.text(headerText, 20, sy);
+            sy += 8;
+            summaryDoc.setFontSize(10);
+            summaryDoc.setFont('helvetica', 'normal');
+            continue;
+          }
+          if (trimmed.startsWith('#')) {
+            continue; // Skip top-level title (already rendered above)
+          }
+          if (trimmed === '---') { sy += 3; continue; }
+
+          // Strip markdown bold markers
+          const cleanLine = trimmed.replace(/\*\*/g, '');
+          const wrapped = summaryDoc.splitTextToSize(cleanLine, pw - 40);
+          for (const wl of wrapped) {
+            if (sy > 275) { summaryDoc.addPage(); sy = 20; }
+            summaryDoc.text(wl, 20, sy);
+            sy += 5;
+          }
+        }
+
+        // Footer
+        const ph = summaryDoc.internal.pageSize.getHeight();
+        summaryDoc.setFontSize(8);
+        summaryDoc.setTextColor(150);
+        summaryDoc.text(
+          `Generated ${new Date().toLocaleDateString()} - Pulse AI Script Analysis`,
+          pw / 2, ph - 10, { align: 'center' }
+        );
+
+        const pdfFilename = filename.endsWith('.pdf') ? filename : filename.replace(/\.\w+$/, '.pdf');
+        summaryDoc.save(pdfFilename);
       }
 
       toast({
         title: 'Export Complete',
-        description: `Your ${format === 'summary' ? 'executive summary' : format === 'full' ? 'full report' : format === 'pdf' ? 'PDF report' : 'data'} has been downloaded.`,
+        description: `Your ${format === 'summary' ? 'executive summary PDF' : format === 'pdf' ? 'full PDF report' : 'data'} has been downloaded.`,
       });
       
       setOpen(false);
