@@ -1,140 +1,91 @@
 
-# Standardize Report Layout Across All Script Types and Samples
+# Fix Comic Agent Parameter Alignment
 
-## Problem
+## Root Cause
 
-The "Vaddi Kaasula Vaada" report uses the USAF consolidated layout with a **left sidebar navigation** (ReportSidebar), **CommandHeader**, and diagnosis-first page structure. However, the four sample reports use inconsistent patterns:
+The 4 comic agents in the edge function (`analyze-script`) are configured to score parameters that **don't exist** in the `parameters` database table. This means:
 
-| Report | Layout | Navigation | Status |
-|--------|--------|-----------|--------|
-| Live reports (`/report/:runId`) | Sidebar + CommandHeader | USAF nav groups | Standard (the target) |
-| Sample Feature Film | ActionRail (right) + SampleCommandHeader (tabs) | USAF nav groups | Needs sidebar conversion |
-| Sample Comic | ActionRail (right) + SampleCommandHeader (tabs) | USAF nav groups | Needs sidebar conversion |
-| Sample Web Series | WebSeriesActionRail + WebSeriesCommandHeader | USAF nav groups | Needs sidebar conversion |
-| Sample Micro Drama | ActionRail + SampleCommandHeader | **Legacy routes** (old pages) | Needs full overhaul |
+- The agents produce `agentContent` (narrative analysis) correctly -- this works fine
+- But the parameter **scores** are never stored because the parameter names don't match any rows in the `parameters` table
 
-Additionally, the **micro-drama sample** still uses legacy routes (`/concept`, `/plot`, `/protagonist`, etc.) pointing to old page components instead of the consolidated USAF pages.
+### The Mismatch
 
-## Solution
+| Agent | Edge Function Parameters (scored) | Database Parameters (actual) |
+|-------|----------------------------------|------------------------------|
+| PanelFlowAgent | `sequential_storytelling_integrity`, `panel_economy`, `page_architecture` | `panel_composition`, `page_layout`, `action_clarity`, `visual_storytelling` |
+| LetteringBalloonAgent | `dialogue_load`, `balloon_engineering`, `reading_flow` | `balloon_efficiency`, `caption_voice`, `sound_effects` |
+| PageTurnImpactAgent | `emotional_payload_per_page`, `structural_modularity`, `page_turn_reveals` | `cliffhangers`, `issue_structure`, `panel_to_panel_flow` |
+| ArtScriptSynergyAgent | `art_writing_synergy`, `character_visual_identity`, `collaboration_readiness`, `production_pipeline_awareness`, `market_publishing_alignment` | `artist_guidance`, `reference_clarity`, `style_consistency` |
 
-### Part 1: Create a Unified Sample Report Layout
+The database has 13 comic parameters across 4 categories (`Comic Visuals`, `Comic Dialogue`, `Comic Pacing`, `Comic Art Direction`), but the agents reference 14 completely different parameter names that don't exist in the table.
 
-Replace the 4 separate sample layout files with a single `UnifiedSampleReportLayout` component that mirrors the live `ReportLayout` structure:
+## Fix Strategy
 
-- **Left sidebar** using `ReportSidebar` (or a sample-specific variant that doesn't need `runId`)
-- **CommandHeader** with a "Sample" banner
-- Dynamic navigation via `getUSAFNavGroups(scriptType)` -- already working for most
-- Passes the same `ReportContextValue` shape via `Outlet context`
+**Option A (Recommended):** Update the agent configurations and edge function hardcoded definitions to use the parameter names that already exist in the `parameters` table. This aligns agents with the database schema.
 
-**Files to create:**
-- `src/components/report/SampleReportSidebar.tsx` -- A sidebar variant for sample reports that accepts `basePath` instead of `runId`
+**Option B:** Add the 14 missing parameters to the database and remove the 13 unused ones. This is riskier because it changes the scoring schema.
 
-**Files to modify:**
-- `src/pages/SampleReport.tsx` -- Replace ActionRail layout with sidebar layout
-- `src/pages/SampleComicReport.tsx` -- Replace ActionRail layout with sidebar layout
-- `src/pages/SampleWebSeriesReport.tsx` -- Replace WebSeriesActionRail layout with sidebar layout
-- `src/pages/SampleMicroDramaReport.tsx` -- Replace legacy layout with sidebar layout, update context to match standard shape
+Going with **Option A**:
 
-### Part 2: Standardize Micro-Drama Routes
+### Step 1: Update Agent Parameter Mappings in Edge Function
 
-Update `src/App.tsx` to replace the micro-drama sample's legacy routes with the USAF consolidated routes:
+Remap each agent in `supabase/functions/analyze-script/index.ts` to use the correct database parameter names:
 
-**Before (legacy):**
-```
-/sample-micro-drama-report/concept -> ConceptHook
-/sample-micro-drama-report/plot -> PlotAnalysis
-/sample-micro-drama-report/protagonist -> ProtagonistAnalysis
-/sample-micro-drama-report/micro-drama -> MicroDramaAnalysis
-```
+- **PanelFlowAgent**: `panel_composition`, `page_layout`, `visual_storytelling`, `action_clarity`
+  - Category: Comic Visuals
+- **LetteringBalloonAgent**: `balloon_efficiency`, `caption_voice`, `sound_effects`
+  - Category: Comic Dialogue
+- **PageTurnImpactAgent**: `panel_to_panel_flow`, `cliffhangers`, `issue_structure`
+  - Category: Comic Pacing
+- **ArtScriptSynergyAgent**: `artist_guidance`, `reference_clarity`, `style_consistency`
+  - Category: Comic Art Direction
 
-**After (USAF standard):**
-```
-/sample-micro-drama-report/ -> ReportCover
-/sample-micro-drama-report/story -> StoryDiagnosis
-/sample-micro-drama-report/story/concept -> StoryConceptHook
-/sample-micro-drama-report/characters -> CharacterDiagnosis
-/sample-micro-drama-report/craft -> CraftDiagnosis
-/sample-micro-drama-report/format -> FormatDiagnosis (micro-drama specific)
-/sample-micro-drama-report/commercial -> CommercialDiagnosis
-/sample-micro-drama-report/development -> DevelopmentPriorities
-/sample-micro-drama-report/scorecard -> CompleteScorecard
-/sample-micro-drama-report/narrative -> ReportNarrative
-```
+### Step 2: Update Agent Configurations in Database
 
-Legacy micro-drama routes will redirect to their USAF counterparts.
+Sync the `agent_configurations` table to match:
 
-### Part 3: Add Scene Analysis Route to All Sample Reports
+```sql
+UPDATE agent_configurations 
+SET parameters = ARRAY['panel_composition','page_layout','visual_storytelling','action_clarity']
+WHERE agent_name = 'PanelFlowAgent';
 
-The `narrative` route (Scene Analysis) currently exists for Feature Film and Comic samples but is missing from the navigation config for some types. Ensure all sample reports include the route and the nav item appears correctly.
+UPDATE agent_configurations 
+SET parameters = ARRAY['balloon_efficiency','caption_voice','sound_effects']
+WHERE agent_name = 'LetteringBalloonAgent';
 
-### Part 4: Ensure Navigation Visibility Rules
+UPDATE agent_configurations 
+SET parameters = ARRAY['panel_to_panel_flow','cliffhangers','issue_structure']
+WHERE agent_name = 'PageTurnImpactAgent';
 
-Update `USAF_NAV_GROUPS` in `reportNavigation.ts` to handle micro-drama correctly:
-
-- **Format group**: Already includes `micro_drama` in applicable types -- verify it shows the right FormatDiagnosis content
-- **Series Bible**: Already restricted to episodic types including `micro_drama`
-- **Scene Analysis**: Already added to Craft group with no type restriction (shows for all)
-
-### Part 5: Ensure Correct Context Shape
-
-All report pages consume context via `useOutletContext<ReportContextValue>()`. The context must include:
-- `reportData: ReportData`
-- `activeLens: StakeholderLens`
-- `currentScore: number`
-- `isComic: boolean`
-- `scriptType: ScriptType`
-
-Currently the sample layouts provide slightly different shapes. Standardize all of them to match the live `ReportLayout` context shape.
-
-## Technical Details
-
-### SampleReportSidebar Component
-
-A lightweight adaptation of `ReportSidebar` that:
-- Accepts `basePath` (e.g., `/sample-report`) instead of `runId`
-- Navigates to `basePath + item.path` instead of `/report/${runId}${item.path}`
-- Includes the same score ring, readiness label, and collapsible nav
-- No export dialog or stakeholder lens section (sample-specific)
-
-### Sample Layout Consolidation
-
-Each of the 4 sample layouts will be updated to use the same structure:
-
-```
-<div className="min-h-screen bg-background flex flex-col">
-  <SampleBanner ... />
-  <CommandHeader-like top bar />
-  <div className="flex-1 flex">
-    <SampleReportSidebar ... />
-    <main className="flex-1 overflow-auto">
-      <Outlet context={contextValue} />
-    </main>
-  </div>
-</div>
+UPDATE agent_configurations 
+SET parameters = ARRAY['artist_guidance','reference_clarity','style_consistency']
+WHERE agent_name = 'ArtScriptSynergyAgent';
 ```
 
-### Route Changes in App.tsx
+### Step 3: Update Agent System Prompts
 
-**Micro-drama sample** -- full USAF route replacement (same pattern as other samples):
-- Add: `index -> ReportCover`, `story -> StoryDiagnosis`, all USAF sub-routes
-- Add: `format -> FormatDiagnosis` (for micro-drama format analysis)
-- Add: `narrative -> ReportNarrative`
-- Redirect legacy routes (`/concept`, `/plot`, etc.) to USAF equivalents
+Adjust the system prompts in the edge function to reference the correct parameter names and descriptions so the AI scores them properly.
 
-**All sample reports** -- ensure `narrative` route exists (already present for Feature Film and Comic, needs adding for Web Series and Micro Drama if missing).
+### Step 4: Update Comic Page Components
 
-### Files Changed Summary
+Update the filter logic in the 4 comic page components to match the actual database categories:
+
+- `ComicPanelFlow.tsx`: Filter by `category === 'Comic Visuals'`
+- `ComicLettering.tsx`: Filter by `category === 'Comic Dialogue'`
+- `ComicPageTurns.tsx`: Filter by `category === 'Comic Pacing'`
+- `ComicArtSynergy.tsx`: Filter by `category === 'Comic Art Direction'`
+
+### Step 5: Re-run Moksh Analysis
+
+After deploying the fix, the Moksh analysis needs to be re-run to generate proper parameter scores with the correct names.
+
+## Files Changed
 
 | File | Change |
 |------|--------|
-| `src/components/report/SampleReportSidebar.tsx` | New: sidebar for sample reports |
-| `src/pages/SampleReport.tsx` | Replace ActionRail with SampleReportSidebar |
-| `src/pages/SampleComicReport.tsx` | Replace ActionRail with SampleReportSidebar |
-| `src/pages/SampleWebSeriesReport.tsx` | Replace WebSeriesActionRail with SampleReportSidebar |
-| `src/pages/SampleMicroDramaReport.tsx` | Full overhaul to USAF layout with sidebar |
-| `src/App.tsx` | Micro-drama routes to USAF; ensure narrative route for all samples |
-| `src/lib/reportNavigation.ts` | Add `micro_drama` to Format group if missing; verify all nav items |
-
-### No Pipeline/Agent/Prompt Changes Needed
-
-The report structure is purely a frontend concern. The analysis pipeline, agents, and prompts already produce the same `full_report_data` shape regardless of script type. The USAF pages (StoryDiagnosis, CraftDiagnosis, etc.) already handle all script types by reading from `reportData.parameterScores` and `reportData.agentContent` dynamically.
+| `supabase/functions/analyze-script/index.ts` | Update 4 comic agent parameter arrays and system prompts |
+| `agent_configurations` table (migration) | Sync parameter arrays to match database |
+| `src/pages/report/ComicPanelFlow.tsx` | Fix category filter to `Comic Visuals` |
+| `src/pages/report/ComicLettering.tsx` | Fix category filter to `Comic Dialogue` |
+| `src/pages/report/ComicPageTurns.tsx` | Fix category filter to `Comic Pacing` |
+| `src/pages/report/ComicArtSynergy.tsx` | Fix category filter to `Comic Art Direction` |
