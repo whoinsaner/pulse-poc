@@ -27,6 +27,7 @@ import {
   Monitor,
   Zap,
   Activity,
+  Smartphone,
   LucideIcon
 } from 'lucide-react';
 import { ScriptType } from '@/types/database';
@@ -136,6 +137,7 @@ const USAF_NAV_GROUPS: NavGroup[] = [
       { id: 'format-web-series', label: 'Web Series Deep Dive', icon: Monitor, path: '/format/web-series', applicableTypes: ['web_series'] },
       { id: 'format-retention', label: 'Retention Curves', icon: TrendingUp, path: '/format/retention', applicableTypes: ['web_series'] },
       { id: 'format-hooks', label: 'Hook Efficiency', icon: Zap, path: '/format/hooks', applicableTypes: ['web_series'] },
+      { id: 'format-micro-drama', label: 'Micro Drama Deep Dive', icon: Smartphone, path: '/format/micro-drama', applicableTypes: ['micro_drama'] },
       { id: 'bible', label: 'Series Bible', icon: BookOpen, path: '/bible', requiredCategories: ['World & Logic', 'Character', 'Theme'], applicableTypes: ['web_series', 'pilot', 'episode', 'micro_drama'] },
     ],
   },

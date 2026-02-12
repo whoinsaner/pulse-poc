@@ -89,6 +89,7 @@ const SECTION_AGENT_MAP: Record<string, string[]> = {
   'format-web-series': ['WebSeriesAgent'],
   'format-retention': ['StructureAgent', 'ConflictAgent'],
   'format-hooks': ['ConceptAgent'],
+  'format-micro-drama': ['MicroDramaFormatAgent'],
   'commercial-diagnosis': ['CommercialDiagnosisAgent'],
   'commercial-market': ['MarketAgent'],
   'commercial-production': ['ProductionAgent'],
@@ -114,6 +115,7 @@ const SECTION_CATEGORY_MAP: Record<string, string[]> = {
   'format-web-series': ['Web Series'],
   'format-retention': ['Web Series'],
   'format-hooks': ['Web Series'],
+  'format-micro-drama': ['Micro Drama'],
   'commercial-market': ['Market'],
   'commercial-production': ['Execution'],
 };
@@ -1161,11 +1163,18 @@ export async function generateFullReportPDF(
       y = renderSection(doc, y, sec.id, sec.title, sec.subtitle, data, pageNum);
     }
   } else if (scriptType === 'micro_drama') {
-    renderPartDivider(doc, pageNum, 'PART IV', 'FORMAT ANALYSIS', toc);
+    renderPartDivider(doc, pageNum, 'PART IV', 'MICRO DRAMA FORMAT', toc);
 
-    y = newPage(doc, pageNum, 'Format Diagnosis');
-    toc.push({ title: 'Format Diagnosis', page: pageNum.value, level: 1 });
-    y = renderSection(doc, y, 'format', 'Format Diagnosis', 'Format-specific analysis', data, pageNum);
+    const microDramaSections: SectionDef[] = [
+      { id: 'format', title: 'Format Diagnosis', subtitle: 'Micro drama format overview' },
+      { id: 'format-micro-drama', title: 'Micro Drama Deep Dive', subtitle: 'Hook velocity, cliff density, and scroll-stop optimization' },
+    ];
+
+    for (const sec of microDramaSections) {
+      y = newPage(doc, pageNum, sec.title);
+      toc.push({ title: sec.title, page: pageNum.value, level: 1 });
+      y = renderSection(doc, y, sec.id, sec.title, sec.subtitle, data, pageNum);
+    }
   }
 
   // === PART V: PRODUCTION & MARKET ===
