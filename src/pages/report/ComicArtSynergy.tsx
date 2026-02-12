@@ -17,12 +17,7 @@ export default function ComicArtSynergy() {
   const parameters = useMemo(() => {
     const params = context?.reportData?.parameterScores || [];
     return params
-      .filter(p =>
-        p.category === 'Comic Collaboration' ||
-        p.parameterName.includes('synergy') ||
-        p.parameterName.includes('collaboration') ||
-        p.parameterName.includes('art_direction')
-      )
+      .filter(p => p.category === 'Comic Art Direction')
       .map(p => ({
         parameterName: p.parameterName,
         displayName: p.displayName,

@@ -17,12 +17,7 @@ export default function ComicLettering() {
   const parameters = useMemo(() => {
     const params = context?.reportData?.parameterScores || [];
     return params
-      .filter(p =>
-        p.category === 'Comic Dialogue' ||
-        p.parameterName.includes('lettering') ||
-        p.parameterName.includes('balloon') ||
-        p.parameterName.includes('word_economy')
-      )
+      .filter(p => p.category === 'Comic Dialogue')
       .map(p => ({
         parameterName: p.parameterName,
         displayName: p.displayName,

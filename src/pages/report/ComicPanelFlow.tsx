@@ -17,12 +17,7 @@ export default function ComicPanelFlow() {
   const parameters = useMemo(() => {
     const params = context?.reportData?.parameterScores || [];
     return params
-      .filter(p =>
-        p.category === 'Comic Visuals' ||
-        p.parameterName.includes('panel') ||
-        p.parameterName.includes('sequential') ||
-        p.parameterName.includes('page_layout')
-      )
+      .filter(p => p.category === 'Comic Visuals')
       .map(p => ({
         parameterName: p.parameterName,
         displayName: p.displayName,
