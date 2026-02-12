@@ -1,93 +1,100 @@
 
 
-# Add Missing Comic Parameters
+# Add Metadata Pills to Report Cover
 
-## Summary
+## What Changes
 
-6 of the old parameter concepts represent genuinely distinct analysis dimensions not covered by the current 13 comic parameters. Adding them brings comic coverage to 19 parameters across the 4 existing categories.
+Add a row of styled pill badges below the script title on the Report Cover page showing: **Script Type**, **Pages**, **Scenes**, **Characters**, **Genre**, **Subgenre**, and **Theme**.
 
-## New Parameters to Add
+Currently, only "Comic . 90 pages" appears as plain text. This will be replaced with distinct, visually scannable pills.
 
-### PanelFlowAgent (Comic Visuals) -- add 1
+## Data Availability
 
-| Name | Display Name | Description |
-|------|-------------|-------------|
-| `panel_economy` | Panel Economy | Efficient use of panels with no wasted or redundant panels diluting impact |
-
-### LetteringBalloonAgent (Comic Dialogue) -- add 3
-
-| Name | Display Name | Description |
-|------|-------------|-------------|
-| `dialogue_load` | Dialogue Load | Appropriate dialogue density per page avoiding overcrowded panels |
-| `balloon_engineering` | Balloon Engineering | Strategic balloon placement, sizing, and tail direction for readability |
-| `reading_flow` | Reading Flow | Natural eye-path guiding readers within and across panels |
-
-### PageTurnImpactAgent (Comic Pacing) -- add 1
-
-| Name | Display Name | Description |
-|------|-------------|-------------|
-| `emotional_payload_per_page` | Emotional Payload | Emotional impact density and weight distribution across pages |
-
-### ArtScriptSynergyAgent (Comic Art Direction) -- add 1
-
-| Name | Display Name | Description |
-|------|-------------|-------------|
-| `character_visual_identity` | Character Visual Identity | Distinct, memorable visual cues scripted for each character |
-
-## Excluded (already covered elsewhere)
-
-- `production_pipeline_awareness` -- too niche / production-ops territory
-- `market_publishing_alignment` -- covered by core MarketAgent (platform_fit, commercial_viability)
-- `sequential_storytelling_integrity` -- covered by visual_storytelling
-- `page_architecture` -- covered by page_layout
-- `page_turn_reveals` -- covered by cliffhangers
-- `structural_modularity` -- covered by issue_structure
-- `art_writing_synergy` -- covered by artist_guidance
-- `collaboration_readiness` -- overlaps artist_guidance; borderline, excluded to avoid bloat
+| Field | Currently Available? | Source |
+|-------|---------------------|--------|
+| Script Type | Yes | `scriptMetadata.scriptType` |
+| Pages | Yes | `scriptMetadata.pageCount` |
+| Scenes | Yes | `reportData.scenes.length` |
+| Characters | Yes | `reportData.characters.length` |
+| Genre | Yes | `scriptMetadata.genre` (from `scripts.genre`) |
+| Subgenre | No -- needs new DB column + extraction | New |
+| Theme | No -- needs new DB column + extraction | New |
 
 ## Implementation Steps
 
-### Step 1: Insert new parameters into database
+### Step 1: Database Migration -- Add columns to `scripts` table
 
-Insert 6 new rows into the `parameters` table via migration (since RLS blocks inserts):
+Add `subgenre` (text, nullable) and `theme` (text, nullable) columns to the `scripts` table so they can be stored after parsing.
 
-```sql
-INSERT INTO public.parameters (name, display_name, description, category, agent_source, default_weight)
-VALUES
-  ('panel_economy', 'Panel Economy', 'Efficient use of panels with no wasted or redundant panels diluting impact', 'Comic Visuals', 'PanelFlowAgent', 1.0),
-  ('dialogue_load', 'Dialogue Load', 'Appropriate dialogue density per page avoiding overcrowded panels', 'Comic Dialogue', 'LetteringBalloonAgent', 1.0),
-  ('balloon_engineering', 'Balloon Engineering', 'Strategic balloon placement, sizing, and tail direction for readability', 'Comic Dialogue', 'LetteringBalloonAgent', 1.0),
-  ('reading_flow', 'Reading Flow', 'Natural eye-path guiding readers within and across panels', 'Comic Dialogue', 'LetteringBalloonAgent', 1.0),
-  ('emotional_payload_per_page', 'Emotional Payload', 'Emotional impact density and weight distribution across pages', 'Comic Pacing', 'PageTurnImpactAgent', 1.0),
-  ('character_visual_identity', 'Character Visual Identity', 'Distinct, memorable visual cues scripted for each character', 'Comic Art Direction', 'ArtScriptSynergyAgent', 1.0);
+### Step 2: Update `scriptMetadata` in ReportData type
+
+Add `subgenre`, `theme`, `sceneCount`, and `characterCount` to the `scriptMetadata` interface in `src/types/database.ts`.
+
+### Step 3: Update the parser to extract genre, subgenre, and theme
+
+Modify `supabase/functions/script-parser-stream/index.ts` to add a lightweight AI classification step during the finalize stage. After scenes and characters are extracted, send the raw text (first ~3000 chars) to AI to identify:
+- Genre (if not already set on the script)
+- Subgenre
+- Primary theme
+
+Then update the `scripts` table with these values alongside the existing `page_count` update.
+
+### Step 4: Update the analyze-script function
+
+In `supabase/functions/analyze-script/index.ts`, include the new fields when building `scriptMetadata` in the report data object (~line 3451):
+- `subgenre: script.subgenre`
+- `theme: script.theme`
+- `sceneCount: scenes.length`
+- `characterCount: characters.length`
+
+### Step 5: Update ReportCover UI with pills
+
+Modify `src/pages/report/ReportCover.tsx` to replace the current plain-text metadata line (lines 130-144) with styled Badge pills:
+
+```text
+[Comic]  [90 pages]  [42 scenes]  [12 characters]  [Sci-Fi]  [Dystopian]  [Redemption]
 ```
 
-### Step 2: Update agent_configurations parameters arrays
+Each pill will use the existing `Badge` component with `variant="secondary"` styling, displayed in a flex-wrap row below the title.
 
-Add the new parameter names to each agent's `parameters` array in the `agent_configurations` table.
+### Step 6: Update ReportHero (secondary view)
 
-### Step 3: Update edge function agent definitions
+Also update `src/components/report/ReportHero.tsx` to include the new fields in its quick stats section for consistency.
 
-In `supabase/functions/analyze-script/index.ts`, add the new parameters to each agent's `parameters` array and update the system prompts to instruct the AI to score them.
+### Step 7: Deploy edge functions
 
-### Step 4: Update scriptFramework.ts
+Deploy both `script-parser-stream` and `analyze-script` after updates.
 
-Add the 6 new parameters to the framework definition so the sync mechanism recognizes them.
+## Technical Details
 
-### Step 5: Re-run analysis
+### AI Classification Prompt (Parser)
 
-After deployment, re-run the Moksh comic analysis to generate scores for all 19 parameters.
+A single lightweight AI call during the finalize stage extracts genre/subgenre/theme:
 
-## Files Changed
+```
+Analyze this script excerpt and return JSON:
+{"genre": "...", "subgenre": "...", "theme": "..."}
+- genre: Primary genre (e.g., Action, Drama, Comedy, Sci-Fi, Horror)
+- subgenre: More specific classification (e.g., Dystopian, Coming-of-Age, Noir)  
+- theme: Central thematic concern in 1-3 words (e.g., Redemption, Identity, Power)
+```
+
+This uses `google/gemini-2.5-flash-lite` for speed and low cost.
+
+### Files Changed
 
 | File | Change |
 |------|--------|
-| New migration SQL | Insert 6 parameter rows |
-| `agent_configurations` table | Update parameter arrays for 4 agents |
-| `supabase/functions/analyze-script/index.ts` | Add 6 params to agent definitions and prompts |
-| `src/lib/scriptFramework.ts` | Add 6 new parameter definitions |
+| New migration SQL | Add `subgenre`, `theme` columns to `scripts` |
+| `src/types/database.ts` | Add fields to `scriptMetadata` interface |
+| `supabase/functions/script-parser-stream/index.ts` | Add AI classification step at finalize |
+| `supabase/functions/analyze-script/index.ts` | Include new fields in reportData |
+| `src/pages/report/ReportCover.tsx` | Replace text metadata with pill badges |
+| `src/components/report/ReportHero.tsx` | Add new fields to quick stats |
 
-## Result
+### Backward Compatibility
 
-Comic analysis grows from 13 to 19 parameters, covering all meaningful dimensions from both the original and revised parameter sets. No frontend page changes needed -- the pages already filter by category and will automatically display the new parameters.
+- New columns are nullable, so existing scripts won't break
+- Pills gracefully hide when data is missing (conditional rendering)
+- Re-parsing existing scripts will populate the new fields
 
