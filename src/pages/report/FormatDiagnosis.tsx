@@ -202,7 +202,7 @@ export default function FormatDiagnosis() {
     <div className="space-y-8">
       {/* Section Header */}
       <SectionHeader
-        title={`${formatCategory} Diagnosis`}
+        title="Format Diagnosis"
         subtitle={isWebSeries 
           ? 'Hook efficiency, retention design, and platform compatibility'
           : 'Velocity, cliff density, and scroll-stop optimization'
