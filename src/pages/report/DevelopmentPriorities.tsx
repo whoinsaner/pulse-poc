@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useOutletContext, Link } from 'react-router-dom';
 import { ReportData, StakeholderLens } from '@/types/database';
 import { Card } from '@/components/ui/card';
@@ -62,6 +62,41 @@ const CATEGORY_TO_SECTION: Record<string, { label: string; path: string }> = {
 
 export default function DevelopmentPriorities() {
   const context = useOutletContext<ReportContextValue>();
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
+
+  const toggleSection = (key: string) => {
+    setExpandedSections(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  // Categorize all parameters by priority
+  const priorities = useMemo(() => {
+    if (!context) return { criticalCore: [], criticalStandard: [], developCore: [], developStandard: [], polish: [] };
+    const params = context.reportData.parameterScores || [];
+    
+    const criticalCore = params.filter(p => {
+      const weight = 1.0;
+      return p.score < 40 && weight >= 1.2;
+    });
+    
+    const criticalStandard = params.filter(p => {
+      const weight = 1.0;
+      return p.score < 40 && weight < 1.2;
+    });
+    
+    const developCore = params.filter(p => {
+      return p.score >= 40 && p.score < 70 && p.upsideImpact === 'High';
+    });
+    
+    const developStandard = params.filter(p => {
+      return p.score >= 40 && p.score < 70 && p.upsideImpact !== 'High';
+    });
+    
+    const polish = params.filter(p => {
+      return p.score >= 70 && p.score < 85;
+    });
+
+    return { criticalCore, criticalStandard, developCore, developStandard, polish };
+  }, [context]);
   
   if (!context) {
     return <div className="text-center py-12 text-muted-foreground">Loading...</div>;
@@ -69,49 +104,7 @@ export default function DevelopmentPriorities() {
 
   const { reportData, currentScore } = context;
   const decision = getDecisionSignal(currentScore);
-
-  // Get base path
   const basePath = window.location.pathname.split('/development')[0];
-
-  // Categorize all parameters by priority
-  const priorities = useMemo(() => {
-    const params = reportData.parameterScores || [];
-    
-    // Priority 1: Broken core parameters (score < 40, weight >= 1.2)
-    const criticalCore = params.filter(p => {
-      const weight = 1.0; // Would come from lens weights
-      return p.score < 40 && weight >= 1.2;
-    });
-    
-    // Priority 2: Broken standard parameters (score < 40, weight < 1.2)
-    const criticalStandard = params.filter(p => {
-      const weight = 1.0;
-      return p.score < 40 && weight < 1.2;
-    });
-    
-    // Priority 3: Underdeveloped core parameters (40-70, high impact)
-    const developCore = params.filter(p => {
-      return p.score >= 40 && p.score < 70 && p.upsideImpact === 'High';
-    });
-    
-    // Priority 4: Underdeveloped standard (40-70, medium/low impact)
-    const developStandard = params.filter(p => {
-      return p.score >= 40 && p.score < 70 && p.upsideImpact !== 'High';
-    });
-    
-    // Priority 5: Polish items (70+, but not excellent)
-    const polish = params.filter(p => {
-      return p.score >= 70 && p.score < 85;
-    });
-
-    return {
-      criticalCore,
-      criticalStandard,
-      developCore,
-      developStandard,
-      polish,
-    };
-  }, [reportData.parameterScores]);
 
   // All broken items combined
   const allBroken = [...priorities.criticalCore, ...priorities.criticalStandard];
@@ -178,7 +171,7 @@ export default function DevelopmentPriorities() {
           </div>
           
           <div className="space-y-3">
-            {allUnderdeveloped.slice(0, 6).map((param) => (
+            {allUnderdeveloped.slice(0, expandedSections['underdeveloped'] ? undefined : 6).map((param) => (
               <PriorityItem 
                 key={param.parameterName}
                 param={param}
@@ -187,9 +180,14 @@ export default function DevelopmentPriorities() {
               />
             ))}
             {allUnderdeveloped.length > 6 && (
-              <p className="text-sm text-muted-foreground pl-4">
-                +{allUnderdeveloped.length - 6} more items
-              </p>
+              <button
+                onClick={() => toggleSection('underdeveloped')}
+                className="text-sm text-primary hover:text-primary/80 font-medium pl-4 cursor-pointer transition-colors"
+              >
+                {expandedSections['underdeveloped'] 
+                  ? 'Show less' 
+                  : `+${allUnderdeveloped.length - 6} more items`}
+              </button>
             )}
           </div>
         </div>
@@ -205,7 +203,7 @@ export default function DevelopmentPriorities() {
           </div>
           
           <div className="grid md:grid-cols-2 gap-3">
-            {priorities.polish.slice(0, 6).map((param) => (
+            {priorities.polish.slice(0, expandedSections['polish'] ? undefined : 6).map((param) => (
               <Card key={param.parameterName} className="p-3 bg-chart-3/5 border-chart-3/20">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">{param.displayName}</span>
@@ -217,6 +215,16 @@ export default function DevelopmentPriorities() {
               </Card>
             ))}
           </div>
+          {priorities.polish.length > 6 && (
+            <button
+              onClick={() => toggleSection('polish')}
+              className="text-sm text-primary hover:text-primary/80 font-medium pl-4 cursor-pointer transition-colors"
+            >
+              {expandedSections['polish'] 
+                ? 'Show less' 
+                : `+${priorities.polish.length - 6} more items`}
+            </button>
+          )}
         </div>
       )}
 
