@@ -508,7 +508,13 @@ export default function ModelConfiguration() {
               </div>
             </CardHeader>
             <CardContent>
-              <ScrollArea className="h-[500px] pr-4">
+             <ScrollArea className="h-[500px] pr-4">
+                {/* Column Headers */}
+                <div className="flex items-center gap-4 px-3 pb-2 mb-1 border-b border-border text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  <div className="flex-1 min-w-0">Agent</div>
+                  <div className="w-48 text-center">Model</div>
+                  <div className="w-20 text-center" title="Controls randomness: 0 = deterministic, 2 = creative">Temp</div>
+                </div>
                 <div className="space-y-3">
                   {Object.entries(editedMappings)
                     .sort(([a], [b]) => {
