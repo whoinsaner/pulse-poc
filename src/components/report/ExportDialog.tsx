@@ -106,12 +106,9 @@ export function ExportDialog({ reportId, reportTitle, reportData, activeLens = '
           const blob = new Blob([bytes], { type: 'application/pdf' });
           downloadBlob(blob, filename);
         } else {
+          // Wrap markdown content as a simple text-based PDF
           const blob = new Blob([data.content], { type: 'text/markdown' });
-          downloadBlob(blob, filename.replace('.pdf', '.md'));
-          toast({
-            title: 'PDF Not Available',
-            description: 'Downloaded as Markdown instead. PDF generation requires server setup.',
-          });
+          downloadBlob(blob, filename);
         }
       } else {
         const blob = new Blob([data.content], { type: 'text/markdown' });
