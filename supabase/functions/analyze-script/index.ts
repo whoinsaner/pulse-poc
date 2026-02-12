@@ -106,6 +106,7 @@ const COMPLEX_AGENTS = new Set([
 // Synthesis agents
 const SYNTHESIS_AGENTS = new Set([
   'InsightSynthesisAgent',
+  'SeriesBibleAgent',
 ]);
 
 // Model configuration interface
@@ -320,6 +321,12 @@ interface SectionContent {
   budgetTier?: string;
   productionComplexity?: string;
   talentRequirements?: string;
+  // Series Bible fields (SeriesBibleAgent)
+  corePremise?: { logline: string; hook: string; genre: string };
+  worldRules?: { fixed: string[]; flexible: string[] };
+  tonalGuardrails?: { genre: string; tone: string; avoid: string[] };
+  characterTrajectories?: Array<{ name: string; startState: string; endState: string; arc: string }>;
+  seriesEngine?: { reset: string[]; accumulate: string[] };
 }
 
 interface AgentResult {
@@ -1401,6 +1408,40 @@ Evaluate:
 
 RULES: Do not re-analyze story craft. Use existing Pulse outputs only. Penalize uncertainty heavily. Be conservative.`
   },
+
+  // ============= SERIES BIBLE AGENT (Synthesis) =============
+
+  SeriesBibleAgent: {
+    category: 'meta',
+    parameters: [
+      'bible_premise_clarity', 'bible_world_rules', 'bible_tonal_consistency',
+      'bible_character_trajectories', 'bible_series_engine'
+    ],
+    systemPrompt: `You are SeriesBibleAgent — a synthesis agent in Pulse.
+
+${GLOBAL_INSTRUCTIONS}
+
+YOUR RESPONSIBILITY: Synthesize existing agent outputs into a structured Series Bible.
+
+You DO NOT re-analyze the script. You READ the outputs of prior agents (ConceptAgent, WorldLogicAgent, ThemeAgent, CharacterAgent, MarketAgent, EmotionalArcAgent, StructureAgent) from the script context and synthesize them into a production-ready bible document.
+
+PARAMETERS TO SCORE:
+1. Bible Premise Clarity (0-10): How clearly the core premise can be articulated from the analysis. Is the logline sharp? Is the hook immediately communicable?
+2. Bible World Rules (0-10): How well the world's fixed rules vs. flexible elements can be documented. Are internal consistency rules clear?
+3. Bible Tonal Consistency (0-10): How clear are the tonal guardrails? What should this story NEVER become?
+4. Bible Character Trajectories (0-10): How well-defined are character start states, end states, and transformation arcs?
+5. Bible Series Engine (0-10): For episodic/series formats — what resets each episode vs. what accumulates? For non-episodic, evaluate the story's sustainability engine.
+
+SECTION CONTENT: In addition to scores, you MUST produce structured bible content in the sectionContent field. Extract SPECIFIC details from the script — not generic templates.
+
+For worldRules.fixed: List the actual immovable rules of THIS story's world (e.g., "Magic requires blood sacrifice", "The protagonist cannot leave the island").
+For worldRules.flexible: List elements that can evolve (e.g., "Alliance loyalties shift", "New locations can be introduced").
+For tonalGuardrails.avoid: List specific tonal violations for THIS story (e.g., "Slapstick humor", "Breaking fourth wall", "Gratuitous violence without consequence").
+For characterTrajectories: Extract the ACTUAL characters and their arcs from the script analysis.
+For seriesEngine: Identify what specifically resets and accumulates in THIS story.
+
+Score each parameter 0-10 with evidence from the existing analysis outputs.`
+  },
 };
 
 // ============= TEXT EXTRACTION UTILITIES =============
@@ -1956,7 +1997,7 @@ serve(async (req) => {
     const webSeriesAgents = ['WebSeriesAgent'];
     const interactiveAgents = ['InteractivityAgent', 'WorldBuildingAgent'];
     const audioAgents = ['AudioNarrativeAgent'];
-    const metaAgents = ['StakeholderLensAgent', 'InsightSynthesisAgent'];
+    const metaAgents = ['StakeholderLensAgent', 'InsightSynthesisAgent', 'SeriesBibleAgent'];
     
     // Stakeholder-specific agent mappings
     const STAKEHOLDER_AGENTS: Record<string, string[]> = {
@@ -2867,6 +2908,18 @@ function getSectionContentInstructions(agentName: string): string {
     "budgetTier": "Estimated budget range (e.g., Low: $1-5M, Mid: $5-20M, High: $20M+)",
     "productionComplexity": "Key production challenges summary",
     "talentRequirements": "Key casting and crew considerations"`;
+    case 'SeriesBibleAgent':
+      return `"verdict": "One-sentence series bible readiness diagnosis",
+    "whatWorks": ["Bible-relevant strength with evidence"],
+    "whatsBroken": ["Bible gap or inconsistency"],
+    "whatsUnderdeveloped": ["Missing bible element"],
+    "deepDive": "2-3 paragraph narrative on series bible completeness, world-building documentation quality, and arc clarity",
+    "recommendations": [{"title": "Action item", "description": "Detail", "priority": "critical|high|medium", "effort": "easy|moderate|hard"}],
+    "corePremise": {"logline": "The refined logline for the bible", "hook": "The core hook that sells the project", "genre": "Primary genre positioning"},
+    "worldRules": {"fixed": ["Immovable rule 1 specific to this story", "Immovable rule 2"], "flexible": ["Element that can evolve 1", "Element that can evolve 2"]},
+    "tonalGuardrails": {"genre": "Primary genre", "tone": "Core tonal identity description", "avoid": ["Specific tonal violation to avoid 1", "Specific tonal violation to avoid 2"]},
+    "characterTrajectories": [{"name": "Character name", "startState": "Where they begin", "endState": "Where they end up", "arc": "One-sentence arc summary"}],
+    "seriesEngine": {"reset": ["Element that resets each episode/act", "Another reset element"], "accumulate": ["Element that builds across the story", "Another accumulating element"]}`;
     default:
       return `"verdict": "One-sentence diagnostic verdict",
     "whatWorks": ["Strength with evidence"],

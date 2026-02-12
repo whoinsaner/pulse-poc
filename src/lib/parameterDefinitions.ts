@@ -1242,6 +1242,66 @@ export const MICRO_DRAMA_FAILURE_PATTERNS = [
   { id: 'weak_ending', name: 'Weak Episode Ending', description: 'Ending satisfies without driving series continuation.', triggerParam: 'series_hook', threshold: 5 },
 ];
 
+// ============= SERIES BIBLE PARAMETERS =============
+
+export const SERIES_BIBLE_PARAMETERS: ParameterDefinition[] = [
+  {
+    id: 'bible_premise_clarity',
+    name: 'bible_premise_clarity',
+    displayName: 'Premise Clarity',
+    category: 'Series Bible',
+    agentSource: 'SeriesBibleAgent',
+    description: 'How clearly the core premise is defined for a writers\' room bible. Evaluates logline precision, hook articulation, and genre positioning.',
+    scoringGuide: '9-10: Crystal-clear, instantly communicable premise. 7-8: Strong premise with minor ambiguity. 5-6: Premise exists but needs sharpening. 3-4: Unclear or muddled premise. 1-2: No discernible premise.',
+    applicableScriptTypes: 'all',
+    weight: 0.8,
+  },
+  {
+    id: 'bible_world_rules',
+    name: 'bible_world_rules',
+    displayName: 'World Rules Documentation',
+    category: 'Series Bible',
+    agentSource: 'SeriesBibleAgent',
+    description: 'How well the world\'s fixed vs. flexible rules are documented. Evaluates internal consistency, rule boundaries, and what can/cannot change.',
+    scoringGuide: '9-10: Comprehensive rule system, clear fixed/flexible boundaries. 7-8: Well-defined rules with minor gaps. 5-6: Basic rules established but inconsistently applied. 3-4: Vague or contradictory rules. 1-2: No discernible world rules.',
+    applicableScriptTypes: 'all',
+    weight: 0.8,
+  },
+  {
+    id: 'bible_tonal_consistency',
+    name: 'bible_tonal_consistency',
+    displayName: 'Tonal Consistency',
+    category: 'Series Bible',
+    agentSource: 'SeriesBibleAgent',
+    description: 'Clarity of tonal guardrails and genre boundaries. Evaluates what the story IS and what it should NEVER become.',
+    scoringGuide: '9-10: Razor-sharp tonal identity with clear boundaries. 7-8: Strong tone with minor drifts. 5-6: Tone exists but guardrails are soft. 3-4: Tonal confusion or inconsistency. 1-2: No tonal identity.',
+    applicableScriptTypes: 'all',
+    weight: 0.8,
+  },
+  {
+    id: 'bible_character_trajectories',
+    name: 'bible_character_trajectories',
+    displayName: 'Character Trajectories',
+    category: 'Series Bible',
+    agentSource: 'SeriesBibleAgent',
+    description: 'Clarity of character transformation arcs. Evaluates whether start states, end states, and arc directions are defined for key characters.',
+    scoringGuide: '9-10: Fully mapped arcs with clear start/end states. 7-8: Strong arcs with minor ambiguity. 5-6: Some arcs defined but incomplete. 3-4: Vague or missing character trajectories. 1-2: No character arc planning.',
+    applicableScriptTypes: 'all',
+    weight: 0.8,
+  },
+  {
+    id: 'bible_series_engine',
+    name: 'bible_series_engine',
+    displayName: 'Series Engine',
+    category: 'Series Bible',
+    agentSource: 'SeriesBibleAgent',
+    description: 'Strength of episodic engine — the reset vs. accumulate logic that drives sustainability. What resets each episode vs. what builds across the season.',
+    scoringGuide: '9-10: Robust engine with clear reset/accumulate logic. 7-8: Strong engine, minor sustainability concerns. 5-6: Engine exists but may run out of fuel. 3-4: Weak or unclear engine. 1-2: No episodic engine — story is a one-off.',
+    applicableScriptTypes: 'all',
+    weight: 0.8,
+  },
+];
+
 // ============= COMBINED PARAMETER LIST =============
 
 export const ALL_PARAMETERS: ParameterDefinition[] = [
@@ -1249,6 +1309,7 @@ export const ALL_PARAMETERS: ParameterDefinition[] = [
   ...COMIC_PARAMETERS,
   ...WEB_SERIES_PARAMETERS,
   ...MICRO_DRAMA_PARAMETERS,
+  ...SERIES_BIBLE_PARAMETERS,
 ];
 
 // ============= UTILITY FUNCTIONS =============

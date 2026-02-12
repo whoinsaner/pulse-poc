@@ -33,19 +33,35 @@ interface ParameterScore {
   evidence?: { quotes?: string[]; scenes?: string[] };
 }
 
-// Matcher functions for each bible section
+interface BibleSectionContent {
+  verdict?: string;
+  whatWorks?: string[];
+  whatsBroken?: string[];
+  whatsUnderdeveloped?: string[];
+  deepDive?: string;
+  recommendations?: Array<{ title: string; description: string; priority: string; effort: string }>;
+  corePremise?: { logline: string; hook: string; genre: string };
+  worldRules?: { fixed: string[]; flexible: string[] };
+  tonalGuardrails?: { genre: string; tone: string; avoid: string[] };
+  characterTrajectories?: Array<{ name: string; startState: string; endState: string; arc: string }>;
+  seriesEngine?: { reset: string[]; accumulate: string[] };
+}
+
+// Matcher functions for each bible section (fallback when no agent data)
 const isPremise = (p: ParameterScore) =>
   p.parameterName?.includes('concept') ||
   p.parameterName?.includes('hook') ||
   p.parameterName?.includes('compressibility') ||
   p.parameterName?.includes('familiarity') ||
-  p.parameterName?.includes('logline');
+  p.parameterName?.includes('logline') ||
+  p.parameterName?.includes('bible_premise');
 
 const isWorld = (p: ParameterScore) =>
   p.parameterName?.includes('world') ||
   p.parameterName?.includes('setting') ||
   p.parameterName?.includes('plausibility') ||
   p.parameterName?.includes('spatial') ||
+  p.parameterName?.includes('bible_world') ||
   p.category === 'World & Logic';
 
 const isTone = (p: ParameterScore) =>
@@ -53,14 +69,16 @@ const isTone = (p: ParameterScore) =>
   p.parameterName?.includes('genre') ||
   p.parameterName?.includes('thematic') ||
   p.parameterName?.includes('symbol') ||
-  p.parameterName?.includes('motif');
+  p.parameterName?.includes('motif') ||
+  p.parameterName?.includes('bible_tonal');
 
 const isArc = (p: ParameterScore) =>
   p.parameterName?.includes('want_vs_need') ||
   p.parameterName?.includes('transformation') ||
   p.parameterName?.includes('psychological') ||
   p.parameterName?.includes('agency') ||
-  p.parameterName?.includes('flaw');
+  p.parameterName?.includes('flaw') ||
+  p.parameterName?.includes('bible_character');
 
 const isSeries = (p: ParameterScore) =>
   p.parameterName?.includes('serial') ||
@@ -68,6 +86,7 @@ const isSeries = (p: ParameterScore) =>
   p.parameterName?.includes('franchise') ||
   p.parameterName?.includes('retention') ||
   p.parameterName?.includes('momentum') ||
+  p.parameterName?.includes('bible_series') ||
   p.category === 'Web Series';
 
 const ALL_MATCHERS = [isPremise, isWorld, isTone, isArc, isSeries];
@@ -79,6 +98,11 @@ export default function SeriesBibleExtract() {
 
   const scriptType = reportData.scriptMetadata?.scriptType;
   const isEpisodicFormat = ['web_series', 'pilot', 'episode'].includes(scriptType || '');
+
+  // Try to get structured bible content from SeriesBibleAgent
+  const agentContent = (reportData as any).agentContent;
+  const bibleContent = agentContent?.SeriesBibleAgent as BibleSectionContent | undefined;
+  const hasBibleAgent = !!bibleContent;
 
   const allParams = (reportData.parameterScores || []) as ParameterScore[];
 
@@ -135,8 +159,15 @@ export default function SeriesBibleExtract() {
     return sorted[0]?.rationale || 'Analysis pending...';
   };
 
-  // World rules extraction
+  // World rules: prefer agent data, fall back to parameter-derived
   const worldRules = useMemo(() => {
+    if (bibleContent?.worldRules) {
+      return {
+        fixed: bibleContent.worldRules.fixed.length > 0 ? bibleContent.worldRules.fixed : ['Core story logic'],
+        flexible: bibleContent.worldRules.flexible.length > 0 ? bibleContent.worldRules.flexible : ['Secondary elements'],
+      };
+    }
+    // Fallback: derive from parameter scores
     const fixed: string[] = [];
     const flexible: string[] = [];
     worldParams.forEach(p => {
@@ -147,19 +178,55 @@ export default function SeriesBibleExtract() {
       fixed: fixed.length > 0 ? fixed : ['Core story logic', 'Primary setting rules', 'Character capabilities'],
       flexible: flexible.length > 0 ? flexible : ['Secondary locations', 'Relationship dynamics', 'Revelation timing'],
     };
-  }, [worldParams]);
+  }, [bibleContent, worldParams]);
+
+  // Tonal avoid items: prefer agent data
+  const tonalAvoid = useMemo(() => {
+    if (bibleContent?.tonalGuardrails?.avoid && bibleContent.tonalGuardrails.avoid.length > 0) {
+      return bibleContent.tonalGuardrails.avoid;
+    }
+    return ['Camp, slapstick, tonal whiplash'];
+  }, [bibleContent]);
+
+  const tonalGenre = bibleContent?.tonalGuardrails?.genre || reportData.scriptMetadata?.genre || 'Drama / Thriller';
+  const tonalTone = bibleContent?.tonalGuardrails?.tone || toneParams[0]?.rationale?.slice(0, 80) || 'Grounded, emotional, high-stakes';
+
+  // Character trajectories: prefer agent data
+  const characterArcs = useMemo(() => {
+    if (bibleContent?.characterTrajectories && bibleContent.characterTrajectories.length > 0) {
+      return bibleContent.characterTrajectories;
+    }
+    return null; // Fall back to parameter-derived view
+  }, [bibleContent]);
+
+  // Series engine: prefer agent data
+  const engineReset = bibleContent?.seriesEngine?.reset || ['New case/problem/conflict', 'Guest characters', 'Location variety'];
+  const engineAccumulate = bibleContent?.seriesEngine?.accumulate || ['Protagonist relationships', 'Mystery/investigation progress', 'Character growth'];
+
+  // Premise content from agent
+  const premiseLogline = bibleContent?.corePremise?.logline || reportData.scriptMetadata?.logline || getTopRationale(premiseParams);
+  const premiseHook = bibleContent?.corePremise?.hook;
 
   // Copy summary
   const generatePlainTextSummary = () => {
     const title = reportData.scriptMetadata?.title || 'Untitled Script';
-    const logline = reportData.scriptMetadata?.logline || premiseParams[0]?.rationale || 'Logline not provided';
     let summary = `SERIES BIBLE EXTRACT - ${title}\n${'='.repeat(40)}\n\n`;
-    summary += `CORE PREMISE\n${'-'.repeat(20)}\n${logline}\n\n`;
+    summary += `CORE PREMISE\n${'-'.repeat(20)}\n${premiseLogline}\n`;
+    if (premiseHook) summary += `Hook: ${premiseHook}\n`;
+    summary += `\n`;
     summary += `WORLD RULES\n${'-'.repeat(20)}\nFixed: ${worldRules.fixed.join(', ')}\nFlexible: ${worldRules.flexible.join(', ')}\n\n`;
-    summary += `TONAL GUARDRAILS\n${'-'.repeat(20)}\n${getTopRationale(toneParams)}\n\n`;
-    summary += `CHARACTER TRAJECTORIES\n${'-'.repeat(20)}\n${getTopRationale(arcParams)}\n\n`;
+    summary += `TONAL GUARDRAILS\n${'-'.repeat(20)}\nGenre: ${tonalGenre}\nTone: ${tonalTone}\nAvoid: ${tonalAvoid.join(', ')}\n\n`;
+    summary += `CHARACTER TRAJECTORIES\n${'-'.repeat(20)}\n`;
+    if (characterArcs) {
+      characterArcs.forEach(c => {
+        summary += `${c.name}: ${c.startState} → ${c.endState} (${c.arc})\n`;
+      });
+    } else {
+      summary += `${getTopRationale(arcParams)}\n`;
+    }
+    summary += `\n`;
     if (isEpisodicFormat) {
-      summary += `SERIES ENGINE\n${'-'.repeat(20)}\n${getTopRationale(seriesParams)}\n\n`;
+      summary += `SERIES ENGINE\n${'-'.repeat(20)}\nReset: ${engineReset.join(', ')}\nAccumulate: ${engineAccumulate.join(', ')}\n\n`;
     }
     summary += `\nGenerated by Pulse V2 | ${new Date().toLocaleDateString()}`;
     return summary;
@@ -231,8 +298,13 @@ export default function SeriesBibleExtract() {
         </div>
         <CardContent className="p-6">
           <blockquote className="text-lg italic text-foreground/90 border-l-4 border-primary/50 pl-4 mb-4">
-            "{reportData.scriptMetadata?.logline || getTopRationale(premiseParams)}"
+            "{premiseLogline}"
           </blockquote>
+          {premiseHook && (
+            <p className="text-sm text-muted-foreground mb-4">
+              <span className="font-semibold text-foreground">Hook:</span> {premiseHook}
+            </p>
+          )}
           {premiseParams.length > 0 && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
               {premiseParams.slice(0, 4).map((p, i) => (
@@ -311,7 +383,7 @@ export default function SeriesBibleExtract() {
               <h4 className="font-display font-medium">Genre</h4>
             </div>
             <p className="text-sm text-muted-foreground">
-              {reportData.scriptMetadata?.genre || 'Drama / Thriller'}
+              {tonalGenre}
             </p>
           </div>
           <div className="p-4 rounded-xl bg-chart-2/5 border border-chart-2/20">
@@ -320,7 +392,7 @@ export default function SeriesBibleExtract() {
               <h4 className="font-display font-medium">Tone</h4>
             </div>
             <p className="text-sm text-muted-foreground">
-              {toneParams[0]?.rationale?.slice(0, 80) || 'Grounded, emotional, high-stakes'}
+              {tonalTone}
             </p>
           </div>
           <div className="p-4 rounded-xl bg-destructive/5 border border-destructive/20">
@@ -328,9 +400,11 @@ export default function SeriesBibleExtract() {
               <Lock className="h-5 w-5 text-destructive" />
               <h4 className="font-display font-medium">Avoid</h4>
             </div>
-            <p className="text-sm text-muted-foreground">
-              Camp, slapstick, tonal whiplash
-            </p>
+            <ul className="text-sm text-muted-foreground space-y-1">
+              {tonalAvoid.map((item, i) => (
+                <li key={i}>• {item}</li>
+              ))}
+            </ul>
           </div>
         </div>
       </Card>
@@ -342,7 +416,26 @@ export default function SeriesBibleExtract() {
           subtitle="Start → End transformation arcs"
           score={arcScore}
         />
-        {arcParams.length > 0 && (
+        {characterArcs ? (
+          /* Agent-powered character arcs with real data */
+          <div className="grid md:grid-cols-2 gap-4 mt-4">
+            {characterArcs.map((char, i) => (
+              <div key={i} className="p-4 rounded-xl bg-muted/30 border border-border/50">
+                <div className="flex items-center gap-2 mb-2">
+                  <User className="h-4 w-4 text-primary" />
+                  <h4 className="font-display font-medium text-sm">{char.name}</h4>
+                </div>
+                <p className="text-xs text-muted-foreground mb-3">{char.arc}</p>
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="px-2 py-1 rounded bg-muted/50 text-foreground/80">{char.startState}</span>
+                  <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                  <span className="px-2 py-1 rounded bg-primary/10 text-primary">{char.endState}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : arcParams.length > 0 ? (
+          /* Fallback: parameter-derived view */
           <div className="grid md:grid-cols-2 gap-4 mt-4">
             {arcParams.slice(0, 4).map((param, i) => (
               <div key={i} className="p-4 rounded-xl bg-muted/30 border border-border/50">
@@ -366,7 +459,7 @@ export default function SeriesBibleExtract() {
               </div>
             ))}
           </div>
-        )}
+        ) : null}
       </Card>
 
       {/* Series Engine (Episodic Only) */}
@@ -389,36 +482,24 @@ export default function SeriesBibleExtract() {
               <h4 className="font-display font-semibold mb-2">Episode Reset</h4>
               <p className="text-sm text-muted-foreground">Elements that return to baseline each episode.</p>
               <ul className="mt-3 space-y-1">
-                <li className="text-sm flex items-center gap-2">
-                  <div className="h-1.5 w-1.5 rounded-full bg-chart-5" />
-                  New case/problem/conflict
-                </li>
-                <li className="text-sm flex items-center gap-2">
-                  <div className="h-1.5 w-1.5 rounded-full bg-chart-5" />
-                  Guest characters
-                </li>
-                <li className="text-sm flex items-center gap-2">
-                  <div className="h-1.5 w-1.5 rounded-full bg-chart-5" />
-                  Location variety
-                </li>
+                {engineReset.map((item, i) => (
+                  <li key={i} className="text-sm flex items-center gap-2">
+                    <div className="h-1.5 w-1.5 rounded-full bg-chart-5" />
+                    {item}
+                  </li>
+                ))}
               </ul>
             </div>
             <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
               <h4 className="font-display font-semibold mb-2">Accumulate</h4>
               <p className="text-sm text-muted-foreground">Elements that build across the season.</p>
               <ul className="mt-3 space-y-1">
-                <li className="text-sm flex items-center gap-2">
-                  <div className="h-1.5 w-1.5 rounded-full bg-primary" />
-                  Protagonist relationships
-                </li>
-                <li className="text-sm flex items-center gap-2">
-                  <div className="h-1.5 w-1.5 rounded-full bg-primary" />
-                  Mystery/investigation progress
-                </li>
-                <li className="text-sm flex items-center gap-2">
-                  <div className="h-1.5 w-1.5 rounded-full bg-primary" />
-                  Character growth
-                </li>
+                {engineAccumulate.map((item, i) => (
+                  <li key={i} className="text-sm flex items-center gap-2">
+                    <div className="h-1.5 w-1.5 rounded-full bg-primary" />
+                    {item}
+                  </li>
+                ))}
               </ul>
             </div>
           </div>
