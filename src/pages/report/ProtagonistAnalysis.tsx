@@ -75,6 +75,9 @@ export default function ProtagonistAnalysis() {
     i.title?.toLowerCase().includes('character')
   ) || [];
 
+  // AI-generated recommendations from CharacterAgent
+  const agentRecs = reportData.agentContent?.CharacterAgent?.recommendations || [];
+
   const strengths = characterParams.filter(p => p.score >= 7).map(p => ({
     text: p.displayName || p.parameterName,
     detail: p.rationale?.slice(0, 80)
@@ -255,30 +258,47 @@ export default function ProtagonistAnalysis() {
       <Card className="glass-premium p-6">
         <SubSectionHeader title="Protagonist Recommendations" />
         <div className="space-y-3">
-          {subScores.empathy < 7 && (
-            <RecommendationCard
-              title="Increase Empathy Connection"
-              description="Add moments of vulnerability or relatability that help audiences root for the protagonist."
-              priority={subScores.empathy < 5 ? 'critical' : 'high'}
-              effort="moderate"
-              impact="Stronger audience investment"
-            />
-          )}
-          {subScores.agency < 6 && (
-            <RecommendationCard
-              title="Strengthen Character Agency"
-              description="Ensure the protagonist drives the plot through active choices rather than reacting to events."
-              priority="high"
-              effort="moderate"
-            />
-          )}
-          {subScores.arcQuality < 7 && (
-            <RecommendationCard
-              title="Clarify Character Transformation"
-              description="Make the internal change more visible through contrasting behavior in Act I vs Act III."
-              priority="medium"
-              effort="easy"
-            />
+          {agentRecs.length > 0 ? (
+            agentRecs.map((rec, i) => {
+              const effortMap: Record<string, 'easy' | 'moderate' | 'difficult'> = { easy: 'easy', moderate: 'moderate', hard: 'difficult', difficult: 'difficult' };
+              return (
+                <RecommendationCard
+                  key={i}
+                  title={rec.title}
+                  description={rec.description}
+                  priority={rec.priority || 'medium'}
+                  effort={effortMap[rec.effort || 'moderate'] || 'moderate'}
+                />
+              );
+            })
+          ) : (
+            <>
+              {subScores.empathy < 7 && (
+                <RecommendationCard
+                  title="Increase Empathy Connection"
+                  description="Add moments of vulnerability or relatability that help audiences root for the protagonist."
+                  priority={subScores.empathy < 5 ? 'critical' : 'high'}
+                  effort="moderate"
+                  impact="Stronger audience investment"
+                />
+              )}
+              {subScores.agency < 6 && (
+                <RecommendationCard
+                  title="Strengthen Character Agency"
+                  description="Ensure the protagonist drives the plot through active choices rather than reacting to events."
+                  priority="high"
+                  effort="moderate"
+                />
+              )}
+              {subScores.arcQuality < 7 && (
+                <RecommendationCard
+                  title="Clarify Character Transformation"
+                  description="Make the internal change more visible through contrasting behavior in Act I vs Act III."
+                  priority="medium"
+                  effort="easy"
+                />
+              )}
+            </>
           )}
         </div>
       </Card>
