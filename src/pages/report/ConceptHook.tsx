@@ -1,19 +1,15 @@
 import { useOutletContext } from 'react-router-dom';
 import { ReportData, StakeholderLens } from '@/types/database';
 import { ParameterBreakdown } from '@/components/report/ParameterBreakdown';
+import { AgentNarrativePanel } from '@/components/report/AgentNarrativePanel';
 import { Card } from '@/components/ui/card';
 import { 
   SectionHeader, 
   SubSectionHeader,
-  VerdictBox, 
-  AssessmentCard,
-  ScoreBar,
   StrengthWeaknessList,
-  RecommendationCard,
   QuoteCallout
 } from '@/components/report/ui';
-import { Lightbulb, Zap, Target, TrendingUp, MessageSquare } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Lightbulb } from 'lucide-react';
 import { extractScore } from '@/lib/scoreUtils';
 
 interface ReportContextValue {
@@ -23,9 +19,8 @@ interface ReportContextValue {
 }
 
 export default function ConceptHook() {
-  const { reportData, activeLens, currentScore } = useOutletContext<ReportContextValue>();
+  const { reportData, currentScore } = useOutletContext<ReportContextValue>();
   
-  // Get concept-related scores from parameters - Concept & Hook category
   const conceptParams = reportData.parameterScores?.filter(p => 
     ['concept', 'concept & hook', 'hook'].includes(p.category?.toLowerCase() || '') ||
     p.parameterName?.toLowerCase().includes('concept') ||
@@ -35,13 +30,13 @@ export default function ConceptHook() {
     p.parameterName?.toLowerCase().includes('originality')
   ) || [];
 
-  const conceptScore = conceptParams.length > 0 
-    ? conceptParams.reduce((sum, p) => sum + p.score, 0) / conceptParams.length 
-    : extractScore(reportData.categoryScores?.['Concept & Hook']) || currentScore;
+  const categoryScore = extractScore(reportData.categoryScores?.['Concept & Hook']) || 
+    (conceptParams.length > 0 
+      ? conceptParams.reduce((sum, p) => sum + p.score, 0) / conceptParams.length 
+      : currentScore);
 
-  const categoryScore = extractScore(reportData.categoryScores?.['Concept & Hook']) || conceptScore;
+  const agentContent = reportData.agentContent?.ConceptAgent;
 
-  // Get related insights
   const conceptInsights = reportData.insights?.filter(i => 
     i.category?.toLowerCase().includes('concept') ||
     i.category?.toLowerCase().includes('hook') ||
@@ -49,36 +44,12 @@ export default function ConceptHook() {
     i.title?.toLowerCase().includes('hook')
   ) || [];
 
-  // Assessment items based on available data
-  const assessments = [
-    { 
-      label: 'Commercially Viable Concept', 
-      status: categoryScore >= 7 ? 'yes' as const : categoryScore >= 5 ? 'partial' as const : 'no' as const,
-      description: 'Appeals to target demographic with market potential'
-    },
-    { 
-      label: 'Clear Logline Pitch', 
-      status: reportData.scriptMetadata?.logline ? 'yes' as const : 'partial' as const,
-      description: 'Can be communicated in one compelling sentence'
-    },
-    { 
-      label: 'Unique Hook', 
-      status: categoryScore >= 6.5 ? 'yes' as const : categoryScore >= 4.5 ? 'partial' as const : 'no' as const,
-      description: 'Distinctive element that sets it apart'
-    },
-    { 
-      label: 'Genre Clarity', 
-      status: reportData.scriptMetadata?.genre ? 'yes' as const : 'no' as const,
-      description: 'Clear genre positioning for audience expectations'
-    },
-  ];
-
-  const strengths = conceptParams.filter(p => p.score >= 7).map(p => ({
+  const strengths = conceptParams.filter(p => p.score >= 70).map(p => ({
     text: p.displayName || p.parameterName,
     detail: p.rationale?.slice(0, 100)
   }));
 
-  const weaknesses = conceptParams.filter(p => p.score < 5).map(p => ({
+  const weaknesses = conceptParams.filter(p => p.score < 50).map(p => ({
     text: p.displayName || p.parameterName,
     detail: p.rationale?.slice(0, 100)
   }));
@@ -92,36 +63,10 @@ export default function ConceptHook() {
         score={categoryScore}
       />
 
-      {/* Overall Concept Assessment */}
-      <Card className="glass-premium p-6">
-        <SubSectionHeader title="Concept Assessment" />
-        <div className="grid md:grid-cols-2 gap-4">
-          {assessments.map((item, index) => (
-            <div 
-              key={index}
-              className={cn(
-                "p-4 rounded-lg border",
-                item.status === 'yes' ? 'border-success/30 bg-success/5' :
-                item.status === 'partial' ? 'border-warning/30 bg-warning/5' :
-                'border-destructive/30 bg-destructive/5'
-              )}
-            >
-              <div className="flex items-center justify-between mb-1">
-                <span className="font-display font-medium">{item.label}</span>
-                <span className={cn(
-                  "text-xs font-semibold px-2 py-0.5 rounded-full",
-                  item.status === 'yes' ? 'bg-success/20 text-success' :
-                  item.status === 'partial' ? 'bg-warning/20 text-warning' :
-                  'bg-destructive/20 text-destructive'
-                )}>
-                  {item.status === 'yes' ? 'Yes' : item.status === 'partial' ? 'Partial' : 'No'}
-                </span>
-              </div>
-              <p className="text-sm text-muted-foreground">{item.description}</p>
-            </div>
-          ))}
-        </div>
-      </Card>
+      {/* Agent Narrative */}
+      {agentContent && (
+        <AgentNarrativePanel agentName="ConceptAgent" content={agentContent} />
+      )}
 
       {/* Logline Analysis */}
       {reportData.scriptMetadata?.logline && (
@@ -131,23 +76,6 @@ export default function ConceptHook() {
             quote={reportData.scriptMetadata.logline}
             type="general"
           />
-          <div className="mt-4">
-            <h4 className="font-medium mb-2">Why This Works:</h4>
-            <ul className="space-y-2">
-              <li className="flex items-start gap-2 text-sm">
-                <Zap className="h-4 w-4 text-primary mt-0.5" />
-                <span>Establishes clear protagonist and stakes</span>
-              </li>
-              <li className="flex items-start gap-2 text-sm">
-                <Target className="h-4 w-4 text-chart-2 mt-0.5" />
-                <span>Implies central conflict and tension</span>
-              </li>
-              <li className="flex items-start gap-2 text-sm">
-                <TrendingUp className="h-4 w-4 text-chart-3 mt-0.5" />
-                <span>Suggests genre and tone expectations</span>
-              </li>
-            </ul>
-          </div>
         </Card>
       )}
 
@@ -156,57 +84,23 @@ export default function ConceptHook() {
 
       {/* Strengths & Weaknesses */}
       {(strengths.length > 0 || weaknesses.length > 0) && (
-        <StrengthWeaknessList
-          strengths={strengths}
-          weaknesses={weaknesses}
-        />
+        <StrengthWeaknessList strengths={strengths} weaknesses={weaknesses} />
       )}
 
-      {/* Key Findings */}
+      {/* Key Findings from insights */}
       {conceptInsights.length > 0 && (
         <Card className="p-6">
           <SubSectionHeader title="Key Findings" />
-          <div className="space-y-4">
+          <div className="space-y-3">
             {conceptInsights.map((insight, index) => (
-              <VerdictBox
-                key={index}
-                type={insight.priority <= 1 ? 'error' : insight.priority <= 2 ? 'warning' : 'info'}
-                title={insight.title}
-                content={insight.description}
-              />
+              <div key={index} className="p-4 rounded-lg bg-muted/30 border border-border/50">
+                <h4 className="font-display font-medium mb-1">{insight.title}</h4>
+                <p className="text-sm text-muted-foreground">{insight.description}</p>
+              </div>
             ))}
           </div>
         </Card>
       )}
-
-      {/* Recommendations */}
-      <Card className="p-6">
-        <SubSectionHeader title="Recommendations" />
-        <div className="space-y-3">
-          {categoryScore < 7 && (
-            <RecommendationCard
-              title="Strengthen the Hook"
-              description="Consider amplifying the unique selling proposition that differentiates this concept from similar projects in the market."
-              priority={categoryScore < 5 ? 'high' : 'medium'}
-              effort="moderate"
-            />
-          )}
-          {!reportData.scriptMetadata?.logline && (
-            <RecommendationCard
-              title="Craft a Clear Logline"
-              description="Develop a one-sentence pitch that captures the essence of the story, protagonist, and central conflict."
-              priority="high"
-              effort="easy"
-            />
-          )}
-          <RecommendationCard
-            title="Market Positioning"
-            description="Identify 2-3 comparable titles that have performed well and align your concept's positioning accordingly."
-            priority="low"
-            effort="easy"
-          />
-        </div>
-      </Card>
     </div>
   );
 }

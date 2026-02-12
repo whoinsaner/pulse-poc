@@ -1,18 +1,14 @@
 import { useOutletContext } from 'react-router-dom';
 import { ReportData, StakeholderLens } from '@/types/database';
 import { ParameterBreakdown } from '@/components/report/ParameterBreakdown';
+import { AgentNarrativePanel } from '@/components/report/AgentNarrativePanel';
 import { 
   SectionHeader, 
-  ScoreDisplay, 
-  VerdictBox,
-  ScoreBar,
   SubSectionHeader,
   StrengthWeaknessList,
-  RecommendationCard
 } from '@/components/report/ui';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Sparkles, Heart, Flame } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Card } from '@/components/ui/card';
+import { Sparkles } from 'lucide-react';
 import { extractScore } from '@/lib/scoreUtils';
 
 interface ReportContextValue {
@@ -24,7 +20,6 @@ interface ReportContextValue {
 export default function EmotionalResonance() {
   const { reportData, currentScore } = useOutletContext<ReportContextValue>();
 
-  // Get emotional/arc-related parameters
   const emotionalParams = reportData.parameterScores?.filter(p => 
     p.category?.toLowerCase().includes('emotional') || 
     p.category?.toLowerCase().includes('arc') ||
@@ -34,31 +29,23 @@ export default function EmotionalResonance() {
     p.parameterName?.toLowerCase().includes('resonance')
   ) || [];
 
-  const emotionalScore = emotionalParams.length > 0 
-    ? emotionalParams.reduce((sum, p) => sum + p.score, 0) / emotionalParams.length 
-    : extractScore(reportData.categoryScores?.['Emotional Arc']) || currentScore;
+  const categoryScore = extractScore(reportData.categoryScores?.['Emotional Arc']) || 
+    (emotionalParams.length > 0 
+      ? emotionalParams.reduce((sum, p) => sum + p.score, 0) / emotionalParams.length 
+      : currentScore);
 
-  const categoryScore = extractScore(reportData.categoryScores?.['Emotional Arc']) || emotionalScore;
+  const agentContent = reportData.agentContent?.EmotionalArcAgent;
 
-  // Derived emotional metrics
-  const emotionalMetrics = [
-    { label: 'Emotional Range', score: Math.min(10, categoryScore + 0.3), description: 'Variety of emotions evoked' },
-    { label: 'Cathartic Payoff', score: Math.min(10, categoryScore), description: 'Emotional satisfaction at key moments' },
-    { label: 'Audience Connection', score: Math.min(10, categoryScore + 0.5), description: 'Relatability and investment' },
-    { label: 'Earned Moments', score: Math.min(10, categoryScore - 0.3), description: 'Emotional beats feel justified' },
-  ];
-
-  const strengths = emotionalParams.filter(p => p.score >= 7).map(p => ({
+  const strengths = emotionalParams.filter(p => p.score >= 70).map(p => ({
     text: p.displayName || p.parameterName,
     detail: p.rationale?.slice(0, 80)
   }));
 
-  const weaknesses = emotionalParams.filter(p => p.score < 5).map(p => ({
+  const weaknesses = emotionalParams.filter(p => p.score < 50).map(p => ({
     text: p.displayName || p.parameterName,
     detail: p.rationale?.slice(0, 80)
   }));
 
-  // Get insights related to emotional content
   const emotionalInsights = reportData.insights?.filter(i => 
     i.category?.toLowerCase().includes('emotion') ||
     i.category?.toLowerCase().includes('character') ||
@@ -74,34 +61,10 @@ export default function EmotionalResonance() {
         score={categoryScore}
       />
 
-      {/* Emotional Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {emotionalMetrics.map((metric) => (
-          <Card key={metric.label} className="glass-premium">
-            <CardContent className="pt-6">
-              <ScoreDisplay score={metric.score} maxScore={10} size="md" />
-              <h3 className="font-display font-semibold mt-2">{metric.label}</h3>
-              <p className="text-sm text-muted-foreground">{metric.description}</p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* Emotional Assessment */}
-      <VerdictBox
-        type={categoryScore >= 7 ? 'success' : categoryScore >= 5 ? 'finding' : 'issue'}
-        title={categoryScore >= 7 ? 'Strong Emotional Impact' : categoryScore >= 5 ? 'Emotional Potential Present' : 'Emotional Connection Weak'}
-        content={
-          categoryScore >= 7 
-            ? 'This script has genuine emotional power. The protagonist\'s journey generates strong empathy and key moments deliver cathartic payoffs.'
-            : categoryScore >= 5
-            ? 'The script has emotional potential but some beats feel unearned or underdeveloped. Focus on deepening audience investment.'
-            : 'The script struggles to create emotional connection. Consider developing character empathy and ensuring emotional moments are properly set up.'
-        }
-      />
-
-      {/* Parameter Breakdown */}
-      <ParameterBreakdown title="Emotional Parameters" parameters={emotionalParams} />
+      {/* Agent Narrative */}
+      {agentContent && (
+        <AgentNarrativePanel agentName="EmotionalArcAgent" content={agentContent} />
+      )}
 
       {/* Emotional Insights */}
       {emotionalInsights.length > 0 && (
@@ -118,58 +81,13 @@ export default function EmotionalResonance() {
         </Card>
       )}
 
-      {/* Strengths & Weaknesses */}
-      {(strengths.length > 0 || weaknesses.length > 0) ? (
-        <StrengthWeaknessList
-          strengths={strengths.length > 0 ? strengths : [{ text: 'Protagonist generates audience empathy' }]}
-          weaknesses={weaknesses.length > 0 ? weaknesses : [{ text: 'Some emotional beats need more setup' }]}
-        />
-      ) : (
-        <StrengthWeaknessList
-          strengths={[
-            { text: 'Strong emotional peaks at key moments' },
-            { text: 'Protagonist generates genuine audience empathy' },
-            { text: 'Effective use of hope/despair contrast' },
-          ]}
-          weaknesses={[
-            { text: 'Some emotional moments feel slightly rushed' },
-            { text: 'Secondary character emotional arcs underdeveloped' },
-          ]}
-        />
-      )}
+      {/* Parameter Breakdown */}
+      <ParameterBreakdown title="Emotional Parameters" parameters={emotionalParams} />
 
-      {/* Recommendations */}
-      <Card className="p-6">
-        <SubSectionHeader title="Emotional Recommendations" />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {categoryScore < 7 && (
-            <RecommendationCard
-              title="Build to Key Moments"
-              description="Ensure emotional payoffs have sufficient setup. Add 1-2 scenes establishing stakes before major emotional beats."
-              priority="high"
-              effort="moderate"
-            />
-          )}
-          <RecommendationCard
-            title="Let Moments Breathe"
-            description="Give the audience time to feel the weight of emotional beats rather than rushing to the next plot point."
-            priority={categoryScore < 6 ? 'high' : 'medium'}
-            effort="easy"
-          />
-          <RecommendationCard
-            title="Develop Secondary Arcs"
-            description="Give supporting characters their own emotional journeys that parallel or contrast the protagonist's."
-            priority="medium"
-            effort="moderate"
-          />
-          <RecommendationCard
-            title="Add Quiet Moments"
-            description="Consider adding quieter character moments to provide contrast and make peaks more effective."
-            priority="low"
-            effort="easy"
-          />
-        </div>
-      </Card>
+      {/* Strengths & Weaknesses */}
+      {(strengths.length > 0 || weaknesses.length > 0) && (
+        <StrengthWeaknessList strengths={strengths} weaknesses={weaknesses} />
+      )}
     </div>
   );
 }

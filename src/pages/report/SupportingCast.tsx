@@ -1,14 +1,11 @@
 import { useOutletContext } from 'react-router-dom';
 import { ReportData, StakeholderLens } from '@/types/database';
+import { AgentNarrativePanel } from '@/components/report/AgentNarrativePanel';
 import { Card } from '@/components/ui/card';
 import { 
   SectionHeader, 
   SubSectionHeader,
-  VerdictBox, 
-  ScoreBar,
   ScoreBadge,
-  AnalysisTable,
-  RecommendationCard
 } from '@/components/report/ui';
 import { Users, MessageSquare, Film, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -24,37 +21,31 @@ export default function SupportingCast() {
   const { reportData, currentScore } = useOutletContext<ReportContextValue>();
   
   const characters = reportData.characters || [];
-  
-  // Sort by dialogue count, skip first 2 (protagonist/antagonist)
   const sortedCharacters = [...characters].sort((a, b) => b.dialogueCount - a.dialogueCount);
-  const supportingCast = sortedCharacters.slice(2, 12); // Top 10 supporting
+  const supportingCast = sortedCharacters.slice(2, 12);
 
-  // Calculate cast metrics
   const totalDialogue = characters.reduce((sum, c) => sum + c.dialogueCount, 0);
   const supportingDialogue = supportingCast.reduce((sum, c) => sum + c.dialogueCount, 0);
   const castBalance = totalDialogue > 0 ? (supportingDialogue / totalDialogue) * 100 : 0;
 
   const categoryScore = extractScore(reportData.categoryScores?.['Character']) || currentScore;
+  const agentContent = reportData.agentContent?.CharacterAgent;
 
-  // Assess each supporting character
   const assessedCast = supportingCast.map(char => {
     const dialogueShare = totalDialogue > 0 ? (char.dialogueCount / totalDialogue) * 100 : 0;
-    const scenePresence = char.sceneCount / (reportData.scenes?.length || 1) * 100;
     const hasArc = char.arcSummary && char.arcSummary.length > 20;
     const hasRelationships = char.relationships && char.relationships.length > 0;
     
-    // Calculate a utility score
-    const utilityScore = Math.min(10, 
-      (dialogueShare > 5 ? 3 : dialogueShare > 2 ? 2 : 1) +
-      (scenePresence > 20 ? 3 : scenePresence > 10 ? 2 : 1) +
-      (hasArc ? 2 : 0) +
-      (hasRelationships ? 2 : 0)
+    const utilityScore = Math.min(100, 
+      (dialogueShare > 5 ? 30 : dialogueShare > 2 ? 20 : 10) +
+      ((char.sceneCount / (reportData.scenes?.length || 1) * 100) > 20 ? 30 : 20) +
+      (hasArc ? 20 : 0) +
+      (hasRelationships ? 20 : 0)
     );
 
     return {
       ...char,
       dialogueShare: dialogueShare.toFixed(1),
-      scenePresence: scenePresence.toFixed(0),
       utilityScore,
       hasArc,
     };
@@ -68,6 +59,27 @@ export default function SupportingCast() {
         icon={Users}
         score={categoryScore}
       />
+
+      {/* Agent Narrative */}
+      {agentContent && (
+        <AgentNarrativePanel agentName="CharacterAgent" content={agentContent} />
+      )}
+
+      {/* Agent supporting cast data */}
+      {agentContent?.supportingCast && agentContent.supportingCast.length > 0 && (
+        <Card className="glass-premium p-6">
+          <SubSectionHeader title="AI-Analyzed Supporting Cast" />
+          <div className="grid md:grid-cols-2 gap-3">
+            {agentContent.supportingCast.map((c, i) => (
+              <Card key={i} className="p-4">
+                <div className="font-medium">{c.name}</div>
+                <div className="text-sm text-muted-foreground">{c.role}</div>
+                {c.impact && <div className="text-xs text-muted-foreground mt-1">{c.impact}</div>}
+              </Card>
+            ))}
+          </div>
+        </Card>
+      )}
 
       {/* Cast Overview */}
       <div className="grid md:grid-cols-4 gap-4">
@@ -92,25 +104,6 @@ export default function SupportingCast() {
           <p className="text-sm text-muted-foreground">With Character Arcs</p>
         </Card>
       </div>
-
-      {/* Cast Assessment */}
-      <VerdictBox
-        type={castBalance > 30 && castBalance < 50 ? 'success' : castBalance > 20 ? 'finding' : 'issue'}
-        title={
-          castBalance > 30 && castBalance < 50 
-            ? 'Well-Balanced Ensemble' 
-            : castBalance > 50 
-            ? 'Supporting Cast May Overshadow Leads'
-            : 'Supporting Cast Underutilized'
-        }
-        content={
-          castBalance > 30 && castBalance < 50 
-            ? 'The supporting cast has appropriate screen time and dialogue distribution, enhancing the story without overshadowing the leads.'
-            : castBalance > 50 
-            ? 'Supporting characters receive significant dialogue. Ensure this serves the story rather than diluting focus on the protagonist.'
-            : 'Supporting characters may need more development or presence to create a richer story world.'
-        }
-      />
 
       {/* Character Table */}
       {assessedCast.length > 0 && (
@@ -164,7 +157,7 @@ export default function SupportingCast() {
         </Card>
       )}
 
-      {/* Relationship Map Summary */}
+      {/* Relationship Map */}
       <Card className="glass-premium p-6">
         <SubSectionHeader title="Key Relationships" />
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -184,38 +177,6 @@ export default function SupportingCast() {
               )}
             </div>
           ))}
-        </div>
-      </Card>
-
-      {/* Recommendations */}
-      <Card className="glass-premium p-6">
-        <SubSectionHeader title="Cast Recommendations" />
-        <div className="space-y-3">
-          {assessedCast.filter(c => !c.hasArc).length > 3 && (
-            <RecommendationCard
-              title="Develop Supporting Arcs"
-              description="Several supporting characters lack defined arcs. Consider giving key supporting roles their own growth trajectory."
-              priority="medium"
-              effort="moderate"
-              impact="Richer character ensemble"
-            />
-          )}
-          {castBalance < 25 && (
-            <RecommendationCard
-              title="Increase Supporting Presence"
-              description="The supporting cast feels thin. Give key supporting characters more moments to shine and contribute to the story."
-              priority="high"
-              effort="moderate"
-            />
-          )}
-          {characters.length > 15 && (
-            <RecommendationCard
-              title="Consider Cast Consolidation"
-              description="Large cast may dilute focus. Consider combining similar characters or cutting those without clear purpose."
-              priority="low"
-              effort="easy"
-            />
-          )}
         </div>
       </Card>
     </div>
