@@ -106,9 +106,17 @@ export function ExportDialog({ reportId, reportTitle, reportData, activeLens = '
           const blob = new Blob([bytes], { type: 'application/pdf' });
           downloadBlob(blob, filename);
         } else {
-          // Wrap markdown content as a simple text-based PDF
-          const blob = new Blob([data.content], { type: 'text/markdown' });
-          downloadBlob(blob, filename);
+          // Convert markdown to a simple text-based PDF instead of raw .md
+          const { jsPDF } = await import('jspdf');
+          const fallbackDoc = new jsPDF({ unit: 'mm', format: 'a4' });
+          const lines = fallbackDoc.splitTextToSize(data.content || '', 170);
+          let fy = 20;
+          for (const line of lines) {
+            if (fy > 275) { fallbackDoc.addPage(); fy = 20; }
+            fallbackDoc.text(line, 20, fy);
+            fy += 5;
+          }
+          fallbackDoc.save(filename.replace(/\.\w+$/, '.pdf'));
         }
       } else {
         const blob = new Blob([data.content], { type: 'text/markdown' });
