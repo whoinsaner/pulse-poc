@@ -26,12 +26,14 @@ import {
   Clapperboard, 
   Sparkles, 
   AlertTriangle,
+  AlertCircle,
 } from 'lucide-react';
-import { SceneData, CharacterData } from '@/types/database';
+import { SceneData, CharacterData, SceneAnalysisData } from '@/types/database';
 
 interface SceneComplexityAnalyzerProps {
   scenes: SceneData[];
   characters?: CharacterData[];
+  sceneAnalysis?: SceneAnalysisData[];
 }
 
 interface ComplexityMetrics {
@@ -40,8 +42,8 @@ interface ComplexityMetrics {
   technicalRequirements: number; // 0-100
   vfxPotential: number;         // 0-100
   locationComplexity: number;   // 0-100
-  castSize: number;             // estimated
   overallComplexity: number;    // 0-100
+  aiSourced: boolean;           // whether dialogue/action came from AI
 }
 
 const COMPLEXITY_LEVELS = [
@@ -51,64 +53,73 @@ const COMPLEXITY_LEVELS = [
   { min: 80, max: 100, label: 'High', color: 'hsl(var(--destructive))', description: 'Significant technical challenge' },
 ];
 
-function analyzeSceneComplexity(scene: SceneData): ComplexityMetrics {
+// Heuristic fallbacks for technical/VFX/location (still used even with AI data)
+function estimateTechnical(scene: SceneData): number {
+  const heading = scene.heading.toLowerCase();
+  const intExt = scene.intExt || '';
+  let val = 20;
+  if (intExt === 'EXT') val += 10;
+  if (scene.timeOfDay === 'NIGHT') val += 15;
+  if (heading.includes('moving') || heading.includes('car') || heading.includes('vehicle')) val += 20;
+  return Math.min(100, val);
+}
+
+function estimateVfx(scene: SceneData): number {
   const heading = scene.heading.toLowerCase();
   const description = (scene.description || '').toLowerCase();
-  const location = (scene.location || '').toLowerCase();
-  const intExt = scene.intExt || '';
-  
-  // Dialogue density - estimate based on scene type
-  let dialogueDensity = 50;
-  if (heading.includes('restaurant') || heading.includes('office') || heading.includes('bar')) {
-    dialogueDensity = 70;
-  } else if (heading.includes('chase') || heading.includes('fight') || heading.includes('action')) {
-    dialogueDensity = 20;
-  }
-  
-  // Action intensity
-  let actionIntensity = 30;
-  const actionKeywords = ['chase', 'fight', 'explosion', 'crash', 'run', 'escape', 'battle', 'attack'];
-  actionKeywords.forEach(keyword => {
-    if (heading.includes(keyword) || description.includes(keyword)) {
-      actionIntensity += 15;
-    }
-  });
-  actionIntensity = Math.min(100, actionIntensity);
-  
-  // Technical requirements
-  let technicalRequirements = 20;
-  if (intExt === 'EXT') technicalRequirements += 10;
-  if (scene.timeOfDay === 'NIGHT') technicalRequirements += 15;
-  if (heading.includes('moving') || heading.includes('car') || heading.includes('vehicle')) {
-    technicalRequirements += 20;
-  }
-  technicalRequirements = Math.min(100, technicalRequirements);
-  
-  // VFX potential
-  let vfxPotential = 10;
+  let val = 10;
   const vfxKeywords = ['space', 'explosion', 'magic', 'transform', 'cgi', 'creature', 'monster', 'fantasy'];
   vfxKeywords.forEach(keyword => {
-    if (heading.includes(keyword) || description.includes(keyword)) {
-      vfxPotential += 20;
-    }
+    if (heading.includes(keyword) || description.includes(keyword)) val += 20;
   });
-  vfxPotential = Math.min(100, vfxPotential);
-  
-  // Location complexity
-  let locationComplexity = 30;
+  return Math.min(100, val);
+}
+
+function estimateLocation(scene: SceneData): number {
+  const heading = scene.heading.toLowerCase();
+  const location = (scene.location || '').toLowerCase();
+  const intExt = scene.intExt || '';
+  let val = 30;
   const complexLocations = ['mansion', 'castle', 'hospital', 'airport', 'stadium', 'prison', 'ship'];
   complexLocations.forEach(loc => {
-    if (location.includes(loc) || heading.includes(loc)) {
-      locationComplexity += 15;
-    }
+    if (location.includes(loc) || heading.includes(loc)) val += 15;
   });
-  if (intExt === 'EXT') locationComplexity += 10;
-  locationComplexity = Math.min(100, locationComplexity);
+  if (intExt === 'EXT') val += 10;
+  return Math.min(100, val);
+}
+
+// Heuristic fallbacks for dialogue/action (only used when no AI data)
+function estimateDialogue(scene: SceneData): number {
+  const heading = scene.heading.toLowerCase();
+  let val = 50;
+  if (heading.includes('restaurant') || heading.includes('office') || heading.includes('bar')) val = 70;
+  else if (heading.includes('chase') || heading.includes('fight') || heading.includes('action')) val = 20;
+  return val;
+}
+
+function estimateAction(scene: SceneData): number {
+  const heading = scene.heading.toLowerCase();
+  const description = (scene.description || '').toLowerCase();
+  let val = 30;
+  const actionKeywords = ['chase', 'fight', 'explosion', 'crash', 'run', 'escape', 'battle', 'attack'];
+  actionKeywords.forEach(keyword => {
+    if (heading.includes(keyword) || description.includes(keyword)) val += 15;
+  });
+  return Math.min(100, val);
+}
+
+function analyzeSceneComplexity(
+  scene: SceneData,
+  aiData: SceneAnalysisData | undefined
+): ComplexityMetrics {
+  const hasAI = !!aiData;
   
-  // Estimated cast size
-  const castSize = Math.floor(Math.random() * 8) + 2; // 2-10 people
-  
-  // Overall complexity
+  const dialogueDensity = hasAI ? aiData.dialogueDensity : estimateDialogue(scene);
+  const actionIntensity = hasAI ? aiData.actionIntensity : estimateAction(scene);
+  const technicalRequirements = estimateTechnical(scene);
+  const vfxPotential = estimateVfx(scene);
+  const locationComplexity = estimateLocation(scene);
+
   const overallComplexity = Math.round(
     dialogueDensity * 0.15 +
     actionIntensity * 0.25 +
@@ -116,15 +127,15 @@ function analyzeSceneComplexity(scene: SceneData): ComplexityMetrics {
     vfxPotential * 0.2 +
     locationComplexity * 0.15
   );
-  
+
   return {
     dialogueDensity: Math.round(dialogueDensity),
     actionIntensity: Math.round(actionIntensity),
     technicalRequirements: Math.round(technicalRequirements),
     vfxPotential: Math.round(vfxPotential),
     locationComplexity: Math.round(locationComplexity),
-    castSize,
     overallComplexity,
+    aiSourced: hasAI,
   };
 }
 
@@ -132,16 +143,26 @@ function getComplexityLevel(value: number) {
   return COMPLEXITY_LEVELS.find(level => value >= level.min && value < level.max) || COMPLEXITY_LEVELS[0];
 }
 
-export function SceneComplexityAnalyzer({ scenes, characters = [] }: SceneComplexityAnalyzerProps) {
-  const sceneAnalysis = useMemo(() => {
+export function SceneComplexityAnalyzer({ scenes, characters = [], sceneAnalysis }: SceneComplexityAnalyzerProps) {
+  // Build AI lookup map
+  const aiMap = useMemo(() => {
+    if (!sceneAnalysis || sceneAnalysis.length === 0) return null;
+    const map = new Map<number, SceneAnalysisData>();
+    sceneAnalysis.forEach(sa => map.set(sa.sceneNumber, sa));
+    return map;
+  }, [sceneAnalysis]);
+
+  const useAI = !!aiMap;
+
+  const sceneAnalysisResults = useMemo(() => {
     return scenes.map(scene => ({
       scene,
-      metrics: analyzeSceneComplexity(scene),
+      metrics: analyzeSceneComplexity(scene, aiMap?.get(scene.sceneNumber)),
     }));
-  }, [scenes]);
+  }, [scenes, aiMap]);
 
   const chartData = useMemo(() => {
-    return sceneAnalysis.map(({ scene, metrics }) => ({
+    return sceneAnalysisResults.map(({ scene, metrics }) => ({
       scene: scene.sceneNumber,
       name: `Scene ${scene.sceneNumber}`,
       dialogue: metrics.dialogueDensity,
@@ -152,22 +173,22 @@ export function SceneComplexityAnalyzer({ scenes, characters = [] }: SceneComple
       overall: metrics.overallComplexity,
       heading: scene.heading,
     }));
-  }, [sceneAnalysis]);
+  }, [sceneAnalysisResults]);
 
   const scatterData = useMemo(() => {
-    return sceneAnalysis.map(({ scene, metrics }) => ({
+    return sceneAnalysisResults.map(({ scene, metrics }) => ({
       x: metrics.dialogueDensity,
       y: metrics.actionIntensity,
       z: metrics.overallComplexity,
       scene: scene.sceneNumber,
       heading: scene.heading,
     }));
-  }, [sceneAnalysis]);
+  }, [sceneAnalysisResults]);
 
   const averageMetrics = useMemo(() => {
-    if (sceneAnalysis.length === 0) return null;
+    if (sceneAnalysisResults.length === 0) return null;
     
-    const totals = sceneAnalysis.reduce((acc, { metrics }) => ({
+    const totals = sceneAnalysisResults.reduce((acc, { metrics }) => ({
       dialogueDensity: acc.dialogueDensity + metrics.dialogueDensity,
       actionIntensity: acc.actionIntensity + metrics.actionIntensity,
       technicalRequirements: acc.technicalRequirements + metrics.technicalRequirements,
@@ -183,7 +204,7 @@ export function SceneComplexityAnalyzer({ scenes, characters = [] }: SceneComple
       overallComplexity: 0,
     });
     
-    const count = sceneAnalysis.length;
+    const count = sceneAnalysisResults.length;
     return {
       dialogueDensity: Math.round(totals.dialogueDensity / count),
       actionIntensity: Math.round(totals.actionIntensity / count),
@@ -192,7 +213,7 @@ export function SceneComplexityAnalyzer({ scenes, characters = [] }: SceneComple
       locationComplexity: Math.round(totals.locationComplexity / count),
       overallComplexity: Math.round(totals.overallComplexity / count),
     };
-  }, [sceneAnalysis]);
+  }, [sceneAnalysisResults]);
 
   const radarData = useMemo(() => {
     if (!averageMetrics) return [];
@@ -206,21 +227,21 @@ export function SceneComplexityAnalyzer({ scenes, characters = [] }: SceneComple
   }, [averageMetrics]);
 
   const complexScenes = useMemo(() => {
-    return sceneAnalysis
+    return sceneAnalysisResults
       .filter(({ metrics }) => metrics.overallComplexity >= 60)
       .sort((a, b) => b.metrics.overallComplexity - a.metrics.overallComplexity)
       .slice(0, 5);
-  }, [sceneAnalysis]);
+  }, [sceneAnalysisResults]);
 
   const distributionStats = useMemo(() => {
     const byLevel = COMPLEXITY_LEVELS.map(level => ({
       ...level,
-      count: sceneAnalysis.filter(({ metrics }) => 
+      count: sceneAnalysisResults.filter(({ metrics }) => 
         metrics.overallComplexity >= level.min && metrics.overallComplexity < level.max
       ).length,
     }));
     return byLevel;
-  }, [sceneAnalysis]);
+  }, [sceneAnalysisResults]);
 
   if (scenes.length === 0) {
     return (
@@ -236,12 +257,27 @@ export function SceneComplexityAnalyzer({ scenes, characters = [] }: SceneComple
     <div className="py-20 bg-card/30">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
-          <span className="px-4 py-1.5 rounded-full bg-chart-4/10 text-chart-4 text-sm font-medium">
-            Production Analysis
-          </span>
+          <div className="flex items-center justify-center gap-2 mb-4">
+            <span className="px-4 py-1.5 rounded-full bg-chart-4/10 text-chart-4 text-sm font-medium">
+              Production Analysis
+            </span>
+            {useAI ? (
+              <span className="px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium flex items-center gap-1">
+                <Sparkles className="h-3 w-3" />
+                AI Analyzed
+              </span>
+            ) : (
+              <span className="px-3 py-1 rounded-full bg-muted text-muted-foreground text-xs font-medium flex items-center gap-1">
+                <AlertCircle className="h-3 w-3" />
+                Estimated
+              </span>
+            )}
+          </div>
           <h2 className="text-4xl sm:text-5xl font-bold mt-6 mb-4">Scene Complexity</h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Analyze dialogue density, action intensity, and technical requirements across scenes
+            {useAI 
+              ? 'AI-analyzed dialogue density and action intensity with estimated technical requirements'
+              : 'Analyze dialogue density, action intensity, and technical requirements across scenes'}
           </p>
         </div>
 
@@ -255,7 +291,10 @@ export function SceneComplexityAnalyzer({ scenes, characters = [] }: SceneComple
                 </div>
                 <div>
                   <div className="text-2xl font-bold">{averageMetrics?.dialogueDensity || 0}%</div>
-                  <div className="text-xs text-muted-foreground">Avg Dialogue</div>
+                  <div className="text-xs text-muted-foreground flex items-center gap-1">
+                    Avg Dialogue
+                    {useAI && <Sparkles className="h-3 w-3 text-primary" />}
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -268,7 +307,10 @@ export function SceneComplexityAnalyzer({ scenes, characters = [] }: SceneComple
                 </div>
                 <div>
                   <div className="text-2xl font-bold">{averageMetrics?.actionIntensity || 0}%</div>
-                  <div className="text-xs text-muted-foreground">Avg Action</div>
+                  <div className="text-xs text-muted-foreground flex items-center gap-1">
+                    Avg Action
+                    {useAI && <Sparkles className="h-3 w-3 text-primary" />}
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -281,7 +323,10 @@ export function SceneComplexityAnalyzer({ scenes, characters = [] }: SceneComple
                 </div>
                 <div>
                   <div className="text-2xl font-bold">{averageMetrics?.technicalRequirements || 0}%</div>
-                  <div className="text-xs text-muted-foreground">Avg Technical</div>
+                  <div className="text-xs text-muted-foreground flex items-center gap-1">
+                    Avg Technical
+                    <AlertCircle className="h-3 w-3 text-muted-foreground/50" />
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -294,7 +339,10 @@ export function SceneComplexityAnalyzer({ scenes, characters = [] }: SceneComple
                 </div>
                 <div>
                   <div className="text-2xl font-bold">{averageMetrics?.vfxPotential || 0}%</div>
-                  <div className="text-xs text-muted-foreground">Avg VFX</div>
+                  <div className="text-xs text-muted-foreground flex items-center gap-1">
+                    Avg VFX
+                    <AlertCircle className="h-3 w-3 text-muted-foreground/50" />
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -442,7 +490,15 @@ export function SceneComplexityAnalyzer({ scenes, characters = [] }: SceneComple
         {/* Dialogue vs Action Scatter */}
         <Card>
           <CardHeader>
-            <CardTitle>Dialogue vs Action Intensity</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              Dialogue vs Action Intensity
+              {useAI && (
+                <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium flex items-center gap-1">
+                  <Sparkles className="h-3 w-3" />
+                  AI
+                </span>
+              )}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-[400px]">

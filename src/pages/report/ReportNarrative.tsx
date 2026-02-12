@@ -81,7 +81,8 @@ export default function ReportNarrative() {
         </div>
         <SceneComplexityAnalyzer 
           scenes={reportData.scenes || []} 
-          characters={reportData.characters || []} 
+          characters={reportData.characters || []}
+          sceneAnalysis={reportData.sceneAnalysis}
         />
       </section>
 
