@@ -74,7 +74,7 @@ export function ReportHero({ reportData, reportTitle, currentScore, activeLens }
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Genre</p>
-                    <p className="font-semibold">{metadata.genre}</p>
+                    <p className="font-semibold">{metadata.genre}{metadata?.subgenre ? ` · ${metadata.subgenre}` : ''}</p>
                   </div>
                 </div>
               )}
@@ -89,24 +89,39 @@ export function ReportHero({ reportData, reportTitle, currentScore, activeLens }
                   </div>
                 </div>
               )}
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded-lg bg-card border border-border">
-                  <Target className="h-4 w-4 text-chart-3" />
+              {(metadata?.sceneCount || reportData.scenes?.length > 0) && (
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-lg bg-card border border-border">
+                    <Target className="h-4 w-4 text-chart-3" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Scenes</p>
+                    <p className="font-semibold">{metadata?.sceneCount ?? reportData.scenes?.length}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Parameters</p>
-                  <p className="font-semibold">{totalParameters}</p>
+              )}
+              {(metadata?.characterCount || reportData.characters?.length > 0) && (
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-lg bg-card border border-border">
+                    <Zap className="h-4 w-4 text-chart-4" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Characters</p>
+                    <p className="font-semibold">{metadata?.characterCount ?? reportData.characters?.length}</p>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded-lg bg-card border border-border">
-                  <Zap className="h-4 w-4 text-chart-4" />
+              )}
+              {metadata?.theme && (
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-lg bg-card border border-border">
+                    <Target className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Theme</p>
+                    <p className="font-semibold">{metadata.theme}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Insights</p>
-                  <p className="font-semibold">{totalInsights}</p>
-                </div>
-              </div>
+              )}
             </div>
 
             {/* Lens indicator */}

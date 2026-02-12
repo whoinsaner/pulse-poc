@@ -226,8 +226,12 @@ export interface ReportData {
     title: string;
     logline?: string;
     genre?: string;
+    subgenre?: string;
+    theme?: string;
     scriptType: ScriptType;
     pageCount?: number;
+    sceneCount?: number;
+    characterCount?: number;
     episodeLengthClass?: EpisodeLengthClass;
   };
   overallScore: number;
