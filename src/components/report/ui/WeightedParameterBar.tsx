@@ -37,55 +37,43 @@ export function WeightedParameterBar({
   const diagnostic = getDiagnosticCategory(parameter.score);
 
   return (
-    <div className={cn('space-y-1.5', className)}>
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 min-w-0 flex-1">
-          {/* Weight indicator dot */}
-          {showWeight && (
-            <span className="shrink-0">
-              {weightTier.tier === 'core' ? (
-                <CircleDot className={cn('h-3.5 w-3.5', weightTier.color)} />
-              ) : weightTier.tier === 'polish' ? (
-                <Circle className={cn('h-3.5 w-3.5', weightTier.color)} />
-              ) : (
-                <Circle className="h-3.5 w-3.5 text-muted-foreground/40 fill-muted-foreground/20" />
-              )}
-            </span>
-          )}
-          
-          <span className="text-sm font-medium truncate">{parameter.displayName}</span>
-          
-          {/* Weight multiplier label */}
+    <div className={cn(
+      'flex items-start gap-4 p-4 rounded-xl border border-border bg-card',
+      className
+    )}>
+      {/* Left: Title + Rationale */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
           {showWeight && weightTier.multiplierLabel && (
-            <span className={cn('text-[10px] uppercase font-semibold', weightTier.color)}>
+            <span className={cn('text-[10px] uppercase font-semibold shrink-0', weightTier.color)}>
               {weightTier.tier === 'core' ? 'CORE' : 'Polish'}
             </span>
           )}
+          <h4 className="font-semibold text-sm text-foreground">{parameter.displayName}</h4>
         </div>
+        {showRationale && parameter.rationale && (
+          <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
+            {parameter.rationale}
+          </p>
+        )}
+      </div>
 
-        <span className={cn('font-mono font-bold text-sm tabular-nums', diagnostic.color)}>
+      {/* Right: Score bar + number */}
+      <div className="flex items-center gap-3 shrink-0 pt-0.5">
+        <div className="w-24">
+          <Progress 
+            value={parameter.score} 
+            className={cn(
+              'h-2.5',
+              weightTier.tier === 'core' && 'h-3',
+              weightTier.tier === 'polish' && 'h-2 opacity-70'
+            )}
+          />
+        </div>
+        <span className={cn('font-mono font-bold text-base tabular-nums w-8 text-right', diagnostic.color)}>
           {Math.round(parameter.score)}
         </span>
       </div>
-
-      {/* Progress bar */}
-      <div className="relative">
-        <Progress 
-          value={parameter.score} 
-          className={cn(
-            'h-2',
-            weightTier.tier === 'core' && 'h-2.5',
-            weightTier.tier === 'polish' && 'h-1.5 opacity-70'
-          )}
-        />
-      </div>
-
-      {/* Rationale */}
-      {showRationale && parameter.rationale && (
-        <p className="text-xs text-muted-foreground pl-5">
-          {parameter.rationale}
-        </p>
-      )}
     </div>
   );
 }
@@ -122,9 +110,9 @@ export function WeightedParameterList({
   const hiddenParams = showAllByDefault ? [] : sortedParams.slice(defaultVisibleCount);
 
   return (
-    <div className={cn('rounded-xl border bg-card p-4', className)}>
+    <div className={cn('space-y-2', className)}>
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-        <CollapsibleTrigger className="flex items-center justify-between w-full group">
+        <CollapsibleTrigger className="flex items-center justify-between w-full group px-1">
           <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             {title}
           </h4>
@@ -141,7 +129,7 @@ export function WeightedParameterList({
           </div>
         </CollapsibleTrigger>
 
-        <div className="mt-4 space-y-3">
+        <div className="mt-3 space-y-2">
           {visibleParams.map((param) => (
             <WeightedParameterBar
               key={param.parameterName}
@@ -154,7 +142,7 @@ export function WeightedParameterList({
 
         {hiddenParams.length > 0 && (
           <CollapsibleContent>
-            <div className="mt-3 pt-3 border-t border-border/50 space-y-3">
+            <div className="mt-2 space-y-2">
               {hiddenParams.map((param) => (
                 <WeightedParameterBar
                   key={param.parameterName}
