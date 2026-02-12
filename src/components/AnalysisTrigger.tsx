@@ -25,6 +25,7 @@ interface AnalysisTriggerProps {
   scriptId: string;
   scriptTitle: string;
   scriptType?: ScriptType;
+  resumeRunId?: string;
   onAnalysisComplete?: (analysisRunId: string) => void;
 }
 
@@ -70,6 +71,7 @@ export function AnalysisTrigger({
   scriptId, 
   scriptTitle, 
   scriptType = 'feature',
+  resumeRunId,
   onAnalysisComplete 
 }: AnalysisTriggerProps) {
   const { user, profile } = useAuth();
@@ -286,6 +288,13 @@ export function AnalysisTrigger({
       supabase.removeChannel(channel);
     };
   }, [analysisRunId, isAnalyzing, handleRealtimeUpdate]);
+
+  // Auto-start resume when resumeRunId is provided
+  useEffect(() => {
+    if (resumeRunId && user && !isAnalyzing) {
+      startAnalysis(false, 'deep', true, resumeRunId);
+    }
+  }, [resumeRunId, user]);
 
   const startAnalysis = async (forceAnalysis = false, mode: 'quick' | 'deep' = 'deep', resume = false, existingRunId?: string, stakeholderLens?: StakeholderLens | null) => {
     if (!user) {

@@ -106,7 +106,7 @@ export default function Scripts() {
   const [previewScript, setPreviewScript] = useState<SampleScriptData | null>(null);
   const [showExtractionDialog, setShowExtractionDialog] = useState(false);
   const [stuckRuns, setStuckRuns] = useState<Record<string, string>>({}); // scriptId -> analysisRunId
-  const [resumingScript, setResumingScript] = useState<string | null>(null);
+  const [resumeRunId, setResumeRunId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -183,44 +183,20 @@ export default function Scripts() {
     }
   };
 
-  const handleResumeAnalysis = async (script: Script) => {
+  const handleResumeAnalysis = (script: Script) => {
     const runId = stuckRuns[script.id];
     if (!runId) return;
 
-    setResumingScript(script.id);
-    try {
-      const { error: invokeError } = await supabase.functions.invoke('analyze-script', {
-        body: {
-          scriptId: script.id,
-          analysisRunId: runId,
-          mode: 'deep',
-          resume: true,
-        },
-      });
+    setResumeRunId(runId);
+    setSelectedScript(script);
+    setShowAnalyzeDialog(true);
 
-      if (invokeError) throw invokeError;
-
-      toast({
-        title: 'Analysis resumed',
-        description: `Resuming analysis for "${script.title}". Failed and interrupted agents will be re-run.`,
-      });
-
-      // Remove from stuck runs
-      setStuckRuns(prev => {
-        const next = { ...prev };
-        delete next[script.id];
-        return next;
-      });
-    } catch (err) {
-      console.error('Resume error:', err);
-      toast({
-        title: 'Resume failed',
-        description: err instanceof Error ? err.message : 'Failed to resume analysis',
-        variant: 'destructive',
-      });
-    } finally {
-      setResumingScript(null);
-    }
+    // Remove from stuck runs since we're handling it
+    setStuckRuns(prev => {
+      const next = { ...prev };
+      delete next[script.id];
+      return next;
+    });
   };
 
   const fetchRelatedCounts = async (scriptId: string) => {
@@ -472,13 +448,8 @@ export default function Scripts() {
                               e.stopPropagation();
                               handleResumeAnalysis(script);
                             }}
-                            disabled={resumingScript === script.id}
                           >
-                            {resumingScript === script.id ? (
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            ) : (
-                              <RotateCcw className="h-4 w-4 mr-2" />
-                            )}
+                            <RotateCcw className="h-4 w-4 mr-2" />
                             Resume Stuck Analysis
                           </DropdownMenuItem>
                         )}
@@ -642,18 +613,23 @@ export default function Scripts() {
         </div>
 
         {/* Analyze Dialog */}
-        <Dialog open={showAnalyzeDialog} onOpenChange={setShowAnalyzeDialog}>
+        <Dialog open={showAnalyzeDialog} onOpenChange={(open) => {
+          setShowAnalyzeDialog(open);
+          if (!open) setResumeRunId(null);
+        }}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Analyze Script</DialogTitle>
+              <DialogTitle>{resumeRunId ? 'Resume Analysis' : 'Analyze Script'}</DialogTitle>
             </DialogHeader>
             {selectedScript && (
               <AnalysisTrigger
                 scriptId={selectedScript.id}
                 scriptTitle={selectedScript.title}
                 scriptType={selectedScript.script_type}
+                resumeRunId={resumeRunId || undefined}
                 onAnalysisComplete={(runId) => {
                   setShowAnalyzeDialog(false);
+                  setResumeRunId(null);
                   navigate(`/reports/${runId}`);
                 }}
               />
