@@ -1987,6 +1987,7 @@ serve(async (req) => {
     const episodeLengthClass = script?.episode_length_class;
     const isComic = scriptType === 'comic';
     const isWebSeries = scriptType === 'web_series';
+    const isMicroDrama = scriptType === 'micro_drama';
     const isInteractive = ['game_narrative', 'interactive_fiction'].includes(scriptType);
     const isAudio = ['audio_drama', 'podcast_fiction'].includes(scriptType);
     
@@ -1995,6 +1996,7 @@ serve(async (req) => {
     const coreAgents = ['ConceptAgent', 'StructureAgent', 'CharacterAgent', 'ConflictAgent', 'ThemeAgent', 'DialogueAgent', 'WorldLogicAgent', 'EmotionalArcAgent', 'MarketAgent', 'ExecutionAgent'];
     const comicAgents = ['PanelFlowAgent', 'LetteringBalloonAgent', 'PageTurnImpactAgent', 'ArtScriptSynergyAgent'];
     const webSeriesAgents = ['WebSeriesAgent'];
+    const microDramaAgents = ['MicroDramaAgent'];
     const interactiveAgents = ['InteractivityAgent', 'WorldBuildingAgent'];
     const audioAgents = ['AudioNarrativeAgent'];
     const metaAgents = ['StakeholderLensAgent', 'InsightSynthesisAgent', 'SeriesBibleAgent'];
@@ -2007,9 +2009,9 @@ serve(async (req) => {
       director: ['StructureAgent', 'ThemeAgent', 'EmotionalArcAgent', 'WorldLogicAgent'],
       writer: ['ConceptAgent', 'StructureAgent', 'CharacterAgent', 'DialogueAgent', 'ThemeAgent', 'ConflictAgent'],
       financier: ['ConceptAgent', 'MarketAgent', 'ExecutionAgent'],
-      ott_platform: ['ConceptAgent', 'CharacterAgent', 'EmotionalArcAgent', 'MarketAgent', 'WebSeriesAgent'],
+      ott_platform: ['ConceptAgent', 'CharacterAgent', 'EmotionalArcAgent', 'MarketAgent', 'WebSeriesAgent', 'MicroDramaAgent'],
       theatrical: ['ConceptAgent', 'EmotionalArcAgent', 'MarketAgent', 'ExecutionAgent'],
-      investor: ['ConceptAgent', 'MarketAgent', 'ExecutionAgent', 'WebSeriesAgent'],
+      investor: ['ConceptAgent', 'MarketAgent', 'ExecutionAgent', 'WebSeriesAgent', 'MicroDramaAgent'],
     };
     
     // Build agent list based on script type and stakeholder
@@ -2032,12 +2034,17 @@ serve(async (req) => {
       if (isWebSeries && (stakeholderLens === 'ott_platform' || stakeholderLens === 'investor' || stakeholderLens === 'producer')) {
         activeAgentNames.push(...webSeriesAgents);
       }
+      // Add micro drama agents if relevant for this stakeholder
+      if (isMicroDrama && (stakeholderLens === 'ott_platform' || stakeholderLens === 'investor' || stakeholderLens === 'producer' || stakeholderLens === 'writer')) {
+        activeAgentNames.push(...microDramaAgents);
+      }
     } else {
       // Comprehensive analysis - run all agents
       activeAgentNames = [...systemAgents, ...coreAgents];
       
       if (isComic) activeAgentNames.push(...comicAgents);
       if (isWebSeries) activeAgentNames.push(...webSeriesAgents);
+      if (isMicroDrama) activeAgentNames.push(...microDramaAgents);
       if (isInteractive) activeAgentNames.push(...interactiveAgents);
       if (isAudio) activeAgentNames.push(...audioAgents);
       
@@ -2054,7 +2061,7 @@ serve(async (req) => {
       return activeAgentNames.includes(agentName);
     });
 
-    console.log(`[analyze-script] Script type: ${scriptType}, mode: ${mode}, stakeholder: ${stakeholderLens || 'all'}, running ${agentsToRun.length} agents (comic: ${isComic}, interactive: ${isInteractive}, audio: ${isAudio})`);
+    console.log(`[analyze-script] Script type: ${scriptType}, mode: ${mode}, stakeholder: ${stakeholderLens || 'all'}, running ${agentsToRun.length} agents (comic: ${isComic}, web_series: ${isWebSeries}, micro_drama: ${isMicroDrama}, interactive: ${isInteractive}, audio: ${isAudio})`);
     let existingProgress: Record<string, { status: string; error?: string; retryCount?: number }> = {};
     
     if (resume) {

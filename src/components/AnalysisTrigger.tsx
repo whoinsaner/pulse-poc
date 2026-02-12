@@ -53,6 +53,10 @@ const WEB_SERIES_AGENTS = [
   { name: 'WebSeriesAgent', label: 'Web Series', module: 'WS', icon: MonitorPlay },
 ];
 
+const MICRO_DRAMA_AGENTS = [
+  { name: 'MicroDramaAgent', label: 'Micro Drama', module: 'MD', icon: Zap },
+];
+
 const ENRICHMENT_AGENTS = [
   { name: 'SceneEnrichmentAgent', label: 'Scene Enrichment', module: 'SE', icon: ScanSearch },
 ];
@@ -109,9 +113,12 @@ export function AnalysisTrigger({
   const isWebSeries = scriptType === 'web_series';
   
   // Get format-specific agents based on script type
+  const isMicroDrama = scriptType === 'micro_drama';
+  
   const getFormatSpecificAgents = () => {
     if (isComic) return COMIC_AGENTS;
     if (isWebSeries) return WEB_SERIES_AGENTS;
+    if (isMicroDrama) return MICRO_DRAMA_AGENTS;
     return [];
   };
   

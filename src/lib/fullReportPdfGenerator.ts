@@ -1175,10 +1175,23 @@ export async function generateFullReportPDF(
       toc.push({ title: sec.title, page: pageNum.value, level: 1 });
       y = renderSection(doc, y, sec.id, sec.title, sec.subtitle, data, pageNum);
     }
+  } else if (scriptType === 'pilot' || scriptType === 'episode') {
+    renderPartDivider(doc, pageNum, 'PART IV', 'FORMAT ANALYSIS', toc);
+
+    const formatSections: SectionDef[] = [
+      { id: 'format', title: 'Format Diagnosis', subtitle: 'Structure and pacing for pilot/episode format' },
+    ];
+
+    for (const sec of formatSections) {
+      y = newPage(doc, pageNum, sec.title);
+      toc.push({ title: sec.title, page: pageNum.value, level: 1 });
+      y = renderSection(doc, y, sec.id, sec.title, sec.subtitle, data, pageNum);
+    }
   }
 
   // === PART V: PRODUCTION & MARKET ===
-  const marketPartNum = isComicType(scriptType) || isWebSeriesType(scriptType) || scriptType === 'micro_drama' ? 'PART V' : 'PART IV';
+  const hasFormatPart = isComicType(scriptType) || isWebSeriesType(scriptType) || scriptType === 'micro_drama' || scriptType === 'pilot' || scriptType === 'episode';
+  const marketPartNum = hasFormatPart ? 'PART V' : 'PART IV';
   renderPartDivider(doc, pageNum, marketPartNum, 'PRODUCTION & MARKET', toc);
 
   const marketSections: SectionDef[] = [
