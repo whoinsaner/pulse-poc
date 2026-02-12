@@ -599,7 +599,7 @@ function normalizeToFountain(rawText: string): {
   // Character patterns - Unicode-aware for multilingual names (Hinglish, Hindi, etc.)
   const characterCuePattern = /^([\p{Lu}][\p{L}\s\.']{1,}|[\u0900-\u097F][\u0900-\u097F\s]+)(\s*\(.*\))?$/u;
   
-  // Non-character words to filter - includes Hindi/Hinglish terms
+  // Non-character words to filter - includes Hindi/Hinglish terms, locations, props
   const nonCharacterWords = new Set([
     'INT', 'EXT', 'INTERIOR', 'EXTERIOR', 'FADE', 'CUT', 'DISSOLVE',
     'THE', 'CONTINUED', 'CONTINUOUS', 'LATER', 'DAY', 'NIGHT', 'MORNING',
@@ -609,7 +609,25 @@ function normalizeToFountain(rawText: string): {
     'ANDAR', 'BAHAR', 'DIN', 'RAAT', 'SUBAH', 'SHAAM', 'DOPAHAR',
     'अंदर', 'बाहर', 'दिन', 'रात', 'सुबह', 'शाम', 'दोपहर',
     'SCENE', 'SHOT', 'FLASHBACK', 'MONTAGE', 'INTERCUT',
+    // Common locations/props misidentified as characters
+    'INSIDE', 'OUTSIDE', 'HALL', 'HALLWAY', 'ROOM', 'BACK ROOM', 'BACKROOM',
+    'BEDROOM', 'BATHROOM', 'KITCHEN', 'LIVING ROOM', 'OFFICE', 'CORRIDOR',
+    'STREET', 'ROAD', 'ANOTHER STREET', 'DESERTED ROAD', 'HIGHWAY',
+    'ROOFTOP', 'TERRACE', 'BALCONY', 'GARDEN', 'COURTYARD', 'PARKING',
+    'HOSPITAL', 'TEMPLE', 'CHURCH', 'SCHOOL', 'COLLEGE', 'STATION',
+    'POLICE STATION', 'MARKET', 'SHOP', 'STORE', 'BAR', 'RESTAURANT',
+    'HOUSE', 'HOME', 'BUILDING', 'APARTMENT', 'FLAT', 'FLOOR',
+    'GATE', 'DOOR', 'WINDOW', 'STAIRS', 'STAIRCASE', 'ENTRANCE',
+    'VILLAGE', 'TOWN', 'CITY', 'JUNGLE', 'FOREST', 'FIELD', 'FARM',
+    'BRIDGE', 'RIVER', 'LAKE', 'POND', 'WELL', 'CAVE', 'HILL',
+    'CAR', 'TAXI', 'BUS', 'TRAIN', 'TRUCK', 'VEHICLE', 'BIKE',
+    'PHONE', 'LETTER', 'NOTE', 'SIGN', 'BOARD', 'POSTER',
+    'HER POV', 'HIS POV', 'THEIR POV', 'NEARBY', 'ELSEWHERE',
+    'MEANWHILE', 'LATER THAT',
   ]);
+  
+  // Pattern to detect location-like names (common in Indian screenplays)
+  const locationLikePattern = /^(ANOTHER|DESERTED|NARROW|DARK|OLD|NEW|SMALL|BIG|EMPTY|BUSY|CROWDED|SAME|NEARBY)\s+(STREET|ROAD|LANE|LANES|ROOM|HALL|HOUSE|BUILDING|SHOP|ALLEY|AREA|PLACE|SIDE|CORNER|MARKET|TOWN|VILLAGE|CITY)S?$/i;
   
   let lastWasCharacter = false;
   let inDialogue = false;
@@ -687,7 +705,7 @@ function normalizeToFountain(rawText: string): {
     if (characterCuePattern.test(trimmed) && trimmed.length < 40) {
       const potentialName = trimmed.replace(/\s*\(.*\)$/, '').trim();
       
-      if (!nonCharacterWords.has(potentialName) && potentialName.length > 1) {
+      if (!nonCharacterWords.has(potentialName) && potentialName.length > 1 && !locationLikePattern.test(potentialName)) {
         if (nextLine && !sceneHeadingPattern.test(nextLine) && !characterCuePattern.test(nextLine)) {
           characterNames.add(potentialName);
           normalizedLines.push('');
@@ -2203,14 +2221,32 @@ function parseTextFormat(content: string): { scenes: Scene[]; characters: Charac
   // Character pattern - Unicode-aware for multilingual names (Hinglish, Hindi, etc.)
   const characterPattern = /^([\p{Lu}][\p{L}\s\.']+|[\u0900-\u097F][\u0900-\u097F\s]+)(\s*\(.*\))?$/u;
   
-  // Non-character words - includes Hindi/Hinglish terms
+  // Non-character words - includes Hindi/Hinglish terms, locations, props
   const nonCharacterWords = new Set([
     'INT', 'EXT', 'INTERIOR', 'EXTERIOR', 'FADE', 'CUT', 'DISSOLVE',
     'THE', 'CONTINUED', 'CONTINUOUS', 'LATER', 'DAY', 'NIGHT',
     'MORNING', 'EVENING', 'DUSK', 'DAWN', 'SCENE', 'SHOT',
     'ANDAR', 'BAHAR', 'DIN', 'RAAT', 'SUBAH', 'SHAAM', 'DOPAHAR',
     'अंदर', 'बाहर', 'दिन', 'रात', 'सुबह', 'शाम', 'दोपहर',
+    // Common locations/props misidentified as characters
+    'INSIDE', 'OUTSIDE', 'HALL', 'HALLWAY', 'ROOM', 'BACK ROOM', 'BACKROOM',
+    'BEDROOM', 'BATHROOM', 'KITCHEN', 'LIVING ROOM', 'OFFICE', 'CORRIDOR',
+    'STREET', 'ROAD', 'ANOTHER STREET', 'DESERTED ROAD', 'HIGHWAY',
+    'ROOFTOP', 'TERRACE', 'BALCONY', 'GARDEN', 'COURTYARD', 'PARKING',
+    'HOSPITAL', 'TEMPLE', 'CHURCH', 'SCHOOL', 'COLLEGE', 'STATION',
+    'POLICE STATION', 'MARKET', 'SHOP', 'STORE', 'BAR', 'RESTAURANT',
+    'HOUSE', 'HOME', 'BUILDING', 'APARTMENT', 'FLAT', 'FLOOR',
+    'GATE', 'DOOR', 'WINDOW', 'STAIRS', 'STAIRCASE', 'ENTRANCE',
+    'VILLAGE', 'TOWN', 'CITY', 'JUNGLE', 'FOREST', 'FIELD', 'FARM',
+    'BRIDGE', 'RIVER', 'LAKE', 'POND', 'WELL', 'CAVE', 'HILL',
+    'CAR', 'TAXI', 'BUS', 'TRAIN', 'TRUCK', 'VEHICLE', 'BIKE',
+    'PHONE', 'LETTER', 'NOTE', 'SIGN', 'BOARD', 'POSTER',
+    'HER POV', 'HIS POV', 'THEIR POV', 'NEARBY', 'ELSEWHERE',
+    'MEANWHILE', 'LATER THAT', 'FLASHBACK', 'MONTAGE', 'INTERCUT',
   ]);
+  
+  // Pattern to detect location-like names
+  const locationLikePattern = /^(ANOTHER|DESERTED|NARROW|DARK|OLD|NEW|SMALL|BIG|EMPTY|BUSY|CROWDED|SAME|NEARBY)\s+(STREET|ROAD|LANE|LANES|ROOM|HALL|HOUSE|BUILDING|SHOP|ALLEY|AREA|PLACE|SIDE|CORNER|MARKET|TOWN|VILLAGE|CITY)S?$/i;
 
   // Page marker pattern for PyMuPDF extracted text
   const pageMarkerPattern = /^-+\s*PAGE\s*(\d+)\s*-+$/i;
@@ -2357,9 +2393,10 @@ function parseTextFormat(content: string): { scenes: Scene[]; characters: Charac
           !nextLine.match(pageMarkerPattern);
         const looksLikeTransition = /^(FADE|CUT|DISSOLVE|SMASH|JUMP|TIME|MATCH|IRIS|WIPE)\b/i.test(charName);
         const looksLikeDirection = /^(BACK TO|CLOSE ON|ANGLE ON|WIDE ON|INSERT|SUPER|TITLE|MONTAGE|INTERCUT|FLASHBACK|LATER|CONTINUOUS|MEANWHILE)\b/i.test(charName);
+        const looksLikeLocation = locationLikePattern.test(charName);
         const tooManyWords = charName.split(/\s+/).length > 4;
         
-        if (isAllCaps && hasDialogueBelow && !looksLikeTransition && !looksLikeDirection && !tooManyWords &&
+        if (isAllCaps && hasDialogueBelow && !looksLikeTransition && !looksLikeDirection && !looksLikeLocation && !tooManyWords &&
             !nonCharacterWords.has(charName) && charName.length > 1) {
           if (!characterMap.has(charName)) {
             characterMap.set(charName, {
