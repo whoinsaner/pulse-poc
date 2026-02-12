@@ -216,6 +216,8 @@ export interface SceneAnalysisData {
   emotionalTone: string;
   dialogueDensity: number;   // 0-100
   actionIntensity: number;   // 0-100
+  technicalRequirements: number; // 0-100
+  vfxPotential: number;      // 0-100
   narrativeFunction: 'setup' | 'escalation' | 'climax' | 'resolution' | 'transition';
   keyMoment: boolean;
   briefSummary?: string;     // 1-2 sentence summary
