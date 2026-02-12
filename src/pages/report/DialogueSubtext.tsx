@@ -5,7 +5,6 @@ import { AgentNarrativePanel } from '@/components/report/AgentNarrativePanel';
 import { 
   SectionHeader, 
   SubSectionHeader,
-  StrengthWeaknessList,
   WeightedParameterList,
 } from '@/components/report/ui';
 import { Card } from '@/components/ui/card';
@@ -43,16 +42,6 @@ export default function DialogueSubtext() {
   const topCharacters = [...characters]
     .sort((a, b) => b.dialogueCount - a.dialogueCount)
     .slice(0, 4);
-
-  const strengths = dialogueParams.filter(p => p.score >= 70).map(p => ({
-    text: p.displayName || p.parameterName,
-    detail: p.rationale?.slice(0, 80)
-  }));
-
-  const weaknesses = dialogueParams.filter(p => p.score < 50).map(p => ({
-    text: p.displayName || p.parameterName,
-    detail: p.rationale?.slice(0, 80)
-  }));
 
   const filteredDialogueParams = filterParameters(dialogueParams);
   const filterStats = getFilterStats(dialogueParams);
@@ -117,11 +106,6 @@ export default function DialogueSubtext() {
         initiallyExpanded={true}
         defaultVisibleCount={8}
       />
-
-      {/* Strengths & Weaknesses */}
-      {(strengths.length > 0 || weaknesses.length > 0) && (
-        <StrengthWeaknessList strengths={strengths} weaknesses={weaknesses} />
-      )}
     </div>
   );
 }

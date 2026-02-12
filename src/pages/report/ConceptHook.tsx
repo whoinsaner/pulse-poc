@@ -6,7 +6,7 @@ import { Card } from '@/components/ui/card';
 import { 
   SectionHeader, 
   SubSectionHeader,
-  StrengthWeaknessList,
+  
   QuoteCallout,
   WeightedParameterList,
 } from '@/components/report/ui';
@@ -45,16 +45,6 @@ export default function ConceptHook() {
     i.title?.toLowerCase().includes('hook')
   ) || [];
 
-  const strengths = conceptParams.filter(p => p.score >= 70).map(p => ({
-    text: p.displayName || p.parameterName,
-    detail: p.rationale?.slice(0, 100)
-  }));
-
-  const weaknesses = conceptParams.filter(p => p.score < 50).map(p => ({
-    text: p.displayName || p.parameterName,
-    detail: p.rationale?.slice(0, 100)
-  }));
-
   return (
     <div className="space-y-8">
       <SectionHeader
@@ -87,11 +77,6 @@ export default function ConceptHook() {
         initiallyExpanded={true}
         defaultVisibleCount={8}
       />
-
-      {/* Strengths & Weaknesses */}
-      {(strengths.length > 0 || weaknesses.length > 0) && (
-        <StrengthWeaknessList strengths={strengths} weaknesses={weaknesses} />
-      )}
 
       {/* Key Findings from insights */}
       {conceptInsights.length > 0 && (

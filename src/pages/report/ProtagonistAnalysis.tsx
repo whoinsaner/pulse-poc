@@ -1,12 +1,10 @@
 import { useOutletContext } from 'react-router-dom';
 import { ReportData, StakeholderLens } from '@/types/database';
 
-import { AgentNarrativePanel, CharacterNarrativePanel } from '@/components/report/AgentNarrativePanel';
 import { Card } from '@/components/ui/card';
 import { 
   SectionHeader, 
   SubSectionHeader,
-  StrengthWeaknessList,
   WeightedParameterList,
 } from '@/components/report/ui';
 import { User } from 'lucide-react';
@@ -45,18 +43,6 @@ export default function ProtagonistAnalysis() {
       ? characterParams.reduce((sum, p) => sum + p.score, 0) / characterParams.length 
       : currentScore);
 
-  const agentContent = reportData.agentContent?.CharacterAgent;
-
-  const strengths = characterParams.filter(p => p.score >= 70).map(p => ({
-    text: p.displayName || p.parameterName,
-    detail: p.rationale?.slice(0, 80)
-  }));
-
-  const weaknesses = characterParams.filter(p => p.score < 50).map(p => ({
-    text: p.displayName || p.parameterName,
-    detail: p.rationale?.slice(0, 80)
-  }));
-
   const filteredCharacterParams = filterParameters(characterParams);
   const filterStats = getFilterStats(characterParams);
 
@@ -76,11 +62,6 @@ export default function ProtagonistAnalysis() {
           totalCount={filterStats.total}
         />
       )}
-
-      {/* Agent Narrative with character extras (protagonist profile, etc.) */}
-      {agentContent ? (
-        <CharacterNarrativePanel content={agentContent} />
-      ) : null}
 
       {/* Character Fundamentals from parsed data */}
       {protagonist && (
@@ -142,10 +123,6 @@ export default function ProtagonistAnalysis() {
         defaultVisibleCount={8}
       />
 
-      {/* Strengths & Weaknesses */}
-      {(strengths.length > 0 || weaknesses.length > 0) && (
-        <StrengthWeaknessList strengths={strengths} weaknesses={weaknesses} />
-      )}
     </div>
   );
 }

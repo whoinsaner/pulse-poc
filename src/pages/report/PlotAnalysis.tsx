@@ -7,7 +7,7 @@ import {
   SectionHeader, 
   SubSectionHeader,
   VerdictBox, 
-  StrengthWeaknessList,
+  
   WeightedParameterList,
 } from '@/components/report/ui';
 import { TrendingUp } from 'lucide-react';
@@ -47,16 +47,6 @@ export default function PlotAnalysis() {
   // Agent content from StructureAgent or ConflictAgent
   const structureContent = reportData.agentContent?.StructureAgent;
   const conflictContent = reportData.agentContent?.ConflictAgent;
-
-  const strengths = plotParams.filter(p => p.score >= 70).map(p => ({
-    text: p.displayName || p.parameterName,
-    detail: p.rationale?.slice(0, 80)
-  }));
-
-  const weaknesses = plotParams.filter(p => p.score < 50).map(p => ({
-    text: p.displayName || p.parameterName,
-    detail: p.rationale?.slice(0, 80)
-  }));
 
   return (
     <div className="space-y-8">
@@ -113,11 +103,6 @@ export default function PlotAnalysis() {
         initiallyExpanded={true}
         defaultVisibleCount={8}
       />
-
-      {/* Strengths & Weaknesses */}
-      {(strengths.length > 0 || weaknesses.length > 0) && (
-        <StrengthWeaknessList strengths={strengths} weaknesses={weaknesses} />
-      )}
 
       {/* Key Insights */}
       {plotInsights.length > 0 && (

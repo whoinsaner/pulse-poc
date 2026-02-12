@@ -4,10 +4,6 @@ import { ReportData, StakeholderLens } from '@/types/database';
 import { 
   SectionHeader, 
   ScoreDisplay, 
-  VerdictBox,
-  SubSectionHeader,
-  StrengthWeaknessList,
-  RecommendationCard,
   WeightedParameterList,
 } from '@/components/report/ui';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -58,22 +54,9 @@ export default function SceneEconomy() {
   const avgSceneLength = totalScenes > 0 ? (pageCount / totalScenes).toFixed(1) : '—';
 
   // Diagnostic buckets from real params
-  const { working, underdeveloped, broken } = useMemo(() => {
-    const w = economyParams.filter(p => p.score >= 70);
-    const u = economyParams.filter(p => p.score >= 40 && p.score < 70);
-    const b = economyParams.filter(p => p.score < 40);
-    return { working: w, underdeveloped: u, broken: b };
+  const working = useMemo(() => {
+    return economyParams.filter(p => p.score >= 70);
   }, [economyParams]);
-
-  const strengths = working.map(p => ({
-    text: p.displayName || p.parameterName,
-    detail: p.rationale?.slice(0, 100),
-  }));
-
-  const weaknesses = [...broken, ...underdeveloped.slice(0, 3)].map(p => ({
-    text: p.displayName || p.parameterName,
-    detail: p.rationale?.slice(0, 100),
-  }));
 
   // Derive top economy metrics from the top 4 relevant params
   const topMetrics = useMemo(() => {
@@ -84,18 +67,6 @@ export default function SceneEconomy() {
       description: p.rationale?.split('.')[0] || '',
     }));
   }, [economyParams]);
-
-  const getVerdictLabel = (score: number) => {
-    if (score >= 70) return 'Strong Scene Economy';
-    if (score >= 40) return 'Scene Economy Needs Attention';
-    return 'Weak Scene Economy';
-  };
-
-  const mapEffort = (fixCost?: string): 'easy' | 'moderate' | 'difficult' => {
-    if (fixCost === 'Low') return 'easy';
-    if (fixCost === 'High') return 'difficult';
-    return 'moderate';
-  };
 
   return (
     <div className="space-y-8">
@@ -155,19 +126,6 @@ export default function SceneEconomy() {
         </Card>
       )}
 
-      {/* Verdict */}
-      <VerdictBox
-        type={economyScore >= 70 ? 'success' : economyScore >= 40 ? 'finding' : 'issue'}
-        title={getVerdictLabel(economyScore)}
-        content={
-          economyScore >= 70
-            ? `Scene economy is strong with ${working.length} parameters performing well. The script maintains good structural efficiency across ${totalScenes} scenes.`
-            : economyScore >= 40
-            ? `Scene economy shows potential but ${underdeveloped.length} parameters need attention. Review pacing and structural tightness across the ${totalScenes} scenes.`
-            : `Scene economy needs significant work. ${broken.length} parameters are underperforming. Focus on structural efficiency and pacing.`
-        }
-      />
-
       {/* Parameter Breakdown */}
       <WeightedParameterList
         parameters={economyParams.map(p => ({
@@ -181,41 +139,6 @@ export default function SceneEconomy() {
         initiallyExpanded={true}
         defaultVisibleCount={8}
       />
-
-      {/* Strengths & Weaknesses from real data */}
-      {(strengths.length > 0 || weaknesses.length > 0) && (
-        <StrengthWeaknessList
-          strengths={strengths}
-          weaknesses={weaknesses}
-        />
-      )}
-
-      {/* Recommendations based on actual weak areas */}
-      {(broken.length > 0 || underdeveloped.length > 0) && (
-        <Card className="p-6">
-          <SubSectionHeader title="Economy Recommendations" />
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {broken.slice(0, 2).map((param) => (
-              <RecommendationCard
-                key={param.parameterId}
-                title={`Fix: ${param.displayName || param.parameterName}`}
-                description={param.rationale?.slice(0, 150) || 'This parameter needs immediate attention.'}
-                priority="high"
-                effort={mapEffort(param.fixCost)}
-              />
-            ))}
-            {underdeveloped.slice(0, 2).map((param) => (
-              <RecommendationCard
-                key={param.parameterId}
-                title={`Improve: ${param.displayName || param.parameterName}`}
-                description={param.rationale?.slice(0, 150) || 'This parameter has room for improvement.'}
-                priority="medium"
-                effort={mapEffort(param.fixCost)}
-              />
-            ))}
-          </div>
-        </Card>
-      )}
     </div>
   );
 }

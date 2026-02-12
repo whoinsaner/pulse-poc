@@ -5,7 +5,6 @@ import { ProductionNarrativePanel } from '@/components/report/AgentNarrativePane
 import { 
   SectionHeader, 
   SubSectionHeader,
-  StrengthWeaknessList,
   WeightedParameterList,
 } from '@/components/report/ui';
 import { Card } from '@/components/ui/card';
@@ -44,16 +43,6 @@ export default function Production() {
   const characters = reportData.characters || [];
   const uniqueLocations = new Set(scenes.map(s => s.location).filter(Boolean));
   const pageCount = reportData.scriptMetadata?.pageCount || 110;
-
-  const strengths = productionParams.filter(p => p.score >= 70).map(p => ({
-    text: p.displayName || p.parameterName,
-    detail: p.rationale?.slice(0, 80)
-  }));
-
-  const weaknesses = productionParams.filter(p => p.score < 50).map(p => ({
-    text: p.displayName || p.parameterName,
-    detail: p.rationale?.slice(0, 80)
-  }));
 
   const filteredProductionParams = filterParameters(productionParams);
   const filterStats = getFilterStats(productionParams);
@@ -110,11 +99,6 @@ export default function Production() {
         initiallyExpanded={true}
         defaultVisibleCount={8}
       />
-
-      {/* Strengths & Weaknesses */}
-      {(strengths.length > 0 || weaknesses.length > 0) && (
-        <StrengthWeaknessList strengths={strengths} weaknesses={weaknesses} />
-      )}
     </div>
   );
 }

@@ -12,7 +12,7 @@ import {
   QuoteCallout,
   WeightedParameterList,
 } from '@/components/report/ui';
-import { AgentNarrativePanel } from '@/components/report/AgentNarrativePanel';
+
 import { UserX, Shield, Brain, Zap, Target, Sword } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { extractScore } from '@/lib/scoreUtils';
@@ -129,14 +129,6 @@ export default function AntagonistAnalysis() {
           <ScoreDisplay score={avgPower} size="sm" />
         </Card>
       </div>
-
-      {/* AI Agent Narrative Content */}
-      {agentContent && (
-        <AgentNarrativePanel 
-          agentName="CharacterAgent" 
-          content={agentContent} 
-        />
-      )}
 
       {/* Antagonist Profile from AI */}
       {antagonistProfile && (

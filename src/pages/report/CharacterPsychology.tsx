@@ -1,7 +1,7 @@
 import { useOutletContext } from 'react-router-dom';
 import { ReportData, StakeholderLens } from '@/types/database';
 
-import { AgentNarrativePanel } from '@/components/report/AgentNarrativePanel';
+
 import { Card } from '@/components/ui/card';
 import { 
   SectionHeader, 
@@ -76,11 +76,6 @@ export default function CharacterPsychology() {
         icon={Brain}
         score={psychScore}
       />
-
-      {/* Agent Narrative */}
-      {agentContent && (
-        <AgentNarrativePanel agentName="CharacterAgent" content={agentContent} />
-      )}
 
       {/* Psychological Pillars */}
       <div className="grid md:grid-cols-3 lg:grid-cols-6 gap-4">

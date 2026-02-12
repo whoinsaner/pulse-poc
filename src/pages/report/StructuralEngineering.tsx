@@ -6,7 +6,7 @@ import { Card } from '@/components/ui/card';
 import { 
   SectionHeader, 
   SubSectionHeader,
-  StrengthWeaknessList,
+  
   WeightedParameterList,
 } from '@/components/report/ui';
 import { Building } from 'lucide-react';
@@ -40,16 +40,6 @@ export default function StructuralEngineering() {
   const pageCount = reportData.scriptMetadata?.pageCount || 120;
 
   const agentContent = reportData.agentContent?.StructureAgent;
-
-  const strengths = structureParams.filter(p => p.score >= 70).map(p => ({
-    text: p.displayName || p.parameterName,
-    detail: p.rationale?.slice(0, 80)
-  }));
-
-  const weaknesses = structureParams.filter(p => p.score < 50).map(p => ({
-    text: p.displayName || p.parameterName,
-    detail: p.rationale?.slice(0, 80)
-  }));
 
   return (
     <div className="space-y-8">
@@ -97,10 +87,6 @@ export default function StructuralEngineering() {
         defaultVisibleCount={8}
       />
 
-      {/* Strengths & Weaknesses */}
-      {(strengths.length > 0 || weaknesses.length > 0) && (
-        <StrengthWeaknessList strengths={strengths} weaknesses={weaknesses} />
-      )}
     </div>
   );
 }

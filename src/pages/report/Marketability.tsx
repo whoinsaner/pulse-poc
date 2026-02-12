@@ -4,7 +4,6 @@ import { ReportData, StakeholderLens } from '@/types/database';
 import { CommercialNarrativePanel } from '@/components/report/AgentNarrativePanel';
 import { 
   SectionHeader, 
-  StrengthWeaknessList,
   WeightedParameterList,
 } from '@/components/report/ui';
 import { TrendingUp } from 'lucide-react';
@@ -38,16 +37,6 @@ export default function Marketability() {
 
   const agentContent = reportData.agentContent?.MarketAgent;
 
-  const strengths = marketParams.filter(p => p.score >= 70).map(p => ({
-    text: p.displayName || p.parameterName,
-    detail: p.rationale?.slice(0, 80)
-  }));
-
-  const weaknesses = marketParams.filter(p => p.score < 50).map(p => ({
-    text: p.displayName || p.parameterName,
-    detail: p.rationale?.slice(0, 80)
-  }));
-
   const filteredMarketParams = filterParameters(marketParams);
   const filterStats = getFilterStats(marketParams);
 
@@ -80,11 +69,6 @@ export default function Marketability() {
         initiallyExpanded={true}
         defaultVisibleCount={8}
       />
-
-      {/* Strengths & Weaknesses */}
-      {(strengths.length > 0 || weaknesses.length > 0) && (
-        <StrengthWeaknessList strengths={strengths} weaknesses={weaknesses} />
-      )}
     </div>
   );
 }
