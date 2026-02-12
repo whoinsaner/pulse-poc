@@ -157,6 +157,9 @@ export function getExpectedAgentsForAnalysis(
   stakeholderLens: StakeholderLens | null
 ): string[] {
   const isComic = scriptType === 'comic' || scriptType.includes('comic');
+  const isWebSeries = scriptType === 'web_series' || scriptType.includes('web_series');
+  const isMicroDrama = scriptType === 'micro_drama' || scriptType.includes('micro_drama');
+  const isEpisodic = ['web_series', 'pilot', 'episode', 'micro_drama'].includes(scriptType);
   
   // System agents always run (4 agents)
   const systemAgentIds = [
@@ -169,20 +172,19 @@ export function getExpectedAgentsForAnalysis(
   // Get stakeholder-filtered analysis agents (includes StakeholderLensAgent, InsightSynthesisAgent)
   const analysisAgentIds = getAgentsForStakeholder(stakeholderLens, isComic);
   
-  // NOTE: Meta agents (ScriptEvolutionAgent, CreatorFeedbackLoopAgent, 
-  // ExplainabilityTraceAgent, InvestorReadinessAgent) are defined in scriptFramework.ts
-  // but are NOT currently implemented in the analyze-script edge function.
-  // They should NOT be included in expected count until actually implemented.
-  // When implemented, uncomment the following:
-  // const metaAgentIds = [
-  //   'ScriptEvolutionAgent',
-  //   'CreatorFeedbackLoopAgent',
-  //   'ExplainabilityTraceAgent',
-  //   'InvestorReadinessAgent'
-  // ];
-  
   // Combine only agents that are actually run by the edge function
   const allAgents = [...systemAgentIds, ...analysisAgentIds];
+  
+  // Add format-specific agents
+  if (isWebSeries && !allAgents.includes('WebSeriesAgent')) {
+    allAgents.push('WebSeriesAgent');
+  }
+  if (isMicroDrama && !allAgents.includes('MicroDramaAgent')) {
+    allAgents.push('MicroDramaAgent');
+  }
+  if (isEpisodic && !allAgents.includes('SeriesBibleAgent')) {
+    allAgents.push('SeriesBibleAgent');
+  }
   
   // Deduplicate (in case of overlap)
   return [...new Set(allAgents)];
