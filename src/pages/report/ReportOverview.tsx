@@ -7,6 +7,7 @@ import { StakeholderReportCache } from '@/components/report/StakeholderReportCac
 import { Card } from '@/components/ui/card';
 import { FileText, Sparkles, Target, Zap, TrendingUp, Users, Film, Brain } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { extractScore } from '@/lib/scoreUtils';
 
 interface ReportContextValue {
   report: Report;
@@ -42,8 +43,7 @@ export default function ReportOverview() {
   // Calculate category averages - handle both number and object formats
   const categoryAverages = Object.entries(reportData.categoryScores || {})
     .map(([name, value]) => {
-      // Handle both formats: direct number or object with score property
-      const score = typeof value === 'number' ? value : (value as { score?: number })?.score || 0;
+      const score = extractScore(value);
       const highRiskParams = typeof value === 'object' && value !== null 
         ? (value as { highRiskParameters?: string[] })?.highRiskParameters || []
         : [];

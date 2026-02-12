@@ -13,6 +13,7 @@ import {
 } from '@/components/report/ui';
 import { User, Heart, Target, Zap, Brain, TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { extractScore } from '@/lib/scoreUtils';
 import { useStakeholderFiltering } from '@/hooks/useStakeholderFiltering';
 import { StakeholderFilterNotice } from '@/components/report/StakeholderFilterNotice';
 
@@ -47,11 +48,9 @@ export default function ProtagonistAnalysis() {
 
   const characterScore = characterParams.length > 0 
     ? characterParams.reduce((sum, p) => sum + p.score, 0) / characterParams.length 
-    : reportData.categoryScores?.['Character'] || currentScore;
+    : extractScore(reportData.categoryScores?.['Character']) || currentScore;
 
-  const categoryScore = typeof reportData.categoryScores?.['Character'] === 'number'
-    ? reportData.categoryScores['Character']
-    : (reportData.categoryScores?.['Character'] as { score?: number })?.score || characterScore;
+  const categoryScore = extractScore(reportData.categoryScores?.['Character']) || characterScore;
 
   // Derive sub-scores from actual parameter data
   const getParamScore = (keywords: string[]) => {

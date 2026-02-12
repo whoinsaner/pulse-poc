@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/card';
 import { SectionHeader, SubSectionHeader, ScoreDisplay, ScoreBar, ScoreBadge, VerdictBox } from '@/components/report/ui';
 import { BarChart3, TrendingUp, TrendingDown, Target } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { extractScore } from '@/lib/scoreUtils';
 
 interface ReportContextValue {
   reportData: ReportData;
@@ -17,7 +18,7 @@ export default function CompleteScorecard() {
   const categoryScores = Object.entries(reportData.categoryScores || {})
     .map(([name, value]) => ({
       name,
-      score: typeof value === 'number' ? value : (value as { score?: number })?.score || 0
+      score: extractScore(value)
     }))
     .sort((a, b) => b.score - a.score);
 

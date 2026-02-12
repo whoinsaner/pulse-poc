@@ -12,6 +12,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Target, Users, Globe, Megaphone } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { extractScore } from '@/lib/scoreUtils';
 
 interface ReportContextValue {
   reportData: ReportData;
@@ -32,11 +33,9 @@ export default function AudienceStrategy() {
 
   const audienceScore = audienceParams.length > 0 
     ? audienceParams.reduce((sum, p) => sum + p.score, 0) / audienceParams.length 
-    : reportData.categoryScores?.['Market'] || currentScore;
+    : extractScore(reportData.categoryScores?.['Market']) || currentScore;
 
-  const categoryScore = typeof reportData.categoryScores?.['Market'] === 'number'
-    ? reportData.categoryScores['Market']
-    : (reportData.categoryScores?.['Market'] as { score?: number })?.score || audienceScore;
+  const categoryScore = extractScore(reportData.categoryScores?.['Market']) || audienceScore;
 
   // Script metadata
   const scriptMeta = reportData.scriptMetadata;

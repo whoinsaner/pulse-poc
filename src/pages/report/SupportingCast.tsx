@@ -12,6 +12,7 @@ import {
 } from '@/components/report/ui';
 import { Users, MessageSquare, Film, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { extractScore } from '@/lib/scoreUtils';
 
 interface ReportContextValue {
   reportData: ReportData;
@@ -33,11 +34,7 @@ export default function SupportingCast() {
   const supportingDialogue = supportingCast.reduce((sum, c) => sum + c.dialogueCount, 0);
   const castBalance = totalDialogue > 0 ? (supportingDialogue / totalDialogue) * 100 : 0;
 
-  const categoryScore = reportData.categoryScores?.['Character'] 
-    ? (typeof reportData.categoryScores['Character'] === 'number' 
-        ? reportData.categoryScores['Character'] 
-        : (reportData.categoryScores['Character'] as { score?: number })?.score || currentScore)
-    : currentScore;
+  const categoryScore = extractScore(reportData.categoryScores?.['Character']) || currentScore;
 
   // Assess each supporting character
   const assessedCast = supportingCast.map(char => {

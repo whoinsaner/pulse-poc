@@ -1,9 +1,10 @@
 import { AlertTriangle, Palette, TrendingUp, Clapperboard } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { extractScore } from '@/lib/scoreUtils';
 
 interface RiskMapProps {
   score: number;
-  categoryScores: Record<string, number>;
+  categoryScores: Record<string, unknown>;
 }
 
 export function RiskMap({ score, categoryScores }: RiskMapProps) {
@@ -24,19 +25,19 @@ export function RiskMap({ score, categoryScores }: RiskMapProps) {
     {
       category: 'Creative Risk',
       icon: Palette,
-      score: categoryScores['Characters & Arcs'] || categoryScores['Character'] || 60,
+      score: extractScore(categoryScores['Characters & Arcs']) || extractScore(categoryScores['Character']) || 60,
       description: 'Act I weakness, tonal drift, character motivation clarity',
     },
     {
       category: 'Market Risk',
       icon: TrendingUp,
-      score: categoryScores['Marketability'] || categoryScores['Market'] || 60,
+      score: extractScore(categoryScores['Marketability']) || extractScore(categoryScores['Market']) || 60,
       description: 'Audience targeting, competitive positioning, timing',
     },
     {
       category: 'Production Risk',
       icon: Clapperboard,
-      score: categoryScores['Production Value'] || categoryScores['Execution'] || 70,
+      score: extractScore(categoryScores['Production Value']) || extractScore(categoryScores['Execution']) || 70,
       description: 'Budget requirements, location complexity, VFX needs',
     },
   ];

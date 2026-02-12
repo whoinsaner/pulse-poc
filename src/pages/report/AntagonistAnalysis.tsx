@@ -12,6 +12,7 @@ import {
 } from '@/components/report/ui';
 import { UserX, Shield, Brain, Zap, Target, Sword } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { extractScore } from '@/lib/scoreUtils';
 
 interface ReportContextValue {
   reportData: ReportData;
@@ -38,11 +39,9 @@ export default function AntagonistAnalysis() {
 
   const conflictScore = conflictParams.length > 0 
     ? conflictParams.reduce((sum, p) => sum + p.score, 0) / conflictParams.length 
-    : reportData.categoryScores?.['Conflict'] || currentScore * 0.9;
+    : extractScore(reportData.categoryScores?.['Conflict']) || currentScore * 0.9;
 
-  const categoryScore = typeof reportData.categoryScores?.['Conflict'] === 'number'
-    ? reportData.categoryScores['Conflict']
-    : (reportData.categoryScores?.['Conflict'] as { score?: number })?.score || conflictScore;
+  const categoryScore = extractScore(reportData.categoryScores?.['Conflict']) || conflictScore;
 
   // Derive power scores from actual parameter data
   const getParamScore = (keywords: string[]) => {

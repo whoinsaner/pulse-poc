@@ -6,6 +6,7 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { ReportData, StakeholderLens, LENS_CONFIG } from '@/types/database';
+import { extractScore } from '@/lib/scoreUtils';
 
 // ============= CONSTANTS =============
 
@@ -233,11 +234,14 @@ export function generateSampleReportPDF(
   yPos += 15;
   
   if (reportData.categoryScores) {
-    const categoryData = Object.entries(reportData.categoryScores).map(([category, catScore]) => [
-      category,
-      `${Math.round(catScore as number)}/100`,
-      getReadinessLabel(catScore as number),
-    ]);
+    const categoryData = Object.entries(reportData.categoryScores).map(([category, catScore]) => {
+      const score = extractScore(catScore);
+      return [
+        category,
+        `${Math.round(score)}/100`,
+        getReadinessLabel(score),
+      ];
+    });
     
     autoTable(doc, {
       startY: yPos,

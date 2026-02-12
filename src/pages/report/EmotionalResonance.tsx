@@ -12,6 +12,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Sparkles, Heart, Flame } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { extractScore } from '@/lib/scoreUtils';
 
 interface ReportContextValue {
   reportData: ReportData;
@@ -34,11 +35,9 @@ export default function EmotionalResonance() {
 
   const emotionalScore = emotionalParams.length > 0 
     ? emotionalParams.reduce((sum, p) => sum + p.score, 0) / emotionalParams.length 
-    : reportData.categoryScores?.['Emotional Arc'] || currentScore;
+    : extractScore(reportData.categoryScores?.['Emotional Arc']) || currentScore;
 
-  const categoryScore = typeof reportData.categoryScores?.['Emotional Arc'] === 'number'
-    ? reportData.categoryScores['Emotional Arc']
-    : (reportData.categoryScores?.['Emotional Arc'] as { score?: number })?.score || emotionalScore;
+  const categoryScore = extractScore(reportData.categoryScores?.['Emotional Arc']) || emotionalScore;
 
   // Derived emotional metrics
   const emotionalMetrics = [
