@@ -22,7 +22,7 @@ import {
   Layers,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { getDiagnosticCategory, getWeightTier } from '@/lib/scoreUtils';
+import { getDiagnosticCategory, getWeightTier, extractScore } from '@/lib/scoreUtils';
 
 interface ReportContextValue {
   reportData: ReportData;
@@ -208,9 +208,9 @@ export default function ComicFormatDiagnosis() {
 
   // Get category scores for the format badge
   const categoryScores = reportData.categoryScores || {};
-  const visualScore = categoryScores['Comic Visuals'] || 0;
-  const dialogueScore = categoryScores['Comic Dialogue'] || 0;
-  const pacingScore = categoryScores['Comic Pacing'] || 0;
+  const visualScore = extractScore(categoryScores['Comic Visuals']);
+  const dialogueScore = extractScore(categoryScores['Comic Dialogue']);
+  const pacingScore = extractScore(categoryScores['Comic Pacing']);
 
   return (
     <div className="space-y-8">
@@ -267,7 +267,7 @@ export default function ComicFormatDiagnosis() {
             { label: 'Panel Flow', score: visualScore, icon: LayoutPanelTop },
             { label: 'Lettering', score: dialogueScore, icon: MessageCircle },
             { label: 'Page Turns', score: pacingScore, icon: Timer },
-            { label: 'Art Synergy', score: categoryScores['Comic Collaboration'] || 0, icon: Palette },
+            { label: 'Art Synergy', score: extractScore(categoryScores['Comic Collaboration']), icon: Palette },
           ].map((metric) => {
             const diagnostic = getDiagnosticCategory(metric.score);
             const Icon = metric.icon;
