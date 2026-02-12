@@ -2010,6 +2010,27 @@ serve(async (req) => {
           scene.scene_number = index + 1;
         });
         
+        // Clean up existing data for this script (handles re-parsing)
+        const { error: deleteNarrativeError } = await supabase
+          .from('narrative_graphs')
+          .delete()
+          .eq('script_id', scriptId);
+        if (deleteNarrativeError) console.warn('[script-parser-stream] Could not clean narrative_graphs:', deleteNarrativeError.message);
+        
+        const { error: deleteCharsError } = await supabase
+          .from('characters')
+          .delete()
+          .eq('script_id', scriptId);
+        if (deleteCharsError) console.warn('[script-parser-stream] Could not clean characters:', deleteCharsError.message);
+        
+        const { error: deleteScenesError } = await supabase
+          .from('scenes')
+          .delete()
+          .eq('script_id', scriptId);
+        if (deleteScenesError) console.warn('[script-parser-stream] Could not clean scenes:', deleteScenesError.message);
+        
+        console.log(`[script-parser-stream] Cleaned up existing parsed data for script`);
+
         // Insert scenes
         console.log(`[script-parser-stream] Inserting ${allScenes.length} scenes`);
         if (allScenes.length > 0) {
