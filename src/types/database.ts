@@ -3,7 +3,7 @@
 
 export type AppRole = 'admin' | 'analyst' | 'viewer';
 export type ScriptFormat = 'pdf' | 'fdx' | 'fountain' | 'highland' | 'txt' | 'docx';
-export type ScriptType = 'feature' | 'pilot' | 'episode' | 'short' | 'documentary' | 'comic' | 'web_series' | 'micro_drama';
+export type ScriptType = 'feature' | 'pilot' | 'episode' | 'short' | 'documentary' | 'comic' | 'web_series' | 'micro_drama' | 'stage_play' | 'audio_drama' | 'podcast_fiction' | 'game_narrative';
 export type AnalysisStatus = 'pending' | 'processing' | 'completed' | 'failed';
 export type StakeholderLens = 
   | 'studio_executive' 

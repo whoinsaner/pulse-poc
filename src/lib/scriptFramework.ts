@@ -75,6 +75,10 @@ export const SIMPLE_SCRIPT_TYPES = [
   { value: 'comic', label: 'Comic/Graphic Novel', description: 'Sequential art storytelling' },
   { value: 'web_series', label: 'Web Series', description: 'Digital-first episodic content' },
   { value: 'micro_drama', label: 'Micro Drama', description: 'Ultra-short vertical content (30-180 sec)' },
+  { value: 'stage_play', label: 'Stage Play', description: 'Theatre/stage performance script' },
+  { value: 'audio_drama', label: 'Audio Drama', description: 'Audio-only narrative fiction' },
+  { value: 'podcast_fiction', label: 'Podcast Fiction', description: 'Serialized podcast narrative' },
+  { value: 'game_narrative', label: 'Game Narrative', description: 'Video game story/screenplay' },
 ];
 
 // ============= FORMAT, DISTRIBUTION, NARRATIVE, INTERACTION TAGS =============

@@ -953,6 +953,10 @@ export type Database = {
         | "comic"
         | "web_series"
         | "micro_drama"
+        | "stage_play"
+        | "audio_drama"
+        | "podcast_fiction"
+        | "game_narrative"
       stakeholder_lens:
         | "studio_executive"
         | "producer"
@@ -1102,6 +1106,10 @@ export const Constants = {
         "comic",
         "web_series",
         "micro_drama",
+        "stage_play",
+        "audio_drama",
+        "podcast_fiction",
+        "game_narrative",
       ],
       stakeholder_lens: [
         "studio_executive",

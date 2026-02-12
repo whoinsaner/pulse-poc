@@ -385,6 +385,10 @@ export function getScriptTypeLabel(scriptType: ScriptType | undefined): string {
     comic: 'Comic / Graphic Novel',
     web_series: 'Web Series',
     micro_drama: 'Micro Drama',
+    stage_play: 'Stage Play',
+    audio_drama: 'Audio Drama',
+    podcast_fiction: 'Podcast Fiction',
+    game_narrative: 'Game Narrative',
   };
   return labels[scriptType || 'feature'] || 'Script';
 }

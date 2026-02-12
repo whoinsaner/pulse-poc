@@ -332,21 +332,30 @@ export function ScriptUpload({ onUploadComplete, onClose }: ScriptUploadProps) {
           <div className="space-y-2">
             <label className="text-sm font-medium">Script Type</label>
             <div className="flex flex-wrap gap-2">
-              {(['feature', 'pilot', 'episode', 'short', 'documentary', 'comic', 'web_series'] as ScriptType[]).map(
-                (type) => (
-                  <button
-                    key={type}
-                    onClick={() => setScriptType(type)}
-                    className={cn(
-                      'px-4 py-2 rounded-lg text-sm font-medium transition-colors capitalize',
-                      scriptType === type
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
-                    )}
-                  >
-                    {type === 'web_series' ? 'Web Series' : type}
-                  </button>
-                )
+              {(['feature', 'pilot', 'episode', 'short', 'documentary', 'comic', 'web_series', 'micro_drama', 'stage_play', 'audio_drama', 'podcast_fiction', 'game_narrative'] as ScriptType[]).map(
+                (type) => {
+                  const labels: Record<string, string> = {
+                    feature: 'Feature', pilot: 'Pilot', episode: 'Episode',
+                    short: 'Short', documentary: 'Documentary', comic: 'Comic',
+                    web_series: 'Web Series', micro_drama: 'Micro Drama',
+                    stage_play: 'Stage Play', audio_drama: 'Audio Drama',
+                    podcast_fiction: 'Podcast Fiction', game_narrative: 'Game Narrative',
+                  };
+                  return (
+                    <button
+                      key={type}
+                      onClick={() => setScriptType(type)}
+                      className={cn(
+                        'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
+                        scriptType === type
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+                      )}
+                    >
+                      {labels[type] || type}
+                    </button>
+                  );
+                }
               )}
             </div>
           </div>

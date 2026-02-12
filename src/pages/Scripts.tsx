@@ -75,6 +75,10 @@ const TYPE_LABELS: Record<ScriptType, string> = {
   comic: 'Comic Script',
   web_series: 'Web Series',
   micro_drama: 'Micro Drama',
+  stage_play: 'Stage Play',
+  audio_drama: 'Audio Drama',
+  podcast_fiction: 'Podcast Fiction',
+  game_narrative: 'Game Narrative',
 };
 
 export default function Scripts() {
