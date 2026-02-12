@@ -7,7 +7,7 @@ export interface SampleScriptData {
   id: string;
   title: string;
   genre: string;
-  scriptType: 'feature' | 'pilot' | 'episode' | 'short' | 'documentary' | 'comic' | 'web_series';
+  scriptType: 'feature' | 'pilot' | 'episode' | 'short' | 'documentary' | 'comic' | 'web_series' | 'micro_drama';
   episodeLengthClass?: 'short_form_web' | 'mid_form_web' | 'long_form_web';
   logline: string;
   pageCount: number;
@@ -4507,6 +4507,633 @@ RHODEY STEPS OUT OF THE HOSPITAL ROOM.
           be out the rest of the day.
 
 END OF EXCERPT`
+  },
+  {
+    id: 'micro-drama-betrayal',
+    title: 'The Last Text',
+    genre: 'Romantic Thriller',
+    scriptType: 'micro_drama',
+    logline: 'A woman discovers a devastating secret in her boyfriend\'s phone — but the real twist is who sent it.',
+    pageCount: 2,
+    content: `COLD OPEN — VERTICAL FRAME (9:16)
+
+INT. BEDROOM — NIGHT
+
+CLOSE ON: A PHONE SCREEN. A text notification slides down:
+
+"She knows. Run."
+
+PULL BACK TO REVEAL: MIRA (25), tear-streaked, holding her boyfriend's phone. Behind her, JAKE (27) sleeps peacefully.
+
+She reads the text again. Her jaw tightens.
+
+MIRA
+(whisper)
+Who is "she"?
+
+She scrolls up. Messages between Jake and "K":
+
+"Tomorrow night. Same place."
+"Delete everything after."
+"She can never find out."
+
+Mira's breathing quickens. She screenshots the conversation.
+
+JAKE
+(stirring)
+Babe? What time is it?
+
+MIRA
+(hiding the phone)
+Late. Go back to sleep.
+
+She slips out of bed. Grabs her coat. At the door—
+
+JAKE
+Where are you going?
+
+MIRA
+(not turning)
+To find out who "K" is.
+
+CUT TO:
+
+EXT. STREET — NIGHT
+
+Mira walks fast, phone to her ear.
+
+MIRA
+Pick up, pick up...
+
+VOICEMAIL: "Hey, it's Kenji. Leave one."
+
+She freezes. KENJI. Her brother.
+
+MIRA
+(breaking)
+No...
+
+Her phone buzzes. New text from "K":
+
+"I was trying to plan your surprise birthday party. Jake was helping. Please don't be mad."
+
+HOLD ON: Mira's face — relief, guilt, tears, and a broken laugh all at once.
+
+She turns back toward the apartment.
+
+SMASH CUT TO BLACK.
+
+TITLE: "THE LAST TEXT"
+
+END.`
+  },
+  {
+    id: 'micro-drama-elevator',
+    title: 'Going Down',
+    genre: 'Horror',
+    scriptType: 'micro_drama',
+    logline: 'Two strangers are trapped in an elevator — but the floor counter keeps going below the basement.',
+    pageCount: 2,
+    content: `COLD OPEN — VERTICAL FRAME (9:16)
+
+INT. ELEVATOR — NIGHT
+
+Fluorescent buzz. DANA (30s), business suit, checks her watch. The doors close. She's alone.
+
+DING. Floor 3.
+
+The doors open. A MAN (40s), pale, drenched in sweat, stumbles in.
+
+DANA
+You okay?
+
+MAN
+Don't let the doors close.
+
+Too late. DING. The doors shut.
+
+The elevator descends. Floor 2... Floor 1...
+
+DANA
+This is me—
+
+The elevator doesn't stop. B1... B2...
+
+DANA (CONT'D)
+There's no B2 in this building.
+
+MAN
+I know.
+
+B3... B4... B5...
+
+Dana hits the emergency button. Nothing. Hits it again. The intercom crackles — WHITE NOISE.
+
+DANA
+What is this? What's happening?
+
+The Man presses himself against the wall.
+
+MAN
+(quiet)
+It picks someone every night. I thought if I wasn't alone, it might skip me.
+
+B8... B9... B10...
+
+DANA
+What picks someone?
+
+The lights flicker. When they come back, the Man is GONE. His jacket lies crumpled on the floor.
+
+Dana SCREAMS. Hammers on the doors.
+
+B15... B16... B17...
+
+The elevator STOPS. Silence.
+
+DING.
+
+The doors open to COMPLETE DARKNESS. From deep within it, a sound:
+
+BREATHING.
+
+DANA
+(barely audible)
+No...
+
+The lights inside the elevator begin to go out. One. By. One.
+
+SMASH CUT TO BLACK.
+
+TITLE: "GOING DOWN"
+
+The elevator DINGS one last time.
+
+END.`
+  },
+  {
+    id: 'micro-drama-mirror',
+    title: 'Reflection',
+    genre: 'Psychological Thriller',
+    scriptType: 'micro_drama',
+    logline: 'A woman notices her reflection in the mirror is half a second behind her.',
+    pageCount: 2,
+    content: `COLD OPEN — VERTICAL FRAME (9:16)
+
+INT. BATHROOM — MORNING
+
+SUKI (28), tired eyes, brushes her teeth in front of the mirror. Routine. Mundane.
+
+She reaches for a towel—
+
+AND CATCHES IT. Her reflection is STILL REACHING.
+
+She freezes. Stares. The reflection completes the motion, half a beat late.
+
+SUKI
+(mouthful of toothpaste)
+What the...
+
+She raises her right hand. Watches. The reflection raises its right hand — but a FRACTION OF A SECOND BEHIND.
+
+Suki's breathing changes. She leans closer.
+
+The reflection leans closer — late.
+
+SUKI (CONT'D)
+(whisper)
+That's not possible.
+
+She steps left. The reflection follows — delayed.
+
+She STOPS. The reflection KEEPS MOVING. Just for a moment. Then stops.
+
+Suki backs away from the mirror. Her reflection stays close.
+
+CLOSE ON: The reflection's mouth. It's moving. Silently forming words.
+
+Suki leans in despite herself. Reads the lips:
+
+"BEHIND YOU."
+
+Suki's eyes go wide. She spins around—
+
+NOTHING THERE.
+
+She turns back to the mirror. Her reflection is perfectly in sync again. Normal. Smiling.
+
+But Suki isn't smiling.
+
+SMASH CUT TO BLACK.
+
+TITLE: "REFLECTION"
+
+END.`
+  },
+  {
+    id: 'pilot-nightshift',
+    title: 'Night Shift',
+    genre: 'Crime Drama',
+    scriptType: 'pilot',
+    logline: 'A disgraced homicide detective is reassigned to the overnight shift at a precinct haunted by cold cases — and the ghosts of detectives who tried to solve them.',
+    pageCount: 55,
+    content: `FADE IN:
+
+EXT. 47TH PRECINCT — NIGHT
+
+Rain. A building that looks like it stopped trying decades ago. Most windows dark. One light on the third floor.
+
+SUPER: "THE 47TH PRECINCT. BRONX, NY. 11:47 PM."
+
+INT. 47TH PRECINCT, BULLPEN — NIGHT
+
+Empty desks. Old coffee. DETECTIVE ALMA REYES (40s), leather jacket, sharp but worn down, drops a box on a desk. Her new desk.
+
+She looks around. Nobody.
+
+ALMA
+(to herself)
+Welcome to the end of the line.
+
+FOOTSTEPS. SERGEANT PETE KOVAC (60s), built like a filing cabinet, rounds the corner with two coffees.
+
+KOVAC
+Reyes?
+
+ALMA
+That obvious?
+
+KOVAC
+You're the only one who showed up.
+Night shift's more of a...
+suggestion.
+
+ALMA
+Then why am I here?
+
+KOVAC
+(handing her coffee)
+Because you shot a councilman's
+son.
+
+ALMA
+He was holding a gun.
+
+KOVAC
+It was a phone.
+
+ALMA
+In the dark, they look the same.
+
+KOVAC
+That's what Internal Affairs said.
+Right before they sent you here.
+
+He gestures at the bullpen. Three desks. All empty except hers.
+
+KOVAC (CONT'D)
+Night shift handles the cold case
+backlog. Files nobody wants.
+Murders nobody remembers.
+
+ALMA
+How many?
+
+KOVAC
+Four hundred and twelve open cases.
+Some go back to the seventies.
+
+He drops a THICK FOLDER on her desk. "PATRICIA VEGA - 1994."
+
+KOVAC (CONT'D)
+Start with this one. Young mother.
+Found in the Bronx River. Three
+detectives worked it over the
+years. All three requested
+transfers.
+
+ALMA
+Why?
+
+KOVAC
+(beat)
+Ask them. If you can find them.
+Two retired. One's in a psych ward
+in Queens.
+
+He finishes his coffee. Heads for the door.
+
+KOVAC (CONT'D)
+I'm downstairs if you need
+anything. Which you won't. Nobody
+comes up here after midnight.
+
+He leaves. Alma opens the folder. A photo of PATRICIA VEGA (20s), beautiful, smiling.
+
+ALMA
+(quiet)
+What happened to you, Patricia?
+
+She reads. Flips pages. Something catches her eye — a POST-IT NOTE stuck to an evidence log:
+
+"SHE'S STILL IN THE RIVER."
+
+Different handwriting from the detective's notes. Alma frowns.
+
+The overhead light FLICKERS. She looks up. Steady again.
+
+ALMA (CONT'D)
+Great. Building's falling apart
+too.
+
+She turns back to the file. CLOSE ON: The case photos. The crime scene. The river. A shoe on the bank.
+
+Then — a SOUND. Like someone TYPING. Alma looks up.
+
+ACROSS THE BULLPEN, one of the other desks. The ancient computer monitor is ON. Green text scrolling.
+
+Alma stands. Walks over slowly. Reads the screen:
+
+"YOU'RE LOOKING IN THE WRONG PLACE."
+
+She touches the keyboard. It's ICE COLD.
+
+ALMA (CONT'D)
+What the hell...
+
+The screen goes dark. The room is silent except for the rain.
+
+Alma looks at the desk nameplate: "DET. R. SANTOS — RETIRED."
+
+She pulls out her phone. Dials.
+
+ALMA (CONT'D)
+Kovac? Who's Detective Santos?
+
+KOVAC (O.S.)
+Ray Santos? He was the last one to
+work the Vega case.
+
+ALMA
+Where is he now?
+
+Long pause.
+
+KOVAC (O.S.)
+He's the one in the psych ward.
+
+Alma stares at the dark monitor. The reflection of the room behind her — and for just a FRAME, the shadow of a WOMAN standing in the doorway.
+
+Alma turns. Nobody there.
+
+She grabs her jacket and the Vega file.
+
+ALMA
+(to herself)
+Wrong place. Okay. Let's find the
+right one.
+
+EXT. 47TH PRECINCT — NIGHT
+
+Alma walks to her car in the rain. She pauses. Looks up at the third floor window.
+
+THE LIGHT IS OFF. But someone is STANDING AT THE WINDOW.
+
+Alma blinks. The figure is gone.
+
+She gets in her car. Drives into the rain.
+
+END OF PILOT`
+  },
+  {
+    id: 'episode-inheritance',
+    title: 'The Inheritance — Ep. 3: "Blood Money"',
+    genre: 'Family Drama/Thriller',
+    scriptType: 'episode',
+    logline: 'When the family patriarch\'s secret offshore accounts surface, three siblings must decide whether to expose the truth or protect the empire — and each other.',
+    pageCount: 48,
+    content: `FADE IN:
+
+INT. ASANTE FAMILY ESTATE, DINING ROOM — NIGHT
+
+A long mahogany table. Crystal. Silver. Three place settings. No food.
+
+NADIA ASANTE (38), eldest, corporate, composed, sits at the head. She checks her watch.
+
+The door opens. KWAME ASANTE (33), creative, restless, enters with a bottle of whiskey.
+
+KWAME
+I brought dinner.
+
+NADIA
+Where's Ama?
+
+KWAME
+Where she always is. Making an
+entrance.
+
+He pours two glasses. Nadia doesn't touch hers.
+
+NADIA
+Did you read the documents?
+
+KWAME
+All forty-seven pages of offshore
+banking joy? Couldn't put it down.
+
+NADIA
+This isn't a joke, Kwame. If the
+board sees these accounts—
+
+KWAME
+Relax. The board doesn't know.
+
+NADIA
+The board doesn't know YET.
+Somebody leaked the first page
+to the Financial Times.
+
+Kwame stops pouring.
+
+KWAME
+When?
+
+NADIA
+Three hours ago. They're sitting
+on it while they verify.
+
+KWAME
+How long do we have?
+
+NADIA
+Forty-eight hours. Maybe less.
+
+The door BURSTS open. AMA ASANTE (28), youngest, activist, furious, storms in waving printed pages.
+
+AMA
+Somebody want to explain why
+Dad had two hundred million
+dollars in the Cayman Islands?
+
+NADIA
+Close the door.
+
+AMA
+While he was lecturing ME about
+fiscal responsibility? While he
+was cutting my foundation's budget
+because "money doesn't grow on
+trees"?
+
+KWAME
+Ama—
+
+AMA
+Two hundred MILLION, Kwame. That's
+not savings. That's a second life.
+
+NADIA
+(calm, precise)
+It's a legacy. And right now,
+it's our problem.
+
+She opens a laptop. A spreadsheet glows.
+
+NADIA (CONT'D)
+Seven shell companies. Four
+jurisdictions. Money flowing in
+from accounts I can't trace. And
+one account that received a
+deposit the day Dad died.
+
+AMA
+After he died?
+
+NADIA
+Two hours after.
+
+Silence. The weight of that lands.
+
+KWAME
+So someone else has access.
+
+NADIA
+Someone else has been running this.
+Maybe since the beginning.
+
+AMA
+Who?
+
+Nadia closes the laptop.
+
+NADIA
+That's what we need to find out.
+Before the Times does. Before the
+board does. Before whoever made
+that deposit realizes we know.
+
+KWAME
+And if it's someone in the family?
+
+NADIA
+(dead-eyed)
+Then we deal with it as a family.
+
+INT. ASANTE CORP, NADIA'S OFFICE — DAY
+
+Nadia on a call. Pacing. The city sprawls below her.
+
+NADIA
+I need those records sealed.
+Attorney-client privilege,
+executive session, whatever you
+have to call it.
+
+LAWYER (O.S.)
+Nadia, if these accounts are tied
+to the company, privilege won't
+protect you. This is potential
+money laundering.
+
+NADIA
+It's my father's estate.
+
+LAWYER (O.S.)
+Your father's estate is the
+company. They're inseparable.
+That's the problem.
+
+Nadia hangs up. Stares at a framed photo: the three siblings, young, laughing. Their father, KOFI ASANTE, towering behind them.
+
+NADIA
+(to the photo)
+What did you do, Dad?
+
+Her assistant, RUTH (50s), knocks.
+
+RUTH
+The forensic accountant is here.
+
+NADIA
+Send her in.
+
+ELENA CROSS (45), sharp, no-nonsense, enters with a briefcase.
+
+ELENA
+Ms. Asante. I've done a
+preliminary trace on the accounts
+you flagged. I have good news
+and bad news.
+
+NADIA
+Bad first.
+
+ELENA
+The money trail goes back fifteen
+years. It's sophisticated. Shell
+within shell within shell.
+
+NADIA
+And the good news?
+
+ELENA
+Whoever built it made one mistake.
+The post-mortem deposit? It came
+from an account inside your
+company.
+
+NADIA
+Inside Asante Corp?
+
+ELENA
+Someone on payroll. Someone with
+CFO-level access.
+
+Nadia's face changes. She knows who that is.
+
+NADIA
+Thank you, Elena. Don't share
+this with anyone.
+
+Elena leaves. Nadia picks up her phone.
+
+NADIA (CONT'D)
+(texting)
+"Family meeting. Tonight.
+Same place. Bring everything."
+
+She stares at her contact list. One name highlighted:
+"UNCLE JAMES — CFO."
+
+She puts the phone down. Picks up the family photo again.
+
+NADIA (CONT'D)
+(quiet)
+Family first. Right, Dad?
+
+She sets it face down.
+
+END OF EPISODE`
   }
 ];
 
