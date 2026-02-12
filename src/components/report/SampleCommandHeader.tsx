@@ -2,8 +2,8 @@ import { useNavigate } from 'react-router-dom';
 import { ReportData, StakeholderLens, LENS_CONFIG } from '@/types/database';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { 
-  ArrowLeft, 
+import {
+  ArrowLeft,
   Share2,
   Film,
   Tv,
@@ -11,8 +11,8 @@ import {
   FileVideo,
   FileText,
   Palette,
-  Sparkles,
-} from 'lucide-react';
+  Sparkles } from
+'lucide-react';
 import { cn } from '@/lib/utils';
 import { getUSAFNavGroups, getScriptTypeLabel } from '@/lib/reportNavigation';
 import type { ScriptType } from '@/types/database';
@@ -37,7 +37,7 @@ const SCRIPT_TYPE_ICONS: Record<ScriptType, typeof Film> = {
   documentary: FileText,
   comic: Palette,
   web_series: Tv,
-  micro_drama: FileVideo,
+  micro_drama: FileVideo
 };
 
 // Script type badge colors
@@ -49,13 +49,13 @@ const SCRIPT_TYPE_COLORS: Record<ScriptType, string> = {
   documentary: 'bg-chart-5/15 text-chart-5 border-chart-5/30',
   comic: 'bg-chart-5/15 text-chart-5 border-chart-5/30',
   web_series: 'bg-chart-4/15 text-chart-4 border-chart-4/30',
-  micro_drama: 'bg-chart-5/15 text-chart-5 border-chart-5/30',
+  micro_drama: 'bg-chart-5/15 text-chart-5 border-chart-5/30'
 };
 
-const BANNER_COLORS: Record<string, { bg: string; border: string; text: string; icon: string }> = {
+const BANNER_COLORS: Record<string, {bg: string;border: string;text: string;icon: string;}> = {
   primary: { bg: 'bg-primary/10', border: 'border-primary/20', text: 'text-primary', icon: 'text-primary' },
   'chart-4': { bg: 'bg-chart-4/10', border: 'border-chart-4/20', text: 'text-chart-4', icon: 'text-chart-4' },
-  'chart-5': { bg: 'bg-chart-5/10', border: 'border-chart-5/20', text: 'text-chart-5', icon: 'text-chart-5' },
+  'chart-5': { bg: 'bg-chart-5/10', border: 'border-chart-5/20', text: 'text-chart-5', icon: 'text-chart-5' }
 };
 
 export function SampleCommandHeader({
@@ -66,29 +66,29 @@ export function SampleCommandHeader({
   basePath,
   sampleTitle,
   sampleBannerColor = 'primary',
-  viewScriptPath,
+  viewScriptPath
 }: SampleCommandHeaderProps) {
   const navigate = useNavigate();
-  
+
   // Get dynamic navigation based on script type - use USAF consolidated navigation
   const scriptType = reportData.scriptMetadata?.scriptType || 'feature';
   const navGroups = getUSAFNavGroups(scriptType, reportData.categoryScores);
-  
+
   // Get script type display info
   const ScriptTypeIcon = SCRIPT_TYPE_ICONS[scriptType];
   const scriptTypeLabel = getScriptTypeLabel(scriptType);
   const scriptTypeColor = SCRIPT_TYPE_COLORS[scriptType];
   const bannerColors = BANNER_COLORS[sampleBannerColor] || BANNER_COLORS.primary;
-  
+
   // Find current group and item
   const findCurrentNav = () => {
     for (const group of navGroups) {
-      const item = group.items.find(item => item.path === currentPath);
+      const item = group.items.find((item) => item.path === currentPath);
       if (item) return { group, item };
     }
     return { group: navGroups[0], item: navGroups[0]?.items[0] };
   };
-  
+
   const { group: currentGroup, item: currentItem } = findCurrentNav();
 
   const handleShare = () => {
@@ -107,18 +107,18 @@ export function SampleCommandHeader({
             <Badge variant="secondary" className="text-xs">Demo</Badge>
           </div>
           <div className="flex items-center gap-3">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => navigate(viewScriptPath)}
-            >
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate(viewScriptPath)}>
+
               <FileText className="h-4 w-4 mr-2" />
               View Script
             </Button>
-            <Button 
-              size="sm" 
-              onClick={() => navigate('/auth?mode=signup')}
-            >
+            <Button
+              size="sm"
+              onClick={() => navigate('/auth?mode=signup')}>
+
               Analyze Your Script
             </Button>
           </div>
@@ -131,12 +131,12 @@ export function SampleCommandHeader({
         <div className="h-14 flex items-center justify-between px-4 lg:px-6 gap-4">
           {/* Left: Back + Title + Script Type Badge */}
           <div className="flex items-center gap-3 min-w-0">
-            <Button 
-              variant="ghost" 
-              size="icon" 
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => navigate('/dashboard')}
-              className="shrink-0"
-            >
+              className="shrink-0">
+
               <ArrowLeft className="h-4 w-4" />
             </Button>
             
@@ -146,13 +146,13 @@ export function SampleCommandHeader({
               </h1>
               
               {/* Script Type Badge */}
-              <Badge 
-                variant="outline" 
+              <Badge
+                variant="outline"
                 className={cn(
                   "hidden sm:inline-flex items-center gap-1.5 shrink-0 border",
                   scriptTypeColor
-                )}
-              >
+                )}>
+
                 <ScriptTypeIcon className="h-3 w-3" />
                 <span className="text-xs font-medium">{scriptTypeLabel}</span>
               </Badge>
@@ -170,47 +170,47 @@ export function SampleCommandHeader({
             <Badge variant="outline" className="hidden lg:inline-flex text-xs">
               {LENS_CONFIG[activeLens].label}
             </Badge>
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               size="icon"
-              onClick={handleShare}
-            >
+              onClick={handleShare}>
+
               <Share2 className="h-4 w-4" />
             </Button>
           </div>
         </div>
 
         {/* Bottom row: Grouped tabs */}
-        <div className="h-12 border-t border-border/50 flex items-center px-4 gap-1 overflow-x-auto scrollbar-hide">
-          {navGroups.map((group) => (
-            <div key={group.label} className="flex items-center gap-1">
-              {group.items.map((item) => {
-                const isActive = item.path === currentPath;
-                const Icon = item.icon;
-                
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => navigate(`${basePath}${item.path}`)}
-                    className={cn(
-                      "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap",
-                      isActive
-                        ? "bg-primary text-primary-foreground"
-                        : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                    )}
-                  >
-                    <Icon className="h-3.5 w-3.5" />
-                    <span className="hidden sm:inline">{item.label}</span>
-                  </button>
-                );
-              })}
-              
-              {/* Divider between groups */}
-              <div className="h-6 w-px bg-border mx-1" />
-            </div>
-          ))}
-        </div>
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
       </header>
-    </>
-  );
+    </>);
+
 }
