@@ -616,7 +616,7 @@ function renderParameterCards(
     const barX = MARGINS.left;
     const barWidth = cw;
     doc.setFillColor(...COLORS.background);
-    doc.roundedRect(barX, y - 3, barWidth, 18, 2, 2, 'F');
+    if (barWidth > 0) doc.roundedRect(barX, y - 3, barWidth, 18, 2, 2, 'F');
 
     // Parameter name and score
     doc.setFontSize(FONTS.body);
@@ -683,9 +683,12 @@ function renderDiagnosisOverview(
     const barX = MARGINS.left + cw * 0.55;
     const barW = cw * 0.3;
     doc.setFillColor(...COLORS.background);
-    doc.roundedRect(barX, y - 4, barW, 6, 1, 1, 'F');
-    doc.setFillColor(...getScoreColor(score));
-    doc.roundedRect(barX, y - 4, barW * (score / 100), 6, 1, 1, 'F');
+    if (barW > 0) doc.roundedRect(barX, y - 4, barW, 6, 1, 1, 'F');
+    const fillW = barW * (score / 100);
+    if (fillW > 0) {
+      doc.setFillColor(...getScoreColor(score));
+      doc.roundedRect(barX, y - 4, Math.max(0.5, fillW), 6, 1, 1, 'F');
+    }
 
     doc.setFontSize(FONTS.small);
     doc.setFont('helvetica', 'bold');
