@@ -100,7 +100,7 @@ export const INTERACTION_TAGS = [
 
 // ============= AGENT DEFINITIONS =============
 
-export type AgentCategory = 'system' | 'analysis' | 'comic' | 'meta';
+export type AgentCategory = 'system' | 'analysis' | 'comic' | 'meta' | 'enrichment';
 
 export interface AgentDefinition {
   id: string;
@@ -453,6 +453,21 @@ export const MICRO_DRAMA_AGENTS: AgentDefinition[] = [
   },
 ];
 
+// Enrichment Agents (Scene-level AI analysis)
+export const ENRICHMENT_AGENTS: AgentDefinition[] = [
+  {
+    id: 'SceneEnrichmentAgent',
+    name: 'Scene Enrichment',
+    category: 'enrichment',
+    description: 'Analyzes each scene for emotional tone, dialogue density, action intensity, technical requirements, VFX potential, and narrative function',
+    parameters: ['dialogue_density', 'action_intensity', 'technical_requirements', 'vfx_potential', 'emotional_tone', 'narrative_function'],
+    reportSections: ['Scene Complexity', 'Pacing Analysis', 'Scene Heatmap'],
+    applicableScriptTypes: 'all',
+    color: 'bg-cyan-500/10 text-cyan-500 border-cyan-500/30',
+    icon: 'ScanSearch'
+  },
+];
+
 // All agents combined
 export const ALL_AGENTS: AgentDefinition[] = [
   ...SYSTEM_AGENTS,
@@ -462,6 +477,7 @@ export const ALL_AGENTS: AgentDefinition[] = [
   ...AUDIO_AGENTS,
   ...WEB_SERIES_AGENTS,
   ...MICRO_DRAMA_AGENTS,
+  ...ENRICHMENT_AGENTS,
   ...META_AGENTS,
 ];
 
@@ -482,7 +498,7 @@ export function getAgentsForScriptType(scriptType: string): AgentDefinition[] {
 // Get analysis agents only (no system/meta)
 export function getAnalysisAgentsForScriptType(scriptType: string): AgentDefinition[] {
   return getAgentsForScriptType(scriptType).filter(a => 
-    a.category === 'analysis' || a.category === 'comic'
+    a.category === 'analysis' || a.category === 'comic' || a.category === 'enrichment'
   );
 }
 
