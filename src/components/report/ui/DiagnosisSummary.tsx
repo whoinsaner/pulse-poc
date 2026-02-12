@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { getDiagnosticCategory, getFixCostColor, getFixCostBg } from '@/lib/scoreUtils';
-import { CheckCircle, AlertCircle, XCircle, ChevronDown, ChevronUp, Settings2 } from 'lucide-react';
+import { CheckCircle, AlertCircle, XCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { VerdictBox } from '@/components/report/ui/VerdictBox';
 import { StakeholderLens } from '@/types/database';
 import { translateTerm } from '@/lib/stakeholderVocabulary';
 
@@ -74,17 +75,7 @@ export function DiagnosisSummary({
     <div className={cn('space-y-4', className)}>
       {/* Verdict */}
       {displayVerdict && (
-        <div className="rounded-xl border border-success/20 border-l-4 border-l-success bg-success/5 p-5">
-          <div className="flex items-start gap-4">
-            <div className="p-2 rounded-lg bg-success/10">
-              <Settings2 className="h-5 w-5 text-success" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <h4 className="font-display font-semibold tracking-tight text-success">Verdict</h4>
-              <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{displayVerdict}</p>
-            </div>
-          </div>
-        </div>
+        <VerdictBox type="finding" title="Verdict" content={displayVerdict} />
       )}
 
       {parameters.length === 0 ? (
