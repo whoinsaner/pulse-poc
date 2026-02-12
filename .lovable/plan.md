@@ -1,52 +1,52 @@
 
+# Comic-Specific Dialogue Evaluation in DialogueAgent
 
-# Fix: PDF Report NaN Scores and Broken Formatting
+## Problem
+The DialogueAgent evaluates comic scripts using traditional screenplay dialogue metrics (voice differentiation, subtext density, quotability). Comic scripts often rely on captions, narration boxes, and minimal spoken dialogue -- leading to artificially low scores and misleading assessments like "no traditional dialogue found."
 
-## Problem 1: All Category Scores Show "NaN"
+## Solution
+Enhance the DialogueAgent's system prompt with comic-specific evaluation criteria that activate when analyzing comic scripts. The script type is already available in the context passed to each agent (`Type: comic`), so the agent just needs instructions on how to adapt.
 
-Category scores in the database are stored as objects (e.g., `{score: 85, maturity: "Strong"}`) rather than plain numbers. The PDF generator reads these values directly without extracting the numeric score, resulting in `NaN` throughout the Executive Summary and any page that displays category breakdowns.
+## Changes
 
-### Fix
-- Import `extractScore` from `scoreUtils.ts` into `fullReportPdfGenerator.ts`
-- In `renderDiagnosisOverview` (line 672), wrap `categoryScores[cat]` with `extractScore()` so the numeric value is properly extracted
-- Also update the function signature from `Record<string, number>` to `Record<string, unknown>` to match the actual data shape
-- Apply the same fix anywhere else `categoryScores` values are used as raw numbers (e.g., line 714 for overall score, line 727 where the object is passed through)
+### File: `supabase/functions/analyze-script/index.ts`
 
-## Problem 2: Garbled Bullet Characters
+**1. Update DialogueAgent system prompt (lines 638-653)**
 
-The PDF uses Unicode symbols that Helvetica (jsPDF's built-in font) cannot render:
-- `✓` (U+2713) in "What Works" bullets -- renders as `'`
-- `✗` (U+2717) in "What's Broken" bullets -- renders as `'`
-- `◦` (U+25E6) in "What's Underdeveloped" bullets -- renders as `%ae`
+Expand the prompt to include comic-specific evaluation guidance. The agent already receives the script type in the context, so we add conditional instructions telling it how to reinterpret each parameter for comics:
 
-### Fix
-Replace these Unicode characters with ASCII equivalents that Helvetica supports:
-- `✓` becomes `+` or `*`
-- `✗` becomes `-` or `x`
-- `◦` becomes `-` or `*`
+| Standard Parameter | Comic Interpretation |
+|---|---|
+| Exposition Load | Caption economy -- how efficiently narration boxes convey story vs. over-explaining visuals |
+| Subtext Density | Visual-text interplay -- meaning created between what captions say and what panels show |
+| Voice Differentiation | Narrator voice consistency and tonal identity across caption styles |
+| Rhythm & Silence | Text pacing across panels -- wordless panels as "silence," caption density variation |
+| Quotability | Memorable caption lines, taglines, or narration hooks |
+| Medium Appropriateness | Whether text complements visual storytelling rather than duplicating it |
 
-Alternatively, use jsPDF bullet symbols like the em-dash or simple hyphen prefix.
+The updated prompt will include a section like:
 
-## Problem 3: Narrative Items May Be Objects
+```
+COMIC/GRAPHIC NARRATIVE ADAPTATION:
+When analyzing comics or graphic narratives, adapt your evaluation:
+- Exposition Load → Caption Economy: Evaluate narration boxes for efficiency. 
+  Do captions add meaning beyond what panels show, or do they redundantly describe the art?
+- Subtext Density → Visual-Text Interplay: Assess the gap between what text says 
+  and what art depicts. The best comics create meaning in this gap.
+- Voice Differentiation → Narrative Voice Identity: Evaluate consistency and 
+  distinctiveness of caption/narrator voice. If multiple narrators exist, 
+  assess differentiation.
+- Rhythm & Silence → Text Pacing: Evaluate caption density variation. 
+  Wordless panels function as silence. Assess the rhythm of text-heavy 
+  vs. text-light sequences.
+- Quotability → Memorable Lines: Evaluate caption hooks, taglines, 
+  and standout narration moments.
+- Medium Appropriateness → Show vs. Tell Balance: Comics should SHOW through art. 
+  Text that describes what art already depicts is a red flag.
 
-The `whatWorks`, `whatsBroken`, and `whatsUnderdeveloped` arrays can contain either strings or structured objects (with `content`/`evidence` keys). The PDF generator assumes strings, which would render as `[object Object]`.
+Do NOT penalize comics for lacking traditional character dialogue exchanges. 
+Evaluate the text elements that ARE present (captions, narration, SFX, 
+balloon text) on their own merits.
+```
 
-### Fix
-Add a `toDisplayString` helper in the PDF generator (mirroring the one in `AgentNarrativePanel`) to safely convert items to strings before rendering.
-
-## Files Changed
-
-| File | Change |
-|------|--------|
-| `src/lib/fullReportPdfGenerator.ts` | Import `extractScore`; use it in `renderDiagnosisOverview` and Executive Summary; replace unsupported Unicode bullets with ASCII; add `toDisplayString` helper for narrative items |
-
-## Summary of Edits (all in `fullReportPdfGenerator.ts`)
-
-1. **Line ~8**: Add `extractScore` to imports from `scoreUtils`
-2. **Lines 362-404**: Replace Unicode bullet chars with ASCII (`+`, `x`, `-`)
-3. **Lines 362-404**: Wrap each `item` in `toDisplayString()` before passing to `wrapText`
-4. **Line 664-668**: Change `categoryScores` param type to `Record<string, unknown>`
-5. **Line 672**: Use `extractScore(categoryScores[cat])` instead of raw value
-6. **Line 727**: The call site already passes `data.categoryScores` which contains objects -- the fix in `renderDiagnosisOverview` handles it
-7. Add a small `toDisplayString` helper near the top utility functions
-
+This is the only file that needs to change. No UI changes are required since the report pages already display whatever the agent produces -- the improvement is entirely in the quality and relevance of the agent's analysis output for comic scripts.
