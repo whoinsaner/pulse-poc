@@ -1,12 +1,11 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { 
   Network, Users, GitBranch, Maximize2, Minimize2,
-  ZoomIn, ZoomOut, RotateCcw, Filter, MessageSquare
+  ZoomIn, ZoomOut, RotateCcw, Filter, MessageSquare, X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { NarrativeGraphData, CharacterData } from '@/types/database';
@@ -50,6 +49,7 @@ interface CharacterNode {
   sceneCount: number;
   description?: string;
   arcSummary?: string;
+  relationships?: Array<{ character: string; type: string; description?: string }>;
   x: number;
   y: number;
   radius: number;
@@ -66,7 +66,22 @@ export function NarrativeGraphViewer({ graphData, characters, className }: Narra
   const [zoom, setZoom] = useState(1);
   const [isExpanded, setIsExpanded] = useState(false);
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
+  const [selectedNode, setSelectedNode] = useState<string | null>(null);
   const [showMinorChars, setShowMinorChars] = useState(false);
+  const popoverRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Close popover on outside click
+  useEffect(() => {
+    if (!selectedNode) return;
+    const handler = (e: MouseEvent) => {
+      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
+        setSelectedNode(null);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [selectedNode]);
 
   // Build character relationship graph from characters data
   const characterGraph = useMemo(() => {
@@ -117,6 +132,7 @@ export function NarrativeGraphViewer({ graphData, characters, className }: Narra
         sceneCount: char.sceneCount || 0,
         description: char.description,
         arcSummary: char.arcSummary,
+        relationships: char.relationships,
         x: centerX + radius * Math.cos(angle),
         y: centerY + radius * Math.sin(angle),
         radius: nodeRadius,
@@ -333,10 +349,11 @@ export function NarrativeGraphViewer({ graphData, characters, className }: Narra
                 className="cursor-pointer transition-opacity"
                 onMouseEnter={() => setHoveredNode(node.id)}
                 onMouseLeave={() => setHoveredNode(null)}
+                onClick={() => setSelectedNode(selectedNode === node.id ? null : node.id)}
                 opacity={isDimmed ? 0.3 : 1}
               >
-                {/* Glow ring on hover */}
-                {isHovered && (
+                {/* Glow ring on hover or selected */}
+                {(isHovered || selectedNode === node.id) && (
                   <circle
                     cx={node.x}
                     cy={node.y}
@@ -379,29 +396,6 @@ export function NarrativeGraphViewer({ graphData, characters, className }: Narra
                 >
                   {node.name.length > 14 ? node.name.slice(0, 14) + '…' : node.name}
                 </text>
-
-                {/* Scene count badge */}
-                {isHovered && (
-                  <g>
-                    <rect
-                      x={node.x - 45}
-                      y={node.y - node.radius - 28}
-                      width={90}
-                      height={20}
-                      rx={4}
-                      className="fill-popover stroke-border"
-                      strokeWidth={1}
-                    />
-                    <text
-                      x={node.x}
-                      y={node.y - node.radius - 15}
-                      className="fill-popover-foreground text-[9px] pointer-events-none"
-                      textAnchor="middle"
-                    >
-                      {node.sceneCount} scenes · {node.dialogueCount} lines
-                    </text>
-                  </g>
-                )}
               </g>
             );
           })}
@@ -589,11 +583,70 @@ export function NarrativeGraphViewer({ graphData, characters, className }: Narra
           </div>
 
           <TabsContent value="character" className="mt-0">
-            <div className={cn(
+            <div ref={containerRef} className={cn(
               'relative bg-muted/20 rounded-lg border border-border/50 overflow-hidden',
               isExpanded ? 'h-[calc(100vh-280px)]' : 'h-[400px]'
             )}>
               {renderCharacterGraph()}
+
+              {/* Character detail popover */}
+              {selectedNode && (() => {
+                const node = characterGraph.nodes.find(n => n.id === selectedNode);
+                if (!node) return null;
+                // Convert SVG coords to container-relative pixel position
+                const containerEl = containerRef.current;
+                const svgW = 600, svgH = 400;
+                const cW = containerEl?.clientWidth || svgW;
+                const cH = containerEl?.clientHeight || svgH;
+                const pxX = (node.x / svgW) * cW;
+                const pxY = (node.y / svgH) * cH;
+                // Position popover to the right if space, else left
+                const popLeft = pxX > cW * 0.6 ? pxX - 260 : pxX + 20;
+                const popTop = Math.max(8, Math.min(pxY - 40, cH - 220));
+
+                return (
+                  <div
+                    ref={popoverRef}
+                    className="absolute z-20 w-[250px] rounded-lg border bg-popover text-popover-foreground shadow-lg p-3 text-xs animate-in fade-in-0 zoom-in-95"
+                    style={{ left: popLeft, top: popTop }}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-semibold text-sm">{node.name}</span>
+                      <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => setSelectedNode(null)}>
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                    <div className="flex gap-3 mb-2">
+                      <Badge variant="secondary" className="text-[10px]">{node.sceneCount} scenes</Badge>
+                      <Badge variant="secondary" className="text-[10px]">{node.dialogueCount} lines</Badge>
+                    </div>
+                    {node.description && (
+                      <p className="text-muted-foreground mb-2 leading-relaxed">{node.description}</p>
+                    )}
+                    {node.arcSummary && (
+                      <div className="mb-2">
+                        <span className="font-medium text-foreground">Arc: </span>
+                        <span className="text-muted-foreground">{node.arcSummary}</span>
+                      </div>
+                    )}
+                    {node.relationships && node.relationships.length > 0 && (
+                      <div>
+                        <span className="font-medium text-foreground block mb-1">Relationships:</span>
+                        <div className="space-y-0.5">
+                          {node.relationships.slice(0, 4).map((rel, i) => (
+                            <div key={i} className="text-muted-foreground">
+                              <span className="text-foreground">{rel.character}</span> — {rel.type}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {!node.description && !node.arcSummary && (!node.relationships || node.relationships.length === 0) && (
+                      <p className="text-muted-foreground italic">No detailed data yet. Run analysis to populate.</p>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           </TabsContent>
 
@@ -638,7 +691,7 @@ export function NarrativeGraphViewer({ graphData, characters, className }: Narra
               </>
             )}
           </div>
-          <span className="text-[10px] text-muted-foreground">Hover to explore</span>
+          <span className="text-[10px] text-muted-foreground">Click a node to explore</span>
         </div>
       </CardContent>
     </Card>
