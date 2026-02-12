@@ -1,51 +1,101 @@
 import { useState, useMemo } from 'react';
-import { SceneData } from '@/types/database';
+import { SceneData, SceneAnalysisData } from '@/types/database';
 import { cn } from '@/lib/utils';
-import { Timer, Activity, TrendingUp, BarChart2 } from 'lucide-react';
+import { Timer, Activity, TrendingUp, BarChart2, Sparkles, AlertCircle } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface PacingAnalysisProps {
   scenes: SceneData[];
   totalPages?: number;
+  sceneAnalysis?: SceneAnalysisData[];
 }
 
 type ViewMode = 'rhythm' | 'distribution' | 'flow';
 
-// Estimate scene duration based on page range
+// Estimate scene duration based on page range (fallback)
 function estimateSceneDuration(scene: SceneData): number {
   const pageStart = scene.pageStart || scene.sceneNumber;
   const pageEnd = scene.pageEnd || pageStart + 1;
   return Math.max(0.5, pageEnd - pageStart);
 }
 
-// Categorize scene pace
-function getScenePace(duration: number, avgDuration: number): 'fast' | 'medium' | 'slow' {
+// Categorize scene pace from duration (fallback)
+function getScenePaceFromDuration(duration: number, avgDuration: number): 'fast' | 'medium' | 'slow' {
   if (duration < avgDuration * 0.6) return 'fast';
   if (duration > avgDuration * 1.4) return 'slow';
   return 'medium';
 }
 
-export function PacingAnalysis({ scenes, totalPages }: PacingAnalysisProps) {
+// Categorize scene pace from narrative function (AI-driven)
+function getScenePaceFromFunction(narrativeFunction: string): 'fast' | 'medium' | 'slow' {
+  switch (narrativeFunction) {
+    case 'climax':
+    case 'escalation':
+      return 'fast';
+    case 'setup':
+    case 'transition':
+      return 'slow';
+    case 'resolution':
+    default:
+      return 'medium';
+  }
+}
+
+// Compute composite intensity score from AI data
+function getCompositeIntensity(analysis: SceneAnalysisData): number {
+  return (analysis.dialogueDensity + analysis.actionIntensity) / 2;
+}
+
+export function PacingAnalysis({ scenes, totalPages, sceneAnalysis }: PacingAnalysisProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('rhythm');
   const [hoveredScene, setHoveredScene] = useState<number | null>(null);
+
+  // Build a lookup map for sceneAnalysis by sceneNumber
+  const analysisMap = useMemo(() => {
+    if (!sceneAnalysis || sceneAnalysis.length === 0) return null;
+    const map = new Map<number, SceneAnalysisData>();
+    sceneAnalysis.forEach(sa => map.set(sa.sceneNumber, sa));
+    return map;
+  }, [sceneAnalysis]);
+
+  const useAI = !!analysisMap;
 
   const analysisData = useMemo(() => {
     if (!scenes || scenes.length === 0) return null;
 
     const sortedScenes = [...scenes].sort((a, b) => a.sceneNumber - b.sceneNumber);
-    const durations = sortedScenes.map(estimateSceneDuration);
-    const avgDuration = durations.reduce((a, b) => a + b, 0) / durations.length;
-    const maxDuration = Math.max(...durations);
-    const minDuration = Math.min(...durations);
 
-    const scenesWithPace = sortedScenes.map((scene, i) => ({
-      scene,
-      duration: durations[i],
-      pace: getScenePace(durations[i], avgDuration),
-      position: i / sortedScenes.length, // 0 to 1
-    }));
+    // Compute intensity or duration values per scene
+    const values = sortedScenes.map(scene => {
+      if (analysisMap) {
+        const sa = analysisMap.get(scene.sceneNumber);
+        return sa ? getCompositeIntensity(sa) : 50; // default mid-intensity if no match
+      }
+      return estimateSceneDuration(scene);
+    });
 
-    // Calculate act boundaries
+    const avgValue = values.reduce((a, b) => a + b, 0) / values.length;
+    const maxValue = Math.max(...values);
+    const minValue = Math.min(...values);
+
+    const scenesWithPace = sortedScenes.map((scene, i) => {
+      let pace: 'fast' | 'medium' | 'slow';
+      if (analysisMap) {
+        const sa = analysisMap.get(scene.sceneNumber);
+        pace = sa ? getScenePaceFromFunction(sa.narrativeFunction) : 'medium';
+      } else {
+        pace = getScenePaceFromDuration(values[i], avgValue);
+      }
+      return {
+        scene,
+        value: values[i],
+        pace,
+        position: i / sortedScenes.length,
+        analysis: analysisMap?.get(scene.sceneNumber) || null,
+      };
+    });
+
+    // Act boundaries
     const act1End = Math.floor(sortedScenes.length * 0.25);
     const act2End = Math.floor(sortedScenes.length * 0.75);
 
@@ -56,30 +106,30 @@ export function PacingAnalysis({ scenes, totalPages }: PacingAnalysisProps) {
       slow: scenesWithPace.filter(s => s.pace === 'slow').length,
     };
 
-    // Duration buckets for histogram
-    const bucketSize = (maxDuration - minDuration) / 6 || 1;
+    // Histogram buckets
+    const bucketSize = (maxValue - minValue) / 6 || 1;
     const histogram = Array(6).fill(0).map((_, i) => ({
-      min: minDuration + i * bucketSize,
-      max: minDuration + (i + 1) * bucketSize,
+      min: minValue + i * bucketSize,
+      max: minValue + (i + 1) * bucketSize,
       count: 0,
     }));
-    durations.forEach(d => {
-      const bucketIndex = Math.min(5, Math.floor((d - minDuration) / bucketSize));
+    values.forEach(v => {
+      const bucketIndex = Math.min(5, Math.floor((v - minValue) / bucketSize));
       histogram[bucketIndex].count++;
     });
 
     return {
       scenes: scenesWithPace,
-      avgDuration,
-      maxDuration,
-      minDuration,
+      avgValue,
+      maxValue,
+      minValue,
       act1End,
       act2End,
       paceDistribution,
       histogram,
-      totalDuration: durations.reduce((a, b) => a + b, 0),
+      totalValue: values.reduce((a, b) => a + b, 0),
     };
-  }, [scenes]);
+  }, [scenes, analysisMap]);
 
   if (!analysisData || scenes.length === 0) {
     return null;
@@ -93,19 +143,37 @@ export function PacingAnalysis({ scenes, totalPages }: PacingAnalysisProps) {
     }
   };
 
+  const valueLabel = useAI ? 'Intensity' : 'Pages';
+  const valueUnit = useAI ? '/100' : ' pages';
+
   return (
     <section className="min-h-screen py-20 bg-card/30">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="text-center mb-16">
-          <span className="px-4 py-1.5 rounded-full bg-chart-3/10 text-chart-3 text-sm font-medium">
-            Rhythm Analysis
-          </span>
+          <div className="flex items-center justify-center gap-2 mb-4">
+            <span className="px-4 py-1.5 rounded-full bg-chart-3/10 text-chart-3 text-sm font-medium">
+              Rhythm Analysis
+            </span>
+            {useAI ? (
+              <span className="px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium flex items-center gap-1">
+                <Sparkles className="h-3 w-3" />
+                AI Analyzed
+              </span>
+            ) : (
+              <span className="px-3 py-1 rounded-full bg-muted text-muted-foreground text-xs font-medium flex items-center gap-1">
+                <AlertCircle className="h-3 w-3" />
+                Estimated
+              </span>
+            )}
+          </div>
           <h2 className="text-4xl sm:text-5xl font-bold mt-6 mb-4">
             Script Pacing
           </h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Scene duration and rhythm patterns across {scenes.length} scenes
+            {useAI
+              ? `AI-analyzed intensity and rhythm patterns across ${scenes.length} scenes`
+              : `Scene duration and rhythm patterns across ${scenes.length} scenes`}
           </p>
         </div>
 
@@ -113,8 +181,12 @@ export function PacingAnalysis({ scenes, totalPages }: PacingAnalysisProps) {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-12">
           <div className="p-5 rounded-xl bg-card border border-border text-center">
             <Timer className="h-8 w-8 text-primary mx-auto mb-2" />
-            <p className="text-3xl font-bold">{analysisData.avgDuration.toFixed(1)}</p>
-            <p className="text-sm text-muted-foreground">Avg Pages/Scene</p>
+            <p className="text-3xl font-bold">
+              {useAI ? Math.round(analysisData.avgValue) : analysisData.avgValue.toFixed(1)}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {useAI ? 'Avg Intensity' : 'Avg Pages/Scene'}
+            </p>
           </div>
           <div className="p-5 rounded-xl bg-card border border-border text-center">
             <Activity className="h-8 w-8 text-chart-4 mx-auto mb-2" />
@@ -138,7 +210,7 @@ export function PacingAnalysis({ scenes, totalPages }: PacingAnalysisProps) {
           <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
             <TabsList>
               <TabsTrigger value="rhythm">Rhythm Timeline</TabsTrigger>
-              <TabsTrigger value="distribution">Duration Distribution</TabsTrigger>
+              <TabsTrigger value="distribution">{useAI ? 'Intensity' : 'Duration'} Distribution</TabsTrigger>
               <TabsTrigger value="flow">Pacing Flow</TabsTrigger>
             </TabsList>
           </Tabs>
@@ -168,8 +240,10 @@ export function PacingAnalysis({ scenes, totalPages }: PacingAnalysisProps) {
 
               {/* Rhythm bars */}
               <div className="relative h-48 flex gap-px">
-                {analysisData.scenes.map(({ scene, duration, pace }, i) => {
-                  const height = (duration / analysisData.maxDuration) * 100;
+                {analysisData.scenes.map(({ scene, value, pace, analysis }, i) => {
+                  const height = useAI
+                    ? value // already 0-100
+                    : (value / analysisData.maxValue) * 100;
                   const colors = getPaceColor(pace);
                   const isActBreak = i === analysisData.act1End || i === analysisData.act2End;
                   
@@ -190,14 +264,23 @@ export function PacingAnalysis({ scenes, totalPages }: PacingAnalysisProps) {
                           hoveredScene === scene.sceneNumber && 'opacity-100 scale-105',
                           hoveredScene && hoveredScene !== scene.sceneNumber && 'opacity-50'
                         )}
-                        style={{ height: `${height}%` }}
+                        style={{ height: `${Math.max(height, 5)}%` }}
                       />
                       
                       {/* Tooltip */}
                       {hoveredScene === scene.sceneNumber && (
                         <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 p-3 rounded-lg bg-popover border border-border shadow-lg z-20 whitespace-nowrap">
                           <p className="font-semibold">Scene {scene.sceneNumber}</p>
-                          <p className="text-sm text-muted-foreground">{duration.toFixed(1)} pages</p>
+                          {useAI && analysis ? (
+                            <>
+                              <p className="text-sm text-muted-foreground">Intensity: {Math.round(value)}/100</p>
+                              <p className="text-xs text-muted-foreground">Dialogue: {analysis.dialogueDensity}/100</p>
+                              <p className="text-xs text-muted-foreground">Action: {analysis.actionIntensity}/100</p>
+                              <p className="text-xs text-muted-foreground capitalize">Function: {analysis.narrativeFunction}</p>
+                            </>
+                          ) : (
+                            <p className="text-sm text-muted-foreground">{value.toFixed(1)} pages</p>
+                          )}
                           <p className={cn('text-sm font-medium capitalize', colors.text)}>{pace} pace</p>
                           {scene.heading && (
                             <p className="text-xs text-muted-foreground mt-1 max-w-[200px] truncate">
@@ -220,18 +303,37 @@ export function PacingAnalysis({ scenes, totalPages }: PacingAnalysisProps) {
 
               {/* Legend */}
               <div className="flex justify-center gap-6 mt-6 pt-6 border-t border-border">
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 rounded bg-chart-4" />
-                  <span className="text-sm text-muted-foreground">Fast (&lt;{(analysisData.avgDuration * 0.6).toFixed(1)} pages)</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 rounded bg-chart-2" />
-                  <span className="text-sm text-muted-foreground">Medium</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 rounded bg-chart-5" />
-                  <span className="text-sm text-muted-foreground">Slow (&gt;{(analysisData.avgDuration * 1.4).toFixed(1)} pages)</span>
-                </div>
+                {useAI ? (
+                  <>
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 rounded bg-chart-4" />
+                      <span className="text-sm text-muted-foreground">Fast (Climax/Escalation)</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 rounded bg-chart-2" />
+                      <span className="text-sm text-muted-foreground">Medium (Resolution)</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 rounded bg-chart-5" />
+                      <span className="text-sm text-muted-foreground">Slow (Setup/Transition)</span>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 rounded bg-chart-4" />
+                      <span className="text-sm text-muted-foreground">Fast (&lt;{(analysisData.avgValue * 0.6).toFixed(1)} pages)</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 rounded bg-chart-2" />
+                      <span className="text-sm text-muted-foreground">Medium</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 rounded bg-chart-5" />
+                      <span className="text-sm text-muted-foreground">Slow (&gt;{(analysisData.avgValue * 1.4).toFixed(1)} pages)</span>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           )}
@@ -240,7 +342,7 @@ export function PacingAnalysis({ scenes, totalPages }: PacingAnalysisProps) {
             <div>
               <h3 className="text-xl font-semibold mb-6 flex items-center gap-2">
                 <BarChart2 className="h-5 w-5 text-chart-2" />
-                Scene Duration Distribution
+                {useAI ? 'Scene Intensity Distribution' : 'Scene Duration Distribution'}
               </h3>
 
               {/* Histogram */}
@@ -258,9 +360,9 @@ export function PacingAnalysis({ scenes, totalPages }: PacingAnalysisProps) {
                       />
                       <div className="mt-2 text-center">
                         <p className="text-xs text-muted-foreground">
-                          {bucket.min.toFixed(1)}-{bucket.max.toFixed(1)}
+                          {Math.round(bucket.min)}-{Math.round(bucket.max)}
                         </p>
-                        <p className="text-xs text-muted-foreground">pages</p>
+                        <p className="text-xs text-muted-foreground">{useAI ? 'intensity' : 'pages'}</p>
                       </div>
                     </div>
                   );
@@ -270,16 +372,28 @@ export function PacingAnalysis({ scenes, totalPages }: PacingAnalysisProps) {
               {/* Stats */}
               <div className="grid grid-cols-3 gap-6 mt-8 pt-6 border-t border-border">
                 <div className="text-center">
-                  <p className="text-3xl font-bold text-chart-4">{analysisData.minDuration.toFixed(1)}</p>
-                  <p className="text-sm text-muted-foreground">Shortest Scene</p>
+                  <p className="text-3xl font-bold text-chart-4">
+                    {useAI ? Math.round(analysisData.minValue) : analysisData.minValue.toFixed(1)}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {useAI ? 'Lowest Intensity' : 'Shortest Scene'}
+                  </p>
                 </div>
                 <div className="text-center">
-                  <p className="text-3xl font-bold">{analysisData.avgDuration.toFixed(1)}</p>
-                  <p className="text-sm text-muted-foreground">Average Duration</p>
+                  <p className="text-3xl font-bold">
+                    {useAI ? Math.round(analysisData.avgValue) : analysisData.avgValue.toFixed(1)}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {useAI ? 'Average Intensity' : 'Average Duration'}
+                  </p>
                 </div>
                 <div className="text-center">
-                  <p className="text-3xl font-bold text-chart-5">{analysisData.maxDuration.toFixed(1)}</p>
-                  <p className="text-sm text-muted-foreground">Longest Scene</p>
+                  <p className="text-3xl font-bold text-chart-5">
+                    {useAI ? Math.round(analysisData.maxValue) : analysisData.maxValue.toFixed(1)}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {useAI ? 'Peak Intensity' : 'Longest Scene'}
+                  </p>
                 </div>
               </div>
             </div>
@@ -295,7 +409,6 @@ export function PacingAnalysis({ scenes, totalPages }: PacingAnalysisProps) {
               {/* Flow chart - area style */}
               <div className="relative h-48">
                 <svg className="w-full h-full" viewBox="0 0 100 50" preserveAspectRatio="none">
-                  {/* Background grid */}
                   <defs>
                     <linearGradient id="flowGradient" x1="0%" y1="0%" x2="0%" y2="100%">
                       <stop offset="0%" stopColor="hsl(var(--chart-3))" stopOpacity="0.6" />
@@ -305,9 +418,11 @@ export function PacingAnalysis({ scenes, totalPages }: PacingAnalysisProps) {
                   
                   {/* Area path */}
                   <path
-                    d={`M 0,50 ${analysisData.scenes.map(({ duration }, i) => {
+                    d={`M 0,50 ${analysisData.scenes.map(({ value }, i) => {
                       const x = (i / (analysisData.scenes.length - 1)) * 100;
-                      const y = 50 - (duration / analysisData.maxDuration) * 45;
+                      const y = useAI
+                        ? 50 - (value / 100) * 45
+                        : 50 - (value / analysisData.maxValue) * 45;
                       return `L ${x},${y}`;
                     }).join(' ')} L 100,50 Z`}
                     fill="url(#flowGradient)"
@@ -315,9 +430,11 @@ export function PacingAnalysis({ scenes, totalPages }: PacingAnalysisProps) {
                   
                   {/* Line path */}
                   <path
-                    d={`M ${analysisData.scenes.map(({ duration }, i) => {
+                    d={`M ${analysisData.scenes.map(({ value }, i) => {
                       const x = (i / (analysisData.scenes.length - 1)) * 100;
-                      const y = 50 - (duration / analysisData.maxDuration) * 45;
+                      const y = useAI
+                        ? 50 - (value / 100) * 45
+                        : 50 - (value / analysisData.maxValue) * 45;
                       return `${i === 0 ? '' : 'L '}${x},${y}`;
                     }).join(' ')}`}
                     fill="none"

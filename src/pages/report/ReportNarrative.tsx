@@ -66,7 +66,8 @@ export default function ReportNarrative() {
         </div>
         <PacingAnalysis 
           scenes={reportData.scenes || []} 
-          totalPages={reportData.scriptMetadata?.pageCount} 
+          totalPages={reportData.scriptMetadata?.pageCount}
+          sceneAnalysis={reportData.sceneAnalysis}
         />
       </section>
 
