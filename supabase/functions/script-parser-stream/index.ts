@@ -1949,8 +1949,8 @@ serve(async (req) => {
           if (words.some(w => locationWords.has(w))) return true;
           // Patterns like "ADJECTIVE + LOCATION"
           if (/^(ANOTHER|DESERTED|NARROW|DARK|OLD|NEW|SMALL|BIG|EMPTY|BUSY|CROWDED|SAME|NEARBY|LONE|PEACEFUL|INSIDE|OUTSIDE)\s/i.test(name)) return true;
-          // Contains possessive + location (RUDRA'S LIBRARY)
-          if (/'.S\s+(ROOM|HOUSE|SHOP|LIBRARY|OFFICE|PLACE|HOME|BEDROOM|BATHROOM|KITCHEN|LAB|STUDIO|DEN|LAIR)/i.test(name)) return true;
+          // Contains possessive + anything (RUDRA'S LIBRARY, VICKY'S HOUSE) - these are locations not characters
+          if (/'S\s+/i.test(name)) return true;
           return false;
         };
         const nonCharacterPatterns = [
@@ -1982,6 +1982,12 @@ serve(async (req) => {
             'BIKE', 'CAR', 'PHONE', 'TEMPO', 'PASSAGE', 'CELLAR',
             'STAND', 'WALL', 'GATE', 'DOOR', 'WINDOW', 'STAIRS', 'STEP',
             'CONCESSION', 'ASSISTANT', 'ANNOUNCER', 'NARRATOR', 'VOICE',
+            'RUINS', 'TEMPLE', 'FORT', 'PALACE', 'MANSION', 'HAVELI', 'MAHAL',
+            'JUNGLE', 'FOREST', 'RIVER', 'LAKE', 'POND', 'WELL', 'BRIDGE',
+            'MARKET', 'BAZAAR', 'CHOWK', 'GHAT', 'MANDIR', 'MASJID', 'CHURCH',
+            'TERRACE', 'ROOFTOP', 'BALCONY', 'VERANDAH', 'COURTYARD', 'GARDEN',
+            'GRAVEYARD', 'CEMETERY', 'CREMATORIUM', 'SHAMSHAAN',
+            'EXTERIOR', 'INTERIOR', 'CONTINUOUS', 'LATER', 'MEANWHILE',
           ]);
           if (genericSingles.has(name)) return true;
           // Multi-word names where all words are common English nouns/adjectives (not proper names)
