@@ -1,36 +1,52 @@
 
 
-# Fix: PDF Export Crash and .md Downloads
+# Fix: PDF Report NaN Scores and Broken Formatting
 
-## Root Cause
+## Problem 1: All Category Scores Show "NaN"
 
-Two separate issues are causing `.md` downloads:
+Category scores in the database are stored as objects (e.g., `{score: 85, maturity: "Strong"}`) rather than plain numbers. The PDF generator reads these values directly without extracting the numeric score, resulting in `NaN` throughout the Executive Summary and any page that displays category breakdowns.
 
-### Issue 1: PDF Generator Crashes
-The `renderDiagnosisOverview` function in `fullReportPdfGenerator.ts` (line 688) calls `doc.roundedRect()` with a width of `0` when a category score is `0`. jsPDF rejects zero-width rounded rectangles. This causes the "Export Failed" toast.
+### Fix
+- Import `extractScore` from `scoreUtils.ts` into `fullReportPdfGenerator.ts`
+- In `renderDiagnosisOverview` (line 672), wrap `categoryScores[cat]` with `extractScore()` so the numeric value is properly extracted
+- Also update the function signature from `Record<string, number>` to `Record<string, unknown>` to match the actual data shape
+- Apply the same fix anywhere else `categoryScores` values are used as raw numbers (e.g., line 714 for overall score, line 727 where the object is passed through)
 
-The same risk exists on line 619 in `renderParameterCards` and line 686.
+## Problem 2: Garbled Bullet Characters
 
-### Issue 2: "Full Report" and "Executive Summary" Always Download as .md
-The `getFilename` function (line 66 of ExportDialog.tsx) maps `summary` and `full` formats to the `.md` extension. When the PDF fails and the user clicks "Full Report" instead, they get a `.md` file.
+The PDF uses Unicode symbols that Helvetica (jsPDF's built-in font) cannot render:
+- `✓` (U+2713) in "What Works" bullets -- renders as `'`
+- `✗` (U+2717) in "What's Broken" bullets -- renders as `'`
+- `◦` (U+25E6) in "What's Underdeveloped" bullets -- renders as `%ae`
 
-## Fix
+### Fix
+Replace these Unicode characters with ASCII equivalents that Helvetica supports:
+- `✓` becomes `+` or `*`
+- `✗` becomes `-` or `x`
+- `◦` becomes `-` or `*`
 
-### File 1: `src/lib/fullReportPdfGenerator.ts`
-Guard all `roundedRect` calls against zero or negative width/height:
+Alternatively, use jsPDF bullet symbols like the em-dash or simple hyphen prefix.
 
-- **Line 686-688**: Clamp the bar width to a minimum of 0.5 when score > 0, and skip the filled bar entirely when score is 0
-- **Line 619**: Same guard for parameter card background bars
-- Apply `Math.max(0.5, ...)` to any computed dimension passed to `roundedRect`
+## Problem 3: Narrative Items May Be Objects
 
-### File 2: `src/components/report/ExportDialog.tsx`
-No change needed for the extension -- the real fix is making the PDF generator not crash. Once it works, clicking "PDF Report" will produce a `.pdf` file correctly.
+The `whatWorks`, `whatsBroken`, and `whatsUnderdeveloped` arrays can contain either strings or structured objects (with `content`/`evidence` keys). The PDF generator assumes strings, which would render as `[object Object]`.
 
-However, as a safety measure: in the edge-function fallback path (lines 108-112), when markdown content is returned instead of PDF binary, convert it to a simple PDF using jsPDF `doc.text()` rather than saving raw markdown with a `.pdf` extension.
+### Fix
+Add a `toDisplayString` helper in the PDF generator (mirroring the one in `AgentNarrativePanel`) to safely convert items to strings before rendering.
 
-### Summary of Changes
+## Files Changed
 
 | File | Change |
 |------|--------|
-| `src/lib/fullReportPdfGenerator.ts` | Guard `roundedRect` calls against zero/negative dimensions (lines 619, 686, 688) |
-| `src/components/report/ExportDialog.tsx` | Convert markdown fallback to simple PDF instead of saving as raw markdown with `.pdf` extension (lines 108-112) |
+| `src/lib/fullReportPdfGenerator.ts` | Import `extractScore`; use it in `renderDiagnosisOverview` and Executive Summary; replace unsupported Unicode bullets with ASCII; add `toDisplayString` helper for narrative items |
+
+## Summary of Edits (all in `fullReportPdfGenerator.ts`)
+
+1. **Line ~8**: Add `extractScore` to imports from `scoreUtils`
+2. **Lines 362-404**: Replace Unicode bullet chars with ASCII (`+`, `x`, `-`)
+3. **Lines 362-404**: Wrap each `item` in `toDisplayString()` before passing to `wrapText`
+4. **Line 664-668**: Change `categoryScores` param type to `Record<string, unknown>`
+5. **Line 672**: Use `extractScore(categoryScores[cat])` instead of raw value
+6. **Line 727**: The call site already passes `data.categoryScores` which contains objects -- the fix in `renderDiagnosisOverview` handles it
+7. Add a small `toDisplayString` helper near the top utility functions
+
