@@ -79,6 +79,22 @@ const QUALITY_MODE_PRESETS: Record<'fast' | 'balanced' | 'quality', Record<strin
     system: { model: 'google/gemini-2.5-flash', maxRetries: 3, retryDelayMs: 2000 },
   },
 };
+// ============= TIMEOUT UTILITIES =============
+// Wraps a promise with a timeout. Rejects with a TimeoutError if it takes too long.
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout>;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error(`TIMEOUT: ${label} exceeded ${Math.round(ms / 1000)}s limit`)), ms);
+  });
+  return Promise.race([promise, timeoutPromise]).finally(() => clearTimeout(timeoutId));
+}
+
+// Per-agent API call timeout (5 minutes)
+const AGENT_CALL_TIMEOUT_MS = 5 * 60 * 1000;
+// Scene enrichment batch timeout (8 minutes - larger payload)
+const SCENE_ENRICHMENT_TIMEOUT_MS = 8 * 60 * 1000;
+// Global analysis watchdog timeout (25 minutes)
+const GLOBAL_ANALYSIS_TIMEOUT_MS = 25 * 60 * 1000;
 
 // System presets config IDs
 const SYSTEM_PRESET_CONFIG_IDS: Record<string, string> = {
@@ -2259,71 +2275,116 @@ serve(async (req) => {
     // Use EdgeRuntime.waitUntil for long-running analysis
     const runAnalysisBackground = async () => {
       try {
-        let agentResults: Array<{ agent: string; success: boolean; error?: string }>;
-        
-        if (mode === 'quick' && chunks.length > 3) {
-          // Chunked analysis for large scripts
-          agentResults = await runChunkedAnalysis(
-            supabase,
-            lovableApiKey,
-            analysisRunId,
-            script,
-            chunks,
-            agentsToRun,
-            parameterMap,
-            qualityMode
-          );
-        } else {
-          // Standard analysis (deep mode or small quick scripts)
-          agentResults = await runStandardAnalysis(
-            supabase,
-            lovableApiKey,
-            analysisRunId,
-            scriptContext,
-            agentsToRun,
-            parameterMap,
-            qualityMode
-          );
-        }
+        // Global watchdog - if the entire analysis takes too long, force-complete
+        const analysisWork = async () => {
+          let agentResults: Array<{ agent: string; success: boolean; error?: string }>;
+          
+          if (mode === 'quick' && chunks.length > 3) {
+            agentResults = await runChunkedAnalysis(
+              supabase,
+              lovableApiKey,
+              analysisRunId,
+              script,
+              chunks,
+              agentsToRun,
+              parameterMap,
+              qualityMode
+            );
+          } else {
+            agentResults = await runStandardAnalysis(
+              supabase,
+              lovableApiKey,
+              analysisRunId,
+              scriptContext,
+              agentsToRun,
+              parameterMap,
+              qualityMode
+            );
+          }
 
-        // Run synthesis agents with dynamic model config
-        await runInsightSynthesis(supabase, lovableApiKey, analysisRunId, scriptContext, qualityMode);
-        await runStakeholderLensAgent(supabase, lovableApiKey, analysisRunId);
+          // Run synthesis agents with timeout protection
+          await withTimeout(
+            runInsightSynthesis(supabase, lovableApiKey, analysisRunId, scriptContext, qualityMode),
+            AGENT_CALL_TIMEOUT_MS,
+            'InsightSynthesisAgent'
+          ).catch(err => {
+            console.error('[analyze-script] InsightSynthesis timed out or failed:', err.message);
+            updateAgentProgress(supabase, analysisRunId, 'InsightSynthesisAgent', 'failed', err.message);
+          });
 
-        // Run scene enrichment agent
-        const sceneAnalysisData = await runSceneEnrichmentAgent(supabase, lovableApiKey, scriptId, scriptContext, qualityMode, analysisRunId);
+          await withTimeout(
+            runStakeholderLensAgent(supabase, lovableApiKey, analysisRunId),
+            AGENT_CALL_TIMEOUT_MS,
+            'StakeholderLensAgent'
+          ).catch(err => {
+            console.error('[analyze-script] StakeholderLens timed out or failed:', err.message);
+            updateAgentProgress(supabase, analysisRunId, 'StakeholderLensAgent', 'failed', err.message);
+          });
 
-        // Generate report (includes sceneAnalysis data)
-        await generateReport(supabase, analysisRunId, scriptId, script, mode, sceneAnalysisData);
+          // Run scene enrichment with timeout protection (non-blocking)
+          let sceneAnalysisData = null;
+          try {
+            sceneAnalysisData = await withTimeout(
+              runSceneEnrichmentAgent(supabase, lovableApiKey, scriptId, scriptContext, qualityMode, analysisRunId),
+              SCENE_ENRICHMENT_TIMEOUT_MS,
+              'SceneEnrichmentAgent'
+            );
+          } catch (err) {
+            const errMsg = err instanceof Error ? err.message : String(err);
+            console.error('[analyze-script] SceneEnrichment timed out or failed:', errMsg);
+            await updateAgentProgress(supabase, analysisRunId, 'SceneEnrichmentAgent', 'failed', errMsg);
+          }
 
-        // Update final status
-        const failedAgents = agentResults.filter(r => !r.success);
-        const finalStatus = failedAgents.length === agentResults.length ? 'failed' : 'completed';
-        
-        await supabase
-          .from('analysis_runs')
-          .update({ 
-            status: finalStatus,
-            completed_at: new Date().toISOString(),
-            error_message: failedAgents.length > 0 
-              ? `${failedAgents.length} agents failed: ${failedAgents.map(f => f.agent).join(', ')}`
-              : null
-          })
-          .eq('id', analysisRunId);
+          // Generate report (always runs, even if scene enrichment failed)
+          await generateReport(supabase, analysisRunId, scriptId, script, mode, sceneAnalysisData);
 
-        console.log(`[analyze-script] ${mode.toUpperCase()} Analysis complete: ${finalStatus}`);
+          // Update final status
+          const failedAgents = agentResults.filter(r => !r.success);
+          const finalStatus = failedAgents.length === agentResults.length ? 'failed' : 'completed';
+          
+          await supabase
+            .from('analysis_runs')
+            .update({ 
+              status: finalStatus,
+              completed_at: new Date().toISOString(),
+              error_message: failedAgents.length > 0 
+                ? `${failedAgents.length} agents failed: ${failedAgents.map(f => f.agent).join(', ')}`
+                : null
+            })
+            .eq('id', analysisRunId);
+
+          console.log(`[analyze-script] ${mode.toUpperCase()} Analysis complete: ${finalStatus}`);
+        };
+
+        // Apply global watchdog timeout
+        await withTimeout(analysisWork(), GLOBAL_ANALYSIS_TIMEOUT_MS, 'Global analysis pipeline');
+
       } catch (bgError) {
         const errorMessage = bgError instanceof Error ? bgError.message : 'Unknown background error';
         console.error('[analyze-script] Background analysis error:', errorMessage);
         
+        // Force-complete with whatever we have if it was a timeout
+        const isTimeout = errorMessage.includes('TIMEOUT');
         await supabase
           .from('analysis_runs')
           .update({ 
-            status: 'failed',
+            status: isTimeout ? 'completed' : 'failed',
             completed_at: new Date().toISOString(),
-            error_message: errorMessage
+            error_message: isTimeout 
+              ? `Analysis timed out after ${Math.round(GLOBAL_ANALYSIS_TIMEOUT_MS / 60000)} minutes. Partial results available.`
+              : errorMessage
           })
           .eq('id', analysisRunId);
+
+        // If global timeout, still try to generate a report with what we have
+        if (isTimeout) {
+          try {
+            console.log('[analyze-script] Global timeout - generating partial report');
+            await generateReport(supabase, analysisRunId, scriptId, script, mode, null);
+          } catch (reportErr) {
+            console.error('[analyze-script] Failed to generate partial report:', reportErr);
+          }
+        }
       }
     };
 
@@ -3414,20 +3475,24 @@ Return ONLY a valid JSON array with one object per scene:
 
           console.log(`[SceneEnrichmentAgent] Batch ${batchIdx + 1}/${batches.length}, attempt ${attempt + 1}, model: ${modelConfig.model}`);
 
-          const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${apiKey}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              model: modelConfig.model || 'google/gemini-2.5-flash',
-              messages: [
-                { role: 'system', content: 'You are SceneEnrichmentAgent, analyzing individual scenes for emotional tone, dialogue density, action intensity, technical requirements, VFX potential, location complexity, and narrative function. Return ONLY valid JSON arrays. Be precise with metrics — use the full 0-100 range based on actual scene content.' },
-                { role: 'user', content: prompt }
-              ],
+          const response = await withTimeout(
+            fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${apiKey}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                model: modelConfig.model || 'google/gemini-2.5-flash',
+                messages: [
+                  { role: 'system', content: 'You are SceneEnrichmentAgent, analyzing individual scenes for emotional tone, dialogue density, action intensity, technical requirements, VFX potential, location complexity, and narrative function. Return ONLY valid JSON arrays. Be precise with metrics — use the full 0-100 range based on actual scene content.' },
+                  { role: 'user', content: prompt }
+                ],
+              }),
             }),
-          });
+            AGENT_CALL_TIMEOUT_MS,
+            `SceneEnrichmentAgent batch ${batchIdx + 1}`
+          );
 
           if (response.status === 429) {
             console.log('[SceneEnrichmentAgent] Rate limited (429)');
