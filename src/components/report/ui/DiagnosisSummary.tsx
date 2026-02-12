@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { getDiagnosticCategory, getFixCostColor, getFixCostBg } from '@/lib/scoreUtils';
-import { CheckCircle, AlertCircle, XCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { CheckCircle, AlertCircle, XCircle, ChevronDown, ChevronUp, Settings2 } from 'lucide-react';
 import { StakeholderLens } from '@/types/database';
 import { translateTerm } from '@/lib/stakeholderVocabulary';
 
@@ -23,6 +23,7 @@ interface DiagnosisSummaryProps {
   categoryName: string;
   developmentLink?: string;
   stakeholderLens?: StakeholderLens | null;
+  verdict?: string;
   className?: string;
 }
 
@@ -31,6 +32,7 @@ export function DiagnosisSummary({
   categoryName, 
   developmentLink,
   stakeholderLens,
+  verdict,
   className 
 }: DiagnosisSummaryProps) {
   // Apply stakeholder-specific translations if lens is set
@@ -50,14 +52,41 @@ export function DiagnosisSummary({
   const underdeveloped = processedParameters.filter(p => p.score >= 40 && p.score < 70);
   const broken = processedParameters.filter(p => p.score < 40);
 
-  const IconMap = {
-    CheckCircle,
-    AlertCircle,
-    XCircle,
-  };
+  // Auto-generate verdict if not provided
+  const displayVerdict = verdict || (() => {
+    if (parameters.length === 0) return '';
+    const avgScore = Math.round(parameters.reduce((s, p) => s + p.score, 0) / parameters.length);
+    const topStrengths = working.slice(0, 2).map(p => p.displayName.toLowerCase());
+    const topWeaknesses = [...broken, ...underdeveloped].slice(0, 2).map(p => p.displayName.toLowerCase());
+    
+    const strengthText = topStrengths.length > 0 
+      ? `with solid performance in ${topStrengths.join(' and ')}` 
+      : '';
+    const weaknessText = topWeaknesses.length > 0 
+      ? `but needs development in ${topWeaknesses.join(' and ')}` 
+      : 'with no critical areas requiring immediate attention';
+    
+    const level = avgScore >= 75 ? 'strong foundation' : avgScore >= 50 ? 'a developing foundation' : 'significant structural gaps';
+    return `The ${categoryName.toLowerCase()} analysis reveals ${level} ${strengthText}, ${weaknessText}.`;
+  })();
 
   return (
     <div className={cn('space-y-4', className)}>
+      {/* Verdict */}
+      {displayVerdict && (
+        <div className="rounded-xl border border-success/20 border-l-4 border-l-success bg-success/5 p-5">
+          <div className="flex items-start gap-4">
+            <div className="p-2 rounded-lg bg-success/10">
+              <Settings2 className="h-5 w-5 text-success" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h4 className="font-display font-semibold tracking-tight text-success">Verdict</h4>
+              <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{verdict}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {parameters.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
           <p>No parameters available for diagnosis.</p>
@@ -139,7 +168,7 @@ function DiagnosisSection({
     <div className={cn('rounded-xl p-4', bgClass, borderClass)}>
       <div className="flex items-center gap-2 mb-3">
         <Icon className={cn('h-4 w-4', colorClass)} />
-        <h4 className={cn('text-sm font-bold', colorClass)}>{title}</h4>
+        <h4 className="text-sm font-bold text-foreground">{title}</h4>
       </div>
       
       {items.length === 0 && emptyMessage ? (
