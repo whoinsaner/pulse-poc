@@ -126,13 +126,14 @@ const USAF_NAV_GROUPS: NavGroup[] = [
   {
     id: 'format',
     label: 'Format Diagnosis',
-    applicableTypes: ['comic', 'web_series', 'micro_drama'],
+    applicableTypes: ['comic', 'web_series', 'micro_drama', 'pilot', 'episode'],
     items: [
       { id: 'format', label: 'Format Diagnosis', icon: Layers, path: '/format' },
       { id: 'format-panel-flow', label: 'Panel Flow', icon: Layers, path: '/format/panel-flow', applicableTypes: ['comic'] },
       { id: 'format-lettering', label: 'Lettering & Dialogue', icon: MessageSquare, path: '/format/lettering', applicableTypes: ['comic'] },
       { id: 'format-page-turns', label: 'Page Turns', icon: BookOpen, path: '/format/page-turns', applicableTypes: ['comic'] },
       { id: 'format-art-synergy', label: 'Art-Script Synergy', icon: Palette, path: '/format/art-synergy', applicableTypes: ['comic'] },
+      { id: 'bible', label: 'Series Bible', icon: BookOpen, path: '/bible', requiredCategories: ['World & Logic', 'Character', 'Theme'], applicableTypes: ['web_series', 'pilot', 'episode', 'micro_drama'] },
     ],
   },
   {
@@ -161,7 +162,6 @@ const USAF_NAV_GROUPS: NavGroup[] = [
     items: [
       { id: 'scorecard', label: 'Scorecard', icon: BarChart3, path: '/scorecard' },
       { id: 'script', label: 'Script', icon: FileText, path: '/script' },
-      { id: 'bible', label: 'Series Bible', icon: BookOpen, path: '/bible', requiredCategories: ['World & Logic', 'Character', 'Theme'], applicableTypes: ['web_series', 'pilot', 'episode', 'micro_drama'] },
     ],
   },
 ];
