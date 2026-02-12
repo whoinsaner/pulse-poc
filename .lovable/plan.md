@@ -1,109 +1,51 @@
-
-
-# Add SeriesBibleAgent to the Analysis Pipeline
+# Wire Web Series Sub-Pages Under Format Diagnosis
 
 ## Problem
-The Series Bible page currently stitches together data from other agents' parameter scores, but critical narrative content is hardcoded or derived with generic fallbacks:
-- **World Rules**: Fixed/Flexible labels are parameter display names, not actual story rules
-- **Tonal Guardrails "Avoid"**: Hardcoded as "Camp, slapstick, tonal whiplash"
-- **Series Engine**: Reset/Accumulate bullet points are static strings ("New case/problem/conflict", "Guest characters", etc.)
-- **Character Trajectories**: Start/End badges are generic -- no actual arc data
+
+Comics have 4 dedicated sub-pages under Format Diagnosis (Panel Flow, Lettering, Page Turns, Art-Script Synergy), but web series has **none**. Three fully-built web series pages exist but are orphaned -- their routes just redirect to `/format`:
+
+- `WebSeriesAnalysis.tsx` -- 13-parameter digital series evaluation with episode length tiers
+- `RetentionAnalysis.tsx` -- Retention curve design and engagement metrics
+- `HooksAnalysis.tsx` -- Hook efficiency and shareability scoring
+
+These pages are data-driven and ready to use but inaccessible from the sidebar.
 
 ## Solution
-Add a **SeriesBibleAgent** as a synthesis agent that runs after the core analysis agents, reads their outputs, and produces structured bible-specific content. This follows the same pattern as the existing InsightSynthesisAgent.
 
-## Changes Required
+Add 3 web series sub-pages to the Format navigation group, mirroring the comic pattern. Wire the routes to point to the existing pages instead of redirecting.
 
-### 1. Framework Definition (`src/lib/scriptFramework.ts`)
-Add `SeriesBibleAgent` to the `META_AGENTS` array:
-- **id**: `SeriesBibleAgent`
-- **category**: `meta`
-- **parameters**: `['bible_premise_clarity', 'bible_world_rules', 'bible_tonal_consistency', 'bible_character_trajectories', 'bible_series_engine']`
-- **reportSections**: `['Series Bible']`
-- **applicableScriptTypes**: `'all'` (bible-relevant data exists for all script types, though series engine section is episodic-only)
+## Changes
 
-### 2. Parameter Definitions (`src/lib/parameterDefinitions.ts`)
-Add 5 new parameters under a "Series Bible" category:
-- `bible_premise_clarity` -- How clearly the core premise is defined for a writers' room bible
-- `bible_world_rules` -- How well the world's fixed vs. flexible rules are documented
-- `bible_tonal_consistency` -- Clarity of tonal guardrails and genre boundaries
-- `bible_character_trajectories` -- Clarity of character transformation arcs for the series
-- `bible_series_engine` -- Strength of episodic engine (reset vs. accumulate logic)
+### 1. Navigation Config (`src/lib/reportNavigation.ts`)
 
-All with `agentSource: 'SeriesBibleAgent'`, weight `0.8`, and `applicableScriptTypes: 'all'`.
+Add 3 new nav items under the Format group, after the comic-specific items:
 
-### 3. Edge Function Agent Definition (`supabase/functions/analyze-script/index.ts`)
+- **Web Series Deep Dive** (`/format/web-series`) -- `applicableTypes: ['web_series']`
+- **Retention Curves** (`/format/retention`) -- `applicableTypes: ['web_series']`
+- **Hook Efficiency** (`/format/hooks`) -- `applicableTypes: ['web_series']`
 
-**3a. Add `SeriesBibleAgent` to the AGENTS object:**
-- Category: `meta`
-- Parameters: the 5 bible parameters
-- System prompt instructs it to synthesize from existing agent outputs (ConceptAgent, WorldLogicAgent, ThemeAgent, CharacterAgent, MarketAgent) and produce:
-  - Parameter scores for all 5 bible parameters
-  - A specialized `sectionContent` with structured fields
+### 2. Route Definitions (`src/App.tsx`)
 
-**3b. Add `sectionContent` instructions via `getSectionContentInstructions`:**
-New case for `SeriesBibleAgent` returning structured fields:
-```
-"verdict": "...",
-"whatWorks": [...],
-"whatsBroken": [...],
-"whatsUnderdeveloped": [...],
-"deepDive": "...",
-"recommendations": [...],
-"corePremise": { "logline": "...", "hook": "...", "genre": "..." },
-"worldRules": { "fixed": ["..."], "flexible": ["..."] },
-"tonalGuardrails": { "genre": "...", "tone": "...", "avoid": ["..."] },
-"characterTrajectories": [{ "name": "...", "startState": "...", "endState": "...", "arc": "..." }],
-"seriesEngine": { "reset": ["..."], "accumulate": ["..."] }
-```
+Replace the 3 redirect routes with actual page renders:
 
-**3c. Add to `SectionContent` interface:**
-Add the new fields (`corePremise`, `worldRules`, `tonalGuardrails`, `characterTrajectories`, `seriesEngine`) as optional properties.
+- `format/web-series` renders `WebSeriesAnalysis` (instead of redirecting to `/format`)
+- `format/retention` renders `RetentionAnalysis` (instead of redirecting to `/format`)
+- `format/hooks` renders `HooksAnalysis` (instead of redirecting to `/format`)
 
-**3d. Add to `SYNTHESIS_AGENTS` set:**
-So it gets an upgraded model tier for reliable output.
+Keep the old top-level redirect routes (`/web-series`, `/retention`, `/hooks`) as-is for backward compatibility with bookmarks.
 
-**3e. Add to agent orchestration (agent list building):**
-Add `SeriesBibleAgent` to the `metaAgents` array so it runs for all script types.
+### 3. PDF Export Mapping (`src/lib/fullReportPdfGenerator.ts`)
 
-### 4. Series Bible Page (`src/pages/report/SeriesBibleExtract.tsx`)
-Update the UI to consume real data from `agentContent.SeriesBibleAgent`:
+Add section-to-agent and section-to-category mappings for the new section IDs:
 
-- **Core Premise card**: Use `bibleContent.corePremise.logline` and `bibleContent.corePremise.hook` instead of fallbacks
-- **World Rules card**: Use `bibleContent.worldRules.fixed` and `bibleContent.worldRules.flexible` arrays instead of deriving from parameter names
-- **Tonal Guardrails card**: Use `bibleContent.tonalGuardrails.avoid` instead of the hardcoded "Camp, slapstick, tonal whiplash"
-- **Character Trajectories card**: Use `bibleContent.characterTrajectories` array with real `name`, `startState`, `endState` fields instead of generic Start/End badges
-- **Series Engine card**: Use `bibleContent.seriesEngine.reset` and `bibleContent.seriesEngine.accumulate` instead of static strings
-- Retain graceful fallbacks to the existing parameter-derived approach when `agentContent.SeriesBibleAgent` is not available (backward compatibility with older reports)
+- `format-web-series`: agents `['WebSeriesFormatAgent']`, categories `['Web Series']`
+- `format-retention`: agents `['StructureAgent', 'ConflictAgent']`, categories `['Web Series']`
+- `format-hooks`: agents `['ConceptAgent']`, categories `['Web Series']`
 
-### 5. Parameter Sync (`src/lib/parameterSync.ts`)
-No changes needed -- it already imports from `parameterDefinitions.ts` dynamically.
+### Files Modified
 
-### 6. Agent Sync (`src/lib/agentSync.ts`)
-No changes needed -- it already imports `ALL_AGENTS` from `scriptFramework.ts` and auto-syncs on mount.
+1. `src/lib/reportNavigation.ts` -- Add 3 nav items
+2. `src/App.tsx` -- Wire 3 sub-routes under format
+3. `src/lib/fullReportPdfGenerator.ts` -- Add PDF export mappings
 
-## Data Flow
-
-```text
-Core Agents (Concept, World, Theme, Character, Market)
-        |
-        v  (agent_progress.sectionContent)
-SeriesBibleAgent (reads existing agent outputs + script context)
-        |
-        v  (agent_progress.SeriesBibleAgent.sectionContent)
-generateReport() collects into agentContent
-        |
-        v  (full_report_data.agentContent.SeriesBibleAgent)
-SeriesBibleExtract.tsx reads structured bible fields
-```
-
-## Backward Compatibility
-- Existing reports without `SeriesBibleAgent` data continue to work -- the page falls back to the current parameter-derived approach
-- The agent auto-syncs to the database via the existing sync mechanism
-- New parameters auto-seed via the existing parameter sync mechanism
-
-## Files Modified
-1. `src/lib/scriptFramework.ts` -- Add SeriesBibleAgent definition
-2. `src/lib/parameterDefinitions.ts` -- Add 5 bible parameters
-3. `supabase/functions/analyze-script/index.ts` -- Add agent prompt, sectionContent instructions, orchestration
-4. `src/pages/report/SeriesBibleExtract.tsx` -- Consume real agentContent data with fallbacks
+Ensure all touchpoints across the system are addressed and the report pages are powered by real data produced by the pipeline. 
