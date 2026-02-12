@@ -9,7 +9,7 @@ import {
   Loader2, Play, CheckCircle, XCircle, Clock, Zap, 
   Lightbulb, Layers, Users, Swords, Sparkles, MessageSquare,
   Globe, Heart, TrendingUp, Wrench, Palette, LayoutGrid, 
-  BookOpen, PenTool, AlertTriangle, PlayCircle, MonitorPlay, ScanSearch
+  BookOpen, PenTool, AlertTriangle, PlayCircle, MonitorPlay, ScanSearch, FileText
 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
@@ -18,6 +18,8 @@ import { StakeholderSelector } from '@/components/StakeholderSelector';
 import { StakeholderBadge } from '@/components/StakeholderBadge';
 import { getAgentsForStakeholder, getParameterCountForAnalysis, isAgentActiveForStakeholder } from '@/lib/stakeholderConfig';
 import { QualityModeSelector, type QualityMode, type CustomModelConfig } from '@/components/QualityModeSelector';
+import { useStreamingParser } from '@/hooks/useStreamingParser';
+import { StreamingParsingStatus } from '@/components/StreamingParsingStatus';
 
 interface AnalysisTriggerProps {
   scriptId: string;
@@ -82,6 +84,26 @@ export function AnalysisTrigger({
   const [pendingAnalysisMode, setPendingAnalysisMode] = useState<{ force: boolean; mode: 'quick' | 'deep' } | null>(null);
   const [qualityMode, setQualityMode] = useState<QualityMode>('balanced');
   const [customConfigs, setCustomConfigs] = useState<CustomModelConfig[]>([]);
+  const [scriptDetails, setScriptDetails] = useState<{ file_url: string; format: string } | null>(null);
+  const [isParsing, setIsParsing] = useState(false);
+
+  const streamingParser = useStreamingParser({
+    onComplete: (result) => {
+      setIsParsing(false);
+      if (result.success) {
+        toast({ title: 'Parsing complete', description: 'Script parsed successfully. You can now run analysis.' });
+        // Re-check extraction status
+        setIsExtractionComplete(true);
+        setExtractionError(null);
+      } else {
+        toast({ title: 'Parsing failed', description: result.errorMessage || 'Script parsing failed', variant: 'destructive' });
+      }
+    },
+    onError: (errorMsg) => {
+      setIsParsing(false);
+      toast({ title: 'Parsing error', description: errorMsg, variant: 'destructive' });
+    },
+  });
 
   const isComic = scriptType === 'comic';
   const isWebSeries = scriptType === 'web_series';
@@ -138,6 +160,25 @@ export function AnalysisTrigger({
     fetchCustomConfigs();
   }, [profile?.current_organization_id]);
 
+  // Fetch script details for parsing
+  useEffect(() => {
+    const fetchScriptDetails = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('scripts')
+          .select('file_url, format')
+          .eq('id', scriptId)
+          .single();
+        if (!error && data) {
+          setScriptDetails({ file_url: data.file_url, format: data.format });
+        }
+      } catch (err) {
+        console.error('Error fetching script details:', err);
+      }
+    };
+    fetchScriptDetails();
+  }, [scriptId]);
+
   // Check if script extraction is complete
   useEffect(() => {
     const checkExtractionStatus = async () => {
@@ -149,9 +190,8 @@ export function AnalysisTrigger({
           .single();
 
         if (graphError) {
-          // No graph found - extraction may not be complete
           setIsExtractionComplete(false);
-          setExtractionError('Script has not been parsed yet. Please re-upload the script.');
+          setExtractionError('Script has not been parsed yet.');
           return;
         }
 
@@ -159,7 +199,7 @@ export function AnalysisTrigger({
         
         if (metadata?.extraction_complete === false) {
           setIsExtractionComplete(false);
-          setExtractionError(`Incomplete extraction: Only ${metadata.extracted_pages || 0} of ${metadata.expected_pages || 'unknown'} pages extracted. Please re-upload in a different format.`);
+          setExtractionError(`Incomplete extraction: Only ${metadata.extracted_pages || 0} of ${metadata.expected_pages || 'unknown'} pages extracted.`);
         } else {
           setIsExtractionComplete(true);
           setExtractionError(null);
@@ -418,8 +458,15 @@ export function AnalysisTrigger({
       );
     }
 
-    // Extraction incomplete - show warning with override option
+    // Extraction incomplete - show parse option + override
     if (!isExtractionComplete) {
+      const handleParseScript = () => {
+        if (!scriptDetails) return;
+        setIsParsing(true);
+        streamingParser.reset();
+        streamingParser.startStreaming(scriptId, scriptDetails.format, scriptDetails.file_url, scriptType);
+      };
+
       return (
         <div className="space-y-3">
           <Alert variant="destructive" className="border-amber-500/50 bg-amber-500/10">
@@ -431,19 +478,49 @@ export function AnalysisTrigger({
               </p>
             </AlertDescription>
           </Alert>
+
+          {/* Streaming parsing progress */}
+          {(isParsing || streamingParser.isActive) && (
+            <StreamingParsingStatus
+              isActive={streamingParser.isActive}
+              currentStage={streamingParser.currentStage}
+              progress={streamingParser.progress}
+              chunks={streamingParser.chunks}
+              warnings={streamingParser.warnings}
+              eta={streamingParser.eta}
+              format={scriptDetails?.format}
+              result={streamingParser.result}
+            />
+          )}
           
           <div className="flex flex-col gap-2">
-            <Button 
-              onClick={() => initiateAnalysis(true, 'deep')} 
-              className="w-full" 
-              variant="outline"
-            >
-              <AlertTriangle className="h-4 w-4 mr-2 text-amber-500" />
-              Analyze Anyway (Reduced Accuracy)
-            </Button>
-            <p className="text-xs text-muted-foreground text-center">
-              Analysis will use raw script text as fallback. Results may be less precise.
-            </p>
+            {/* Parse Script button */}
+            {scriptDetails && !streamingParser.isActive && (
+              <Button 
+                onClick={handleParseScript} 
+                className="w-full"
+                disabled={isParsing}
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                Parse Script
+              </Button>
+            )}
+
+            {!streamingParser.isActive && (
+              <>
+                <Button 
+                  onClick={() => initiateAnalysis(true, 'deep')} 
+                  className="w-full" 
+                  variant="outline"
+                >
+                  <AlertTriangle className="h-4 w-4 mr-2 text-amber-500" />
+                  Analyze Anyway (Reduced Accuracy)
+                </Button>
+                <p className="text-xs text-muted-foreground text-center">
+                  Analysis will use raw script text as fallback. Results may be less precise.
+                </p>
+              </>
+            )}
           </div>
         </div>
       );
