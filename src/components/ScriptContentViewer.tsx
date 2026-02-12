@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
@@ -67,6 +68,9 @@ const TIME_ICONS: Record<string, React.ReactNode> = {
 };
 
 export function ScriptContentViewer({ scriptId, scriptTitle }: ScriptContentViewerProps) {
+  const [searchParams] = useSearchParams();
+  const highlightScene = searchParams.get('scene') ? Number(searchParams.get('scene')) : null;
+  const sceneRefs = useRef<Record<number, HTMLDivElement | null>>({});
   const [scenes, setScenes] = useState<Scene[]>([]);
   const [characters, setCharacters] = useState<Character[]>([]);
   const [narrativeGraphs, setNarrativeGraphs] = useState<NarrativeGraph[]>([]);
@@ -108,6 +112,15 @@ export function ScriptContentViewer({ scriptId, scriptTitle }: ScriptContentView
 
     fetchContent();
   }, [scriptId]);
+
+  // Scroll to highlighted scene after loading
+  useEffect(() => {
+    if (!isLoading && highlightScene && sceneRefs.current[highlightScene]) {
+      setTimeout(() => {
+        sceneRefs.current[highlightScene]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 200);
+    }
+  }, [isLoading, highlightScene]);
 
   if (isLoading) {
     return (
@@ -154,7 +167,14 @@ export function ScriptContentViewer({ scriptId, scriptTitle }: ScriptContentView
       <ScrollArea className="h-[500px] mt-4">
         <TabsContent value="scenes" className="mt-0 space-y-3">
           {scenes.map((scene) => (
-            <Card key={scene.id} className="bg-muted/30">
+            <Card
+              key={scene.id}
+              ref={(el) => { sceneRefs.current[scene.scene_number] = el; }}
+              className={cn(
+                'bg-muted/30 transition-all duration-500',
+                highlightScene === scene.scene_number && 'ring-2 ring-primary bg-primary/5'
+              )}
+            >
               <CardContent className="p-4">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { SceneData, SceneAnalysisData } from '@/types/database';
 import { cn } from '@/lib/utils';
 import { Flame, MessageSquare, Zap, Info, Sparkles } from 'lucide-react';
@@ -62,6 +63,7 @@ function getMetrics(scene: SceneData, analysisItem?: SceneAnalysisData) {
 }
 
 export function SceneHeatmap({ scenes, sceneAnalysis }: SceneHeatmapProps) {
+  const navigate = useNavigate();
   const [activeMetric, setActiveMetric] = useState<MetricType>('emotional');
   const [hoveredScene, setHoveredScene] = useState<number | null>(null);
 
@@ -213,6 +215,7 @@ export function SceneHeatmap({ scenes, sceneAnalysis }: SceneHeatmapProps) {
                         )}
                         onMouseEnter={() => setHoveredScene(scene.sceneNumber)}
                         onMouseLeave={() => setHoveredScene(null)}
+                        onClick={() => navigate(`../script?scene=${scene.sceneNumber}`)}
                       >
                         <span className="absolute inset-0 flex items-center justify-center text-xs font-medium opacity-60">
                           {scene.sceneNumber}
