@@ -63,6 +63,7 @@ export function WeightedParameterBar({
         <div className="w-24">
           <Progress 
             value={parameter.score} 
+            indicatorClassName={scoreColor}
             className={cn(
               'h-2.5',
               weightTier.tier === 'core' && 'h-3',
