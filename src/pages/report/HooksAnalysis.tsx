@@ -1,9 +1,9 @@
 import { useOutletContext } from 'react-router-dom';
 import { ReportData, StakeholderLens } from '@/types/database';
 import { AgentNarrativePanel } from '@/components/report/AgentNarrativePanel';
-import { ParameterBreakdown } from '@/components/report/ParameterBreakdown';
+
 import { Card } from '@/components/ui/card';
-import { SectionHeader } from '@/components/report/ui';
+import { SectionHeader, WeightedParameterList } from '@/components/report/ui';
 import { Zap, Share2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScoreDisplay } from '@/components/report/ui';
@@ -34,7 +34,7 @@ export default function HooksAnalysis() {
   const agentContent = reportData.agentContent?.ConceptAgent;
 
   return (
-    <div className="space-y-8 max-w-6xl mx-auto">
+    <div className="space-y-8">
       <SectionHeader
         title="Hook Efficiency Analysis"
         subtitle="First 30 seconds viewer capture and social media amplification potential"
@@ -77,7 +77,12 @@ export default function HooksAnalysis() {
       )}
 
       {/* Parameter Breakdown */}
-      <ParameterBreakdown title="Hook & Shareability Parameters" parameters={hookParams} />
+      <WeightedParameterList
+        parameters={hookParams.map(p => ({ ...p, weight: 1.0 }))}
+        title="Hook & Shareability Parameters"
+        initiallyExpanded={true}
+        defaultVisibleCount={8}
+      />
 
       {/* Fallback when no data */}
       {hookParams.length === 0 && !agentContent && (

@@ -52,7 +52,7 @@ export default function SupportingCast() {
   });
 
   return (
-    <div className="space-y-8 max-w-6xl mx-auto">
+    <div className="space-y-8">
       <SectionHeader
         title="Supporting Cast"
         subtitle="Analyzing ensemble effectiveness, balance, and character utility"
@@ -67,7 +67,7 @@ export default function SupportingCast() {
 
       {/* Agent supporting cast data */}
       {agentContent?.supportingCast && agentContent.supportingCast.length > 0 && (
-        <Card className="glass-premium p-6">
+        <Card className="p-6">
           <SubSectionHeader title="AI-Analyzed Supporting Cast" />
           <div className="grid md:grid-cols-2 gap-3">
             {agentContent.supportingCast.map((c, i) => (
@@ -83,22 +83,22 @@ export default function SupportingCast() {
 
       {/* Cast Overview */}
       <div className="grid md:grid-cols-4 gap-4">
-        <Card className="glass-premium p-5 text-center">
+        <Card className="p-5 text-center">
           <Users className="h-5 w-5 mx-auto mb-2 text-primary" />
           <p className="text-2xl font-mono font-bold">{characters.length}</p>
           <p className="text-sm text-muted-foreground">Total Characters</p>
         </Card>
-        <Card className="glass-premium p-5 text-center">
+        <Card className="p-5 text-center">
           <Star className="h-5 w-5 mx-auto mb-2 text-chart-4" />
           <p className="text-2xl font-mono font-bold">{supportingCast.length}</p>
           <p className="text-sm text-muted-foreground">Supporting Roles</p>
         </Card>
-        <Card className="glass-premium p-5 text-center">
+        <Card className="p-5 text-center">
           <MessageSquare className="h-5 w-5 mx-auto mb-2 text-chart-2" />
           <p className="text-2xl font-mono font-bold">{castBalance.toFixed(0)}%</p>
           <p className="text-sm text-muted-foreground">Supporting Dialogue</p>
         </Card>
-        <Card className="glass-premium p-5 text-center">
+        <Card className="p-5 text-center">
           <Film className="h-5 w-5 mx-auto mb-2 text-chart-3" />
           <p className="text-2xl font-mono font-bold">{assessedCast.filter(c => c.hasArc).length}</p>
           <p className="text-sm text-muted-foreground">With Character Arcs</p>
@@ -107,7 +107,7 @@ export default function SupportingCast() {
 
       {/* Character Table */}
       {assessedCast.length > 0 && (
-        <Card className="glass-premium p-6">
+        <Card className="p-6">
           <SubSectionHeader title="Supporting Character Analysis" />
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -158,7 +158,7 @@ export default function SupportingCast() {
       )}
 
       {/* Relationship Map */}
-      <Card className="glass-premium p-6">
+      <Card className="p-6">
         <SubSectionHeader title="Key Relationships" />
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
           {assessedCast.slice(0, 6).map((char, index) => (

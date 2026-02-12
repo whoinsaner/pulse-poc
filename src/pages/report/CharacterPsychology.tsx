@@ -1,6 +1,6 @@
 import { useOutletContext } from 'react-router-dom';
 import { ReportData, StakeholderLens } from '@/types/database';
-import { ParameterBreakdown } from '@/components/report/ParameterBreakdown';
+
 import { AgentNarrativePanel } from '@/components/report/AgentNarrativePanel';
 import { Card } from '@/components/ui/card';
 import { 
@@ -9,7 +9,8 @@ import {
   VerdictBox, 
   ScoreBar,
   ScoreDisplay,
-  RecommendationCard
+  RecommendationCard,
+  WeightedParameterList,
 } from '@/components/report/ui';
 import { Brain, Heart, Target, Zap, Eye, Shield } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -68,7 +69,7 @@ export default function CharacterPsychology() {
   ];
 
   return (
-    <div className="space-y-8 max-w-6xl mx-auto">
+    <div className="space-y-8">
       <SectionHeader
         title="Character Psychology"
         subtitle="Exploring internal architecture, motivations, and psychological depth"
@@ -162,7 +163,12 @@ export default function CharacterPsychology() {
       )}
 
       {/* Parameter Scores */}
-      <ParameterBreakdown title="Psychology Parameters" parameters={psychParams} />
+      <WeightedParameterList
+        parameters={psychParams.map(p => ({ ...p, weight: 1.0 }))}
+        title="Psychology Parameters"
+        initiallyExpanded={true}
+        defaultVisibleCount={8}
+      />
     </div>
   );
 }

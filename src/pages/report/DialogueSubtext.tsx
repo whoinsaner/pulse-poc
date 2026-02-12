@@ -1,11 +1,12 @@
 import { useOutletContext } from 'react-router-dom';
 import { ReportData, StakeholderLens } from '@/types/database';
-import { ParameterBreakdown } from '@/components/report/ParameterBreakdown';
+
 import { AgentNarrativePanel } from '@/components/report/AgentNarrativePanel';
 import { 
   SectionHeader, 
   SubSectionHeader,
   StrengthWeaknessList,
+  WeightedParameterList,
 } from '@/components/report/ui';
 import { Card } from '@/components/ui/card';
 import { MessageSquare } from 'lucide-react';
@@ -57,7 +58,7 @@ export default function DialogueSubtext() {
   const filterStats = getFilterStats(dialogueParams);
 
   return (
-    <div className="space-y-8 max-w-6xl mx-auto">
+    <div className="space-y-8">
       <SectionHeader
         title="Dialogue & Subtext Analysis"
         subtitle="Evaluating voice distinctiveness, subtext layers, and dialogue craft"
@@ -80,7 +81,7 @@ export default function DialogueSubtext() {
 
       {/* Character Voice Analysis */}
       {topCharacters.length > 0 && (
-        <Card className="glass-premium p-6">
+        <Card className="p-6">
           <SubSectionHeader title="Character Voice Distinctiveness" />
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -110,7 +111,12 @@ export default function DialogueSubtext() {
       )}
 
       {/* Parameter Breakdown */}
-      <ParameterBreakdown title="Dialogue Parameters" parameters={filteredDialogueParams} />
+      <WeightedParameterList
+        parameters={filteredDialogueParams.map(p => ({ ...p, weight: 1.0 }))}
+        title="Dialogue Parameters"
+        initiallyExpanded={true}
+        defaultVisibleCount={8}
+      />
 
       {/* Strengths & Weaknesses */}
       {(strengths.length > 0 || weaknesses.length > 0) && (

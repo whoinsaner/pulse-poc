@@ -8,6 +8,7 @@ import {
   SubSectionHeader,
   StrengthWeaknessList,
   RecommendationCard,
+  WeightedParameterList,
 } from '@/components/report/ui';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Layers, BarChart3 } from 'lucide-react';
@@ -97,7 +98,7 @@ export default function SceneEconomy() {
   };
 
   return (
-    <div className="space-y-8 max-w-6xl mx-auto">
+    <div className="space-y-8">
       <SectionHeader
         title="Scene Economy"
         subtitle="Analyzing scene efficiency, pacing, and opportunities for tightening"
@@ -109,7 +110,7 @@ export default function SceneEconomy() {
       {topMetrics.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {topMetrics.map((metric) => (
-            <Card key={metric.label} className="glass-premium">
+            <Card key={metric.label}>
               <CardContent className="pt-6">
                 <ScoreDisplay score={metric.score} maxScore={100} size="md" />
                 <h3 className="font-display font-semibold mt-2 text-sm">{metric.label}</h3>
@@ -122,7 +123,7 @@ export default function SceneEconomy() {
 
       {/* Scene Stats - from real data */}
       {totalScenes > 0 && (
-        <Card className="glass-premium border-primary/30">
+        <Card className="border-primary/30">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 font-display">
               <BarChart3 className="h-5 w-5 text-primary" />
@@ -168,34 +169,18 @@ export default function SceneEconomy() {
       />
 
       {/* Parameter Breakdown */}
-      {economyParams.length > 0 && (
-        <Card className="glass-premium p-6">
-          <SubSectionHeader title="Economy Parameters" />
-          <div className="space-y-3">
-            {economyParams.map((param) => (
-              <div key={param.parameterId} className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border/50">
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium">{param.displayName || param.parameterName}</p>
-                  {param.rationale && (
-                    <p className="text-xs text-muted-foreground mt-0.5">{param.rationale}</p>
-                  )}
-                </div>
-                <div className="flex items-center gap-2 shrink-0 ml-4">
-                  <div className="w-20 h-2 bg-muted/50 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full rounded-full transition-all ${
-                        param.score >= 70 ? 'bg-success' : param.score >= 40 ? 'bg-warning' : 'bg-destructive'
-                      }`}
-                      style={{ width: `${param.score}%` }}
-                    />
-                  </div>
-                  <span className="text-sm font-mono font-bold w-8 text-right">{Math.round(param.score)}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
-      )}
+      <WeightedParameterList
+        parameters={economyParams.map(p => ({
+          parameterName: p.parameterName || p.displayName || '',
+          displayName: p.displayName || p.parameterName || '',
+          score: p.score,
+          rationale: p.rationale,
+          weight: 1.0,
+        }))}
+        title="Economy Parameters"
+        initiallyExpanded={true}
+        defaultVisibleCount={8}
+      />
 
       {/* Strengths & Weaknesses from real data */}
       {(strengths.length > 0 || weaknesses.length > 0) && (
@@ -207,7 +192,7 @@ export default function SceneEconomy() {
 
       {/* Recommendations based on actual weak areas */}
       {(broken.length > 0 || underdeveloped.length > 0) && (
-        <Card className="glass-premium p-6">
+        <Card className="p-6">
           <SubSectionHeader title="Economy Recommendations" />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {broken.slice(0, 2).map((param) => (

@@ -1,11 +1,12 @@
 import { useOutletContext } from 'react-router-dom';
 import { ReportData, StakeholderLens } from '@/types/database';
-import { ParameterBreakdown } from '@/components/report/ParameterBreakdown';
+
 import { AgentNarrativePanel } from '@/components/report/AgentNarrativePanel';
 import { 
   SectionHeader, 
   SubSectionHeader,
   StrengthWeaknessList,
+  WeightedParameterList,
 } from '@/components/report/ui';
 import { Card } from '@/components/ui/card';
 import { Eye } from 'lucide-react';
@@ -50,7 +51,7 @@ export default function VisualStorytelling() {
   }));
 
   return (
-    <div className="space-y-8 max-w-6xl mx-auto">
+    <div className="space-y-8">
       <SectionHeader
         title="Visual Storytelling"
         subtitle="Evaluating cinematic imagery, visual metaphors, and directorial potential"
@@ -64,7 +65,7 @@ export default function VisualStorytelling() {
       )}
 
       {/* Location Overview */}
-      <Card className="glass-premium p-6">
+      <Card className="p-6">
         <SubSectionHeader title="Location Analysis" />
         <div className="grid md:grid-cols-3 gap-4 mb-6">
           <div className="p-5 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 text-center">
@@ -97,7 +98,12 @@ export default function VisualStorytelling() {
       </Card>
 
       {/* Parameter Breakdown */}
-      <ParameterBreakdown title="Visual Parameters" parameters={visualParams} />
+      <WeightedParameterList
+        parameters={visualParams.map(p => ({ ...p, weight: 1.0 }))}
+        title="Visual Parameters"
+        initiallyExpanded={true}
+        defaultVisibleCount={8}
+      />
 
       {/* Strengths & Weaknesses */}
       {(strengths.length > 0 || weaknesses.length > 0) && (

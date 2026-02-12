@@ -1,11 +1,12 @@
 import { useOutletContext } from 'react-router-dom';
 import { ReportData, StakeholderLens } from '@/types/database';
-import { ParameterBreakdown } from '@/components/report/ParameterBreakdown';
+
 import { AgentNarrativePanel } from '@/components/report/AgentNarrativePanel';
 import { 
   SectionHeader, 
   SubSectionHeader,
   StrengthWeaknessList,
+  WeightedParameterList,
 } from '@/components/report/ui';
 import { Card } from '@/components/ui/card';
 import { Heart } from 'lucide-react';
@@ -52,7 +53,7 @@ export default function ThemeMoral() {
   ) || [];
 
   return (
-    <div className="space-y-8 max-w-6xl mx-auto">
+    <div className="space-y-8">
       <SectionHeader
         title="Theme & Moral Core"
         subtitle="Analyzing thematic depth, moral complexity, and universal resonance"
@@ -67,7 +68,7 @@ export default function ThemeMoral() {
 
       {/* Theme Insights from DB */}
       {themeInsights.length > 0 && (
-        <Card className="glass-premium p-6">
+        <Card className="p-6">
           <SubSectionHeader title="Thematic Insights" />
           <div className="space-y-3">
             {themeInsights.slice(0, 4).map((insight, index) => (
@@ -81,7 +82,12 @@ export default function ThemeMoral() {
       )}
 
       {/* Parameter Breakdown */}
-      <ParameterBreakdown title="Theme Parameters" parameters={themeParams} />
+      <WeightedParameterList
+        parameters={themeParams.map(p => ({ ...p, weight: 1.0 }))}
+        title="Theme Parameters"
+        initiallyExpanded={true}
+        defaultVisibleCount={8}
+      />
 
       {/* Strengths & Weaknesses */}
       {(strengths.length > 0 || weaknesses.length > 0) && (

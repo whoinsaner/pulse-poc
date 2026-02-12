@@ -1,6 +1,6 @@
 import { useOutletContext } from 'react-router-dom';
 import { ReportData, StakeholderLens } from '@/types/database';
-import { ParameterBreakdown } from '@/components/report/ParameterBreakdown';
+
 import { AgentNarrativePanel } from '@/components/report/AgentNarrativePanel';
 import { Card } from '@/components/ui/card';
 import { 
@@ -8,6 +8,7 @@ import {
   SubSectionHeader,
   VerdictBox, 
   StrengthWeaknessList,
+  WeightedParameterList,
 } from '@/components/report/ui';
 import { TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -58,7 +59,7 @@ export default function PlotAnalysis() {
   }));
 
   return (
-    <div className="space-y-8 max-w-6xl mx-auto">
+    <div className="space-y-8">
       <SectionHeader
         title="Plot Analysis"
         subtitle="Examining story mechanics, conflict density, and narrative momentum"
@@ -76,7 +77,7 @@ export default function PlotAnalysis() {
 
       {/* Act Structure Analysis */}
       {totalScenes > 0 && (
-        <Card className="glass-premium p-6">
+        <Card className="p-6">
           <SubSectionHeader title="Act Structure Analysis" />
           <div className="grid md:grid-cols-3 gap-4">
             {[
@@ -106,7 +107,12 @@ export default function PlotAnalysis() {
       )}
 
       {/* Parameter Breakdown */}
-      <ParameterBreakdown title="Plot Parameters" parameters={plotParams} />
+      <WeightedParameterList
+        parameters={plotParams.map(p => ({ ...p, weight: 1.0 }))}
+        title="Plot Parameters"
+        initiallyExpanded={true}
+        defaultVisibleCount={8}
+      />
 
       {/* Strengths & Weaknesses */}
       {(strengths.length > 0 || weaknesses.length > 0) && (
@@ -115,7 +121,7 @@ export default function PlotAnalysis() {
 
       {/* Key Insights */}
       {plotInsights.length > 0 && (
-        <Card className="glass-premium p-6">
+        <Card className="p-6">
           <SubSectionHeader title="Plot Insights" />
           <div className="space-y-3">
             {plotInsights.map((insight, index) => (
