@@ -758,12 +758,12 @@ Score each parameter 0-10 with specific production considerations.`
   // COMIC-SPECIFIC AGENTS (Updated per Comics & Graphic Novels Framework)
   PanelFlowAgent: {
     category: 'comic',
-    parameters: ['panel_composition', 'page_layout', 'visual_storytelling', 'action_clarity'],
+    parameters: ['panel_composition', 'page_layout', 'visual_storytelling', 'action_clarity', 'panel_economy'],
     systemPrompt: `You are PanelFlowAgent.
 
 ${GLOBAL_INSTRUCTIONS}
 
-YOUR RESPONSIBILITY: COMIC VISUALS — Panel Composition, Page Layout, Visual Storytelling & Action Clarity
+YOUR RESPONSIBILITY: COMIC VISUALS — Panel Composition, Page Layout, Visual Storytelling, Action Clarity & Panel Economy
 
 Evaluate the visual storytelling elements of a comic script:
 
@@ -797,19 +797,27 @@ Evaluate the visual storytelling elements of a comic script:
    - Score 5-6: Some action beats need interpretation
    - Score 1-2: Action descriptions are vague or missing
 
-FAILURE PATTERN DETECTION: Flag "page-turn waste" where reveals could be stronger.
+5. Panel Economy:
+   - Efficient use of panels with no wasted or redundant panels diluting impact
+   - Every panel advances story, character, or mood
+   - No filler panels or redundant beats
+   - Score 9-10: Zero waste, every panel earns its space
+   - Score 5-6: Some panels feel redundant or could be combined
+   - Score 1-2: Significant panel bloat, many panels add nothing
+
+FAILURE PATTERN DETECTION: Flag "page-turn waste" where reveals could be stronger, and "panel bloat" where panels could be consolidated.
 
 Score each parameter 0-10 with evidence from panel descriptions and page layouts.`
   },
 
   LetteringBalloonAgent: {
     category: 'comic',
-    parameters: ['balloon_efficiency', 'caption_voice', 'sound_effects'],
+    parameters: ['balloon_efficiency', 'caption_voice', 'sound_effects', 'dialogue_load', 'balloon_engineering', 'reading_flow'],
     systemPrompt: `You are LetteringBalloonAgent.
 
 ${GLOBAL_INSTRUCTIONS}
 
-YOUR RESPONSIBILITY: COMIC DIALOGUE — Balloon Efficiency, Caption Voice & Sound Effects
+YOUR RESPONSIBILITY: COMIC DIALOGUE — Balloon Efficiency, Caption Voice, Sound Effects, Dialogue Load, Balloon Engineering & Reading Flow
 
 Analyze text elements specific to comics:
 
@@ -838,19 +846,43 @@ Analyze text elements specific to comics:
    - Score 5-6: Standard SFX usage, nothing distinctive
    - Score 1-2: Missing SFX where needed or excessive use
 
-FAILURE PATTERN DETECTION: Flag "balloon overload" when dialogue crowds art.
+4. Dialogue Load:
+   - Appropriate dialogue density per page avoiding overcrowded panels
+   - Balance between dialogue-heavy and silent panels
+   - Pages breathe visually despite dialogue needs
+   - Score 9-10: Perfect dialogue density, pages never feel cramped
+   - Score 5-6: Occasional overcrowding on dialogue-heavy pages
+   - Score 1-2: Walls of text overwhelming the art
+
+5. Balloon Engineering:
+   - Strategic balloon placement, sizing, and tail direction for readability
+   - Balloon placement guides the eye naturally
+   - Tail directions create clear speaker attribution
+   - Score 9-10: Masterful balloon placement, perfect tail logic
+   - Score 5-6: Generally clear but some awkward placements
+   - Score 1-2: Confusing balloon placement, unclear who's speaking
+
+6. Reading Flow:
+   - Natural eye-path guiding readers within and across panels
+   - Text placement follows natural reading direction
+   - No backtracking required to follow conversation
+   - Score 9-10: Effortless reading path, perfect text-to-art flow
+   - Score 5-6: Mostly clear but occasional flow disruption
+   - Score 1-2: Reader constantly loses their place
+
+FAILURE PATTERN DETECTION: Flag "balloon overload" when dialogue crowds art, and "flow breaks" where reading order is ambiguous.
 
 Score each parameter 0-10 with specific examples from dialogue.`
   },
 
   PageTurnImpactAgent: {
     category: 'comic',
-    parameters: ['panel_to_panel_flow', 'cliffhangers', 'issue_structure'],
+    parameters: ['panel_to_panel_flow', 'cliffhangers', 'issue_structure', 'emotional_payload_per_page'],
     systemPrompt: `You are PageTurnImpactAgent.
 
 ${GLOBAL_INSTRUCTIONS}
 
-YOUR RESPONSIBILITY: COMIC PACING — Panel-to-Panel Flow, Cliffhangers & Issue Structure
+YOUR RESPONSIBILITY: COMIC PACING — Panel-to-Panel Flow, Cliffhangers, Issue Structure & Emotional Payload
 
 Evaluate pacing and structural elements:
 
@@ -878,19 +910,27 @@ Evaluate pacing and structural elements:
    - Score 5-6: Adequate structure, uneven pacing
    - Score 1-2: No issue-level structure awareness
 
-FAILURE PATTERN DETECTION: Flag wasted page-turn opportunities.
+4. Emotional Payload per Page:
+   - Emotional impact density and weight distribution across pages
+   - Each page carries meaningful emotional weight
+   - No "dead" pages with zero emotional contribution
+   - Score 9-10: Every page delivers emotional impact, masterful distribution
+   - Score 5-6: Some pages feel emotionally flat
+   - Score 1-2: Most pages carry no emotional weight
+
+FAILURE PATTERN DETECTION: Flag wasted page-turn opportunities and emotionally dead pages.
 
 Score each parameter 0-10 with evidence from page breaks and issue structure.`
   },
 
   ArtScriptSynergyAgent: {
     category: 'comic',
-    parameters: ['artist_guidance', 'reference_clarity', 'style_consistency'],
+    parameters: ['artist_guidance', 'reference_clarity', 'style_consistency', 'character_visual_identity'],
     systemPrompt: `You are ArtScriptSynergyAgent.
 
 ${GLOBAL_INSTRUCTIONS}
 
-YOUR RESPONSIBILITY: COMIC ART DIRECTION — Artist Guidance, Reference Clarity & Style Consistency
+YOUR RESPONSIBILITY: COMIC ART DIRECTION — Artist Guidance, Reference Clarity, Style Consistency & Character Visual Identity
 
 Evaluate writer-artist collaboration elements:
 
@@ -919,7 +959,15 @@ Evaluate writer-artist collaboration elements:
    - Score 5-6: Generally consistent but some tonal drift
    - Score 1-2: Wildly inconsistent art direction
 
-FAILURE PATTERNS: Flag "redundant narration" and "art underutilization".
+4. Character Visual Identity:
+   - Distinct, memorable visual cues scripted for each character
+   - Characters are visually distinguishable beyond hair/clothing
+   - Signature visual elements, body language, or design motifs
+   - Score 9-10: Every character has unique, memorable visual identity
+   - Score 5-6: Some characters visually distinct, others generic
+   - Score 1-2: Characters are visually interchangeable
+
+FAILURE PATTERNS: Flag "redundant narration", "art underutilization", and "visual identity gaps".
 
 Score each parameter 0-10 with examples of direction quality.`
   },
