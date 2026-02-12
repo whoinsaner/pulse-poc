@@ -17,13 +17,7 @@ export default function ComicPageTurns() {
   const parameters = useMemo(() => {
     const params = context?.reportData?.parameterScores || [];
     return params
-      .filter(p =>
-        p.category === 'Comic Pacing' ||
-        p.parameterName.includes('page_turn') ||
-        p.parameterName.includes('pacing') ||
-        p.parameterName.includes('tempo') ||
-        p.parameterName.includes('spread')
-      )
+      .filter(p => p.category === 'Comic Pacing')
       .map(p => ({
         parameterName: p.parameterName,
         displayName: p.displayName,
