@@ -116,8 +116,8 @@ function analyzeSceneComplexity(
   
   const dialogueDensity = hasAI ? aiData.dialogueDensity : estimateDialogue(scene);
   const actionIntensity = hasAI ? aiData.actionIntensity : estimateAction(scene);
-  const technicalRequirements = estimateTechnical(scene);
-  const vfxPotential = estimateVfx(scene);
+  const technicalRequirements = hasAI ? aiData.technicalRequirements : estimateTechnical(scene);
+  const vfxPotential = hasAI ? aiData.vfxPotential : estimateVfx(scene);
   const locationComplexity = estimateLocation(scene);
 
   const overallComplexity = Math.round(
@@ -276,7 +276,7 @@ export function SceneComplexityAnalyzer({ scenes, characters = [], sceneAnalysis
           <h2 className="text-4xl sm:text-5xl font-bold mt-6 mb-4">Scene Complexity</h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
             {useAI 
-              ? 'AI-analyzed dialogue density and action intensity with estimated technical requirements'
+              ? 'AI-analyzed scene complexity across dialogue, action, technical, and VFX dimensions'
               : 'Analyze dialogue density, action intensity, and technical requirements across scenes'}
           </p>
         </div>
@@ -325,7 +325,7 @@ export function SceneComplexityAnalyzer({ scenes, characters = [], sceneAnalysis
                   <div className="text-2xl font-bold">{averageMetrics?.technicalRequirements || 0}%</div>
                   <div className="text-xs text-muted-foreground flex items-center gap-1">
                     Avg Technical
-                    <AlertCircle className="h-3 w-3 text-muted-foreground/50" />
+                    {useAI ? <Sparkles className="h-3 w-3 text-primary" /> : <AlertCircle className="h-3 w-3 text-muted-foreground/50" />}
                   </div>
                 </div>
               </div>
@@ -341,7 +341,7 @@ export function SceneComplexityAnalyzer({ scenes, characters = [], sceneAnalysis
                   <div className="text-2xl font-bold">{averageMetrics?.vfxPotential || 0}%</div>
                   <div className="text-xs text-muted-foreground flex items-center gap-1">
                     Avg VFX
-                    <AlertCircle className="h-3 w-3 text-muted-foreground/50" />
+                    {useAI ? <Sparkles className="h-3 w-3 text-primary" /> : <AlertCircle className="h-3 w-3 text-muted-foreground/50" />}
                   </div>
                 </div>
               </div>

@@ -3311,6 +3311,8 @@ For each scene, evaluate:
 - emotional_tone: One of "tense", "calm", "dramatic", "comedic", "romantic", "suspenseful", "melancholic", "hopeful", "exciting", "neutral"
 - dialogue_density: 0-100 (how dialogue-heavy the scene is. 0=no dialogue, 100=entirely dialogue)
 - action_intensity: 0-100 (how much physical action/movement. 0=static, 100=intense action)
+- technical_requirements: 0-100 (production complexity: lighting, camera work, stunts, sets, vehicles, night shoots, weather, crowd scenes. 0=simple single-setup shot, 100=extremely complex multi-setup production)
+- vfx_potential: 0-100 (visual effects needed: CGI, compositing, wire removal, creature work, environment extension. 0=no VFX, 100=entirely VFX-dependent)
 - narrative_function: One of "setup", "escalation", "climax", "resolution", "transition"
 - key_moment: true if this is a pivotal/turning point scene
 - brief_summary: 1-2 sentence summary of what happens
@@ -3318,6 +3320,8 @@ For each scene, evaluate:
 SCORING GUIDE:
 - dialogue_density: 0-20 = mostly visual/action, 20-50 = mixed, 50-80 = dialogue-heavy, 80-100 = almost entirely dialogue
 - action_intensity: 0-20 = static/contemplative, 20-50 = moderate movement, 50-80 = significant action, 80-100 = intense action sequence
+- technical_requirements: 0-20 = simple interior dialogue scene, 20-50 = standard production (exterior, basic props), 50-80 = complex (stunts, vehicles, night, weather, crowds), 80-100 = major set pieces requiring extensive coordination
+- vfx_potential: 0-10 = no VFX needed, 10-30 = minor cleanup/compositing, 30-60 = moderate VFX (environment extension, wire removal), 60-100 = heavy VFX (creatures, destruction, fully digital environments)
 
 Return ONLY a valid JSON array with one object per scene:
 [
@@ -3326,6 +3330,8 @@ Return ONLY a valid JSON array with one object per scene:
     "emotional_tone": "tense",
     "dialogue_density": 70,
     "action_intensity": 30,
+    "technical_requirements": 25,
+    "vfx_potential": 5,
     "narrative_function": "setup",
     "key_moment": false,
     "brief_summary": "The protagonist arrives at the office."
@@ -3354,7 +3360,7 @@ Return ONLY a valid JSON array with one object per scene:
             body: JSON.stringify({
               model: modelConfig.model || 'google/gemini-2.5-flash',
               messages: [
-                { role: 'system', content: 'You are SceneEnrichmentAgent, analyzing individual scenes for emotional tone, dialogue density, action intensity, and narrative function. Return ONLY valid JSON arrays. Be precise with metrics — use the full 0-100 range based on actual scene content.' },
+                { role: 'system', content: 'You are SceneEnrichmentAgent, analyzing individual scenes for emotional tone, dialogue density, action intensity, technical requirements, VFX potential, and narrative function. Return ONLY valid JSON arrays. Be precise with metrics — use the full 0-100 range based on actual scene content.' },
                 { role: 'user', content: prompt }
               ],
             }),
@@ -3449,6 +3455,8 @@ Return ONLY a valid JSON array with one object per scene:
       emotionalTone: sa.emotional_tone || 'neutral',
       dialogueDensity: typeof sa.dialogue_density === 'number' ? Math.max(0, Math.min(100, sa.dialogue_density)) : 50,
       actionIntensity: typeof sa.action_intensity === 'number' ? Math.max(0, Math.min(100, sa.action_intensity)) : 50,
+      technicalRequirements: typeof sa.technical_requirements === 'number' ? Math.max(0, Math.min(100, sa.technical_requirements)) : 20,
+      vfxPotential: typeof sa.vfx_potential === 'number' ? Math.max(0, Math.min(100, sa.vfx_potential)) : 10,
       narrativeFunction: sa.narrative_function || 'transition',
       keyMoment: sa.key_moment || false,
       briefSummary: sa.brief_summary || undefined,
