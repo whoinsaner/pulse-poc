@@ -127,19 +127,33 @@ export default function ReportCover() {
               {metadata.logline}
             </p>
           )}
-          <div className="flex items-center gap-3 mt-3 text-sm text-muted-foreground">
-            {metadata?.genre && <span>{metadata.genre}</span>}
+          <div className="flex flex-wrap items-center gap-2 mt-3">
             {metadata?.scriptType && (
-              <>
-                <span>•</span>
-                <span className="capitalize">{metadata.scriptType.replace('_', ' ')}</span>
-              </>
+              <Badge variant="secondary" className="capitalize">
+                {metadata.scriptType.replace('_', ' ')}
+              </Badge>
             )}
             {metadata?.pageCount && (
-              <>
-                <span>•</span>
-                <span>{metadata.pageCount} pages</span>
-              </>
+              <Badge variant="secondary">{metadata.pageCount} pages</Badge>
+            )}
+            {(metadata?.sceneCount ?? reportData.scenes?.length) ? (
+              <Badge variant="secondary">
+                {metadata?.sceneCount ?? reportData.scenes.length} scenes
+              </Badge>
+            ) : null}
+            {(metadata?.characterCount ?? reportData.characters?.length) ? (
+              <Badge variant="secondary">
+                {metadata?.characterCount ?? reportData.characters.length} characters
+              </Badge>
+            ) : null}
+            {metadata?.genre && (
+              <Badge variant="secondary">{metadata.genre}</Badge>
+            )}
+            {metadata?.subgenre && (
+              <Badge variant="secondary">{metadata.subgenre}</Badge>
+            )}
+            {metadata?.theme && (
+              <Badge variant="secondary">{metadata.theme}</Badge>
             )}
           </div>
         </div>

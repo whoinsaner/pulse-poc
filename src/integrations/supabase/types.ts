@@ -774,6 +774,8 @@ export type Database = {
           organization_id: string
           page_count: number | null
           script_type: Database["public"]["Enums"]["script_type"]
+          subgenre: string | null
+          theme: string | null
           title: string
           updated_at: string
           uploaded_by: string
@@ -790,6 +792,8 @@ export type Database = {
           organization_id: string
           page_count?: number | null
           script_type?: Database["public"]["Enums"]["script_type"]
+          subgenre?: string | null
+          theme?: string | null
           title: string
           updated_at?: string
           uploaded_by: string
@@ -806,6 +810,8 @@ export type Database = {
           organization_id?: string
           page_count?: number | null
           script_type?: Database["public"]["Enums"]["script_type"]
+          subgenre?: string | null
+          theme?: string | null
           title?: string
           updated_at?: string
           uploaded_by?: string

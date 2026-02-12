@@ -2000,8 +2000,8 @@ serve(async (req) => {
           console.log(`[script-parser-stream] Narrative graph inserted successfully`);
         }
 
-        // Update script with page count
-        console.log(`[script-parser-stream] Updating script page count`);
+        // Update script with page count and AI-classified metadata
+        console.log(`[script-parser-stream] Updating script metadata`);
         
         // Calculate extracted pages - consider scene count as alternative for FDX/text formats
         // where page numbers aren't embedded in the format
@@ -2015,10 +2015,71 @@ serve(async (req) => {
           : 0;
         
         const extractedPages = Math.max(scenePageMax, textBasedPages, sceneBasedPages);
+
+        // AI classification for genre/subgenre/theme
+        let classifiedGenre: string | null = null;
+        let classifiedSubgenre: string | null = null;
+        let classifiedTheme: string | null = null;
         
+        try {
+          const apiKey = Deno.env.get('LOVABLE_API_KEY');
+          if (apiKey) {
+            const excerpt = rawText.substring(0, 3000);
+            sendSSE(controller, 'progress', { stage: 'finalize', percent: 80, message: 'Classifying genre & theme...' });
+            
+            const classifyResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${apiKey}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                model: 'google/gemini-2.5-flash-lite',
+                messages: [
+                  { role: 'system', content: 'You extract script metadata. Return ONLY valid JSON, no markdown.' },
+                  { role: 'user', content: `Analyze this script excerpt and return JSON:\n{"genre": "...", "subgenre": "...", "theme": "..."}\n- genre: Primary genre (e.g., Action, Drama, Comedy, Sci-Fi, Horror, Superhero)\n- subgenre: More specific classification (e.g., Dystopian, Coming-of-Age, Noir)\n- theme: Central thematic concern in 1-3 words (e.g., Redemption, Identity, Power)\n\nScript excerpt:\n${excerpt}` }
+                ],
+                temperature: 0.1,
+                max_tokens: 200,
+              }),
+            });
+
+            if (classifyResponse.ok) {
+              const classifyData = await classifyResponse.json();
+              const content = classifyData.choices?.[0]?.message?.content || '';
+              // Parse JSON from response (handle potential markdown wrapping)
+              const jsonMatch = content.match(/\{[\s\S]*?\}/);
+              if (jsonMatch) {
+                const parsed = JSON.parse(jsonMatch[0]);
+                classifiedGenre = parsed.genre || null;
+                classifiedSubgenre = parsed.subgenre || null;
+                classifiedTheme = parsed.theme || null;
+                console.log(`[script-parser-stream] AI classification: genre=${classifiedGenre}, subgenre=${classifiedSubgenre}, theme=${classifiedTheme}`);
+              }
+            } else {
+              console.warn(`[script-parser-stream] Genre classification failed: ${classifyResponse.status}`);
+            }
+          }
+        } catch (classifyError) {
+          console.warn('[script-parser-stream] Genre classification error:', classifyError);
+        }
+
+        // Build update payload
+        const scriptUpdate: Record<string, any> = { page_count: extractedPages };
+        if (classifiedSubgenre) scriptUpdate.subgenre = classifiedSubgenre;
+        if (classifiedTheme) scriptUpdate.theme = classifiedTheme;
+        // Only set genre if not already set on the script
+        if (classifiedGenre) {
+          // Fetch current genre to avoid overwriting user-set values
+          const { data: currentScript } = await supabase.from('scripts').select('genre').eq('id', scriptId).single();
+          if (!currentScript?.genre) {
+            scriptUpdate.genre = classifiedGenre;
+          }
+        }
+
         const { error: updateError } = await supabase
           .from('scripts')
-          .update({ page_count: extractedPages })
+          .update(scriptUpdate)
           .eq('id', scriptId);
 
         if (updateError) {
