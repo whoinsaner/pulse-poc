@@ -153,6 +153,7 @@ const App = () => (
               <Route path="format/web-series" element={<WebSeriesAnalysis />} />
               <Route path="format/retention" element={<RetentionAnalysis />} />
               <Route path="format/hooks" element={<HooksAnalysis />} />
+              <Route path="format/micro-drama" element={<MicroDramaAnalysis />} />
               <Route path="commercial" element={<CommercialDiagnosis />} />
               <Route path="commercial/market" element={<CommercialMarket />} />
               <Route path="commercial/production" element={<CommercialProduction />} />
@@ -413,6 +414,7 @@ const App = () => (
               <Route path="craft/emotional" element={<CraftEmotional />} />
               <Route path="craft/scenes" element={<SceneEconomy />} />
               <Route path="format" element={<FormatDiagnosis />} />
+              <Route path="format/micro-drama" element={<MicroDramaAnalysis />} />
               <Route path="commercial" element={<CommercialDiagnosis />} />
               <Route path="commercial/market" element={<CommercialMarket />} />
               <Route path="commercial/production" element={<CommercialProduction />} />

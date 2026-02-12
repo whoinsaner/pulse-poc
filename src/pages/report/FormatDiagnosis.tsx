@@ -36,30 +36,32 @@ const NAV_SECTIONS = [
 
 export default function FormatDiagnosis() {
   const context = useOutletContext<ReportContextValue>();
-  
-  if (!context) {
-    return <div className="text-center py-12 text-muted-foreground">Loading...</div>;
-  }
 
-  const { reportData } = context;
-  const scriptType = reportData.scriptMetadata?.scriptType;
+  const reportData = context?.reportData;
+  const scriptType = reportData?.scriptMetadata?.scriptType;
   const isWebSeries = scriptType === 'web_series';
   const isMicroDrama = scriptType === 'micro_drama';
+  const isPilotOrEpisode = scriptType === 'pilot' || scriptType === 'episode';
 
   // Determine format category
   const formatCategory = isWebSeries ? 'Web Series' : isMicroDrama ? 'Micro Drama' : null;
-  
-  if (!formatCategory) {
-    return (
-      <div className="text-center py-12">
-        <p className="text-muted-foreground">No format-specific analysis available for this script type.</p>
-      </div>
-    );
-  }
 
-  // Filter parameters for format category
+  // Filter parameters for format category (or all params for pilot/episode)
   const formatParameters = useMemo(() => {
-    const params = reportData.parameterScores || [];
+    const params = reportData?.parameterScores || [];
+    if (isPilotOrEpisode) {
+      // For pilot/episode, show all parameters as a general overview
+      return params.map(p => ({
+        parameterName: p.parameterName,
+        displayName: p.displayName,
+        score: p.score,
+        rationale: p.rationale,
+        fixCost: p.fixCost as 'Low' | 'Medium' | 'High' | undefined,
+        evidence: p.evidence,
+        weight: 1.0,
+      }));
+    }
+    if (!formatCategory) return [];
     return params
       .filter(p => p.category === formatCategory)
       .map(p => ({
@@ -69,12 +71,11 @@ export default function FormatDiagnosis() {
         rationale: p.rationale,
         fixCost: p.fixCost as 'Low' | 'Medium' | 'High' | undefined,
         evidence: p.evidence,
-        // Web series hooks and retention are CORE parameters
         weight: p.parameterName.includes('hook') || 
                 p.parameterName.includes('retention') || 
                 p.parameterName.includes('binge') ? 1.4 : 1.0,
       }));
-  }, [reportData.parameterScores, formatCategory]);
+  }, [reportData.parameterScores, formatCategory, isPilotOrEpisode]);
 
   // Calculate section score
   const sectionScore = useMemo(() => {
@@ -88,7 +89,6 @@ export default function FormatDiagnosis() {
     return formatParameters
       .filter(p => p.score < 70)
       .sort((a, b) => {
-        // Prioritize core parameters (higher weight)
         const weightDiff = (b.weight || 1) - (a.weight || 1);
         if (weightDiff !== 0) return weightDiff;
         return a.score - b.score;
@@ -105,6 +105,7 @@ export default function FormatDiagnosis() {
 
   // Format-specific metrics groupings
   const metricGroups = useMemo(() => {
+    if (isPilotOrEpisode) return [];
     if (isWebSeries) {
       return [
         {
@@ -196,7 +197,69 @@ export default function FormatDiagnosis() {
         ),
       },
     ];
-  }, [isWebSeries, formatParameters]);
+  }, [isWebSeries, isPilotOrEpisode, formatParameters]);
+
+  // Loading guard + early return for unsupported types (after all hooks)
+  if (!context) {
+    return <div className="text-center py-12 text-muted-foreground">Loading...</div>;
+  }
+
+  if (!formatCategory && !isPilotOrEpisode) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-muted-foreground">No format-specific analysis available for this script type.</p>
+      </div>
+    );
+  }
+
+  // Pilot/Episode: render a simplified format overview
+  if (isPilotOrEpisode) {
+    const formatLabel = scriptType === 'pilot' ? 'Pilot' : 'Episode';
+    return (
+      <div className="space-y-8">
+        <SectionHeader
+          title="Format Diagnosis"
+          subtitle={`Structure and pacing analysis for ${formatLabel} format`}
+          icon={Monitor}
+          score={sectionScore}
+        />
+
+        <Card className="p-6 bg-primary/5 border-primary/20">
+          <div className="flex items-start gap-4">
+            <div className="p-3 rounded-xl bg-primary/10">
+              <Monitor className="h-6 w-6 text-primary" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold mb-1">{formatLabel} Format</h3>
+              <p className="text-muted-foreground">
+                Format analysis covers structure and pacing specific to the {formatLabel.toLowerCase()} format, 
+                evaluating how well the script serves its intended delivery context.
+              </p>
+            </div>
+          </div>
+        </Card>
+
+        <WeightedParameterList
+          parameters={formatParameters}
+          title="All Parameter Scores"
+          initiallyExpanded={true}
+          showAllByDefault
+        />
+
+        {developmentItems.length > 0 && (
+          <DevelopmentFocus
+            sectionName={formatLabel}
+            items={developmentItems}
+            developmentPath={`${basePath}/development`}
+            relatedSections={[
+              { label: 'Story Diagnosis', path: `${basePath}/story` },
+              { label: 'Commercial Diagnosis', path: `${basePath}/commercial` },
+            ]}
+          />
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
