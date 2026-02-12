@@ -1,5 +1,6 @@
 import { useOutletContext } from 'react-router-dom';
 import { ReportData, StakeholderLens } from '@/types/database';
+import { ParameterBreakdown } from '@/components/report/ParameterBreakdown';
 import { 
   SectionHeader, 
   ScoreDisplay, 
@@ -147,25 +148,7 @@ export default function DialogueSubtext() {
       )}
 
       {/* Parameter Breakdown */}
-      {filteredDialogueParams.length > 0 && (
-        <Card className="glass-premium p-6">
-          <SubSectionHeader title="Dialogue Parameters" />
-          <div className="space-y-4">
-            {filteredDialogueParams.slice(0, 8).map((param, index) => (
-              <div key={index}>
-                <ScoreBar 
-                  score={param.score} 
-                  label={param.displayName || param.parameterName}
-                  showValue 
-                />
-                {param.rationale && (
-                  <p className="text-sm text-muted-foreground mt-1">{param.rationale}</p>
-                )}
-              </div>
-            ))}
-          </div>
-        </Card>
-      )}
+      <ParameterBreakdown title="Dialogue Parameters" parameters={filteredDialogueParams} />
 
       {/* Strengths & Weaknesses */}
       {(strengths.length > 0 || weaknesses.length > 0) ? (

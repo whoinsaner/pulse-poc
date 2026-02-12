@@ -1,5 +1,6 @@
 import { useOutletContext } from 'react-router-dom';
 import { ReportData, StakeholderLens } from '@/types/database';
+import { ParameterBreakdown } from '@/components/report/ParameterBreakdown';
 import { Card } from '@/components/ui/card';
 import { 
   SectionHeader, 
@@ -199,25 +200,7 @@ export default function CharacterPsychology() {
       </Card>
 
       {/* Parameter Scores */}
-      {psychParams.length > 0 && (
-        <Card className="p-6">
-          <SubSectionHeader title="Psychology Parameters" />
-          <div className="space-y-4">
-            {psychParams.slice(0, 8).map((param, index) => (
-              <div key={index}>
-                <ScoreBar 
-                  score={param.score} 
-                  label={param.displayName || param.parameterName}
-                  showValue 
-                />
-                {param.rationale && (
-                  <p className="text-sm text-muted-foreground mt-1">{param.rationale}</p>
-                )}
-              </div>
-            ))}
-          </div>
-        </Card>
-      )}
+      <ParameterBreakdown title="Psychology Parameters" parameters={psychParams} />
 
       {/* Recommendations */}
       <Card className="p-6">

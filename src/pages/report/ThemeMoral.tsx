@@ -1,5 +1,6 @@
 import { useOutletContext } from 'react-router-dom';
 import { ReportData, StakeholderLens } from '@/types/database';
+import { ParameterBreakdown } from '@/components/report/ParameterBreakdown';
 import { 
   SectionHeader, 
   ScoreDisplay, 
@@ -99,25 +100,7 @@ export default function ThemeMoral() {
       />
 
       {/* Parameter Breakdown */}
-      {themeParams.length > 0 && (
-        <Card className="glass-premium p-6">
-          <SubSectionHeader title="Theme Parameters" />
-          <div className="space-y-4">
-            {themeParams.slice(0, 8).map((param, index) => (
-              <div key={index}>
-                <ScoreBar 
-                  score={param.score} 
-                  label={param.displayName || param.parameterName}
-                  showValue 
-                />
-                {param.rationale && (
-                  <p className="text-sm text-muted-foreground mt-1">{param.rationale}</p>
-                )}
-              </div>
-            ))}
-          </div>
-        </Card>
-      )}
+      <ParameterBreakdown title="Theme Parameters" parameters={themeParams} />
 
       {/* Theme Insights */}
       {themeInsights.length > 0 && (
