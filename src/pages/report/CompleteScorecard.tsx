@@ -5,6 +5,17 @@ import { SectionHeader, SubSectionHeader, ScoreBar, ScoreBadge, VerdictBox } fro
 import { BarChart3, TrendingUp, TrendingDown } from 'lucide-react';
 import { extractScore, getDecisionSignal } from '@/lib/scoreUtils';
 
+// Internal pipeline categories/parameters not meaningful to end users
+const HIDDEN_CATEGORIES = new Set(['System']);
+const INTERNAL_PARAMETER_NAMES = new Set([
+  'arbitration_required', 'blend_complexity', 'classification_confidence',
+  'final_confidence', 'input_completeness', 'normalization_quality',
+  'type_clarity', 'weight_adjustments', 'confidence_shift',
+  'decision_transparency', 'evolution_detected', 'improvements_detected',
+  'reclassification_recommended', 'regressions_detected', 'trace_completeness',
+  'readiness_score',
+]);
+
 interface ReportContextValue {
   reportData: ReportData;
   activeLens: StakeholderLens;
@@ -15,15 +26,18 @@ export default function CompleteScorecard() {
   const { reportData, activeLens, currentScore } = useOutletContext<ReportContextValue>();
   
   const categoryScores = Object.entries(reportData.categoryScores || {})
+    .filter(([name]) => !HIDDEN_CATEGORIES.has(name))
     .map(([name, value]) => ({
       name,
       score: extractScore(value)
     }))
     .sort((a, b) => b.score - a.score);
 
-  const parameterScores = reportData.parameterScores || [];
-  const topStrengths = [...parameterScores].sort((a, b) => b.score - a.score).slice(0, 5);
-  const topWeaknesses = [...parameterScores].sort((a, b) => a.score - b.score).slice(0, 5);
+  // Filter out internal pipeline parameters from strengths/weaknesses
+  const userFacingParams = (reportData.parameterScores || [])
+    .filter(p => !INTERNAL_PARAMETER_NAMES.has(p.parameterName) && !HIDDEN_CATEGORIES.has(p.category));
+  const topStrengths = [...userFacingParams].sort((a, b) => b.score - a.score).slice(0, 5);
+  const topWeaknesses = [...userFacingParams].sort((a, b) => a.score - b.score).slice(0, 5);
 
   const decision = getDecisionSignal(currentScore);
 
