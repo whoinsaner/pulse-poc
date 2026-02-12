@@ -73,31 +73,29 @@ export function DiagnosisSummary({
       )}
 
       {/* What's Structurally Broken */}
-      {broken.length > 0 && (
-        <DiagnosisSection
-          icon={XCircle}
-          title="What's Structurally Broken"
-          items={broken}
-          colorClass="text-destructive"
-          bgClass="bg-destructive/5"
-          borderClass="border-destructive/20"
-          showFixCost
-          showLink
-        />
-      )}
+      <DiagnosisSection
+        icon={XCircle}
+        title="What's Structurally Broken"
+        items={broken}
+        colorClass="text-destructive"
+        bgClass="bg-destructive/5"
+        borderClass="border-destructive/20"
+        showFixCost
+        showLink
+        emptyMessage="No structural issues found"
+      />
 
       {/* What's Underdeveloped */}
-      {underdeveloped.length > 0 && (
-        <DiagnosisSection
-          icon={AlertCircle}
-          title="What's Underdeveloped"
-          items={underdeveloped}
-          colorClass="text-chart-4"
-          bgClass="bg-chart-4/5"
-          borderClass="border-chart-4/20"
-          showFixCost
-        />
-      )}
+      <DiagnosisSection
+        icon={AlertCircle}
+        title="What's Underdeveloped"
+        items={underdeveloped}
+        colorClass="text-chart-4"
+        bgClass="bg-chart-4/5"
+        borderClass="border-chart-4/20"
+        showFixCost
+        emptyMessage="No underdeveloped areas found"
+      />
 
       {/* Empty state */}
       {parameters.length === 0 && (
@@ -118,6 +116,7 @@ interface DiagnosisSectionProps {
   borderClass: string;
   showFixCost?: boolean;
   showLink?: boolean;
+  emptyMessage?: string;
 }
 
 const INITIAL_VISIBLE_COUNT = 3;
@@ -131,6 +130,7 @@ function DiagnosisSection({
   borderClass,
   showFixCost = false,
   showLink = false,
+  emptyMessage,
 }: DiagnosisSectionProps) {
   const [expanded, setExpanded] = useState(false);
   const hasMore = items.length > INITIAL_VISIBLE_COUNT;
@@ -147,6 +147,9 @@ function DiagnosisSection({
         </Badge>
       </div>
       
+      {items.length === 0 && emptyMessage ? (
+        <p className="text-sm text-muted-foreground italic">{emptyMessage}</p>
+      ) : (
       <ul className="space-y-2">
         {visibleItems.map((item) => (
           <li key={item.parameterName} className="flex items-start gap-3">
@@ -184,6 +187,7 @@ function DiagnosisSection({
           </li>
         ))}
       </ul>
+      )}
 
       {hasMore && (
         <button
