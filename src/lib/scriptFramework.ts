@@ -208,6 +208,17 @@ export const META_AGENTS: AgentDefinition[] = [
     color: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/30',
     icon: 'Briefcase'
   },
+  {
+    id: 'SeriesBibleAgent',
+    name: 'Series Bible',
+    category: 'meta',
+    description: 'Synthesizes core premise, world rules, tonal guardrails, character trajectories, and series engine from existing agent outputs into a structured series bible',
+    parameters: ['bible_premise_clarity', 'bible_world_rules', 'bible_tonal_consistency', 'bible_character_trajectories', 'bible_series_engine'],
+    reportSections: ['Series Bible'],
+    applicableScriptTypes: 'all',
+    color: 'bg-sky-500/10 text-sky-500 border-sky-500/30',
+    icon: 'BookOpen'
+  },
 ];
 
 // Core Analysis Agents (Modules A-J)
