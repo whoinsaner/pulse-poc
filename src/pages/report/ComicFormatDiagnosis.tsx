@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { ReportData, StakeholderLens } from '@/types/database';
 import { Card } from '@/components/ui/card';
@@ -56,16 +56,12 @@ const COMIC_CATEGORIES = [
 
 export default function ComicFormatDiagnosis() {
   const context = useOutletContext<ReportContextValue>();
-  
-  if (!context) {
-    return <div className="text-center py-12 text-muted-foreground">Loading...</div>;
-  }
-
-  const { reportData } = context;
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
 
   // Filter parameters for comic-specific categories
   const comicParameters = useMemo(() => {
-    const params = reportData.parameterScores || [];
+    if (!context) return [];
+    const params = context.reportData.parameterScores || [];
     return params
       .filter(p => COMIC_CATEGORIES.includes(p.category))
       .map(p => ({
@@ -76,22 +72,19 @@ export default function ComicFormatDiagnosis() {
         rationale: p.rationale,
         fixCost: p.fixCost as 'Low' | 'Medium' | 'High' | undefined,
         evidence: p.evidence,
-        // Core comic parameters
         weight: p.parameterName.includes('sequential') || 
                 p.parameterName.includes('panel') || 
                 p.parameterName.includes('page_turn') ||
                 p.parameterName.includes('lettering_legibility') ? 1.4 : 1.0,
       }));
-  }, [reportData.parameterScores]);
+  }, [context]);
 
-  // Calculate section score
   const sectionScore = useMemo(() => {
     if (comicParameters.length === 0) return 0;
     const total = comicParameters.reduce((sum, p) => sum + p.score, 0);
     return Math.round(total / comicParameters.length);
   }, [comicParameters]);
 
-  // Get development focus items
   const developmentItems = useMemo(() => {
     return comicParameters
       .filter(p => p.score < 70)
@@ -107,114 +100,36 @@ export default function ComicFormatDiagnosis() {
       }));
   }, [comicParameters]);
 
-  // Get base path
-  const basePath = window.location.pathname.split('/format')[0];
-
-  // Comic-specific metric groups
   const metricGroups = useMemo(() => {
     return [
-      {
-        id: 'visuals',
-        title: 'Visual Storytelling',
-        icon: LayoutPanelTop,
-        description: 'Panel flow and page architecture',
-        params: comicParameters.filter(p => 
-          p.category === 'Comic Visuals' ||
-          p.parameterName.includes('panel') ||
-          p.parameterName.includes('sequential') ||
-          p.parameterName.includes('page')
-        ),
-      },
-      {
-        id: 'dialogue',
-        title: 'Lettering & Dialogue',
-        icon: MessageCircle,
-        description: 'Balloon placement and word economy',
-        params: comicParameters.filter(p => 
-          p.category === 'Comic Dialogue' ||
-          p.parameterName.includes('lettering') ||
-          p.parameterName.includes('balloon') ||
-          p.parameterName.includes('dialogue')
-        ),
-      },
-      {
-        id: 'pacing',
-        title: 'Pacing & Rhythm',
-        icon: Timer,
-        description: 'Page turns and tempo control',
-        params: comicParameters.filter(p => 
-          p.category === 'Comic Pacing' ||
-          p.parameterName.includes('pacing') ||
-          p.parameterName.includes('page_turn') ||
-          p.parameterName.includes('tempo')
-        ),
-      },
-      {
-        id: 'collaboration',
-        title: 'Art-Script Synergy',
-        icon: Palette,
-        description: 'Artist collaboration readiness',
-        params: comicParameters.filter(p => 
-          p.category === 'Comic Collaboration' ||
-          p.parameterName.includes('synergy') ||
-          p.parameterName.includes('collaboration')
-        ),
-      },
-      {
-        id: 'characters',
-        title: 'Visual Characters',
-        icon: Users,
-        description: 'Character design and identity',
-        params: comicParameters.filter(p => 
-          p.category === 'Comic Characters' ||
-          p.parameterName.includes('character_visual')
-        ),
-      },
-      {
-        id: 'production',
-        title: 'Production Pipeline',
-        icon: Factory,
-        description: 'Production feasibility',
-        params: comicParameters.filter(p => 
-          p.category === 'Comic Production' ||
-          p.parameterName.includes('production') ||
-          p.parameterName.includes('pipeline')
-        ),
-      },
-      {
-        id: 'market',
-        title: 'Comic Market',
-        icon: TrendingUp,
-        description: 'Publishing alignment',
-        params: comicParameters.filter(p => 
-          p.category === 'Comic Market' ||
-          p.parameterName.includes('market') ||
-          p.parameterName.includes('publishing')
-        ),
-      },
-      {
-        id: 'structure',
-        title: 'Issue Structure',
-        icon: Layers,
-        description: 'Arc and issue architecture',
-        params: comicParameters.filter(p => 
-          p.category === 'Comic Structure' ||
-          p.parameterName.includes('issue') ||
-          p.parameterName.includes('arc_structure')
-        ),
-      },
+      { id: 'visuals', title: 'Visual Storytelling', icon: LayoutPanelTop, description: 'Panel flow and page architecture', params: comicParameters.filter(p => p.category === 'Comic Visuals') },
+      { id: 'dialogue', title: 'Lettering & Dialogue', icon: MessageCircle, description: 'Balloon placement and word economy', params: comicParameters.filter(p => p.category === 'Comic Dialogue') },
+      { id: 'pacing', title: 'Pacing & Rhythm', icon: Timer, description: 'Page turns and tempo control', params: comicParameters.filter(p => p.category === 'Comic Pacing') },
+      { id: 'collaboration', title: 'Art-Script Synergy', icon: Palette, description: 'Artist collaboration readiness', params: comicParameters.filter(p => p.category === 'Comic Collaboration') },
+      { id: 'characters', title: 'Visual Characters', icon: Users, description: 'Character design and identity', params: comicParameters.filter(p => p.category === 'Comic Characters') },
+      { id: 'production', title: 'Production Pipeline', icon: Factory, description: 'Production feasibility', params: comicParameters.filter(p => p.category === 'Comic Production') },
+      { id: 'market', title: 'Comic Market', icon: TrendingUp, description: 'Publishing alignment', params: comicParameters.filter(p => p.category === 'Comic Market') },
+      { id: 'structure', title: 'Issue Structure', icon: Layers, description: 'Arc and issue architecture', params: comicParameters.filter(p => p.category === 'Comic Structure') },
     ];
   }, [comicParameters]);
 
-  // Get category scores for the format badge
+  if (!context) {
+    return <div className="text-center py-12 text-muted-foreground">Loading...</div>;
+  }
+
+  const { reportData } = context;
+  const basePath = window.location.pathname.split('/format')[0];
   const categoryScores = reportData.categoryScores || {};
   const visualScore = extractScore(categoryScores['Comic Visuals']);
   const dialogueScore = extractScore(categoryScores['Comic Dialogue']);
   const pacingScore = extractScore(categoryScores['Comic Pacing']);
 
+  const toggleGroup = (groupId: string) => {
+    setExpandedGroups(prev => ({ ...prev, [groupId]: !prev[groupId] }));
+  };
+
   return (
     <div className="space-y-8">
-      {/* Section Header */}
       <SectionHeader
         title="Comic Format Diagnosis"
         subtitle="Visual storytelling, panel economy, lettering, and artist collaboration"
@@ -224,7 +139,6 @@ export default function ComicFormatDiagnosis() {
         <InlineMaturity score={sectionScore} />
       </SectionHeader>
 
-      {/* Format Badge */}
       <Card className="p-4 bg-chart-5/5 border-chart-5/20">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -250,14 +164,12 @@ export default function ComicFormatDiagnosis() {
         </div>
       </Card>
 
-      {/* Diagnosis Summary */}
       <DiagnosisSummary
         parameters={comicParameters}
         categoryName="Comic Format"
         developmentLink={`${basePath}/development`}
       />
 
-      {/* Key Metrics Overview */}
       <Card className="p-6">
         <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4">
           Comic-Specific Metrics
@@ -295,6 +207,9 @@ export default function ComicFormatDiagnosis() {
           const diagnostic = getDiagnosticCategory(avgScore);
           const Icon = group.icon;
           const hasCore = group.params.some(p => (p.weight || 1) >= 1.2);
+          const isExpanded = expandedGroups[group.id];
+          const visibleParams = isExpanded ? group.params : group.params.slice(0, 4);
+          const hiddenCount = group.params.length - 4;
 
           return (
             <Card key={group.id} className="p-5">
@@ -319,22 +234,19 @@ export default function ComicFormatDiagnosis() {
               </div>
               
               <div className="space-y-2">
-                {group.params.slice(0, 4).map((param) => {
-                  const weightTier = getWeightTier(param.weight);
-                  return (
-                    <div key={param.parameterName} className="flex items-center justify-between text-sm">
-                      <div className="flex items-center gap-2">
-                        {weightTier.tier === 'core' && (
-                          <span className="w-1.5 h-1.5 rounded-full bg-chart-5" />
-                        )}
-                        <span className="text-muted-foreground truncate">{param.displayName}</span>
-                      </div>
-                      <span className="font-mono">{param.score}</span>
-                    </div>
-                  );
-                })}
-                {group.params.length > 4 && (
-                  <p className="text-xs text-muted-foreground">+{group.params.length - 4} more</p>
+                {visibleParams.map((param) => (
+                  <div key={param.parameterName} className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground truncate">{param.displayName}</span>
+                    <span className="font-mono">{param.score}</span>
+                  </div>
+                ))}
+                {hiddenCount > 0 && (
+                  <button
+                    onClick={() => toggleGroup(group.id)}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    {isExpanded ? 'Show less' : `+${hiddenCount} more`}
+                  </button>
                 )}
               </div>
             </Card>
@@ -342,7 +254,6 @@ export default function ComicFormatDiagnosis() {
         })}
       </div>
 
-      {/* Weighted Parameter Breakdown */}
       <WeightedParameterList
         parameters={comicParameters}
         title="Comic Parameter Breakdown"
@@ -350,7 +261,6 @@ export default function ComicFormatDiagnosis() {
         showAllByDefault={false}
       />
 
-      {/* Development Focus */}
       {developmentItems.length > 0 && (
         <DevelopmentFocus
           sectionName="Comic Format"
@@ -362,9 +272,6 @@ export default function ComicFormatDiagnosis() {
           ]}
         />
       )}
-
-
-
     </div>
   );
 }
