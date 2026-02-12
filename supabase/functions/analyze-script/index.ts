@@ -3550,13 +3550,14 @@ async function generateReport(
   mode: string = 'deep',
   sceneAnalysisData?: any[] | null
 ) {
-  const [scoresResult, insightsResult, scenesResult, charsResult, lensWeightsResult, analysisRunResult] = await Promise.all([
+  const [scoresResult, insightsResult, scenesResult, charsResult, lensWeightsResult, analysisRunResult, narrativeGraphResult] = await Promise.all([
     supabase.from('parameter_scores').select('*, parameters(*)').eq('analysis_run_id', analysisRunId),
     supabase.from('insights').select('*').eq('analysis_run_id', analysisRunId),
     supabase.from('scenes').select('*').eq('script_id', scriptId),
     supabase.from('characters').select('*').eq('script_id', scriptId),
     supabase.from('lens_weights').select('*'),
     supabase.from('analysis_runs').select('agent_progress').eq('id', analysisRunId).single(),
+    supabase.from('narrative_graphs').select('nodes, edges').eq('script_id', scriptId).limit(1).maybeSingle(),
   ]);
 
   const scores = scoresResult.data || [];
@@ -3694,6 +3695,10 @@ async function generateReport(
     })),
     agentContent: Object.keys(agentContent).length > 0 ? agentContent : undefined,
     sceneAnalysis: sceneAnalysisData || undefined,
+    narrativeGraph: narrativeGraphResult.data ? {
+      nodes: narrativeGraphResult.data.nodes,
+      edges: narrativeGraphResult.data.edges,
+    } : undefined,
   };
 
   const topInsights = insights.sort((a: any, b: any) => a.priority - b.priority).slice(0, 3);
