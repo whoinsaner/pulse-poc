@@ -11,11 +11,11 @@ interface MaturityBadgeProps {
 
 const STAGES: MaturityStage[] = ['draft', 'developing', 'polished', 'production'];
 
-export function MaturityBadge({ 
-  score, 
-  showDescription = false, 
+export function MaturityBadge({
+  score,
+  showDescription = false,
   size = 'md',
-  className 
+  className
 }: MaturityBadgeProps) {
   const maturity = getMaturityStage(score);
   const currentIndex = STAGES.indexOf(maturity.stage);
@@ -23,13 +23,13 @@ export function MaturityBadge({
   const sizeClasses = {
     sm: 'text-xs gap-1',
     md: 'text-sm gap-1.5',
-    lg: 'text-base gap-2',
+    lg: 'text-base gap-2'
   };
 
   const iconSizes = {
     sm: 'h-3 w-3',
     md: 'h-4 w-4',
-    lg: 'h-5 w-5',
+    lg: 'h-5 w-5'
   };
 
   return (
@@ -38,28 +38,28 @@ export function MaturityBadge({
       <div className="relative">
         {/* Track line */}
         <div className="absolute top-1/2 left-0 right-0 h-0.5 -translate-y-1/2 bg-border" />
-        <div 
+        <div
           className={cn('absolute top-1/2 left-0 h-0.5 -translate-y-1/2', maturity.bgColor.replace('/10', '/40'))}
-          style={{ width: `${(currentIndex / (STAGES.length - 1)) * 100}%` }}
-        />
+          style={{ width: `${currentIndex / (STAGES.length - 1) * 100}%` }} />
+
         
         {/* Dots */}
         <div className="relative flex items-center justify-between">
           {STAGES.map((stage, index) => {
             const isActive = index <= currentIndex;
             const isCurrent = index === currentIndex;
-            
+
             return (
               <div key={stage} className="flex items-center justify-center bg-card rounded-full">
-                {isCurrent ? (
-                  <CircleDot className={cn(iconSizes[size], maturity.color)} />
-                ) : isActive ? (
-                  <CircleCheck className={cn(iconSizes[size], maturity.color)} />
-                ) : (
-                  <Circle className={cn(iconSizes[size], 'text-muted-foreground/40')} />
-                )}
-              </div>
-            );
+                {isCurrent ?
+                <CircleDot className={cn(iconSizes[size], maturity.color)} /> :
+                isActive ?
+                <CircleCheck className={cn(iconSizes[size], maturity.color)} /> :
+
+                <Circle className={cn(iconSizes[size], 'text-muted-foreground/40')} />
+                }
+              </div>);
+
           })}
         </div>
       </div>
@@ -69,9 +69,9 @@ export function MaturityBadge({
         {STAGES.map((stage, index) => {
           const isCurrent = index === currentIndex;
           const stageLabel = stage.charAt(0).toUpperCase() + stage.slice(1);
-          
+
           return (
-            <span 
+            <span
               key={stage}
               className={cn(
                 'text-[10px] sm:text-xs transition-colors',
@@ -79,22 +79,22 @@ export function MaturityBadge({
                 index === 0 && 'text-left',
                 index === STAGES.length - 1 && 'text-right',
                 index > 0 && index < STAGES.length - 1 && 'text-center'
-              )}
-            >
+              )}>
+
               {stageLabel}
-            </span>
-          );
+            </span>);
+
         })}
       </div>
 
       {/* Description */}
-      {showDescription && (
-        <p className={cn('mt-2 text-muted-foreground', size === 'sm' ? 'text-xs' : 'text-sm')}>
+      {showDescription &&
+      <p className={cn('mt-2 text-muted-foreground', size === 'sm' ? 'text-xs' : 'text-sm')}>
           {maturity.description}
         </p>
-      )}
-    </div>
-  );
+      }
+    </div>);
+
 }
 
 // Compact inline version
@@ -105,19 +105,19 @@ interface InlineMaturityProps {
 
 export function InlineMaturity({ score, className }: InlineMaturityProps) {
   const maturity = getMaturityStage(score);
-  
-  return (
-    <span 
-      className={cn(
-        'inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium border',
-        maturity.bgColor,
-        maturity.borderColor,
-        maturity.color,
-        className
-      )}
-    >
-      <CircleDot className="h-3 w-3" />
-      {maturity.label}
-    </span>
-  );
+
+  return;
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
