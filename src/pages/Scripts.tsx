@@ -555,6 +555,7 @@ export default function Scripts() {
               <AnalysisTrigger
                 scriptId={selectedScript.id}
                 scriptTitle={selectedScript.title}
+                scriptType={selectedScript.script_type}
                 onAnalysisComplete={(runId) => {
                   setShowAnalyzeDialog(false);
                   navigate(`/reports/${runId}`);
