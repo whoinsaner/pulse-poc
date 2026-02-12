@@ -1145,7 +1145,22 @@ export async function generateFullReportPDF(
       toc.push({ title: sec.title, page: pageNum.value, level: 1 });
       y = renderSection(doc, y, sec.id, sec.title, sec.subtitle, data, pageNum);
     }
-  } else if (isWebSeriesType(scriptType) || scriptType === 'micro_drama') {
+  } else if (isWebSeriesType(scriptType)) {
+    renderPartDivider(doc, pageNum, 'PART IV', 'WEB SERIES FORMAT', toc);
+
+    const webSeriesSections: SectionDef[] = [
+      { id: 'format', title: 'Format Diagnosis', subtitle: 'Web series format overview' },
+      { id: 'format-web-series', title: 'Web Series Deep Dive', subtitle: 'Episode length tiers, digital-first optimization' },
+      { id: 'format-retention', title: 'Retention Curves', subtitle: 'Retention design, pacing, and engagement metrics' },
+      { id: 'format-hooks', title: 'Hook Efficiency', subtitle: 'Opening hooks, shareability, and attention capture' },
+    ];
+
+    for (const sec of webSeriesSections) {
+      y = newPage(doc, pageNum, sec.title);
+      toc.push({ title: sec.title, page: pageNum.value, level: 1 });
+      y = renderSection(doc, y, sec.id, sec.title, sec.subtitle, data, pageNum);
+    }
+  } else if (scriptType === 'micro_drama') {
     renderPartDivider(doc, pageNum, 'PART IV', 'FORMAT ANALYSIS', toc);
 
     y = newPage(doc, pageNum, 'Format Diagnosis');
