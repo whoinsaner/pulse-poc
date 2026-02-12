@@ -150,6 +150,9 @@ const App = () => (
               <Route path="format/lettering" element={<ComicLettering />} />
               <Route path="format/page-turns" element={<ComicPageTurns />} />
               <Route path="format/art-synergy" element={<ComicArtSynergy />} />
+              <Route path="format/web-series" element={<WebSeriesAnalysis />} />
+              <Route path="format/retention" element={<RetentionAnalysis />} />
+              <Route path="format/hooks" element={<HooksAnalysis />} />
               <Route path="commercial" element={<CommercialDiagnosis />} />
               <Route path="commercial/market" element={<CommercialMarket />} />
               <Route path="commercial/production" element={<CommercialProduction />} />
