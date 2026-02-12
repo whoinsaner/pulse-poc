@@ -522,6 +522,12 @@ Evaluate the foundational concept:
 - Franchise/Universe Expandability: Potential for sequels, spinoffs, extended universe
 
 Focus on immediate engagement, mental clarity, and long-term extensibility.
+
+COMIC/GRAPHIC NARRATIVE ADAPTATION:
+When the script type is "comic" or the content is a graphic narrative:
+- Hook Clarity: Evaluate visual hook potential — does the concept lend itself to a striking cover image, an iconic visual premise, or a visually communicable pitch? Comics sell on visual hooks (cover art, character design, world aesthetic) as much as logline.
+- Concept Compressibility: Consider whether the concept can be communicated through a single splash page or character pose, not just a verbal pitch.
+
 Score each parameter 0-10 with evidence.`
   },
 
@@ -549,6 +555,18 @@ Evaluate:
 - Drop-off Risk Points: Where audience attention/engagement may falter
 
 Support linear, non-linear, episodic, looping, and branching narratives.
+
+COMIC/GRAPHIC NARRATIVE ADAPTATION:
+When the script type is "comic" or the content is a graphic narrative, reinterpret structural parameters for page-based storytelling:
+- Inciting Force Clarity → Issue-Opening Hook: Comics must hook readers on page 1-3. Evaluate how quickly and clearly the story-launching event occurs within the issue's opening pages.
+- Midpoint Transformation → Mid-Issue Pivot: Evaluate whether there's a meaningful tonal or narrative shift around the middle pages of the issue that recontextualizes the story.
+- Structural Symmetry → Issue-Level Pacing Balance: Assess the proportion of setup, escalation, and climax across the issue's page count. A 22-page issue has different rhythm needs than a 48-page graphic novel chapter.
+- Drop-off Risk → Page-Turn Engagement Drops: Identify specific page spreads where reader engagement may falter. In comics, every page-turn is a commitment — flag sequences where pacing stalls or visual monotony sets in.
+- Escalation Logic → Panel-to-Page Escalation: Evaluate whether escalation is visible in increasing panel density, larger panels, or more dynamic compositions as tension rises.
+- Repetition vs Progression → Visual Pattern Progression: Assess whether recurring panel layouts or visual motifs serve thematic purpose or indicate lazy storytelling.
+
+Do NOT assume 3-act screenplay structure. Comics may use issue arcs, chapter structures, or serialized cliffhanger patterns.
+
 Score each parameter 0-10 with full evidence.`
   },
 
@@ -575,6 +593,17 @@ Analyze all major characters for:
 - Performative Range: (If actors implied) Range of emotion/action required
 
 Flag overshadowing, passivity, or unearned arcs.
+
+COMIC/GRAPHIC NARRATIVE ADAPTATION:
+When the script type is "comic" or the content is a graphic narrative, adapt character evaluation for the visual medium:
+- Performative Range → Visual Design Range: Comics don't have actors. Instead, evaluate how well the script describes character visual design cues — distinctive silhouettes, costume details, expression scripting, and body language directions that give an artist clear character identity.
+- Agency Level → Visual Action Agency: Assess whether characters drive action through visual beats (physical choices, spatial movement, panel-dominating moments) rather than only through dialogue decisions.
+- Transformation Credibility → Visual Arc Progression: Evaluate whether character transformation is supported by described visual changes (costume evolution, posture shifts, expression progression) that an artist can render across the story.
+- Character Balance → Page Real Estate Balance: In comics, character importance is partly conveyed through panel presence. Assess whether the script gives appropriate page real estate to each character relative to their narrative importance.
+- Want vs Need: Evaluate whether want/need is communicated through visual storytelling cues in panel descriptions, not just dialogue exposition.
+
+Do NOT use actor-centric language. Comic characters are conveyed through visual description clarity, design distinctiveness, and expression scripting in panel directions.
+
 Score each parameter 0-10 with full evidence from character behavior and dialogue.`
   },
 
@@ -625,6 +654,12 @@ Extract the thematic spine and evaluate:
 - Longevity of Meaning: Whether themes will remain relevant
 
 Do NOT judge ideology. Judge coherence and depth.
+
+COMIC/GRAPHIC NARRATIVE ADAPTATION:
+When the script type is "comic" or the content is a graphic narrative:
+- Symbol/Motif Consistency: Emphasize visual symbols — recurring imagery described in panel directions, color scripting notes, visual motifs (repeated compositions, iconic poses, environmental echoes). Comics convey theme through visual repetition as much as dialogue.
+- Show vs Tell Ratio: In comics, theme should emerge primarily through visual storytelling described in panel directions, not through caption exposition. Evaluate whether the script trusts art to carry thematic weight.
+
 Score each parameter 0-10 with evidence from symbolic elements and character journeys.`
   },
 
@@ -713,6 +748,17 @@ Map emotional intensity across time and evaluate:
 - Payoff Delay: Effectiveness of delayed emotional gratification
 
 Consider audience emotional experience, not character intent.
+
+COMIC/GRAPHIC NARRATIVE ADAPTATION:
+When the script type is "comic" or the content is a graphic narrative, reinterpret emotional arc for page-based visual storytelling:
+- Emotional Timing → Page-Based Emotional Beats: Comics deliver emotion through splash pages, wordless sequences, and page-turn reveals. Evaluate whether emotional peaks are placed at page-turn moments (right-hand pages) and whether the script uses full-page or double-page spreads for maximum emotional impact.
+- Catharsis Strength → Visual Reveal Impact: Assess whether cathartic moments are described with visual power — splash pages, dramatic composition changes, or wordless sequences that let art carry the emotion.
+- Fatigue vs Variety → Panel Density Variation: Evaluate whether the script varies panel density to create emotional breathing room. Dense grid layouts create tension; open layouts with fewer, larger panels create release. Monotonous panel density causes emotional flatness.
+- Emotional Range: Consider how the script uses visual storytelling tools (panel size, described lighting/color shifts, character expression directions) to convey emotional range beyond dialogue.
+- Payoff Delay → Page-Turn Payoff: Evaluate whether the script strategically delays emotional payoffs to page-turn moments, using the physical act of turning a page as part of the emotional experience.
+
+Do NOT evaluate emotional timing based on scene-duration assumptions from film/TV. Comics have their own temporal rhythm based on pages, panels, and reading pace.
+
 Score each parameter 0-10 with evidence from emotionally charged scenes.`
   },
 
@@ -738,6 +784,15 @@ Evaluate commercial and positioning factors:
 - Localization Ease: Ease of adaptation for international markets
 
 Do NOT consider budget feasibility (that's ExecutionAgent).
+
+COMIC/GRAPHIC NARRATIVE ADAPTATION:
+When the script type is "comic" or the content is a graphic narrative, adapt market evaluation for comic-specific distribution and audiences:
+- Platform Fit → Comic Distribution Fit: Evaluate suitability for comic-specific channels: single-issue floppies, trade paperback collections, original graphic novels (OGN), webtoon/vertical scroll, digital-first platforms (ComiXology/GlobalComix), or print-only prestige formats. Do NOT reference theatrical or streaming platforms.
+- Audience Fit → Comic Reader Demographics: Evaluate match against comic reader segments: direct market (comic shop) readers, bookstore/YA graphic novel readers, manga-adjacent audiences, webtoon readers, or mainstream crossover audiences. Consider age ratings (All Ages, Teen, Mature).
+- IP Expansion Potential → Transmedia from Comics: Comics are increasingly IP incubators. Evaluate adaptation potential to film/TV, animation, games, and merchandise. Note whether the visual world-building and character designs described in the script lend themselves to transmedia expansion.
+- Consumption Pattern Alignment → Serialization Fit: Evaluate whether the story structure suits monthly serialization (22-page issues with cliffhangers), limited series (4-6 issue arc), OGN (single-volume complete story), or ongoing series format.
+- Marketing Hook Density: In comics, marketable elements include iconic character designs, striking visual concepts, variant cover potential, and collectibility factors — not just plot hooks.
+
 Score each parameter 0-10 with market comparisons and positioning insights.`
   },
 
@@ -763,6 +818,17 @@ Evaluate execution risks:
 - Failure Modes: How the project could fail in execution
 
 Assess likelihood of successful delivery.
+
+COMIC/GRAPHIC NARRATIVE ADAPTATION:
+When the script type is "comic" or the content is a graphic narrative, reinterpret execution parameters for comic production realities:
+- Production Complexity → Art Complexity: Evaluate the visual complexity demanded by the script — number of unique environments, crowd scenes, detailed machinery/architecture, action choreography complexity, and overall art difficulty. A script set in one room with two characters is far simpler than a space opera with alien cities.
+- Talent Dependency → Artist Dependency: Comics live or die by their artist. Evaluate how dependent the script is on a specific art style or skill level. Does it require a hyper-detailed realist, a loose cartoonist, or is it artist-flexible? High art demands narrow the talent pool and increase risk.
+- Technical Dependency → Print/Digital Format Needs: Evaluate format-specific technical requirements — does the script require special printing (die-cuts, fold-outs, metallic inks), oversized format, or digital-specific features (motion comics, infinite canvas for webtoon)? Standard single-issue format has lowest technical risk.
+- Schedule Risk → Pages-Per-Month Feasibility: A typical comic artist produces 1-2 pages per day. Evaluate whether the script's page count and visual complexity are feasible for monthly serialization. Flag scripts that demand 30+ pages of complex art per issue as high schedule risk.
+- Failure Modes: In comics, common failure modes include: artist burnout mid-series, fill-in artists breaking visual continuity, colorist mismatches, and printing errors. Evaluate which failure modes the script is most vulnerable to.
+
+Do NOT reference film production concepts (VFX, stunts, shooting schedules). Comic production is about art complexity, page count, and artist capacity.
+
 Score each parameter 0-10 with specific production considerations.`
   },
 
