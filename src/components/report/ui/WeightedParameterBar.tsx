@@ -36,42 +36,44 @@ export function WeightedParameterBar({
   const diagnostic = getDiagnosticCategory(parameter.score);
 
   return (
-    <div className={cn('space-y-1.5', className)}>
-      {/* Row 1: Title + Score */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 min-w-0">
-          {showWeight && weightTier.multiplierLabel && (
-            <span className={cn('text-[10px] uppercase font-semibold shrink-0', weightTier.color)}>
-              {weightTier.tier === 'core' ? 'CORE' : 'Polish'}
-            </span>
+    <div className={cn('rounded-lg border border-border bg-card p-4', className)}>
+      <div className="flex items-start gap-4">
+        {/* Left: Title + Rationale */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            {showWeight && weightTier.multiplierLabel && (
+              <span className={cn('text-[10px] uppercase font-semibold shrink-0', weightTier.color)}>
+                {weightTier.tier === 'core' ? 'CORE' : 'Polish'}
+              </span>
+            )}
+            <h4 className="font-semibold text-sm text-foreground">{parameter.displayName}</h4>
+          </div>
+          {showRationale && parameter.rationale && (
+            <p className="text-sm text-muted-foreground leading-relaxed mt-1.5">
+              {parameter.rationale}
+            </p>
           )}
-          <h4 className="font-semibold text-sm text-foreground truncate">{parameter.displayName}</h4>
         </div>
-        <span className={cn('font-mono font-bold text-sm tabular-nums shrink-0 ml-3', diagnostic.color)}>
-          {Math.round(parameter.score)} <span className="text-muted-foreground font-normal">/ 100</span>
-        </span>
+
+        {/* Right: Progress bar + Score */}
+        <div className="flex items-center gap-3 shrink-0 pt-0.5">
+          <Progress
+            value={parameter.score}
+            indicatorClassName={cn(
+              scoreColor,
+              weightTier.tier === 'polish' && 'opacity-70'
+            )}
+            className={cn(
+              'h-2.5 w-24',
+              weightTier.tier === 'core' && 'h-3',
+              weightTier.tier === 'polish' && 'h-2'
+            )}
+          />
+          <span className={cn('font-mono font-bold text-base tabular-nums', diagnostic.color)}>
+            {Math.round(parameter.score)}
+          </span>
+        </div>
       </div>
-
-      {/* Row 2: Full-width progress bar */}
-      <Progress
-        value={parameter.score}
-        indicatorClassName={cn(
-          scoreColor,
-          weightTier.tier === 'polish' && 'opacity-70'
-        )}
-        className={cn(
-          'h-2.5',
-          weightTier.tier === 'core' && 'h-3',
-          weightTier.tier === 'polish' && 'h-2'
-        )}
-      />
-
-      {/* Row 3: Rationale */}
-      {showRationale && parameter.rationale && (
-        <p className="text-sm text-muted-foreground leading-relaxed">
-          {parameter.rationale}
-        </p>
-      )}
     </div>
   );
 }
