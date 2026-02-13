@@ -2013,14 +2013,33 @@ serve(async (req) => {
         };
         
         const filteredCharacters = new Map<string, Character>();
+        // Adaptive threshold: if strict filtering (>=2) leaves too few characters,
+        // relax to include all non-noise entries to avoid 0-character extraction
+        const strictThreshold = 2;
+        let thresholdUsed = strictThreshold;
+        
         allCharacters.forEach((char, name) => {
-          if (!isNonCharacter(name) && (char.dialogueCount || 0) >= 2) {
+          if (!isNonCharacter(name) && (char.dialogueCount || 0) >= strictThreshold) {
             filteredCharacters.set(name, char);
           }
         });
+        
+        // ADAPTIVE FALLBACK: If strict filtering left fewer than 3 characters,
+        // relax threshold to 1 (include single-line characters)
+        if (filteredCharacters.size < 3 && allCharacters.size > 0) {
+          console.log(`[script-parser-stream] Strict threshold (>=${strictThreshold}) left only ${filteredCharacters.size} characters. Relaxing to >=1.`);
+          filteredCharacters.clear();
+          thresholdUsed = 1;
+          allCharacters.forEach((char, name) => {
+            if (!isNonCharacter(name) && (char.dialogueCount || 0) >= 1) {
+              filteredCharacters.set(name, char);
+            }
+          });
+        }
+        
         const removedCount = allCharacters.size - filteredCharacters.size;
         if (removedCount > 0) {
-          console.log(`[script-parser-stream] Filtered ${removedCount} non-character entries (noise/single-line characters)`);
+          console.log(`[script-parser-stream] Filtered ${removedCount} entries (threshold: >=${thresholdUsed} lines). Kept ${filteredCharacters.size} characters.`);
         }
         
         const characters = Array.from(filteredCharacters.values());
