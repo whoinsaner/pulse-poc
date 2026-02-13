@@ -2314,60 +2314,209 @@ serve(async (req) => {
             .single();
           const currentProgress = (currentRun?.agent_progress || {}) as Record<string, any>;
 
+          // Run synthesis agents in PARALLEL for speed
+          const synthesisPromises: Promise<void>[] = [];
+
           if (currentProgress['InsightSynthesisAgent']?.status !== 'completed') {
-            await withTimeout(
-              runInsightSynthesis(supabase, lovableApiKey, analysisRunId, scriptContext, qualityMode),
-              AGENT_CALL_TIMEOUT_MS,
-              'InsightSynthesisAgent'
-            ).catch(err => {
-              console.error('[analyze-script] InsightSynthesis timed out or failed:', err.message);
-              updateAgentProgress(supabase, analysisRunId, 'InsightSynthesisAgent', 'failed', err.message);
-            });
+            synthesisPromises.push(
+              withTimeout(
+                runInsightSynthesis(supabase, lovableApiKey, analysisRunId, scriptContext, qualityMode),
+                AGENT_CALL_TIMEOUT_MS,
+                'InsightSynthesisAgent'
+              ).catch(err => {
+                console.error('[analyze-script] InsightSynthesis timed out or failed:', err.message);
+                updateAgentProgress(supabase, analysisRunId, 'InsightSynthesisAgent', 'failed', err.message);
+              })
+            );
           } else {
             console.log('[analyze-script] Skipping InsightSynthesisAgent (already completed)');
           }
 
           if (currentProgress['StakeholderLensAgent']?.status !== 'completed') {
-            await withTimeout(
-              runStakeholderLensAgent(supabase, lovableApiKey, analysisRunId),
-              AGENT_CALL_TIMEOUT_MS,
-              'StakeholderLensAgent'
-            ).catch(err => {
-              console.error('[analyze-script] StakeholderLens timed out or failed:', err.message);
-              updateAgentProgress(supabase, analysisRunId, 'StakeholderLensAgent', 'failed', err.message);
-            });
+            synthesisPromises.push(
+              withTimeout(
+                runStakeholderLensAgent(supabase, lovableApiKey, analysisRunId),
+                AGENT_CALL_TIMEOUT_MS,
+                'StakeholderLensAgent'
+              ).catch(err => {
+                console.error('[analyze-script] StakeholderLens timed out or failed:', err.message);
+                updateAgentProgress(supabase, analysisRunId, 'StakeholderLensAgent', 'failed', err.message);
+              })
+            );
           } else {
             console.log('[analyze-script] Skipping StakeholderLensAgent (already completed)');
+          }
+
+          // Wait for all synthesis agents to complete in parallel
+          if (synthesisPromises.length > 0) {
+            console.log(`[analyze-script] Running ${synthesisPromises.length} synthesis agents in parallel`);
+            await Promise.all(synthesisPromises);
           }
 
           // Generate report first (scene enrichment runs separately after)
           await generateReport(supabase, analysisRunId, scriptId, script, mode, null);
 
-          // Fire off scene enrichment as a separate function call with its own timeout budget
+          // Scene enrichment: inline for small scripts (≤5 scenes), otherwise fire separate function
           if (currentProgress['SceneEnrichmentAgent']?.status !== 'completed') {
-            try {
-              const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-              const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-              console.log('[analyze-script] Triggering scene-enrichment function...');
-              const enrichResponse = await fetch(`${supabaseUrl}/functions/v1/scene-enrichment`, {
-                method: 'POST',
-                headers: {
-                  'Authorization': `Bearer ${supabaseAnonKey}`,
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  scriptId,
-                  analysisRunId,
-                  qualityMode,
-                  scriptContext: scriptContext.substring(0, 60000),
-                }),
-              });
-              const enrichResult = await enrichResponse.json();
-              console.log('[analyze-script] Scene enrichment triggered:', enrichResult.status);
-            } catch (err) {
-              console.error('[analyze-script] Failed to trigger scene-enrichment:', err instanceof Error ? err.message : err);
-              await updateAgentProgress(supabase, analysisRunId, 'SceneEnrichmentAgent', 'failed', 
-                'Failed to trigger scene-enrichment function');
+            // Check scene count to decide inline vs separate function
+            const { data: sceneCountData } = await supabase
+              .from('scenes')
+              .select('id', { count: 'exact', head: true })
+              .eq('script_id', scriptId);
+            const sceneCount = sceneCountData?.length ?? 0;
+            // Also check via count header
+            const { count: exactSceneCount } = await supabase
+              .from('scenes')
+              .select('*', { count: 'exact', head: true })
+              .eq('script_id', scriptId);
+            const totalScenes = exactSceneCount ?? sceneCount;
+
+            if (totalScenes > 0 && totalScenes <= 5) {
+              // INLINE scene enrichment for small scripts - avoid separate function call overhead
+              console.log(`[analyze-script] Inlining scene enrichment for ${totalScenes} scenes (small script optimization)`);
+              try {
+                await updateAgentProgress(supabase, analysisRunId, 'SceneEnrichmentAgent', 'running');
+                const { data: scenes } = await supabase
+                  .from('scenes')
+                  .select('*')
+                  .eq('script_id', scriptId)
+                  .order('scene_number');
+
+                if (scenes && scenes.length > 0) {
+                  const enrichModelConfig = await getAgentModelConfig(supabase, 'SceneEnrichmentAgent', qualityMode);
+                  const sceneList = scenes.map((s: any) =>
+                    `Scene ${s.scene_number}: ${s.heading}${s.description ? ' - ' + s.description.substring(0, 200) : ''}${s.location ? ' [' + s.location + ']' : ''}${s.int_ext ? ' (' + s.int_ext + ')' : ''}`
+                  ).join('\n');
+
+                  const enrichPrompt = `You are SceneEnrichmentAgent. Analyze each scene and produce per-scene metrics.
+
+SCRIPT CONTEXT:
+${scriptContext.substring(0, 60000)}
+
+SCENES TO ANALYZE:
+${sceneList}
+
+For each scene, evaluate:
+- emotional_tone: One of "tense", "calm", "dramatic", "comedic", "romantic", "suspenseful", "melancholic", "hopeful", "exciting", "neutral"
+- dialogue_density: 0-100
+- action_intensity: 0-100
+- technical_requirements: 0-100
+- vfx_potential: 0-100
+- location_complexity: 0-100
+- narrative_function: One of "setup", "escalation", "climax", "resolution", "transition"
+- key_moment: true/false
+- brief_summary: 1-2 sentence summary
+
+Return ONLY a valid JSON array with one object per scene:
+[{"scene_number": 1, "emotional_tone": "tense", "dialogue_density": 70, "action_intensity": 30, "technical_requirements": 25, "vfx_potential": 5, "location_complexity": 15, "narrative_function": "setup", "key_moment": false, "brief_summary": "..."}]`;
+
+                  let enrichResult: any[] | null = null;
+                  for (let attempt = 0; attempt <= enrichModelConfig.maxRetries; attempt++) {
+                    try {
+                      if (attempt > 0) {
+                        await new Promise(r => setTimeout(r, enrichModelConfig.retryDelayMs * Math.pow(2, attempt - 1)));
+                      }
+                      const enrichResponse = await withTimeout(
+                        fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+                          method: 'POST',
+                          headers: {
+                            'Authorization': `Bearer ${lovableApiKey}`,
+                            'Content-Type': 'application/json',
+                          },
+                          body: JSON.stringify({
+                            model: enrichModelConfig.model || 'google/gemini-2.5-flash-lite',
+                            messages: [
+                              { role: 'system', content: 'You are SceneEnrichmentAgent. Return ONLY valid JSON arrays.' },
+                              { role: 'user', content: enrichPrompt }
+                            ],
+                          }),
+                        }),
+                        AGENT_CALL_TIMEOUT_MS,
+                        'Inline SceneEnrichment'
+                      );
+                      if (!enrichResponse.ok) throw new Error(`API error: ${enrichResponse.status}`);
+                      const enrichData = await enrichResponse.json();
+                      const content = enrichData.choices?.[0]?.message?.content || '';
+                      if (!content.trim()) throw new Error('Empty response');
+                      const sanitized = content.replace(/```json\s*/g, '').replace(/```\s*/g, '').replace(/[\x00-\x1f\x7f]/g, (ch: string) => (ch === '\n' || ch === '\r' || ch === '\t') ? ch : '').trim();
+                      const jsonMatch = sanitized.match(/\[[\s\S]*\]/);
+                      if (!jsonMatch) throw new Error('No JSON array found');
+                      enrichResult = JSON.parse(jsonMatch[0]);
+                      break;
+                    } catch (err) {
+                      console.error(`[analyze-script] Inline scene enrichment attempt ${attempt + 1} failed:`, err instanceof Error ? err.message : err);
+                      if (attempt === enrichModelConfig.maxRetries) break;
+                    }
+                  }
+
+                  if (enrichResult && Array.isArray(enrichResult)) {
+                    // Update scenes in DB
+                    for (const sa of enrichResult) {
+                      if (sa.scene_number && sa.emotional_tone) {
+                        const matchingScene = scenes.find((s: any) => s.scene_number === sa.scene_number);
+                        if (matchingScene) {
+                          await supabase.from('scenes').update({
+                            emotional_tone: sa.emotional_tone,
+                            description: matchingScene.description || sa.brief_summary || null,
+                          }).eq('id', matchingScene.id);
+                        }
+                      }
+                    }
+                    // Update report with scene analysis
+                    const sceneAnalysisData = enrichResult.map((sa: any) => ({
+                      sceneNumber: sa.scene_number,
+                      emotionalTone: sa.emotional_tone || 'neutral',
+                      dialogueDensity: typeof sa.dialogue_density === 'number' ? Math.max(0, Math.min(100, sa.dialogue_density)) : 50,
+                      actionIntensity: typeof sa.action_intensity === 'number' ? Math.max(0, Math.min(100, sa.action_intensity)) : 50,
+                      technicalRequirements: typeof sa.technical_requirements === 'number' ? Math.max(0, Math.min(100, sa.technical_requirements)) : 20,
+                      vfxPotential: typeof sa.vfx_potential === 'number' ? Math.max(0, Math.min(100, sa.vfx_potential)) : 10,
+                      locationComplexity: typeof sa.location_complexity === 'number' ? Math.max(0, Math.min(100, sa.location_complexity)) : 30,
+                      narrativeFunction: sa.narrative_function || 'transition',
+                      keyMoment: sa.key_moment || false,
+                      briefSummary: sa.brief_summary || undefined,
+                    }));
+                    // Update report inline
+                    const { data: report } = await supabase.from('reports').select('id, full_report_data').eq('analysis_run_id', analysisRunId).maybeSingle();
+                    if (report) {
+                      await supabase.from('reports').update({ full_report_data: { ...report.full_report_data, sceneAnalysis: sceneAnalysisData } }).eq('id', report.id);
+                    }
+                    console.log(`[analyze-script] Inline scene enrichment completed: ${enrichResult.length} scenes`);
+                    await updateAgentProgress(supabase, analysisRunId, 'SceneEnrichmentAgent', 'completed');
+                  } else {
+                    await updateAgentProgress(supabase, analysisRunId, 'SceneEnrichmentAgent', 'failed', 'All inline attempts failed');
+                  }
+                }
+              } catch (err) {
+                console.error('[analyze-script] Inline scene enrichment error:', err instanceof Error ? err.message : err);
+                await updateAgentProgress(supabase, analysisRunId, 'SceneEnrichmentAgent', 'failed', 
+                  err instanceof Error ? err.message : 'Inline enrichment failed');
+              }
+            } else {
+              // SEPARATE FUNCTION for larger scripts (>5 scenes)
+              try {
+                const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+                const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+                console.log(`[analyze-script] Triggering scene-enrichment function for ${totalScenes} scenes...`);
+                const enrichResponse = await fetch(`${supabaseUrl}/functions/v1/scene-enrichment`, {
+                  method: 'POST',
+                  headers: {
+                    'Authorization': `Bearer ${supabaseAnonKey}`,
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                    scriptId,
+                    analysisRunId,
+                    qualityMode,
+                    scriptContext: scriptContext.substring(0, 60000),
+                  }),
+                });
+                const enrichResult = await enrichResponse.json();
+                console.log('[analyze-script] Scene enrichment triggered:', enrichResult.status);
+              } catch (err) {
+                console.error('[analyze-script] Failed to trigger scene-enrichment:', err instanceof Error ? err.message : err);
+                await updateAgentProgress(supabase, analysisRunId, 'SceneEnrichmentAgent', 'failed', 
+                  'Failed to trigger scene-enrichment function');
+              }
             }
           } else {
             console.log('[analyze-script] Skipping SceneEnrichmentAgent (already completed)');
@@ -2543,8 +2692,11 @@ async function runStandardAnalysis(
   qualityMode: QualityMode = 'balanced'
 ): Promise<Array<{ agent: string; success: boolean; error?: string }>> {
   const MAX_AGENT_RETRIES = 3;
-  const BATCH_SIZE = 3; // Run 3 agents at a time to avoid rate limits
-  const BATCH_DELAY_MS = 3000; // Wait 3s between batches
+  
+  // Adaptive batching: small scripts (≤5 pages or micro dramas) get larger batches and shorter delays
+  const isSmallScript = agentsToRun.length <= 8;
+  const BATCH_SIZE = isSmallScript ? 6 : 3; // Run more agents concurrently for small scripts
+  const BATCH_DELAY_MS = isSmallScript ? 1000 : 3000; // Shorter delay between batches for small scripts
   
   // Helper to check if an error is retryable
   // We now retry ALL errors since JSON parse failures, malformed responses, and API errors
