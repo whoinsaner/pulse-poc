@@ -2306,14 +2306,14 @@ serve(async (req) => {
       const scenes = scenesResult.data || [];
       const characters = charsResult.data || [];
 
-      // Check if we have enough parsed data
-      const hasStructuredData = scenes.length > 0 && characters.length > 0;
+      // Check if we have enough parsed data - use OR so partial data (scenes only, chars only) is still used
+      const hasStructuredData = scenes.length > 0 || characters.length > 0;
       let rawScriptText: string | null = null;
       let usingFallbackMode = false;
 
       if (!hasStructuredData) {
-        // Auto-enable fallback mode instead of throwing error
-        console.log('[analyze-script] Deep mode: No structured data found, auto-enabling fallback to raw text analysis');
+        // Auto-enable fallback mode only when BOTH scenes AND characters are missing
+        console.log('[analyze-script] Deep mode: No structured data found (0 scenes, 0 characters), auto-enabling fallback to raw text analysis');
         forceAnalysis = true;
         usingFallbackMode = true;
         
