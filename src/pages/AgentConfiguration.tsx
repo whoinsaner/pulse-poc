@@ -1,25 +1,23 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
 import { 
   Bot, 
-  ChevronLeft, 
   Save, 
   RotateCcw, 
   Trash2, 
   Plus,
   ChevronDown,
   ChevronRight,
-  Settings2,
   Sparkles,
   Layers,
   Wand2,
   Cpu,
   RefreshCw,
   AlertCircle,
-  CheckCircle2
+  CheckCircle2,
+  Search,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -70,7 +68,6 @@ const CATEGORY_CONFIG: Record<string, { label: string; icon: React.ElementType; 
 };
 
 export default function AgentConfiguration() {
-  const navigate = useNavigate();
   const { user, profile } = useAuth();
   const [agents, setAgents] = useState<AgentConfiguration[]>([]);
   const [selectedAgent, setSelectedAgent] = useState<AgentConfiguration | null>(null);
@@ -87,10 +84,10 @@ export default function AgentConfiguration() {
   const [newParameterInput, setNewParameterInput] = useState("");
   const [syncing, setSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState<Record<string, AgentSyncStatus>>({});
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     const initializeAgents = async () => {
-      // Auto-sync framework on mount to ensure agents are up-to-date
       await autoSyncIfNeeded();
       await fetchAgents();
       await fetchSyncStatus();
@@ -103,7 +100,6 @@ export default function AgentConfiguration() {
     setSyncStatus(status);
   };
 
-  // Auto-sync if there are missing agents or framework updates
   const autoSyncIfNeeded = async () => {
     try {
       const status = await getAgentSyncStatus();
@@ -164,11 +160,9 @@ export default function AgentConfiguration() {
 
       if (error) throw error;
       
-      // Cast the data to our interface
       const typedAgents = (data || []) as AgentConfiguration[];
       setAgents(typedAgents);
       
-      // Select first agent if none selected
       if (!selectedAgent && typedAgents.length > 0) {
         setSelectedAgent(typedAgents[0]);
         setEditedAgent(typedAgents[0]);
@@ -181,7 +175,13 @@ export default function AgentConfiguration() {
     }
   };
 
-  const groupedAgents = agents.reduce((acc, agent) => {
+  const filteredAgents = agents.filter(agent =>
+    searchQuery === "" ||
+    agent.display_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    agent.agent_name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const groupedAgents = filteredAgents.reduce((acc, agent) => {
     const category = agent.category || "other";
     if (!acc[category]) {
       acc[category] = [];
@@ -201,7 +201,6 @@ export default function AgentConfiguration() {
     try {
       setSaving(true);
       
-      // First, save the current version to history before updating
       const { error: historyError } = await supabase
         .from("agent_prompt_versions")
         .insert({
@@ -217,7 +216,6 @@ export default function AgentConfiguration() {
 
       if (historyError) {
         console.error("Error saving version history:", historyError);
-        // Continue with save even if history fails
       }
       
       const { error } = await supabase
@@ -368,7 +366,7 @@ export default function AgentConfiguration() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="p-8 flex items-center justify-center min-h-[400px]">
         <div className="flex items-center gap-2 text-muted-foreground">
           <Bot className="h-5 w-5 animate-pulse" />
           <span>Loading agent configurations...</span>
@@ -378,28 +376,52 @@ export default function AgentConfiguration() {
   }
 
   return (
-    <div className="h-[calc(100vh-4rem)]">
-      <div className="flex h-full">
-        {/* Sidebar */}
-        <aside className="w-80 border-r bg-muted/30">
-          <ScrollArea className="h-full">
-            <div className="p-4 space-y-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-sm font-medium text-muted-foreground">Agents</h2>
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleSync}
-                    disabled={syncing}
-                    className="h-7 px-2"
-                  >
-                    <RefreshCw className={cn("h-3 w-3", syncing && "animate-spin")} />
-                  </Button>
-                  <Badge variant="secondary">{agents.length}</Badge>
-                </div>
-              </div>
+    <div className="flex flex-col h-[calc(100vh-4rem)]">
+      {/* Page Header */}
+      <div className="px-6 py-5 border-b border-border bg-card/30">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-semibold">Agent Prompts</h2>
+            <p className="text-sm text-muted-foreground">
+              Configure AI agent behaviors, system prompts, and parameter assignments
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSync}
+              disabled={syncing}
+            >
+              <RefreshCw className={cn("h-3.5 w-3.5 mr-1.5", syncing && "animate-spin")} />
+              Sync Framework
+            </Button>
+            <Badge variant="secondary" className="tabular-nums">
+              {agents.length} agents
+            </Badge>
+          </div>
+        </div>
+      </div>
 
+      {/* Master-Detail Layout */}
+      <div className="flex flex-1 min-h-0">
+        {/* Agent List Panel */}
+        <div className="w-72 border-r border-border flex flex-col bg-muted/20">
+          {/* Search */}
+          <div className="p-3 border-b border-border">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+              <Input
+                placeholder="Search agents..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-8 h-8 text-sm"
+              />
+            </div>
+          </div>
+
+          <ScrollArea className="flex-1">
+            <div className="p-2 space-y-1">
               {Object.entries(groupedAgents).map(([category, categoryAgents]) => {
                 const config = CATEGORY_CONFIG[category] || { 
                   label: category, 
@@ -412,117 +434,126 @@ export default function AgentConfiguration() {
                 return (
                   <Collapsible key={category} open={isExpanded} onOpenChange={() => toggleCategory(category)}>
                     <CollapsibleTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        className="w-full justify-between px-2 py-1.5 h-auto"
+                      <button
+                        className="flex items-center justify-between w-full px-2 py-1.5 rounded-md text-sm hover:bg-muted transition-colors"
                       >
                         <div className="flex items-center gap-2">
-                          <div className={cn("p-1 rounded", config.color)}>
+                          <div className={cn("p-0.5 rounded", config.color)}>
                             <Icon className="h-3 w-3 text-white" />
                           </div>
-                          <span className="text-sm font-medium">{config.label}</span>
-                          <Badge variant="outline" className="text-xs">
+                          <span className="font-medium text-foreground">{config.label}</span>
+                          <span className="text-xs text-muted-foreground">
                             {categoryAgents.length}
-                          </Badge>
+                          </span>
                         </div>
                         {isExpanded ? (
-                          <ChevronDown className="h-4 w-4" />
+                          <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
                         ) : (
-                          <ChevronRight className="h-4 w-4" />
+                          <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
                         )}
-                      </Button>
+                      </button>
                     </CollapsibleTrigger>
-                    <CollapsibleContent className="space-y-1 mt-1">
+                    <CollapsibleContent className="space-y-0.5 mt-0.5">
                       {categoryAgents.map((agent) => {
                         const isInFramework = !!AGENT_BY_ID[agent.agent_name];
                         const isInactive = !agent.is_active;
+                        const isSelected = selectedAgent?.id === agent.id;
                         
                         return (
-                          <Button
+                          <button
                             key={agent.id}
-                            variant="ghost"
                             className={cn(
-                              "w-full justify-start pl-8 py-1.5 h-auto text-sm gap-2",
-                              selectedAgent?.id === agent.id && "bg-accent",
+                              "w-full text-left pl-7 pr-2 py-1.5 rounded-md text-sm transition-colors flex items-center gap-1.5",
+                              isSelected
+                                ? "bg-primary/10 text-primary font-medium"
+                                : "text-muted-foreground hover:bg-muted hover:text-foreground",
                               isInactive && "opacity-50"
                             )}
                             onClick={() => handleSelectAgent(agent)}
                           >
                             <span className={cn(
-                              "truncate flex-1 text-left",
+                              "truncate flex-1",
                               isInactive && "line-through"
                             )}>
                               {agent.display_name}
                             </span>
                             {isInactive && (
-                              <Badge variant="outline" className="text-xs text-muted-foreground">
-                                Inactive
-                              </Badge>
+                              <span className="text-[10px] uppercase tracking-wider text-muted-foreground">off</span>
                             )}
                             {!isInFramework && agent.is_system && (
                               <AlertCircle className="h-3 w-3 text-amber-500 shrink-0" />
                             )}
-                          </Button>
+                          </button>
                         );
                       })}
                     </CollapsibleContent>
                   </Collapsible>
                 );
               })}
+
+              {Object.keys(groupedAgents).length === 0 && searchQuery && (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  No agents match "{searchQuery}"
+                </p>
+              )}
             </div>
           </ScrollArea>
-        </aside>
+        </div>
 
-        {/* Main Content */}
-        <main className="flex-1 overflow-auto">
+        {/* Detail Panel */}
+        <div className="flex-1 min-w-0 overflow-auto">
           {editedAgent ? (
-            <div className="p-6 max-w-4xl mx-auto space-y-6">
+            <div className="p-6 max-w-3xl space-y-5">
               {/* Agent Header */}
-              <div className="flex items-start justify-between">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <Input
-                      value={editedAgent.display_name}
-                      onChange={(e) =>
-                        setEditedAgent({ ...editedAgent, display_name: e.target.value })
-                      }
-                      className="text-2xl font-bold h-auto py-1 px-2"
-                    />
-                    <Badge className={cn(
+              <div className="flex items-start justify-between gap-4">
+                <div className="space-y-1 min-w-0 flex-1">
+                  <Input
+                    value={editedAgent.display_name}
+                    onChange={(e) =>
+                      setEditedAgent({ ...editedAgent, display_name: e.target.value })
+                    }
+                    className="text-lg font-semibold h-auto py-1 px-2 border-transparent hover:border-border focus:border-border transition-colors"
+                  />
+                  <div className="flex items-center gap-2 px-2">
+                    <code className="text-xs text-muted-foreground font-mono">
+                      {editedAgent.agent_name}
+                    </code>
+                    <Badge variant="outline" className={cn(
+                      "text-[10px]",
                       CATEGORY_CONFIG[editedAgent.category]?.color || "bg-muted",
-                      "text-white"
+                      "text-white border-transparent"
                     )}>
                       {CATEGORY_CONFIG[editedAgent.category]?.label || editedAgent.category}
                     </Badge>
+                    <Badge variant="outline" className="text-[10px]">
+                      v{editedAgent.version}
+                    </Badge>
                   </div>
-                  <p className="text-sm text-muted-foreground font-mono">
-                    {editedAgent.agent_name}
-                  </p>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 shrink-0">
                   <AgentVersionHistory
                     agentConfigId={editedAgent.id}
                     currentVersion={editedAgent.version}
                     onRevert={handleRevertToVersion}
                   />
                   <Button
-                    variant="outline"
+                    variant="ghost"
+                    size="sm"
                     onClick={handleRevert}
                     disabled={!hasChanges || saving}
                   >
-                    <RotateCcw className="h-4 w-4 mr-2" />
-                    Revert
+                    <RotateCcw className="h-3.5 w-3.5" />
                   </Button>
-                  <Button onClick={() => handleSave()} disabled={!hasChanges || saving}>
-                    <Save className="h-4 w-4 mr-2" />
+                  <Button size="sm" onClick={() => handleSave()} disabled={!hasChanges || saving}>
+                    <Save className="h-3.5 w-3.5 mr-1.5" />
                     Save
                   </Button>
                   {!editedAgent.is_system && (
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
-                        <Button variant="destructive" size="icon" disabled={saving}>
-                          <Trash2 className="h-4 w-4" />
+                        <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" disabled={saving}>
+                          <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       </AlertDialogTrigger>
                       <AlertDialogContent>
@@ -544,192 +575,148 @@ export default function AgentConfiguration() {
 
               <Separator />
 
-              {/* Description */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Description</CardTitle>
-                  <CardDescription>What this agent does and its purpose</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Textarea
-                    value={editedAgent.description || ""}
-                    onChange={(e) =>
-                      setEditedAgent({ ...editedAgent, description: e.target.value })
+              {/* Active Toggle + Framework Status */}
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg border bg-card">
+                  <Switch
+                    checked={editedAgent.is_active}
+                    onCheckedChange={(checked) =>
+                      setEditedAgent({ ...editedAgent, is_active: checked })
                     }
-                    placeholder="Describe what this agent analyzes..."
-                    className="min-h-[80px]"
                   />
-                </CardContent>
-              </Card>
+                  <span className="text-sm">{editedAgent.is_active ? "Active" : "Inactive"}</span>
+                </div>
+                {(() => {
+                  const isInFramework = !!AGENT_BY_ID[editedAgent.agent_name];
+                  return (
+                    <div className={cn(
+                      "flex items-center gap-1.5 px-3 py-2 rounded-lg border text-sm",
+                      isInFramework ? "border-green-500/30 text-green-600 dark:text-green-400" : "border-amber-500/30 text-amber-600 dark:text-amber-400"
+                    )}>
+                      {isInFramework ? (
+                        <><CheckCircle2 className="h-3.5 w-3.5" /> In Framework</>
+                      ) : (
+                        <><AlertCircle className="h-3.5 w-3.5" /> Legacy</>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Description */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Description</label>
+                <Textarea
+                  value={editedAgent.description || ""}
+                  onChange={(e) =>
+                    setEditedAgent({ ...editedAgent, description: e.target.value })
+                  }
+                  placeholder="Describe what this agent analyzes..."
+                  className="min-h-[60px] resize-none"
+                />
+              </div>
 
               {/* Parameters */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Parameters</CardTitle>
-                  <CardDescription>
-                    The scoring parameters this agent evaluates ({editedAgent.parameters.length} parameters)
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex flex-wrap gap-2">
-                    {editedAgent.parameters.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">No parameters defined</p>
-                    ) : (
-                      editedAgent.parameters.map((param) => (
-                        <Badge
-                          key={param}
-                          variant="secondary"
-                          className="gap-1 pr-1"
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium">
+                    Parameters
+                    <span className="text-muted-foreground font-normal ml-1.5">
+                      ({editedAgent.parameters.length})
+                    </span>
+                  </label>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {editedAgent.parameters.length === 0 ? (
+                    <p className="text-sm text-muted-foreground italic">No parameters defined</p>
+                  ) : (
+                    editedAgent.parameters.map((param) => (
+                      <Badge
+                        key={param}
+                        variant="secondary"
+                        className="gap-1 pr-1 text-xs"
+                      >
+                        {param}
+                        <button
+                          className="ml-0.5 h-3.5 w-3.5 inline-flex items-center justify-center rounded-full hover:bg-destructive hover:text-destructive-foreground transition-colors"
+                          onClick={() => handleRemoveParameter(param)}
                         >
-                          {param}
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-4 w-4 ml-1 hover:bg-destructive hover:text-destructive-foreground rounded-full"
-                            onClick={() => handleRemoveParameter(param)}
-                          >
-                            ×
-                          </Button>
-                        </Badge>
-                      ))
-                    )}
-                  </div>
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="Add parameter (e.g., pacing_quality)"
-                      value={newParameterInput}
-                      onChange={(e) => setNewParameterInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          handleAddParameter();
-                        }
-                      }}
-                    />
-                    <Button onClick={handleAddParameter} size="icon">
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+                          ×
+                        </button>
+                      </Badge>
+                    ))
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Add parameter (e.g., pacing_quality)"
+                    value={newParameterInput}
+                    onChange={(e) => setNewParameterInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleAddParameter();
+                      }
+                    }}
+                    className="h-8 text-sm"
+                  />
+                  <Button onClick={handleAddParameter} size="sm" variant="outline" className="h-8 px-2">
+                    <Plus className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
 
               {/* System Prompt */}
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="text-base">System Prompt</CardTitle>
-                      <CardDescription>
-                        The instructions sent to the AI model for this agent
-                      </CardDescription>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setPromptExpanded(!promptExpanded)}
-                    >
-                      {promptExpanded ? "Collapse" : "Expand"}
-                      {promptExpanded ? (
-                        <ChevronDown className="h-4 w-4 ml-1" />
-                      ) : (
-                        <ChevronRight className="h-4 w-4 ml-1" />
-                      )}
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <Textarea
-                    value={editedAgent.system_prompt}
-                    onChange={(e) =>
-                      setEditedAgent({ ...editedAgent, system_prompt: e.target.value })
-                    }
-                    className={cn(
-                      "font-mono text-sm transition-all",
-                      promptExpanded ? "min-h-[500px]" : "min-h-[150px]"
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium">System Prompt</label>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-xs"
+                    onClick={() => setPromptExpanded(!promptExpanded)}
+                  >
+                    {promptExpanded ? "Collapse" : "Expand"}
+                    {promptExpanded ? (
+                      <ChevronDown className="h-3 w-3 ml-1" />
+                    ) : (
+                      <ChevronRight className="h-3 w-3 ml-1" />
                     )}
-                    placeholder="Enter the system prompt for this agent..."
-                  />
-                  <p className="text-xs text-muted-foreground mt-2">
-                    {editedAgent.system_prompt.length} characters • Version {editedAgent.version}
-                  </p>
-                </CardContent>
-              </Card>
+                  </Button>
+                </div>
+                <Textarea
+                  value={editedAgent.system_prompt}
+                  onChange={(e) =>
+                    setEditedAgent({ ...editedAgent, system_prompt: e.target.value })
+                  }
+                  className={cn(
+                    "font-mono text-xs leading-relaxed transition-all resize-none",
+                    promptExpanded ? "min-h-[500px]" : "min-h-[120px]"
+                  )}
+                  placeholder="Enter the system prompt for this agent..."
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  {editedAgent.system_prompt.length} characters
+                </p>
+              </div>
 
-              {/* Metadata */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Metadata & Status</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* Active Toggle */}
-                  <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
-                    <div className="space-y-0.5">
-                      <p className="text-sm font-medium">Agent Active</p>
-                      <p className="text-xs text-muted-foreground">
-                        Inactive agents are skipped during analysis
-                      </p>
-                    </div>
-                    <Switch
-                      checked={editedAgent.is_active}
-                      onCheckedChange={(checked) =>
-                        setEditedAgent({ ...editedAgent, is_active: checked })
-                      }
-                    />
-                  </div>
-
-                  {/* Framework Status */}
-                  {(() => {
-                    const isInFramework = !!AGENT_BY_ID[editedAgent.agent_name];
-                    return (
-                      <div className={cn(
-                        "flex items-center gap-2 p-3 rounded-lg border",
-                        isInFramework ? "bg-green-500/10 border-green-500/30" : "bg-amber-500/10 border-amber-500/30"
-                      )}>
-                        {isInFramework ? (
-                          <>
-                            <CheckCircle2 className="h-4 w-4 text-green-500" />
-                            <span className="text-sm">In USAF Framework</span>
-                          </>
-                        ) : (
-                          <>
-                            <AlertCircle className="h-4 w-4 text-amber-500" />
-                            <span className="text-sm">Legacy agent (not in current framework)</span>
-                          </>
-                        )}
-                      </div>
-                    );
-                  })()}
-
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <p className="text-muted-foreground">Created</p>
-                      <p>{new Date(editedAgent.created_at).toLocaleDateString()}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Last Updated</p>
-                      <p>{new Date(editedAgent.updated_at).toLocaleDateString()}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">System Agent</p>
-                      <p>{editedAgent.is_system ? "Yes" : "No (Custom)"}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Version</p>
-                      <p>{editedAgent.version}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              {/* Metadata footer */}
+              <Separator />
+              <div className="flex items-center gap-6 text-xs text-muted-foreground">
+                <span>Created {new Date(editedAgent.created_at).toLocaleDateString()}</span>
+                <span>Updated {new Date(editedAgent.updated_at).toLocaleDateString()}</span>
+                <span>{editedAgent.is_system ? "System" : "Custom"}</span>
+              </div>
             </div>
           ) : (
             <div className="flex items-center justify-center h-full text-muted-foreground">
               <div className="text-center">
-                <Bot className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>Select an agent to view its configuration</p>
+                <Bot className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                <p className="text-sm">Select an agent to configure</p>
               </div>
             </div>
           )}
-        </main>
+        </div>
       </div>
     </div>
   );
