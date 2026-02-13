@@ -365,29 +365,8 @@ export default function ModelConfiguration() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border bg-card/50 backdrop-blur-xl sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')}>
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-              <div>
-                <h1 className="text-xl font-bold">Model Configuration</h1>
-                <p className="text-sm text-muted-foreground">Configure AI models for each agent</p>
-              </div>
-            </div>
-            <Button variant="outline" onClick={() => navigate('/admin/agents')}>
-              <Bot className="h-4 w-4 mr-2" />
-              Agent Prompts
-            </Button>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="p-6">
+      <div className="max-w-6xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Configuration List */}
           <Card>
@@ -621,7 +600,7 @@ export default function ModelConfiguration() {
             </div>
           </CardContent>
         </Card>
-      </main>
+      </div>
     </div>
   );
 }

@@ -378,53 +378,26 @@ export default function AgentConfiguration() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-14 items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate(-1)}
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </Button>
-            <div className="flex items-center gap-2">
-              <Bot className="h-5 w-5 text-primary" />
-              <h1 className="text-lg font-semibold">Agent Configuration</h1>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleSync}
-              disabled={syncing}
-            >
-              <RefreshCw className={cn("h-4 w-4 mr-2", syncing && "animate-spin")} />
-              {syncing ? "Syncing..." : "Sync Framework"}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate("/admin/models")}
-            >
-              <Settings2 className="h-4 w-4 mr-2" />
-              Model Settings
-            </Button>
-          </div>
-        </div>
-      </header>
-
-      <div className="flex h-[calc(100vh-3.5rem)]">
+    <div className="h-[calc(100vh-4rem)]">
+      <div className="flex h-full">
         {/* Sidebar */}
         <aside className="w-80 border-r bg-muted/30">
           <ScrollArea className="h-full">
             <div className="p-4 space-y-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-sm font-medium text-muted-foreground">Agents</h2>
-                <Badge variant="secondary">{agents.length}</Badge>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleSync}
+                    disabled={syncing}
+                    className="h-7 px-2"
+                  >
+                    <RefreshCw className={cn("h-3 w-3", syncing && "animate-spin")} />
+                  </Button>
+                  <Badge variant="secondary">{agents.length}</Badge>
+                </div>
               </div>
 
               {Object.entries(groupedAgents).map(([category, categoryAgents]) => {

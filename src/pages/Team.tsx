@@ -54,15 +54,8 @@ export default function Team() {
   useEffect(() => {
     if (!authLoading && !user) {
       navigate('/auth');
-    } else if (!authLoading && userRole !== 'admin') {
-      navigate('/dashboard');
-      toast({
-        title: 'Access Denied',
-        description: 'Only admins can access team management.',
-        variant: 'destructive',
-      });
     }
-  }, [user, authLoading, userRole, navigate, toast]);
+  }, [user, authLoading, navigate]);
 
   useEffect(() => {
     async function fetchTeam() {
@@ -267,25 +260,8 @@ export default function Team() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="sticky top-0 z-40 glass-strong border-b border-border">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')}>
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-              <div>
-                <h1 className="text-xl font-bold">Team Management</h1>
-                <p className="text-sm text-muted-foreground">{currentOrganization?.name}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    <div className="p-6 max-w-4xl">
+      <div className="space-y-8">
         {/* Invite Section */}
         <Card>
           <CardHeader>
@@ -453,7 +429,7 @@ export default function Team() {
             </div>
           </CardContent>
         </Card>
-      </main>
+      </div>
     </div>
   );
 }
