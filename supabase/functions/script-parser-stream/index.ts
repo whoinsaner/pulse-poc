@@ -2021,7 +2021,7 @@ serve(async (req) => {
         let thresholdUsed = strictThreshold;
         
         allCharacters.forEach((char, name) => {
-          if (!isNonCharacter(name) && (char.dialogueCount || 0) >= strictThreshold) {
+          if (!isNonCharacter(name) && (char.dialogue_count || 0) >= strictThreshold) {
             filteredCharacters.set(name, char);
           }
         });
@@ -2033,7 +2033,7 @@ serve(async (req) => {
           filteredCharacters.clear();
           thresholdUsed = 1;
           allCharacters.forEach((char, name) => {
-            if (!isNonCharacter(name) && (char.dialogueCount || 0) >= 1) {
+            if (!isNonCharacter(name) && (char.dialogue_count || 0) >= 1) {
               filteredCharacters.set(name, char);
             }
           });
