@@ -10,7 +10,10 @@ import Onboarding from "./pages/Onboarding";
 import Dashboard from "./pages/Dashboard";
 import Upload from "./pages/Upload";
 import Scripts from "./pages/Scripts";
-import Settings from "./pages/Settings";
+import SettingsLayout from "./components/SettingsLayout";
+import ProfileSettings from "./pages/settings/ProfileSettings";
+import OrganizationSettings from "./pages/settings/OrganizationSettings";
+import FeaturesSettings from "./pages/settings/FeaturesSettings";
 import AcceptInvitation from "./pages/AcceptInvitation";
 import ModelConfiguration from "./pages/ModelConfiguration";
 import AgentConfiguration from "./pages/AgentConfiguration";
@@ -120,10 +123,18 @@ const App = () => (
             <Route path="/scripts" element={<Scripts />} />
             <Route path="/reports" element={<Reports />} />
             <Route path="/reports/:runId" element={<ReportsRedirect />} />
-            <Route path="/settings" element={<Settings />} />
+            <Route path="/settings" element={<SettingsLayout />}>
+              <Route index element={<Navigate to="/settings/profile" replace />} />
+              <Route path="profile" element={<ProfileSettings />} />
+              <Route path="organization" element={<OrganizationSettings />} />
+              <Route path="team" element={<Team />} />
+              <Route path="models" element={<ModelConfiguration />} />
+              <Route path="agents" element={<AgentConfiguration />} />
+              <Route path="parameters" element={<ParametersAgents />} />
+              <Route path="test-pipeline" element={<TestAnalysisPipeline />} />
+              <Route path="features" element={<FeaturesSettings />} />
+            </Route>
             <Route path="/invite/:token" element={<AcceptInvitation />} />
-            <Route path="/admin/models" element={<ModelConfiguration />} />
-            <Route path="/admin/agents" element={<AgentConfiguration />} />
             <Route path="/report/:runId" element={<ReportLayout />}>
               {/* USAF Consolidated Routes (primary) */}
               <Route index element={<ReportCover />} />
@@ -447,11 +458,14 @@ const App = () => (
               <Route path="insights" element={<ReportInsights />} />
             </Route>
             <Route path="/comic-gallery" element={<ComicGallery />} />
-            <Route path="/team" element={<Team />} />
-            <Route path="/parameters" element={<ParametersAgents />} />
-            <Route path="/documentation" element={<FrameworkDocumentation />} />
-            <Route path="/test-pipeline" element={<TestAnalysisPipeline />} />
+            {/* Legacy redirects */}
+            <Route path="/admin/models" element={<Navigate to="/settings/models" replace />} />
+            <Route path="/admin/agents" element={<Navigate to="/settings/agents" replace />} />
+            <Route path="/team" element={<Navigate to="/settings/team" replace />} />
+            <Route path="/parameters" element={<Navigate to="/settings/parameters" replace />} />
+            <Route path="/test-pipeline" element={<Navigate to="/settings/test-pipeline" replace />} />
             <Route path="/test-comic-pipeline" element={<TestComicAnalysis />} />
+            <Route path="*" element={<NotFound />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

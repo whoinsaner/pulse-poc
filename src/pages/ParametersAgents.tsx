@@ -1,6 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -34,7 +33,7 @@ import {
   FileJson,
   Download,
   Film,
-  ArrowLeft,
+  
   RefreshCw,
   CheckCircle2,
   AlertCircle,
@@ -326,22 +325,14 @@ export default function ParametersAgents() {
 
   return (
     <TooltipProvider>
-      <div className="min-h-screen bg-background">
-        {/* Header */}
+      <div className="h-full">
+        {/* Compact Header */}
         <div className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-          <div className="container mx-auto px-6 py-4">
+          <div className="px-6 py-4">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
-                <div className="flex items-center gap-3 mb-1">
-                  <Link to="/dashboard">
-                    <Button variant="ghost" size="sm" className="gap-1 -ml-2">
-                      <ArrowLeft className="h-4 w-4" />
-                      Back
-                    </Button>
-                  </Link>
-                </div>
-                <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-                  <Layers className="h-6 w-6 text-primary" />
+                <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
+                  <Layers className="h-5 w-5 text-primary" />
                   Parameters & Agents
                   <Badge variant="outline" className="text-xs font-normal">v{CURRENT_PROMPT_VERSION}</Badge>
                   {syncChecked && (
@@ -361,9 +352,9 @@ export default function ParametersAgents() {
                       </TooltipContent>
                     </Tooltip>
                   )}
-                </h1>
+                </h2>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Universal Script Analysis Framework — {ALL_AGENTS.length} agents, {ALL_FRAMEWORK_PARAMETERS.length} parameters across {SCRIPT_TYPES.length} script types
+                  {ALL_AGENTS.length} agents, {ALL_FRAMEWORK_PARAMETERS.length} parameters across {SCRIPT_TYPES.length} script types
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-3">
@@ -371,7 +362,6 @@ export default function ParametersAgents() {
                   <Film className="h-4 w-4 text-muted-foreground" />
                   <Select value={selectedScriptType} onValueChange={(value) => {
                     setSelectedScriptType(value);
-                    // Reset agent filter if current agent is not applicable
                     if (value !== "all" && selectedAgent !== "all") {
                       const newApplicable = getAgentsForScriptType(value);
                       if (!newApplicable.includes(selectedAgent)) {
@@ -384,7 +374,6 @@ export default function ParametersAgents() {
                   </SelectTrigger>
                   <SelectContent className="max-h-80">
                     <SelectItem value="all">All Script Types</SelectItem>
-                    {/* Group script types by category */}
                     {Object.entries(
                       SCRIPT_TYPES.reduce((acc, type) => {
                         if (!acc[type.category]) acc[type.category] = [];
@@ -457,7 +446,7 @@ export default function ParametersAgents() {
           </div>
         </div>
 
-        <div className="container mx-auto px-6 py-6">
+        <div className="px-6 py-6">
           <Tabs defaultValue="overview" className="space-y-6">
             <TabsList className="grid w-full grid-cols-7 lg:w-auto lg:inline-grid">
               <TabsTrigger value="overview">Overview</TabsTrigger>

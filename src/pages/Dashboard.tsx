@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DashboardStats } from '@/components/DashboardStats';
-import { Upload, FileText, BarChart3, Users, LogOut, Plus, Layers, FlaskConical, Settings, Cpu, Palette, Play, Bot, Smartphone } from 'lucide-react';
+import { Upload, FileText, BarChart3, LogOut, Plus, Settings, Palette, Play, Smartphone } from 'lucide-react';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -126,67 +126,17 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          <Card className="card-hover cursor-pointer group" onClick={() => navigate('/parameters')}>
+          <Card className="card-hover cursor-pointer group" onClick={() => navigate('/settings')}>
             <CardContent className="p-6 flex items-center gap-4">
-              <div className="p-3 rounded-lg bg-purple-500/10 group-hover:bg-purple-500/20 transition-colors">
-                <Layers className="h-6 w-6 text-purple-500" />
+              <div className="p-3 rounded-lg bg-muted group-hover:bg-muted/80 transition-colors">
+                <Settings className="h-6 w-6 text-muted-foreground" />
               </div>
               <div>
-                <h3 className="font-semibold">Parameters</h3>
-                <p className="text-sm text-muted-foreground">Agents & lenses</p>
+                <h3 className="font-semibold">Settings</h3>
+                <p className="text-sm text-muted-foreground">Team, models & config</p>
               </div>
             </CardContent>
           </Card>
-
-          <Card className="card-hover cursor-pointer group" onClick={() => navigate('/test-pipeline')}>
-            <CardContent className="p-6 flex items-center gap-4">
-              <div className="p-3 rounded-lg bg-orange-500/10 group-hover:bg-orange-500/20 transition-colors">
-                <FlaskConical className="h-6 w-6 text-orange-500" />
-              </div>
-              <div>
-                <h3 className="font-semibold">Test Pipeline</h3>
-                <p className="text-sm text-muted-foreground">Run full analysis test</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          {userRole === 'admin' && (
-            <>
-              <Card className="card-hover cursor-pointer group" onClick={() => navigate('/team')}>
-                <CardContent className="p-6 flex items-center gap-4">
-                  <div className="p-3 rounded-lg bg-warning/10 group-hover:bg-warning/20 transition-colors">
-                    <Users className="h-6 w-6 text-warning" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold">Team</h3>
-                    <p className="text-sm text-muted-foreground">Manage members</p>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="card-hover cursor-pointer group" onClick={() => navigate('/admin/models')}>
-                <CardContent className="p-6 flex items-center gap-4">
-                  <div className="p-3 rounded-lg bg-cyan-500/10 group-hover:bg-cyan-500/20 transition-colors">
-                    <Cpu className="h-6 w-6 text-cyan-500" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold">AI Models</h3>
-                    <p className="text-sm text-muted-foreground">Model configurations</p>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="card-hover cursor-pointer group" onClick={() => navigate('/admin/agents')}>
-                <CardContent className="p-6 flex items-center gap-4">
-                  <div className="p-3 rounded-lg bg-violet-500/10 group-hover:bg-violet-500/20 transition-colors">
-                    <Bot className="h-6 w-6 text-violet-500" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold">Agent Prompts</h3>
-                    <p className="text-sm text-muted-foreground">Configure agent behavior</p>
-                  </div>
-                </CardContent>
-              </Card>
-            </>
-          )}
         </div>
 
         {/* Dashboard Statistics */}

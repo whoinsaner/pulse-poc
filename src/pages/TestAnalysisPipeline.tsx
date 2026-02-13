@@ -161,12 +161,12 @@ export default function TestAnalysisPipeline() {
   };
 
   return (
-    <div className="container mx-auto py-8 max-w-4xl">
+    <div className="p-6 max-w-4xl">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2 flex items-center gap-3">
-          <Beaker className="h-8 w-8 text-primary" />
+        <h2 className="text-2xl font-bold mb-2 flex items-center gap-3">
+          <Beaker className="h-7 w-7 text-primary" />
           Test Analysis Pipeline
-        </h1>
+        </h2>
         <p className="text-muted-foreground">
           Run a full USAF analysis on a sample script to verify all 10 agents are working correctly.
         </p>
