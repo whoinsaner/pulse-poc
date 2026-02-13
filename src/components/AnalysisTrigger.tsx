@@ -534,6 +534,16 @@ export function AnalysisTrigger({
       );
     }
 
+    // If no custom configs, skip the config selector and go straight to analysis
+    if (customConfigs.length === 0) {
+      return (
+        <Button onClick={() => initiateAnalysis(false, 'deep')} className="w-full" size="lg">
+          <Play className="h-4 w-4 mr-2" />
+          Analyze Script
+        </Button>
+      );
+    }
+
     return (
       <div className="space-y-4">
         <QualityModeSelector 
