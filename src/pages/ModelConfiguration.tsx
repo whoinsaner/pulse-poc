@@ -112,6 +112,7 @@ export default function ModelConfiguration() {
   const [showNewConfigDialog, setShowNewConfigDialog] = useState(false);
   const [newConfigName, setNewConfigName] = useState('');
   const [newConfigDescription, setNewConfigDescription] = useState('');
+  const [copyFromSystem, setCopyFromSystem] = useState(true);
   const [editedMappings, setEditedMappings] = useState<Record<string, { model: string; temperature: number }>>({});
   const [auditLog, setAuditLog] = useState<AuditLogEntry[]>([]);
   const [showAuditLog, setShowAuditLog] = useState(false);
@@ -259,14 +260,50 @@ export default function ModelConfiguration() {
       setShowNewConfigDialog(false);
       setNewConfigName('');
       setNewConfigDescription('');
+      setCopyFromSystem(true);
 
-      // Initialize with default mappings using Gemini 3 Flash Preview
-      const defaultMappings = agentConfigs.map(agent => ({
-        agent_name: agent.agent_name,
-        model: 'google/gemini-3-flash-preview',
-        temperature: 0.7,
-        config_id: data.id,
-      }));
+      // Build initial mappings - either copy from system quality config or use defaults
+      let defaultMappings: Array<{ agent_name: string; model: string; temperature: number; config_id: string }>;
+
+      if (copyFromSystem) {
+        const systemConfig = configurations.find(c => c.is_system && c.name === 'quality');
+        if (systemConfig) {
+          const { data: systemMappings } = await supabase
+            .from('agent_model_mappings')
+            .select('agent_name, model, temperature')
+            .eq('config_id', systemConfig.id);
+
+          if (systemMappings && systemMappings.length > 0) {
+            defaultMappings = systemMappings.map(m => ({
+              agent_name: m.agent_name,
+              model: m.model,
+              temperature: m.temperature ?? 0.7,
+              config_id: data.id,
+            }));
+          } else {
+            defaultMappings = agentConfigs.map(agent => ({
+              agent_name: agent.agent_name,
+              model: 'google/gemini-3-flash-preview',
+              temperature: 0.7,
+              config_id: data.id,
+            }));
+          }
+        } else {
+          defaultMappings = agentConfigs.map(agent => ({
+            agent_name: agent.agent_name,
+            model: 'google/gemini-3-flash-preview',
+            temperature: 0.7,
+            config_id: data.id,
+          }));
+        }
+      } else {
+        defaultMappings = agentConfigs.map(agent => ({
+          agent_name: agent.agent_name,
+          model: 'google/gemini-3-flash-preview',
+          temperature: 0.7,
+          config_id: data.id,
+        }));
+      }
 
       await supabase.from('agent_model_mappings').insert(defaultMappings);
       await fetchMappings(data.id, agentConfigs);
@@ -491,6 +528,18 @@ export default function ModelConfiguration() {
                           onChange={(e) => setNewConfigDescription(e.target.value)}
                           placeholder="Optimized for fast analysis"
                         />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id="copyFromSystem"
+                          checked={copyFromSystem}
+                          onChange={(e) => setCopyFromSystem(e.target.checked)}
+                          className="rounded border-border"
+                        />
+                        <Label htmlFor="copyFromSystem" className="text-sm font-normal cursor-pointer">
+                          Copy model mappings from system configuration
+                        </Label>
                       </div>
                       <Button onClick={handleCreateConfig} disabled={!newConfigName.trim() || isSaving}>
                         {isSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
