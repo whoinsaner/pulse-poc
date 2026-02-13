@@ -2014,13 +2014,13 @@ serve(async (req) => {
         
         const filteredCharacters = new Map<string, Character>();
         allCharacters.forEach((char, name) => {
-          if (!isNonCharacter(name)) {
+          if (!isNonCharacter(name) && (char.dialogueCount || 0) >= 2) {
             filteredCharacters.set(name, char);
           }
         });
         const removedCount = allCharacters.size - filteredCharacters.size;
         if (removedCount > 0) {
-          console.log(`[script-parser-stream] Filtered ${removedCount} non-character entries (locations/props/transitions)`);
+          console.log(`[script-parser-stream] Filtered ${removedCount} non-character entries (noise/single-line characters)`);
         }
         
         const characters = Array.from(filteredCharacters.values());
