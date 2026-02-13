@@ -1,78 +1,70 @@
 
+# Pipeline Performance and Resilience Optimizations
 
-# Wire MicroDramaAgent + Fix Pilot/Episode Pipeline Gaps
+## Current Bottlenecks Identified
 
-## Summary
+1. **Redundant DB queries per agent**: Every `runSingleAgent` call fetches `organization_id` from `analysis_runs` joined with `scripts` -- the same query repeated 10-16 times per run.
+2. **`updateAgentProgress` is read-then-write**: Each status update does a SELECT then an UPDATE on `analysis_runs.agent_progress` (a JSONB column). With agents running in parallel, this creates race conditions and ~2 DB round-trips per update.
+3. **`getAgentModelConfig` hits DB per agent**: Each agent queries `agent_model_mappings` individually -- 10-16 identical queries (same `config_id`, different `agent_name`) that could be a single batch query.
+4. **Sequential score inserts**: After each agent completes, parameter scores are inserted one-by-one in a loop rather than batched.
+5. **Scene count query is done twice**: Lines 2362-2372 query scene count with two separate approaches back-to-back.
+6. **3-second batch delay is still used for large scripts**: Even for medium scripts (e.g., 20 pages) with simple structure, the conservative 3s delay adds 15+ seconds of idle time.
 
-After auditing all touchpoints, here are the gaps found and the fixes needed.
+## Proposed Optimizations
 
-## Gap Analysis
+### Optimization 1: Hoist organization_id lookup (eliminate N redundant queries)
+- Fetch `organization_id` once before entering the agent loop in `runStandardAnalysis`
+- Pass it as a parameter to `runSingleAgent` instead of each agent querying it independently
+- Saves 10-16 DB round-trips per run
 
-### 1. AnalysisTrigger -- MicroDramaAgent Not Dispatched (CRITICAL)
-The `getFormatSpecificAgents()` function (line 112-116) only handles `comic` and `web_series`. Micro drama falls through to an empty array, so `MicroDramaAgent` never appears in the UI panel and never gets counted.
+### Optimization 2: Batch-load all model configs upfront
+- Before the agent loop, query `agent_model_mappings` for ALL agent names in one query filtered by `config_id`
+- Build a local map and use it in `runSingleAgent` instead of per-agent DB calls
+- Saves 10-16 DB round-trips per run
 
-### 2. Edge Function -- MicroDramaAgent Not Dispatched (CRITICAL)
-In `supabase/functions/analyze-script/index.ts` (lines 2035-2044), the comprehensive analysis block adds agents for comic, web series, interactive, and audio -- but there is no `isMicroDrama` check. The `MicroDramaAgent` is defined in the AGENTS map (line 1226) but never added to `activeAgentNames`, so it is **never actually run**.
+### Optimization 3: Batch-load all prompt configs upfront
+- Similarly, query `agent_configurations` for all active agent names in one query (org-specific first, then system fallback)
+- Build a local map; each agent just does a map lookup
+- Saves 10-16 DB round-trips per run
 
-### 3. getCategoriesForScriptType Missing Micro Drama
-In `reportNavigation.ts` (line 330-366), `getCategoriesForScriptType` returns base categories for micro_drama scripts but never adds `'Micro Drama'` to the list. This affects category-based filtering.
+### Optimization 4: Batch insert parameter scores
+- After each agent completes, collect all scores into an array and do a single `.insert([...scores])` call instead of looping
+- Saves 5-10 DB round-trips per agent (50-100+ total per run)
 
-### 4. getAgentCountForScriptType Incomplete
-In `reportNavigation.ts` (line 396-399), specialized agent count is hardcoded to only handle comic (4). Web series (1) and micro drama (1) are not counted.
+### Optimization 5: Reduce updateAgentProgress race conditions
+- Use a Postgres `jsonb_set` via `.rpc()` or a raw update with JSON path operators instead of read-modify-write
+- Alternative: queue progress updates and flush them periodically (e.g., every 2 seconds) to reduce total DB calls
+- This prevents parallel agents from overwriting each other's progress
 
-### 5. PDF Export -- Pilot/Episode Gets No Format Section
-In `fullReportPdfGenerator.ts` (lines 1133-1178), the format part is only rendered for comic, web_series, and micro_drama. Pilots and episodes (which have a Format Diagnosis nav item and page) get nothing in the PDF.
+### Optimization 6: Adaptive batch delays based on script size
+- Currently: small scripts get 1s delay, large scripts get 3s
+- Proposed tiered approach:
+  - Scripts with 5 or fewer pages: 0ms delay, run all agents at once (single batch)
+  - Scripts with 6-30 pages: 1s delay, batch size 4
+  - Scripts with 30+ pages: 2s delay, batch size 3
+- This reduces idle time for medium scripts by ~30%
 
-### 6. Stakeholder Config -- MicroDramaAgent Not in Stakeholder Mappings
-In the edge function's `STAKEHOLDER_AGENTS` (lines 2003-2013), no stakeholder lens includes `MicroDramaAgent`. So stakeholder-specific runs on micro drama scripts will skip it entirely.
+### Optimization 7: Deduplicate scene count query
+- Replace the two sequential scene count queries (lines 2362-2372) with a single `select('*', { count: 'exact', head: true })` call
 
-## Changes
+### Optimization 8: Graceful degradation for non-critical agents
+- If a non-critical agent (e.g., SceneEnrichmentAgent, MarketAgent) fails after retries, continue without blocking the pipeline
+- Currently this is mostly handled, but explicitly categorize agents as "critical" vs "supplementary" so failures in supplementary agents don't inflate error messages or confuse users
+- Add a `partialFailures` field to the report metadata listing which agents failed, so the UI can show targeted "re-run X agent" options
 
-### File 1: `src/components/AnalysisTrigger.tsx`
-- Add `MICRO_DRAMA_AGENTS` array (similar to `WEB_SERIES_AGENTS`):
-  ```
-  const MICRO_DRAMA_AGENTS = [
-    { name: 'MicroDramaAgent', label: 'Micro Drama', module: 'MD', icon: Smartphone },
-  ];
-  ```
-- Update `getFormatSpecificAgents()` to include a check for `scriptType === 'micro_drama'` returning `MICRO_DRAMA_AGENTS`
-- Import `Smartphone` icon (already imported at line 12 -- verify)
+## Technical Details
 
-### File 2: `supabase/functions/analyze-script/index.ts`
-- Add `microDramaAgents` constant: `const microDramaAgents = ['MicroDramaAgent'];`
-- Add `isMicroDrama` check: `const isMicroDrama = scriptType === 'micro_drama';`
-- In the comprehensive block (line 2042), add: `if (isMicroDrama) activeAgentNames.push(...microDramaAgents);`
-- In the stakeholder block, add micro drama agent for relevant stakeholders (ott_platform, investor, producer, writer)
-- Update the log line to include `micro_drama: ${isMicroDrama}`
+### Files to modify:
+- `supabase/functions/analyze-script/index.ts` -- all optimizations target this single file
 
-### File 3: `src/lib/reportNavigation.ts`
-- In `getCategoriesForScriptType`, add a micro drama check returning `[...baseCategories, 'Micro Drama']`
-- In `getAgentCountForScriptType`, update specialized count logic:
-  - comic: 4, web_series: 1, micro_drama: 1, others: 0
+### Estimated impact:
+- Optimizations 1-4 combined: **save 80-150+ DB round-trips per analysis run**
+- Optimization 6: **save 5-15 seconds of idle time** for medium scripts
+- Optimization 5: **eliminate race conditions** in progress tracking for parallel agents
+- Optimization 8: **improve perceived reliability** by surfacing partial results cleanly
 
-### File 4: `src/lib/fullReportPdfGenerator.ts`
-- After the micro_drama block (line 1178), add a pilot/episode block:
-  ```
-  else if (scriptType === 'pilot' || scriptType === 'episode') {
-    renderPartDivider(doc, pageNum, 'PART IV', 'FORMAT ANALYSIS', toc);
-    const formatSections = [
-      { id: 'format', title: 'Format Diagnosis', subtitle: 'Structure and pacing for pilot/episode format' },
-    ];
-    for (const sec of formatSections) { ... }
-  }
-  ```
-- Update `marketPartNum` on line 1181 to also include pilot/episode in the "PART V" condition
-
-### File 5: No changes needed
-- `MicroDramaAnalysis.tsx` -- already properly wired (uses `MicroDramaFormatAgent` agent content, filters by `'Micro Drama'` category, uses standard report UI components)
-- `FormatDiagnosis.tsx` -- already handles pilot/episode gracefully with a simplified view
-- `App.tsx` routes -- `format/micro-drama` route already exists at line 156
-- `reportNavigation.ts` nav items -- micro drama and pilot/episode already listed in the format group
-- PDF agent/category maps -- `format-micro-drama` already mapped at lines 92 and 118
-
-## Files Modified
-1. `src/components/AnalysisTrigger.tsx` -- Add MicroDramaAgent to the analysis panel
-2. `supabase/functions/analyze-script/index.ts` -- Wire MicroDramaAgent into agent dispatch
-3. `src/lib/reportNavigation.ts` -- Add Micro Drama category, fix agent counts
-4. `src/lib/fullReportPdfGenerator.ts` -- Add pilot/episode format section to PDF
-
+### Risk mitigation:
+- All optimizations are backward-compatible (no schema changes, no new tables)
+- Batch queries use the same Supabase client methods, just with broader filters
+- The prompt/model config caching already exists (5-minute TTL), so upfront loading is a natural extension
+- Progress update changes will be tested to ensure realtime UI updates still work
