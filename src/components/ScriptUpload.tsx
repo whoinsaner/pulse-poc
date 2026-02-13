@@ -1,7 +1,7 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDropzone } from 'react-dropzone';
-import { Upload, FileText, X, Loader2, Check, AlertTriangle, PlayCircle, Eye, RefreshCw, Clock, Info } from 'lucide-react';
+import { Upload, FileText, X, Loader2, Check, AlertTriangle, PlayCircle, Eye, RefreshCw, Clock, Info, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Card } from '@/components/ui/card';
@@ -76,6 +76,17 @@ export function ScriptUpload({ onUploadComplete, onClose }: ScriptUploadProps) {
   const [showPreview, setShowPreview] = useState(false);
   const [fileSizeWarning, setFileSizeWarning] = useState<string | null>(null);
 
+  // Auto-classification state
+  const [classifying, setClassifying] = useState(false);
+  const [autoDetectedType, setAutoDetectedType] = useState<ScriptType | null>(null);
+  const [classificationConfidence, setClassificationConfidence] = useState<number>(0);
+  const [isAutoSelected, setIsAutoSelected] = useState(false);
+  const [showMismatchPrompt, setShowMismatchPrompt] = useState(false);
+  const [mismatchDetectedType, setMismatchDetectedType] = useState<ScriptType | null>(null);
+  const [autoClassifyEnabled] = useState(() => {
+    return localStorage.getItem('pulse_auto_classify') !== 'false';
+  });
+
   const isWebSeries = scriptType === 'web_series';
 
   const EPISODE_LENGTH_OPTIONS: { value: EpisodeLengthClass; label: string; description: string }[] = [
@@ -120,6 +131,80 @@ export function ScriptUpload({ onUploadComplete, onClose }: ScriptUploadProps) {
     return ext ? FORMAT_MAP[ext] || null : null;
   };
 
+  const extractTextSample = async (file: File, format: ScriptFormat): Promise<string | null> => {
+    try {
+      if (['fountain', 'txt', 'highland'].includes(format)) {
+        return await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve((reader.result as string).substring(0, 5000));
+          reader.onerror = reject;
+          // Read only first chunk
+          const blob = file.slice(0, 8000);
+          reader.readAsText(blob);
+        });
+      }
+      if (format === 'fdx') {
+        return await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const text = reader.result as string;
+            // Extract dialogue and scene content from FDX XML
+            const stripped = text.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
+            resolve(stripped.substring(0, 5000));
+          };
+          reader.onerror = reject;
+          const blob = file.slice(0, 20000);
+          reader.readAsText(blob);
+        });
+      }
+      // For PDF/DOCX: send base64 chunk to the edge function
+      if (['pdf', 'docx'].includes(format)) {
+        const chunk = file.slice(0, 50000);
+        const buffer = await chunk.arrayBuffer();
+        const base64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
+        return base64; // The edge function will handle extraction
+      }
+      return null;
+    } catch (e) {
+      console.warn('Text extraction failed:', e);
+      return null;
+    }
+  };
+
+  const classifyScript = async (file: File, format: ScriptFormat) => {
+    if (!autoClassifyEnabled) return;
+    
+    setClassifying(true);
+    try {
+      const textSample = await extractTextSample(file, format);
+      if (!textSample) {
+        setClassifying(false);
+        return;
+      }
+
+      const { data, error } = await supabase.functions.invoke('classify-script-type', {
+        body: { textSample, fileName: file.name },
+      });
+
+      if (error) throw error;
+
+      const detectedType = data?.scriptType as ScriptType;
+      const confidence = data?.confidence || 0;
+
+      setAutoDetectedType(detectedType);
+      setClassificationConfidence(confidence);
+
+      if (confidence >= 0.6 && detectedType) {
+        setScriptType(detectedType);
+        setIsAutoSelected(true);
+      }
+    } catch (e) {
+      console.warn('Auto-classification failed:', e);
+    } finally {
+      setClassifying(false);
+    }
+  };
+
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
     if (!file) return;
@@ -135,7 +220,14 @@ export function ScriptUpload({ onUploadComplete, onClose }: ScriptUploadProps) {
     setTitle(file.name.replace(/\.[^.]+$/, ''));
     setError(null);
     setParseResult(null);
-  }, []);
+    setAutoDetectedType(null);
+    setIsAutoSelected(false);
+    setClassificationConfidence(0);
+    setShowMismatchPrompt(false);
+
+    // Trigger auto-classification
+    classifyScript(file, format);
+  }, [autoClassifyEnabled]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -157,6 +249,13 @@ export function ScriptUpload({ onUploadComplete, onClose }: ScriptUploadProps) {
         description: 'Missing required information for upload.',
         variant: 'destructive',
       });
+      return;
+    }
+
+    // Check for mismatch between auto-detected and user-selected type
+    if (autoDetectedType && classificationConfidence >= 0.6 && autoDetectedType !== scriptType && !showMismatchPrompt) {
+      setMismatchDetectedType(autoDetectedType);
+      setShowMismatchPrompt(true);
       return;
     }
 
@@ -244,6 +343,11 @@ export function ScriptUpload({ onUploadComplete, onClose }: ScriptUploadProps) {
     setCurrentFilePath(null);
     setShowPreview(false);
     setEpisodeLengthClass('mid_form_web');
+    setAutoDetectedType(null);
+    setIsAutoSelected(false);
+    setClassificationConfidence(0);
+    setShowMismatchPrompt(false);
+    setMismatchDetectedType(null);
   };
 
   return (
@@ -330,7 +434,21 @@ export function ScriptUpload({ onUploadComplete, onClose }: ScriptUploadProps) {
 
           {/* Script type */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Script Type</label>
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium">Script Type</label>
+              {classifying && (
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  Detecting...
+                </div>
+              )}
+              {isAutoSelected && autoDetectedType && !classifying && (
+                <Badge variant="secondary" className="text-xs gap-1">
+                  <Sparkles className="h-3 w-3" />
+                  Auto-detected ({Math.round(classificationConfidence * 100)}%)
+                </Badge>
+              )}
+            </div>
             <div className="flex flex-wrap gap-2">
               {(['feature', 'pilot', 'episode', 'short', 'documentary', 'comic', 'web_series', 'micro_drama', 'stage_play', 'audio_drama', 'podcast_fiction', 'game_narrative'] as ScriptType[]).map(
                 (type) => {
@@ -344,7 +462,10 @@ export function ScriptUpload({ onUploadComplete, onClose }: ScriptUploadProps) {
                   return (
                     <button
                       key={type}
-                      onClick={() => setScriptType(type)}
+                      onClick={() => {
+                        setScriptType(type);
+                        setIsAutoSelected(false);
+                      }}
                       className={cn(
                         'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
                         scriptType === type
@@ -358,6 +479,12 @@ export function ScriptUpload({ onUploadComplete, onClose }: ScriptUploadProps) {
                 }
               )}
             </div>
+            {autoDetectedType && !isAutoSelected && classificationConfidence >= 0.6 && autoDetectedType !== scriptType && (
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <Sparkles className="h-3 w-3" />
+                AI suggested: <span className="font-medium">{autoDetectedType.replace('_', ' ')}</span> ({Math.round(classificationConfidence * 100)}% confidence)
+              </p>
+            )}
           </div>
 
           {/* Episode Length Class - Only shown for Web Series */}
@@ -430,10 +557,62 @@ export function ScriptUpload({ onUploadComplete, onClose }: ScriptUploadProps) {
             </div>
           )}
 
+          {/* Mismatch prompt */}
+          {showMismatchPrompt && mismatchDetectedType && (
+            <Card className="p-4 border-primary/30 bg-primary/5">
+              <div className="flex items-start gap-3">
+                <Sparkles className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+                <div className="flex-1 space-y-3">
+                  <div>
+                    <p className="text-sm font-medium">Script type mismatch detected</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      AI detected this as <strong>{mismatchDetectedType.replace('_', ' ')}</strong> ({Math.round(classificationConfidence * 100)}% confidence),
+                      but you selected <strong>{scriptType.replace('_', ' ')}</strong>.
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        setScriptType(mismatchDetectedType);
+                        setIsAutoSelected(true);
+                        setShowMismatchPrompt(false);
+                        // Re-trigger upload
+                        setTimeout(() => handleUpload(), 0);
+                      }}
+                    >
+                      Use {mismatchDetectedType.replace('_', ' ')}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setShowMismatchPrompt(false);
+                        // Proceed with user's choice
+                        handleUpload();
+                      }}
+                    >
+                      Keep {scriptType.replace('_', ' ')}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          )}
+
           {/* Upload button */}
-          <Button onClick={handleUpload} className="w-full h-12" size="lg">
-            <Upload className="h-5 w-5 mr-2" />
-            Upload & Parse Script
+          <Button onClick={handleUpload} className="w-full h-12" size="lg" disabled={classifying}>
+            {classifying ? (
+              <>
+                <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                Detecting script type...
+              </>
+            ) : (
+              <>
+                <Upload className="h-5 w-5 mr-2" />
+                Upload & Parse Script
+              </>
+            )}
           </Button>
         </div>
       )}

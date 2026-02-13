@@ -5,12 +5,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, User, Building2, Upload, Loader2, Save, Camera } from 'lucide-react';
+import { ArrowLeft, User, Building2, Upload, Loader2, Save, Camera, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export default function Settings() {
@@ -29,6 +30,22 @@ export default function Settings() {
   const [orgLogoUrl, setOrgLogoUrl] = useState<string | null>(null);
   const [isSavingOrg, setIsSavingOrg] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+
+  // Feature flags
+  const [autoClassifyEnabled, setAutoClassifyEnabled] = useState(() => {
+    return localStorage.getItem('pulse_auto_classify') !== 'false';
+  });
+
+  const handleToggleAutoClassify = (checked: boolean) => {
+    setAutoClassifyEnabled(checked);
+    localStorage.setItem('pulse_auto_classify', checked ? 'true' : 'false');
+    toast({
+      title: checked ? 'Auto-classification enabled' : 'Auto-classification disabled',
+      description: checked 
+        ? 'Script type will be auto-detected on upload.' 
+        : 'You will manually select the script type.',
+    });
+  };
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -275,7 +292,7 @@ export default function Settings() {
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsList className="grid w-full max-w-lg grid-cols-3">
             <TabsTrigger value="profile" className="flex items-center gap-2">
               <User className="h-4 w-4" />
               Profile
@@ -283,6 +300,10 @@ export default function Settings() {
             <TabsTrigger value="organization" className="flex items-center gap-2" disabled={userRole !== 'admin'}>
               <Building2 className="h-4 w-4" />
               Organization
+            </TabsTrigger>
+            <TabsTrigger value="features" className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4" />
+              Features
             </TabsTrigger>
           </TabsList>
 
@@ -458,6 +479,36 @@ export default function Settings() {
                   )}
                   Save Organization
                 </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Features Tab */}
+          <TabsContent value="features" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Feature Settings</CardTitle>
+                <CardDescription>
+                  Enable or disable experimental features
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="flex items-center justify-between p-4 rounded-lg border border-border">
+                  <div className="flex items-start gap-3">
+                    <Sparkles className="h-5 w-5 text-primary mt-0.5" />
+                    <div>
+                      <p className="font-medium text-sm">Auto-Detect Script Type</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Automatically classify the script type (feature, comic, web series, etc.) 
+                        when a file is dropped. Uses AI to analyze the script content.
+                      </p>
+                    </div>
+                  </div>
+                  <Switch
+                    checked={autoClassifyEnabled}
+                    onCheckedChange={handleToggleAutoClassify}
+                  />
+                </div>
               </CardContent>
             </Card>
           </TabsContent>

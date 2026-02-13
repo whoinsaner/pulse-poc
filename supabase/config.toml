@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.scene-enrichment]
 verify_jwt = false
+
+[functions.classify-script-type]
+verify_jwt = false
