@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { ReportData, StakeholderLens } from '@/types/database';
 
@@ -5,16 +6,12 @@ import { Card } from '@/components/ui/card';
 import { 
   SectionHeader, 
   SubSectionHeader,
-  VerdictBox, 
-  ScoreBar,
-  ScoreDisplay,
-  RecommendationCard,
-  QuoteCallout,
+  DiagnosisSummary,
   WeightedParameterList,
+  DevelopmentFocus,
 } from '@/components/report/ui';
-
-import { UserX, Shield, Brain, Zap, Target, Sword } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { InlineMaturity } from '@/components/report/ui/MaturityBadge';
+import { UserX } from 'lucide-react';
 import { extractScore } from '@/lib/scoreUtils';
 import { useStakeholderFiltering } from '@/hooks/useStakeholderFiltering';
 import { StakeholderFilterNotice } from '@/components/report/StakeholderFilterNotice';
@@ -26,71 +23,77 @@ interface ReportContextValue {
   stakeholderLens: StakeholderLens | null;
 }
 
+const ANTAGONIST_KEYWORDS = ['antagonist', 'villain', 'opposition', 'threat', 'conflict'];
+
 export default function AntagonistAnalysis() {
-  const { reportData, currentScore, stakeholderLens } = useOutletContext<ReportContextValue>();
-  
+  const context = useOutletContext<ReportContextValue>();
+  const { reportData, currentScore, stakeholderLens } = context;
   const { isFiltered, filterParameters, getFilterStats } = useStakeholderFiltering({ stakeholderLens });
 
   const agentContent = reportData.agentContent?.CharacterAgent;
   const antagonistProfile = agentContent?.antagonistProfile;
-
-  // Get conflict-related parameters
-  const conflictParams = reportData.parameterScores?.filter(p => 
-    p.category?.toLowerCase().includes('conflict') || 
-    p.parameterName?.toLowerCase().includes('antagonist') ||
-    p.parameterName?.toLowerCase().includes('villain') ||
-    p.parameterName?.toLowerCase().includes('opposition') ||
-    p.parameterName?.toLowerCase().includes('threat')
-  ) || [];
-
-  const conflictScore = conflictParams.length > 0 
-    ? conflictParams.reduce((sum, p) => sum + p.score, 0) / conflictParams.length 
-    : extractScore(reportData.categoryScores?.['Conflict']) || currentScore * 0.9;
-
-  const categoryScore = extractScore(reportData.categoryScores?.['Conflict']) || conflictScore;
-
-  // Derive power scores from actual parameter data
-  const getParamScore = (keywords: string[]) => {
-    const allParams = reportData.parameterScores || [];
-    const matched = allParams.filter(p => 
-      keywords.some(k => p.parameterName?.toLowerCase().includes(k) || p.displayName?.toLowerCase().includes(k))
-    );
-    return matched.length > 0 
-      ? Math.round(matched.reduce((sum, p) => sum + p.score, 0) / matched.length)
-      : Math.round(categoryScore);
-  };
-
-  const powerScores = {
-    physical: getParamScore(['threat', 'stakes', 'danger', 'physical']),
-    psychological: getParamScore(['psychology', 'manipulat', 'depth', 'complex']),
-    tactical: getParamScore(['tactical', 'strateg', 'intellig', 'plan']),
-    dramatic: getParamScore(['dramatic', 'tension', 'conflict', 'opposition']),
-  };
-
-  const avgPower = Math.round((powerScores.physical + powerScores.psychological + powerScores.tactical + powerScores.dramatic) / 4);
-
-  // AI-generated recommendations from CharacterAgent
-  const agentRecs = agentContent?.recommendations || [];
-
-  // Filter parameters based on stakeholder lens
-  const filteredConflictParams = filterParameters(conflictParams);
-  const filterStats = getFilterStats(conflictParams);
 
   // Find antagonist character from characters list as fallback
   const characters = reportData.characters || [];
   const sortedByPresence = [...characters].sort((a, b) => b.dialogueCount - a.dialogueCount);
   const antagonistCharacter = sortedByPresence[1] || null;
 
-  const antagonistName = antagonistProfile?.name || antagonistCharacter?.name || 'Antagonist';
+  // Filter antagonist/conflict-relevant parameters
+  const antagonistParams = useMemo(() => {
+    const params = reportData.parameterScores || [];
+    return params
+      .filter(p => 
+        p.category?.toLowerCase().includes('conflict') || 
+        p.category?.toLowerCase().includes('character') ||
+        ANTAGONIST_KEYWORDS.some(k => 
+          p.parameterName?.toLowerCase().includes(k) || 
+          p.displayName?.toLowerCase().includes(k)
+        )
+      )
+      .map(p => ({
+        parameterName: p.parameterName,
+        displayName: p.displayName,
+        score: p.score,
+        rationale: p.rationale,
+        fixCost: p.fixCost as 'Low' | 'Medium' | 'High' | undefined,
+        evidence: p.evidence,
+        category: p.category,
+        weight: 1.0,
+      }));
+  }, [reportData.parameterScores]);
+
+  // Calculate section score
+  const sectionScore = useMemo(() => {
+    if (antagonistParams.length === 0) {
+      return extractScore(reportData.categoryScores?.['Conflict']) || 
+             extractScore(reportData.categoryScores?.['Character']) || 
+             currentScore;
+    }
+    return Math.round(antagonistParams.reduce((sum, p) => sum + p.score, 0) / antagonistParams.length);
+  }, [antagonistParams, reportData.categoryScores, currentScore]);
+
+  const filteredParams = filterParameters(antagonistParams);
+  const filterStats = getFilterStats(antagonistParams);
+  const basePath = window.location.pathname.split('/characters')[0];
+
+  // AI recommendations
+  const agentRecs = agentContent?.recommendations || [];
+
+  if (!context) {
+    return <div className="text-center py-12 text-muted-foreground">Loading...</div>;
+  }
 
   return (
     <div className="space-y-8">
+      {/* Section Header */}
       <SectionHeader
         title="Antagonist Analysis"
         subtitle="Evaluating the opposition's power, motivation, and dramatic function"
         icon={UserX}
-        score={categoryScore}
-      />
+        score={sectionScore}
+      >
+        <InlineMaturity score={sectionScore} />
+      </SectionHeader>
 
       {/* Stakeholder Filter Notice */}
       {isFiltered && stakeholderLens && (
@@ -101,34 +104,13 @@ export default function AntagonistAnalysis() {
         />
       )}
 
-      {/* Power Breakdown */}
-      <div className="grid md:grid-cols-5 gap-4">
-        <Card className="p-5 text-center">
-          <Sword className="h-5 w-5 mx-auto mb-2 text-destructive" />
-          <p className="text-sm text-muted-foreground mb-1">Physical</p>
-          <ScoreDisplay score={powerScores.physical} size="sm" showLabel={false} />
-        </Card>
-        <Card className="p-5 text-center">
-          <Brain className="h-5 w-5 mx-auto mb-2 text-chart-6" />
-          <p className="text-sm text-muted-foreground mb-1">Psychological</p>
-          <ScoreDisplay score={powerScores.psychological} size="sm" showLabel={false} />
-        </Card>
-        <Card className="p-5 text-center">
-          <Target className="h-5 w-5 mx-auto mb-2 text-chart-4" />
-          <p className="text-sm text-muted-foreground mb-1">Tactical</p>
-          <ScoreDisplay score={powerScores.tactical} size="sm" showLabel={false} />
-        </Card>
-        <Card className="p-5 text-center">
-          <Zap className="h-5 w-5 mx-auto mb-2 text-chart-2" />
-          <p className="text-sm text-muted-foreground mb-1">Dramatic</p>
-          <ScoreDisplay score={powerScores.dramatic} size="sm" showLabel={false} />
-        </Card>
-        <Card className="p-5 text-center bg-primary/5 border-primary/20">
-          <Shield className="h-5 w-5 mx-auto mb-2 text-primary" />
-          <p className="text-sm text-muted-foreground mb-1">Overall</p>
-          <ScoreDisplay score={avgPower} size="sm" />
-        </Card>
-      </div>
+      {/* Diagnosis Summary — 3-column grid */}
+      <DiagnosisSummary
+        parameters={antagonistParams}
+        categoryName="Antagonist"
+        developmentLink={`${basePath}/development`}
+        stakeholderLens={stakeholderLens}
+      />
 
       {/* Antagonist Profile from AI */}
       {antagonistProfile && (
@@ -136,20 +118,38 @@ export default function AntagonistAnalysis() {
           <SubSectionHeader title={`${antagonistProfile.name} — Antagonist Profile`} />
           <div className="grid md:grid-cols-2 gap-6">
             <div className="space-y-4">
-              <div>
-                <p className="text-sm text-muted-foreground">Motivation</p>
-                <p className="text-sm leading-relaxed">{antagonistProfile.motivation}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Threat Level</p>
-                <p className="text-sm leading-relaxed">{antagonistProfile.threat}</p>
-              </div>
+              {antagonistProfile.motivation && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Motivation</p>
+                  <p className="text-sm leading-relaxed">{antagonistProfile.motivation}</p>
+                </div>
+              )}
+              {antagonistProfile.threat && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Threat Level</p>
+                  <p className="text-sm leading-relaxed">{antagonistProfile.threat}</p>
+                </div>
+              )}
             </div>
-            <div>
-              <div>
-                <p className="text-sm text-muted-foreground">Complexity</p>
-                <p className="text-sm leading-relaxed">{antagonistProfile.complexity}</p>
-              </div>
+            <div className="space-y-4">
+              {antagonistProfile.complexity && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Complexity</p>
+                  <p className="text-sm leading-relaxed">{antagonistProfile.complexity}</p>
+                </div>
+              )}
+              {(antagonistProfile as any)?.want && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Want</p>
+                  <p className="text-sm leading-relaxed">{(antagonistProfile as any).want}</p>
+                </div>
+              )}
+              {(antagonistProfile as any)?.flaw && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Fatal Flaw</p>
+                  <p className="text-sm leading-relaxed">{(antagonistProfile as any).flaw}</p>
+                </div>
+              )}
             </div>
           </div>
         </Card>
@@ -183,72 +183,57 @@ export default function AntagonistAnalysis() {
               </div>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground mb-3">Power Analysis</p>
-              <div className="space-y-3">
-                <ScoreBar score={powerScores.physical} label="Physical Threat" showValue />
-                <ScoreBar score={powerScores.psychological} label="Psychological Manipulation" showValue />
-                <ScoreBar score={powerScores.tactical} label="Strategic Intelligence" showValue />
-                <ScoreBar score={powerScores.dramatic} label="Dramatic Weight" showValue />
-              </div>
+              {antagonistCharacter.arcSummary && (
+                <div>
+                  <p className="text-sm text-muted-foreground mb-2">Character Arc</p>
+                  <p className="text-sm leading-relaxed">{antagonistCharacter.arcSummary}</p>
+                </div>
+              )}
+              {antagonistCharacter.relationships && antagonistCharacter.relationships.length > 0 && (
+                <div className="mt-4">
+                  <p className="text-sm text-muted-foreground mb-2">Key Relationships</p>
+                  <div className="space-y-2">
+                    {antagonistCharacter.relationships.slice(0, 3).map((rel, idx) => (
+                      <div key={idx} className="flex items-center gap-2 text-sm">
+                        <span className="font-medium">{rel.character}</span>
+                        <span className="text-muted-foreground">— {rel.type}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </Card>
       )}
 
-      {/* Conflict Parameters */}
+      {/* Weighted Parameter Breakdown */}
       <WeightedParameterList
-        parameters={filteredConflictParams.map(p => ({ ...p, weight: 1.0 }))}
-        title="Conflict Parameters"
-        initiallyExpanded={true}
+        parameters={filteredParams.map(p => ({ ...p, weight: 1.0 }))}
+        title="Antagonist Parameter Breakdown"
+        initiallyExpanded={false}
         defaultVisibleCount={6}
       />
 
-      {/* Recommendations — AI-first, fallback to template */}
-      <Card className="p-6">
-        <SubSectionHeader title="Antagonist Recommendations" />
-        <div className="space-y-3">
-          {agentRecs.length > 0 ? (
-            agentRecs.map((rec, i) => {
-              const effortMap: Record<string, 'easy' | 'moderate' | 'difficult'> = { easy: 'easy', moderate: 'moderate', hard: 'difficult', difficult: 'difficult' };
-              return (
-                <RecommendationCard
-                  key={i}
-                  title={rec.title}
-                  description={rec.description}
-                  priority={rec.priority || 'medium'}
-                  effort={effortMap[rec.effort || 'moderate'] || 'moderate'}
-                />
-              );
-            })
-          ) : (
-            <>
-              {avgPower < 70 && (
-                <RecommendationCard
-                  title="Increase Threat Level"
-                  description="Give the antagonist more power, resources, or intelligence to make the protagonist's victory feel earned."
-                  priority={avgPower < 50 ? 'critical' : 'high'}
-                  effort="moderate"
-                  impact="Heightened dramatic tension"
-                />
-              )}
-              {powerScores.psychological < 60 && (
-                <RecommendationCard
-                  title="Add Psychological Depth"
-                  description="Develop the antagonist's worldview and motivation. The best villains believe they're the hero of their own story."
-                  priority="high"
-                  effort="moderate"
-                />
-              )}
-              <RecommendationCard
-                title="Mirror the Protagonist"
-                description="Consider how the antagonist represents an alternate path or dark reflection of the protagonist's journey."
-                priority="medium"
-                effort="easy"
-              />
-            </>
-          )}
-        </div>
-      </Card>
+      {/* Development Focus */}
+      {(() => {
+        const items = antagonistParams
+          .filter(p => p.score < 70)
+          .sort((a, b) => a.score - b.score)
+          .map(p => ({ title: p.displayName, description: p.rationale || '' }));
+        return items.length > 0 ? (
+          <DevelopmentFocus
+            sectionName="Antagonist"
+            items={items}
+            developmentPath={`${basePath}/development`}
+            stakeholderLens={stakeholderLens}
+            relatedSections={[
+              { label: 'Character Diagnosis', path: `${basePath}/characters` },
+              { label: 'Protagonist Analysis', path: `${basePath}/characters/protagonist` },
+            ]}
+          />
+        ) : null;
+      })()}
     </div>
   );
 }
