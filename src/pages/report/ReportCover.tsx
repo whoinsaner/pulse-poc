@@ -87,24 +87,31 @@ export default function ReportCover() {
     });
   }, [reportData.categoryScores]);
 
+  // Compute a fallback score from all available category scores
+  const overallCategoryAverage = useMemo(() => {
+    const scores = Object.values(reportData.categoryScores || {}).map(extractScore).filter(s => s > 0);
+    return scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : Math.round(currentScore * 10);
+  }, [reportData.categoryScores, currentScore]);
+
   // Get format-specific section if applicable
   const formatSection = useMemo(() => {
     const scriptType = metadata?.scriptType;
+    const getFormatScore = (keys: string[]) => {
+      const scores = keys.map(k => extractScore(reportData.categoryScores?.[k])).filter(s => s > 0);
+      return scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : overallCategoryAverage;
+    };
+
     if (scriptType === 'web_series') {
-      return { id: 'format', label: 'Web Series', icon: Monitor, path: '/format', score: extractScore(reportData.categoryScores?.['Web Series']) };
+      return { id: 'format', label: 'Web Series', icon: Monitor, path: '/format', score: getFormatScore(['Web Series', 'Web Series Format']) };
     }
     if (scriptType === 'micro_drama') {
-      return { id: 'format', label: 'Micro Drama', icon: Smartphone, path: '/format', score: extractScore(reportData.categoryScores?.['Micro Drama']) };
+      return { id: 'format', label: 'Micro Drama', icon: Smartphone, path: '/format', score: getFormatScore(['Micro Drama', 'Micro Drama Format']) };
     }
     if (scriptType === 'comic') {
-      // Calculate average comic score from comic-specific categories
-      const comicCategories = ['Comic Visuals', 'Comic Dialogue', 'Comic Pacing', 'Comic Collaboration'];
-      const comicScores = comicCategories.map(cat => extractScore(reportData.categoryScores?.[cat])).filter(s => s > 0);
-      const avgComicScore = comicScores.length > 0 ? comicScores.reduce((a, b) => a + b, 0) / comicScores.length : 0;
-      return { id: 'format', label: 'Comic', icon: LayoutPanelTop, path: '/format', score: avgComicScore };
+      return { id: 'format', label: 'Comic', icon: LayoutPanelTop, path: '/format', score: getFormatScore(['Comic Visuals', 'Comic Dialogue', 'Comic Pacing', 'Comic Collaboration']) };
     }
     return null;
-  }, [metadata?.scriptType, reportData.categoryScores]);
+  }, [metadata?.scriptType, reportData.categoryScores, overallCategoryAverage]);
 
   // Get top working and needs-work items
   const topWorking = diagnostics.working.slice(0, 3).map(p => p.displayName);
