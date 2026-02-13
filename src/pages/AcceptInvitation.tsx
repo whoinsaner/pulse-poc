@@ -54,48 +54,31 @@ export default function AcceptInvitation() {
       }
 
       try {
-        const { data, error: fetchError } = await supabase
-          .from('invitations')
-          .select(`
-            id,
-            email,
-            role,
-            expires_at,
-            accepted_at,
-            organizations:organization_id (
-              name,
-              logo_url
-            )
-          `)
-          .eq('token', token)
-          .single();
+        const { data: fnData, error: fnError } = await supabase.functions.invoke(
+          'validate-invitation',
+          { body: { token } }
+        );
 
-        if (fetchError || !data) {
+        if (fnError) {
           setError('Invitation not found');
           setLoading(false);
           return;
         }
 
-        if (data.accepted_at) {
-          setError('This invitation has already been used');
-          setLoading(false);
-          return;
-        }
-
-        if (new Date(data.expires_at) < new Date()) {
-          setError('This invitation has expired');
+        if (fnData.error) {
+          setError(fnData.error);
           setLoading(false);
           return;
         }
 
         setInvitation({
-          id: data.id,
-          email: data.email,
-          role: data.role as AppRole,
-          expires_at: data.expires_at,
-          organization: data.organizations as unknown as { name: string; logo_url: string | null },
+          id: fnData.id,
+          email: fnData.email,
+          role: fnData.role as AppRole,
+          expires_at: fnData.expires_at,
+          organization: fnData.organization as { name: string; logo_url: string | null },
         });
-        setEmail(data.email);
+        setEmail(fnData.email);
       } catch (err) {
         console.error('Error fetching invitation:', err);
         setError('Failed to load invitation');
