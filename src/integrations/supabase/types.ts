@@ -166,7 +166,10 @@ export type Database = {
           error_message: string | null
           id: string
           initiated_by: string
+          max_retries: number
+          parent_run_id: string | null
           quality_mode: string | null
+          retry_count: number
           script_id: string
           stakeholder_lens: string | null
           started_at: string | null
@@ -179,7 +182,10 @@ export type Database = {
           error_message?: string | null
           id?: string
           initiated_by: string
+          max_retries?: number
+          parent_run_id?: string | null
           quality_mode?: string | null
+          retry_count?: number
           script_id: string
           stakeholder_lens?: string | null
           started_at?: string | null
@@ -192,13 +198,23 @@ export type Database = {
           error_message?: string | null
           id?: string
           initiated_by?: string
+          max_retries?: number
+          parent_run_id?: string | null
           quality_mode?: string | null
+          retry_count?: number
           script_id?: string
           stakeholder_lens?: string | null
           started_at?: string | null
           status?: Database["public"]["Enums"]["analysis_status"]
         }
         Relationships: [
+          {
+            foreignKeyName: "analysis_runs_parent_run_id_fkey"
+            columns: ["parent_run_id"]
+            isOneToOne: false
+            referencedRelation: "analysis_runs"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "analysis_runs_script_id_fkey"
             columns: ["script_id"]

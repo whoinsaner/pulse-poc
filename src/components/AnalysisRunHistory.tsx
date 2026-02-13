@@ -16,7 +16,10 @@ import {
   Sparkles,
   Zap,
   BarChart3,
+  RotateCcw,
 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/lib/auth';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow, format } from 'date-fns';
 import type { AnalysisStatus, StakeholderLens, LENS_CONFIG } from '@/types/database';
@@ -39,6 +42,9 @@ interface AnalysisRun {
   completed_at: string | null;
   error_message: string | null;
   agent_progress: Record<string, AgentProgress> | null;
+  retry_count: number;
+  max_retries: number;
+  parent_run_id: string | null;
   report?: {
     id: string;
     overall_score: number | null;
@@ -52,8 +58,11 @@ interface AnalysisRunHistoryProps {
 
 export function AnalysisRunHistory({ scriptId, scriptTitle }: AnalysisRunHistoryProps) {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [runs, setRuns] = useState<AnalysisRun[]>([]);
   const [loading, setLoading] = useState(true);
+  const [retrying, setRetrying] = useState<string | null>(null);
 
   useEffect(() => {
     fetchRuns();
@@ -74,6 +83,9 @@ export function AnalysisRunHistory({ scriptId, scriptTitle }: AnalysisRunHistory
           completed_at,
           error_message,
           agent_progress,
+          retry_count,
+          max_retries,
+          parent_run_id,
           reports (
             id,
             overall_score
@@ -87,6 +99,9 @@ export function AnalysisRunHistory({ scriptId, scriptTitle }: AnalysisRunHistory
       const formattedRuns = (data || []).map(run => ({
         ...run,
         agent_progress: run.agent_progress as unknown as Record<string, AgentProgress> | null,
+        retry_count: (run as any).retry_count ?? 0,
+        max_retries: (run as any).max_retries ?? 3,
+        parent_run_id: (run as any).parent_run_id ?? null,
         report: Array.isArray(run.reports) && run.reports.length > 0 ? run.reports[0] : undefined,
       }));
 
@@ -95,6 +110,53 @@ export function AnalysisRunHistory({ scriptId, scriptTitle }: AnalysisRunHistory
       console.error('Error fetching analysis runs:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const retryRun = async (failedRun: AnalysisRun) => {
+    if (!user) return;
+    setRetrying(failedRun.id);
+    try {
+      // Create a new run linked to the failed one
+      const { data: newRun, error: createError } = await supabase
+        .from('analysis_runs')
+        .insert({
+          script_id: scriptId,
+          initiated_by: user.id,
+          status: 'pending' as const,
+          stakeholder_lens: failedRun.stakeholder_lens,
+          quality_mode: failedRun.quality_mode,
+          retry_count: failedRun.retry_count + 1,
+          max_retries: failedRun.max_retries,
+          parent_run_id: failedRun.parent_run_id || failedRun.id,
+        })
+        .select()
+        .single();
+
+      if (createError) throw createError;
+
+      // Trigger analysis
+      const { error: invokeError } = await supabase.functions.invoke('analyze-script', {
+        body: {
+          scriptId,
+          analysisRunId: newRun.id,
+          mode: 'deep',
+          qualityMode: failedRun.quality_mode || 'balanced',
+          forceAnalysis: false,
+          resume: false,
+          stakeholderLens: failedRun.stakeholder_lens || null,
+        },
+      });
+
+      if (invokeError) throw invokeError;
+
+      toast({ title: 'Retry queued', description: `Attempt ${failedRun.retry_count + 2} of ${failedRun.max_retries + 1} started.` });
+      fetchRuns();
+    } catch (err) {
+      console.error('Retry failed:', err);
+      toast({ title: 'Retry failed', description: err instanceof Error ? err.message : 'Unknown error', variant: 'destructive' });
+    } finally {
+      setRetrying(null);
     }
   };
 
@@ -304,16 +366,38 @@ export function AnalysisRunHistory({ scriptId, scriptTitle }: AnalysisRunHistory
                         )}
                       </div>
 
-                      {run.status === 'completed' && run.report && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => navigate(`/report/${run.id}`)}
-                        >
-                          <Eye className="h-4 w-4 mr-1" />
-                          View
-                        </Button>
-                      )}
+                      <div className="flex flex-col gap-1">
+                        {run.status === 'completed' && run.report && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => navigate(`/report/${run.id}`)}
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            View
+                          </Button>
+                        )}
+                        {run.status === 'failed' && run.retry_count < run.max_retries && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={retrying === run.id}
+                            onClick={() => retryRun(run)}
+                          >
+                            {retrying === run.id ? (
+                              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                            ) : (
+                              <RotateCcw className="h-4 w-4 mr-1" />
+                            )}
+                            Retry
+                          </Button>
+                        )}
+                        {run.retry_count > 0 && (
+                          <Badge variant="outline" className="text-[10px] justify-center">
+                            Attempt {run.retry_count + 1}/{run.max_retries + 1}
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );
