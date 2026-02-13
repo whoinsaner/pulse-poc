@@ -1965,7 +1965,15 @@ serve(async (req) => {
           /^(BIKE|CAR|TRUCK|BUS|VEHICLE|TEMPO|AUTO|PHONE|LETTER|NOTE|SIGN|BOARD)\s*(ON|IN|AT|BY)?\s/i,
           /^(EK|DO|TEEN|CHAR|PAANCH|CHHEH|SAAT|AATH|NAU|DAS)\s+(SAAL|DIN|RAAT|GHANTE|MAHINE|HAFTE)/i,
           /^(DOOSRI|TEESRI|CHAUTHI|PAANCHVI)\s+(RAAT|SUBAH|SHAAM|DIN)/i,
-          /^(ALL\s+THREE|ALL\s+FOUR|EVERYONE|EVERYBODY|CROWD|GROUP|PEOPLE|BOTH)$/i,
+          /^(ALL\s+THREE|ALL\s+FOUR|ALL\s+\w+S?|EVERYONE|EVERYBODY|CROWD|GROUP|PEOPLE|BOTH)$/i,
+          // Gerund-led action phrases (e.g., "Counting the Money", "Looking Around")
+          /^[A-Z][a-z]*ing\s+/,
+          // Stage directions / editorial markers
+          /^(QUICK\s+MONTAGE|ENDING\s+(MOMENT|SHOT|SCENE)|SONG\s+(ENDS|STARTS|BEGINS|PLAYS)|INTERVAL|INTERMISSION)$/i,
+          // Reactive phrases (e.g., "Lenders React", "Crowd Cheers")
+          /\s+(REACT|REACTS|CHEER|CHEERS|GASP|GASPS|LAUGH|LAUGHS|SCREAM|SCREAMS|CRY|CRIES)$/i,
+          // Sentence-like phrases with articles/prepositions in the middle
+          /^[A-Z][a-z]+\s+(the|a|an|his|her|their|its|this|that|to|in|on|at|of|for|with|is|are|was|were|has|have|had|can|will|does|do|did|not|no|but|and|or|so|if|as|up|out|off)\s+/i,
           /\.\s*$/,  // Ends with period (likely a sentence, not a character name)
           /^(STREE|SHAMSHAAN)$/i,  // Script-specific title/location
           // Prepositional phrases - not character names
@@ -1982,6 +1990,8 @@ serve(async (req) => {
             'BIKE', 'CAR', 'PHONE', 'TEMPO', 'PASSAGE', 'CELLAR',
             'STAND', 'WALL', 'GATE', 'DOOR', 'WINDOW', 'STAIRS', 'STEP',
             'CONCESSION', 'ASSISTANT', 'ANNOUNCER', 'NARRATOR', 'VOICE',
+            'INTERVAL', 'INTERMISSION', 'FAMILY', 'MESSAGE', 'MOMENT', 'ENDING',
+            'SONG', 'MUSIC', 'SILENCE', 'PAUSE', 'BEAT', 'MONTAGE',
             'RUINS', 'TEMPLE', 'FORT', 'PALACE', 'MANSION', 'HAVELI', 'MAHAL',
             'JUNGLE', 'FOREST', 'RIVER', 'LAKE', 'POND', 'WELL', 'BRIDGE',
             'MARKET', 'BAZAAR', 'CHOWK', 'GHAT', 'MANDIR', 'MASJID', 'CHURCH',
