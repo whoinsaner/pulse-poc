@@ -141,10 +141,14 @@ export default function ModelConfiguration() {
         .order('is_system', { ascending: false });
 
       if (configError) throw configError;
-      setConfigurations(configs || []);
+      // Filter out legacy "fast" and "balanced" system presets, keep only "quality"
+      const filteredConfigs = (configs || []).filter(c => 
+        !c.is_system || c.name === 'quality'
+      );
+      setConfigurations(filteredConfigs);
 
-      if (configs && configs.length > 0) {
-        const defaultConfig = configs.find(c => c.is_default) || configs[0];
+      if (filteredConfigs.length > 0) {
+        const defaultConfig = filteredConfigs.find(c => c.is_default) || filteredConfigs[0];
         setSelectedConfig(defaultConfig);
         await fetchMappings(defaultConfig.id, (agents || []) as AgentConfig[]);
       }
