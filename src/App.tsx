@@ -87,7 +87,9 @@ import CommercialDiagnosis from "./pages/report/CommercialDiagnosis";
 import DevelopmentPriorities from "./pages/report/DevelopmentPriorities";
 import Reports from "./pages/Reports";
 import Team from "./pages/Team";
-import ParametersAgents from "./pages/ParametersAgents";
+import ParametersOverview from "./pages/settings/ParametersOverview";
+import ParametersSchema from "./pages/settings/ParametersSchema";
+import ParametersWeights from "./pages/settings/ParametersWeights";
 import FrameworkDocumentation from "./pages/FrameworkDocumentation";
 import NotFound from "./pages/NotFound";
 import TestComicAnalysis from "./pages/TestComicAnalysis";
@@ -129,7 +131,9 @@ const App = () => (
               <Route path="team" element={<Team />} />
               <Route path="models" element={<ModelConfiguration />} />
               <Route path="agents" element={<AgentConfiguration />} />
-              <Route path="parameters" element={<ParametersAgents />} />
+              <Route path="parameters" element={<ParametersOverview />} />
+              <Route path="parameters/schema" element={<ParametersSchema />} />
+              <Route path="parameters/weights" element={<ParametersWeights />} />
               <Route path="features" element={<FeaturesSettings />} />
             </Route>
             <Route path="/invite/:token" element={<AcceptInvitation />} />
@@ -461,7 +465,7 @@ const App = () => (
             <Route path="/admin/agents" element={<Navigate to="/settings/agents" replace />} />
             <Route path="/team" element={<Navigate to="/settings/team" replace />} />
             <Route path="/parameters" element={<Navigate to="/settings/parameters" replace />} />
-            <Route path="/test-pipeline" element={<Navigate to="/settings/test-pipeline" replace />} />
+            <Route path="/test-pipeline" element={<Navigate to="/settings/parameters" replace />} />
             <Route path="/test-comic-pipeline" element={<TestComicAnalysis />} />
             <Route path="*" element={<NotFound />} />
             <Route path="*" element={<NotFound />} />
