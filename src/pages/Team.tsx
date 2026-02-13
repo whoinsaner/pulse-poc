@@ -85,9 +85,9 @@ export default function Team() {
         setMembers(memberData as unknown as TeamMember[]);
       }
 
-      // Fetch pending invitations
+      // Fetch pending invitations (using safe view that excludes tokens)
       const { data: inviteData, error: inviteError } = await supabase
-        .from('invitations')
+        .from('invitations_safe' as any)
         .select('*')
         .eq('organization_id', currentOrganization.id)
         .is('accepted_at', null)
@@ -96,7 +96,7 @@ export default function Team() {
       if (inviteError) {
         console.error('Error fetching invitations:', inviteError);
       } else {
-        setInvitations(inviteData || []);
+        setInvitations((inviteData || []) as unknown as Invitation[]);
       }
 
       setLoading(false);
@@ -155,15 +155,15 @@ export default function Team() {
       setInviteEmailError(null);
       setInviteRole('viewer');
 
-      // Refresh invitations
+      // Refresh invitations (using safe view that excludes tokens)
       const { data } = await supabase
-        .from('invitations')
+        .from('invitations_safe' as any)
         .select('*')
         .eq('organization_id', currentOrganization.id)
         .is('accepted_at', null)
         .gt('expires_at', new Date().toISOString());
       
-      setInvitations(data || []);
+      setInvitations((data || []) as unknown as Invitation[]);
     } catch (err) {
       console.error('Error sending invitation:', err);
       toast({
