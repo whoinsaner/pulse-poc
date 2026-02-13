@@ -296,6 +296,21 @@ export function AnalysisTrigger({
     }
   }, [resumeRunId, user]);
 
+  // Auto-skip to stakeholder selector when no custom configs exist
+  useEffect(() => {
+    if (
+      customConfigs.length === 0 &&
+      isExtractionComplete === true &&
+      !isAnalyzing &&
+      status === 'pending' &&
+      !showStakeholderSelector &&
+      !pendingAnalysisMode &&
+      !resumeRunId
+    ) {
+      initiateAnalysis(false, 'deep');
+    }
+  }, [customConfigs, isExtractionComplete, isAnalyzing, status, showStakeholderSelector, pendingAnalysisMode, resumeRunId]);
+
   const startAnalysis = async (forceAnalysis = false, mode: 'quick' | 'deep' = 'deep', resume = false, existingRunId?: string, stakeholderLens?: StakeholderLens | null) => {
     if (!user) {
       toast({
@@ -535,13 +550,12 @@ export function AnalysisTrigger({
     }
 
     // If no custom configs, skip the config selector and go straight to stakeholder selection
-    if (customConfigs.length === 0) {
-      // Auto-trigger stakeholder selector immediately
-      if (!showStakeholderSelector && !pendingAnalysisMode) {
-        initiateAnalysis(false, 'deep');
-        return null;
-      }
-      return null;
+    if (customConfigs.length === 0 && !showStakeholderSelector && !pendingAnalysisMode) {
+      return (
+        <div className="flex items-center justify-center py-4">
+          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        </div>
+      );
     }
 
     return (
