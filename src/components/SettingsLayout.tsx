@@ -13,7 +13,6 @@ import {
   Cpu,
   Bot,
   Layers,
-  FlaskConical,
   Sparkles,
 } from 'lucide-react';
 
@@ -24,7 +23,6 @@ const NAV_ITEMS = [
   { label: 'AI Models', path: '/settings/models', icon: Cpu, adminOnly: true },
   { label: 'Agent Prompts', path: '/settings/agents', icon: Bot, adminOnly: true },
   { label: 'Parameters & Agents', path: '/settings/parameters', icon: Layers, adminOnly: false },
-  { label: 'Test Pipeline', path: '/settings/test-pipeline', icon: FlaskConical, adminOnly: false },
   { label: 'Features', path: '/settings/features', icon: Sparkles, adminOnly: false },
 ];
 
