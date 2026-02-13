@@ -1416,12 +1416,14 @@ serve(async (req) => {
         let usedAIRescue = false;
         let extractionMethod = 'regex';
         let actualPdfPageCount: number | null = null; // Track actual PDF structure page count
+        let extractedText = ''; // Outer scope so finalize stage can save it for analyze-script
         
         if (['fountain', 'highland', 'txt'].includes(format)) {
           // Text-based formats - parse directly
           console.log(`[script-parser-stream] Processing text-based format: ${format}`);
           const textContent = await fileData.text();
           rawText = textContent;
+          extractedText = textContent; // Make available for finalize stage
           console.log(`[script-parser-stream] Text content length: ${textContent.length} chars`);
           
           sendSSE(controller, 'progress', { stage: 'extract', percent: 50, message: 'Parsing text content...' });
@@ -1494,7 +1496,7 @@ serve(async (req) => {
           
           sendSSE(controller, 'progress', { stage: 'extract', percent: 15, message: 'Extracting text from document...' });
           
-          let extractedText = '';
+          extractedText = '';
           let extractionSuccess = false;
           
           if (format === 'pdf') {
