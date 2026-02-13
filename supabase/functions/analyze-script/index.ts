@@ -2401,7 +2401,11 @@ serve(async (req) => {
             );
           }
 
-          // Run synthesis agents with timeout protection (skip if already completed on resume)
+          // ============= OPTIMIZATION 9: Overlap synthesis with analysis =============
+          // StakeholderLensAgent is pure DB computation (no AI call) - run immediately after analysis
+          // InsightSynthesisAgent reads from parameter_scores which are written as each agent completes
+          // So we can start it as soon as enough scores exist (i.e., right after analysis completes)
+          
           const { data: currentRun } = await supabase
             .from('analysis_runs')
             .select('agent_progress')
@@ -2409,7 +2413,7 @@ serve(async (req) => {
             .single();
           const currentProgress = (currentRun?.agent_progress || {}) as Record<string, any>;
 
-          // Batch-load synthesis agent model configs to avoid per-agent DB queries
+          // Batch-load synthesis agent model configs
           const synthesisConfigId = isUUID(qualityMode) 
             ? qualityMode 
             : SYSTEM_PRESET_CONFIG_IDS[qualityMode] || SYSTEM_PRESET_CONFIG_IDS['balanced'];
@@ -2436,7 +2440,7 @@ serve(async (req) => {
             console.log('[analyze-script] Synthesis config batch-load failed, will use per-agent lookup');
           }
 
-          // Run synthesis agents in PARALLEL for speed
+          // Run StakeholderLens + InsightSynthesis in parallel (no sequential dependency)
           const synthesisPromises: Promise<void>[] = [];
 
           if (currentProgress['InsightSynthesisAgent']?.status !== 'completed') {
@@ -2469,7 +2473,7 @@ serve(async (req) => {
             console.log('[analyze-script] Skipping StakeholderLensAgent (already completed)');
           }
 
-          // Wait for all synthesis agents to complete in parallel
+          // Wait for all synthesis agents
           if (synthesisPromises.length > 0) {
             console.log(`[analyze-script] Running ${synthesisPromises.length} synthesis agents in parallel`);
             await Promise.all(synthesisPromises);
@@ -2970,17 +2974,17 @@ async function runStandardAnalysis(
     BATCH_SIZE = agentCount;
     BATCH_DELAY_MS = 0;
   } else if (agentCount <= 8) {
-    // Small scripts / micro dramas
-    BATCH_SIZE = 6;
-    BATCH_DELAY_MS = 500;
+    // Small scripts / micro dramas - run all at once with minimal delay
+    BATCH_SIZE = agentCount;
+    BATCH_DELAY_MS = 0;
   } else if (agentCount <= 16) {
-    // Medium scripts (6-30 pages) - reduced from 1000ms to 500ms
-    BATCH_SIZE = 5; // Increased from 4 to reduce total batches
-    BATCH_DELAY_MS = 500;
+    // Medium scripts - aggressive batching for speed
+    BATCH_SIZE = 7; // Increased from 5 to reduce total batches (2 batches for 14 agents)
+    BATCH_DELAY_MS = 200; // Reduced from 500ms
   } else {
     // Large scripts (30+ pages)
-    BATCH_SIZE = 4; // Increased from 3
-    BATCH_DELAY_MS = 1000; // Reduced from 2000ms
+    BATCH_SIZE = 6; // Increased from 4
+    BATCH_DELAY_MS = 500; // Reduced from 1000ms
   }
   
   console.log(`[analyze-script] Adaptive batching: ${agentCount} agents, batch_size=${BATCH_SIZE}, delay=${BATCH_DELAY_MS}ms`);
