@@ -1,70 +1,65 @@
+# Auto-Select Script Type on Upload
 
-# Pipeline Performance and Resilience Optimizations
+## Overview
 
-## Current Bottlenecks Identified
+Add an AI-powered auto-detection step that runs when the user drops/selects a file, automatically pre-selecting the correct script type (feature, comic, web_series, etc.) before they click "Upload & Parse."
 
-1. **Redundant DB queries per agent**: Every `runSingleAgent` call fetches `organization_id` from `analysis_runs` joined with `scripts` -- the same query repeated 10-16 times per run.
-2. **`updateAgentProgress` is read-then-write**: Each status update does a SELECT then an UPDATE on `analysis_runs.agent_progress` (a JSONB column). With agents running in parallel, this creates race conditions and ~2 DB round-trips per update.
-3. **`getAgentModelConfig` hits DB per agent**: Each agent queries `agent_model_mappings` individually -- 10-16 identical queries (same `config_id`, different `agent_name`) that could be a single batch query.
-4. **Sequential score inserts**: After each agent completes, parameter scores are inserted one-by-one in a loop rather than batched.
-5. **Scene count query is done twice**: Lines 2362-2372 query scene count with two separate approaches back-to-back.
-6. **3-second batch delay is still used for large scripts**: Even for medium scripts (e.g., 20 pages) with simple structure, the conservative 3s delay adds 15+ seconds of idle time.
+## How It Works
 
-## Proposed Optimizations
-
-### Optimization 1: Hoist organization_id lookup (eliminate N redundant queries)
-- Fetch `organization_id` once before entering the agent loop in `runStandardAnalysis`
-- Pass it as a parameter to `runSingleAgent` instead of each agent querying it independently
-- Saves 10-16 DB round-trips per run
-
-### Optimization 2: Batch-load all model configs upfront
-- Before the agent loop, query `agent_model_mappings` for ALL agent names in one query filtered by `config_id`
-- Build a local map and use it in `runSingleAgent` instead of per-agent DB calls
-- Saves 10-16 DB round-trips per run
-
-### Optimization 3: Batch-load all prompt configs upfront
-- Similarly, query `agent_configurations` for all active agent names in one query (org-specific first, then system fallback)
-- Build a local map; each agent just does a map lookup
-- Saves 10-16 DB round-trips per run
-
-### Optimization 4: Batch insert parameter scores
-- After each agent completes, collect all scores into an array and do a single `.insert([...scores])` call instead of looping
-- Saves 5-10 DB round-trips per agent (50-100+ total per run)
-
-### Optimization 5: Reduce updateAgentProgress race conditions
-- Use a Postgres `jsonb_set` via `.rpc()` or a raw update with JSON path operators instead of read-modify-write
-- Alternative: queue progress updates and flush them periodically (e.g., every 2 seconds) to reduce total DB calls
-- This prevents parallel agents from overwriting each other's progress
-
-### Optimization 6: Adaptive batch delays based on script size
-- Currently: small scripts get 1s delay, large scripts get 3s
-- Proposed tiered approach:
-  - Scripts with 5 or fewer pages: 0ms delay, run all agents at once (single batch)
-  - Scripts with 6-30 pages: 1s delay, batch size 4
-  - Scripts with 30+ pages: 2s delay, batch size 3
-- This reduces idle time for medium scripts by ~30%
-
-### Optimization 7: Deduplicate scene count query
-- Replace the two sequential scene count queries (lines 2362-2372) with a single `select('*', { count: 'exact', head: true })` call
-
-### Optimization 8: Graceful degradation for non-critical agents
-- If a non-critical agent (e.g., SceneEnrichmentAgent, MarketAgent) fails after retries, continue without blocking the pipeline
-- Currently this is mostly handled, but explicitly categorize agents as "critical" vs "supplementary" so failures in supplementary agents don't inflate error messages or confuse users
-- Add a `partialFailures` field to the report metadata listing which agents failed, so the UI can show targeted "re-run X agent" options
+1. **On file drop**: After the file is selected, extract a text sample from it client-side (first ~5KB for .txt/.fountain/.highland; for PDFs, use the file's raw bytes sent to a lightweight edge function).
+2. **Call a new edge function** (`classify-script-type`) that reuses the existing `classifyScriptType` AI logic (Gemini Flash Lite) to return a predicted type + confidence score.
+3. **Auto-select the type** in the UI with a visual indicator showing it was AI-suggested (e.g., a small sparkle icon + "Auto-detected" badge). The user can still override it manually.
 
 ## Technical Details
 
-### Files to modify:
-- `supabase/functions/analyze-script/index.ts` -- all optimizations target this single file
+### 1. New Edge Function: `classify-script-type`
 
-### Estimated impact:
-- Optimizations 1-4 combined: **save 80-150+ DB round-trips per analysis run**
-- Optimization 6: **save 5-15 seconds of idle time** for medium scripts
-- Optimization 5: **eliminate race conditions** in progress tracking for parallel agents
-- Optimization 8: **improve perceived reliability** by surfacing partial results cleanly
+- Accepts a text sample (string, max ~5KB) via POST
+- Runs the existing Gemini Flash Lite classification prompt (already proven in `script-parser-stream`)
+- Returns `{ scriptType: string, confidence: number }`
+- Lightweight and fast (~1-2s response time)
 
-### Risk mitigation:
-- All optimizations are backward-compatible (no schema changes, no new tables)
-- Batch queries use the same Supabase client methods, just with broader filters
-- The prompt/model config caching already exists (5-minute TTL), so upfront loading is a natural extension
-- Progress update changes will be tested to ensure realtime UI updates still work
+### 2. Client-Side Text Extraction (ScriptUpload.tsx)
+
+- For text-based formats (.fountain, .txt, .highland): read the first 5KB using `FileReader.readAsText()`
+- For .fdx: read as text and extract dialogue/scene content from XML
+- For .pdf and .docx: send the raw file to the edge function which will handle extraction
+- Trigger classification in the `onDrop` callback after file selection
+
+### 3. UI Changes (ScriptUpload.tsx)
+
+- Add state: `autoDetectedType`, `classifying` (boolean), `classificationConfidence`
+- While classifying: show a subtle spinner next to "Script Type" label
+- On result: auto-set `scriptType` to the detected value; show an "Auto-detected" badge next to the selected type pill
+- Low confidence (<60%): don't auto-select, just show a suggestion tooltip
+- User can always click a different type to override (badge disappears on manual selection)
+
+### 4. Edge Function Implementation
+
+```
+POST /classify-script-type
+Body: { textSample: string, fileName: string }
+Response: { scriptType: string, confidence: number }
+```
+
+The function will:
+
+- Use the proven classification prompt from `classifyScriptType` in script-parser-stream
+- Use Gemini 2.5 Flash Lite for speed
+- Return result in under 2 seconds
+
+### 5. Handling PDFs and DOCX
+
+- For binary formats, the edge function will accept a base64-encoded chunk (first ~50KB of the file)
+- Use basic heuristics on the raw text extraction (PDF text layer) to get a sample
+- If no text can be extracted client-side, skip auto-detection (the parser will classify during parsing anyway)
+
+6. Prompt the user if the system classification is different from the user classification. Give the options to either change or accept the system selection. Take the confirmation from the user and move ahead.
+7. Put auto classification behind a feature flag with ability to turn it off at any point if not required. Add it to the configurations page for toggling the feature. 
+
+## What Stays the Same
+
+- User-selected type remains authoritative (per existing constraint)
+- The parser's built-in classification stage still runs as a safety net
+- All 12 script types remain supported
+- Episode length class selector still appears when web_series is selected (auto-detected or manual)
