@@ -9,9 +9,10 @@ import {
   DiagnosisSummary,
   WeightedParameterList,
   DevelopmentFocus,
+  ScoreDisplay,
 } from '@/components/report/ui';
 import { InlineMaturity } from '@/components/report/ui/MaturityBadge';
-import { UserX } from 'lucide-react';
+import { UserX, Shield, Brain, Zap, Target, Sword } from 'lucide-react';
 import { extractScore } from '@/lib/scoreUtils';
 import { useStakeholderFiltering } from '@/hooks/useStakeholderFiltering';
 import { StakeholderFilterNotice } from '@/components/report/StakeholderFilterNotice';
@@ -76,6 +77,26 @@ export default function AntagonistAnalysis() {
   const filterStats = getFilterStats(antagonistParams);
   const basePath = window.location.pathname.split('/characters')[0];
 
+  // Derive power scores from actual parameter data
+  const getParamScore = (keywords: string[]) => {
+    const allParams = reportData.parameterScores || [];
+    const matched = allParams.filter(p => 
+      keywords.some(k => p.parameterName?.toLowerCase().includes(k) || p.displayName?.toLowerCase().includes(k))
+    );
+    return matched.length > 0 
+      ? Math.round(matched.reduce((sum, p) => sum + p.score, 0) / matched.length)
+      : Math.round(sectionScore);
+  };
+
+  const powerScores = {
+    physical: getParamScore(['threat', 'stakes', 'danger', 'physical']),
+    psychological: getParamScore(['psychology', 'manipulat', 'depth', 'complex']),
+    tactical: getParamScore(['tactical', 'strateg', 'intellig', 'plan']),
+    dramatic: getParamScore(['dramatic', 'tension', 'conflict', 'opposition']),
+  };
+
+  const avgPower = Math.round((powerScores.physical + powerScores.psychological + powerScores.tactical + powerScores.dramatic) / 4);
+
   // AI recommendations
   const agentRecs = agentContent?.recommendations || [];
 
@@ -111,6 +132,35 @@ export default function AntagonistAnalysis() {
         developmentLink={`${basePath}/development`}
         stakeholderLens={stakeholderLens}
       />
+
+      {/* Power Breakdown Tiles */}
+      <div className="grid md:grid-cols-5 gap-4">
+        <Card className="p-5 text-center">
+          <Sword className="h-5 w-5 mx-auto mb-2 text-destructive" />
+          <p className="text-sm text-muted-foreground mb-1">Physical</p>
+          <ScoreDisplay score={powerScores.physical} size="sm" showLabel={false} />
+        </Card>
+        <Card className="p-5 text-center">
+          <Brain className="h-5 w-5 mx-auto mb-2 text-chart-6" />
+          <p className="text-sm text-muted-foreground mb-1">Psychological</p>
+          <ScoreDisplay score={powerScores.psychological} size="sm" showLabel={false} />
+        </Card>
+        <Card className="p-5 text-center">
+          <Target className="h-5 w-5 mx-auto mb-2 text-chart-4" />
+          <p className="text-sm text-muted-foreground mb-1">Tactical</p>
+          <ScoreDisplay score={powerScores.tactical} size="sm" showLabel={false} />
+        </Card>
+        <Card className="p-5 text-center">
+          <Zap className="h-5 w-5 mx-auto mb-2 text-chart-2" />
+          <p className="text-sm text-muted-foreground mb-1">Dramatic</p>
+          <ScoreDisplay score={powerScores.dramatic} size="sm" showLabel={false} />
+        </Card>
+        <Card className="p-5 text-center bg-primary/5 border-primary/20">
+          <Shield className="h-5 w-5 mx-auto mb-2 text-primary" />
+          <p className="text-sm text-muted-foreground mb-1">Overall</p>
+          <ScoreDisplay score={avgPower} size="sm" />
+        </Card>
+      </div>
 
       {/* Antagonist Profile from AI */}
       {antagonistProfile && (
