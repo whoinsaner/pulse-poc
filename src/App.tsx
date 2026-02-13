@@ -89,9 +89,8 @@ import Reports from "./pages/Reports";
 import Team from "./pages/Team";
 import ParametersAgents from "./pages/ParametersAgents";
 import FrameworkDocumentation from "./pages/FrameworkDocumentation";
-import TestAnalysisPipeline from "./pages/TestAnalysisPipeline";
-import TestComicAnalysis from "./pages/TestComicAnalysis";
 import NotFound from "./pages/NotFound";
+import TestComicAnalysis from "./pages/TestComicAnalysis";
 
 function ReportsRedirect() {
   const { runId } = useParams<{ runId: string }>();
@@ -131,7 +130,6 @@ const App = () => (
               <Route path="models" element={<ModelConfiguration />} />
               <Route path="agents" element={<AgentConfiguration />} />
               <Route path="parameters" element={<ParametersAgents />} />
-              <Route path="test-pipeline" element={<TestAnalysisPipeline />} />
               <Route path="features" element={<FeaturesSettings />} />
             </Route>
             <Route path="/invite/:token" element={<AcceptInvitation />} />
