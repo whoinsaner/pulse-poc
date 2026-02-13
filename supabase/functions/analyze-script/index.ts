@@ -2258,26 +2258,55 @@ serve(async (req) => {
 
       if (!hasStructuredData) {
         // Auto-enable fallback mode instead of throwing error
-        // This provides a better user experience - analysis should run with reduced accuracy rather than fail
         console.log('[analyze-script] Deep mode: No structured data found, auto-enabling fallback to raw text analysis');
         forceAnalysis = true;
-        
-        console.log('[analyze-script] Deep mode fallback: using raw text');
         usingFallbackMode = true;
         
+        // PRIORITY 1: Try to load pre-extracted text (saved by script-parser-stream)
+        // This avoids the P0 bug of feeding raw PDF binary to agents
         try {
-          const { data: fileData, error: downloadError } = await supabase.storage
+          const extractedTextPath = `${scriptId}/extracted.txt`;
+          console.log(`[analyze-script] Trying extracted text: ${extractedTextPath}`);
+          const { data: extractedData, error: extractedError } = await supabase.storage
             .from('scripts')
-            .download(normalizedFilePath);
+            .download(extractedTextPath);
           
-          if (!downloadError && fileData) {
-            rawScriptText = await fileData.text();
+          if (!extractedError && extractedData) {
+            rawScriptText = await extractedData.text();
+            console.log(`[analyze-script] Loaded pre-extracted text: ${rawScriptText.length} chars`);
             if (rawScriptText.length > 100000) {
               rawScriptText = rawScriptText.substring(0, 100000) + '\n\n[TEXT TRUNCATED...]';
             }
           }
         } catch (err) {
-          console.error('[analyze-script] Failed to load raw script text:', err);
+          console.log('[analyze-script] No pre-extracted text available:', err);
+        }
+        
+        // PRIORITY 2: Fall back to raw file download (only for non-PDF formats)
+        if (!rawScriptText) {
+          console.log('[analyze-script] Deep mode fallback: downloading raw file');
+          try {
+            const { data: fileData, error: downloadError } = await supabase.storage
+              .from('scripts')
+              .download(normalizedFilePath);
+            
+            if (!downloadError && fileData) {
+              const rawContent = await fileData.text();
+              
+              // CONTENT QUALITY GATE: Detect PDF binary and reject it
+              if (rawContent.startsWith('%PDF') || rawContent.includes('FlateDecode') || rawContent.includes('endstream')) {
+                console.warn('[analyze-script] Raw file is PDF binary - cannot use as script text. Skipping fallback.');
+                // Don't set rawScriptText - agents will work with whatever context is available
+              } else {
+                rawScriptText = rawContent;
+                if (rawScriptText.length > 100000) {
+                  rawScriptText = rawScriptText.substring(0, 100000) + '\n\n[TEXT TRUNCATED...]';
+                }
+              }
+            }
+          } catch (err) {
+            console.error('[analyze-script] Failed to load raw script text:', err);
+          }
         }
       }
 
