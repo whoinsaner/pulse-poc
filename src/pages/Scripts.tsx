@@ -404,9 +404,9 @@ export default function Scripts() {
             {scripts.map((script) => (
               <Card
                 key={script.id}
-                className="card-hover group"
+                className="card-hover group flex flex-col"
               >
-                <CardContent className="p-6">
+                <CardContent className="p-6 flex flex-col flex-1">
                   <div className="flex items-start justify-between mb-4">
                     <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
                       <Film className="h-6 w-6 text-primary" />
@@ -480,7 +480,7 @@ export default function Scripts() {
                   )}
 
                   {/* Action buttons on tile */}
-                  <div className="mt-4 flex items-center gap-2">
+                  <div className="mt-auto pt-4 flex items-center gap-2">
                     <Button
                       size="sm"
                       className="flex-1"
