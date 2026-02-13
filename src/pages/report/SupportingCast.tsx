@@ -1,12 +1,18 @@
+import { useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { ReportData, StakeholderLens } from '@/types/database';
 
 import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { 
   SectionHeader, 
   SubSectionHeader,
+  DiagnosisSummary,
+  WeightedParameterList,
+  DevelopmentFocus,
   ScoreBadge,
 } from '@/components/report/ui';
+import { InlineMaturity } from '@/components/report/ui/MaturityBadge';
 import { Users, MessageSquare, Film, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { extractScore } from '@/lib/scoreUtils';
@@ -15,10 +21,14 @@ interface ReportContextValue {
   reportData: ReportData;
   activeLens: StakeholderLens;
   currentScore: number;
+  stakeholderLens?: StakeholderLens | null;
 }
 
+const SUPPORTING_KEYWORDS = ['supporting', 'ensemble', 'cast', 'character'];
+
 export default function SupportingCast() {
-  const { reportData, currentScore } = useOutletContext<ReportContextValue>();
+  const context = useOutletContext<ReportContextValue>();
+  const { reportData, currentScore, stakeholderLens } = context;
   
   const characters = reportData.characters || [];
   const sortedCharacters = [...characters].sort((a, b) => b.dialogueCount - a.dialogueCount);
@@ -29,7 +39,34 @@ export default function SupportingCast() {
   const castBalance = totalDialogue > 0 ? (supportingDialogue / totalDialogue) * 100 : 0;
 
   const categoryScore = extractScore(reportData.categoryScores?.['Character']) || currentScore;
-  const agentContent = reportData.agentContent?.CharacterAgent;
+
+  // Filter supporting-cast-relevant parameters
+  const supportingParams = useMemo(() => {
+    const params = reportData.parameterScores || [];
+    return params
+      .filter(p => 
+        p.category?.toLowerCase().includes('character') ||
+        SUPPORTING_KEYWORDS.some(k => 
+          p.parameterName?.toLowerCase().includes(k) || 
+          p.displayName?.toLowerCase().includes(k)
+        )
+      )
+      .map(p => ({
+        parameterName: p.parameterName,
+        displayName: p.displayName,
+        score: p.score,
+        rationale: p.rationale,
+        fixCost: p.fixCost as 'Low' | 'Medium' | 'High' | undefined,
+        evidence: p.evidence,
+        category: p.category,
+        weight: 1.0,
+      }));
+  }, [reportData.parameterScores]);
+
+  const sectionScore = useMemo(() => {
+    if (supportingParams.length === 0) return categoryScore;
+    return Math.round(supportingParams.reduce((sum, p) => sum + p.score, 0) / supportingParams.length);
+  }, [supportingParams, categoryScore]);
 
   const assessedCast = supportingCast.map(char => {
     const dialogueShare = totalDialogue > 0 ? (char.dialogueCount / totalDialogue) * 100 : 0;
@@ -51,16 +88,33 @@ export default function SupportingCast() {
     };
   });
 
+  const basePath = window.location.pathname.split('/characters')[0];
+
+  if (!context) {
+    return <div className="text-center py-12 text-muted-foreground">Loading...</div>;
+  }
+
   return (
     <div className="space-y-8">
+      {/* Section Header */}
       <SectionHeader
         title="Supporting Cast"
         subtitle="Analyzing ensemble effectiveness, balance, and character utility"
         icon={Users}
-        score={categoryScore}
+        score={sectionScore}
+      >
+        <InlineMaturity score={sectionScore} />
+      </SectionHeader>
+
+      {/* Diagnosis Summary — 3-column grid */}
+      <DiagnosisSummary
+        parameters={supportingParams}
+        categoryName="Supporting Cast"
+        developmentLink={`${basePath}/development`}
+        stakeholderLens={stakeholderLens}
       />
 
-      {/* Cast Overview */}
+      {/* Cast Overview Stats */}
       <div className="grid md:grid-cols-4 gap-4">
         <Card className="p-5 text-center">
           <Users className="h-5 w-5 mx-auto mb-2 text-primary" />
@@ -137,27 +191,57 @@ export default function SupportingCast() {
       )}
 
       {/* Relationship Map */}
-      <Card className="p-6">
-        <SubSectionHeader title="Key Relationships" />
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {assessedCast.slice(0, 6).map((char, index) => (
-            <div key={index} className="p-4 rounded-lg bg-muted/30 border border-border/50">
-              <p className="font-display font-medium mb-2">{char.name}</p>
-              {char.relationships && char.relationships.length > 0 ? (
-                <div className="space-y-1">
-                  {char.relationships.slice(0, 2).map((rel, idx) => (
-                    <p key={idx} className="text-xs text-muted-foreground">
-                      → {rel.character}: <span className="text-foreground">{rel.type}</span>
-                    </p>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-xs text-muted-foreground">No defined relationships</p>
-              )}
-            </div>
-          ))}
-        </div>
-      </Card>
+      {assessedCast.some(c => c.relationships && c.relationships.length > 0) && (
+        <Card className="p-6">
+          <SubSectionHeader title="Key Relationships" />
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {assessedCast.slice(0, 6).map((char, index) => (
+              <div key={index} className="p-4 rounded-lg bg-muted/30 border border-border/50">
+                <p className="font-display font-medium mb-2">{char.name}</p>
+                {char.relationships && char.relationships.length > 0 ? (
+                  <div className="space-y-1">
+                    {char.relationships.slice(0, 2).map((rel, idx) => (
+                      <p key={idx} className="text-xs text-muted-foreground">
+                        → {rel.character}: <span className="text-foreground">{rel.type}</span>
+                      </p>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">No defined relationships</p>
+                )}
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* Weighted Parameter Breakdown */}
+      <WeightedParameterList
+        parameters={supportingParams}
+        title="Supporting Cast Parameter Breakdown"
+        initiallyExpanded={false}
+        defaultVisibleCount={6}
+      />
+
+      {/* Development Focus */}
+      {(() => {
+        const items = supportingParams
+          .filter(p => p.score < 70)
+          .sort((a, b) => a.score - b.score)
+          .map(p => ({ title: p.displayName, description: p.rationale || '' }));
+        return items.length > 0 ? (
+          <DevelopmentFocus
+            sectionName="Supporting Cast"
+            items={items}
+            developmentPath={`${basePath}/development`}
+            stakeholderLens={stakeholderLens}
+            relatedSections={[
+              { label: 'Character Diagnosis', path: `${basePath}/characters` },
+              { label: 'Protagonist', path: `${basePath}/characters/protagonist` },
+            ]}
+          />
+        ) : null;
+      })()}
     </div>
   );
 }
