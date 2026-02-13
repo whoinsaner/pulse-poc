@@ -46,7 +46,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
@@ -405,8 +404,7 @@ export default function Scripts() {
             {scripts.map((script) => (
               <Card
                 key={script.id}
-                className="card-hover group cursor-pointer"
-                onClick={() => handleAnalyze(script)}
+                className="card-hover group"
               >
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between mb-4">
@@ -414,28 +412,17 @@ export default function Scripts() {
                       <Film className="h-6 w-6 text-primary" />
                     </div>
                     <DropdownMenu>
-                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                      <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100">
                           <MoreVertical className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="z-[100]">
-                        <DropdownMenuItem onClick={(e) => {
-                          e.stopPropagation();
-                          handleAnalyze(script);
-                        }}>
-                          <Play className="h-4 w-4 mr-2" />
-                          Analyze
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={(e) => {
-                          e.stopPropagation();
-                          handleViewContent(script);
-                        }}>
+                        <DropdownMenuItem onClick={() => handleViewContent(script)}>
                           <Eye className="h-4 w-4 mr-2" />
                           View Content
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={(e) => {
-                          e.stopPropagation();
+                        <DropdownMenuItem onClick={() => {
                           setSelectedScript(script);
                           setShowExtractionDialog(true);
                         }}>
@@ -443,39 +430,18 @@ export default function Scripts() {
                           Run Extraction
                         </DropdownMenuItem>
                         {stuckRuns[script.id] && (
-                          <DropdownMenuItem 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleResumeAnalysis(script);
-                            }}
-                          >
+                          <DropdownMenuItem onClick={() => handleResumeAnalysis(script)}>
                             <RotateCcw className="h-4 w-4 mr-2" />
                             Resume Stuck Analysis
                           </DropdownMenuItem>
                         )}
-                        <DropdownMenuItem onClick={(e) => {
-                          e.stopPropagation();
+                        <DropdownMenuItem onClick={() => {
                           setSelectedScript(script);
                           setShowDetailDialog(true);
                         }}>
                           <Info className="h-4 w-4 mr-2" />
                           Details & History
                         </DropdownMenuItem>
-                        {userRole === 'admin' && (
-                          <>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              className="text-destructive"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteClick(script);
-                              }}
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Delete
-                            </DropdownMenuItem>
-                          </>
-                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
@@ -512,6 +478,28 @@ export default function Scripts() {
                       <span>Analysis stuck — use menu to resume</span>
                     </div>
                   )}
+
+                  {/* Action buttons on tile */}
+                  <div className="mt-4 flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => handleAnalyze(script)}
+                    >
+                      <Play className="h-3.5 w-3.5 mr-1.5" />
+                      Start Analysis
+                    </Button>
+                    {userRole === 'admin' && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => handleDeleteClick(script)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             ))}
