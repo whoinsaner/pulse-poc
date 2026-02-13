@@ -935,6 +935,17 @@ export type Database = {
         }
         Returns: boolean
       }
+      update_agent_progress: {
+        Args: {
+          p_agent_name: string
+          p_analysis_run_id: string
+          p_error?: string
+          p_model?: string
+          p_section_content?: Json
+          p_status: string
+        }
+        Returns: undefined
+      }
       user_belongs_to_org: {
         Args: { _org_id: string; _user_id: string }
         Returns: boolean

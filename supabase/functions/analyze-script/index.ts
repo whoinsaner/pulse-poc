@@ -119,6 +119,17 @@ const COMPLEX_AGENTS = new Set([
   'EmotionalArcAgent',
 ]);
 
+// Optimization 8: Categorize agents as critical vs supplementary
+// Critical agents: failure blocks report quality significantly
+const CRITICAL_AGENTS = new Set([
+  'ConceptAgent', 'StructureAgent', 'CharacterAgent', 'ConflictAgent',
+  'ThemeAgent', 'DialogueAgent',
+  // System agents are always critical
+  'IntakeNormalizerAgent', 'ScriptTypeClassifierAgent', 'ClassifierArbitrationAgent', 'MultiTypeBlendingAgent',
+]);
+// Supplementary agents: failure is tolerable, report still usable
+// Everything NOT in CRITICAL_AGENTS is supplementary (MarketAgent, ExecutionAgent, SceneEnrichmentAgent, etc.)
+
 // Synthesis agents
 const SYNTHESIS_AGENTS = new Set([
   'InsightSynthesisAgent',
@@ -2359,17 +2370,11 @@ serve(async (req) => {
           // Scene enrichment: inline for small scripts (≤5 scenes), otherwise fire separate function
           if (currentProgress['SceneEnrichmentAgent']?.status !== 'completed') {
             // Check scene count to decide inline vs separate function
-            const { data: sceneCountData } = await supabase
-              .from('scenes')
-              .select('id', { count: 'exact', head: true })
-              .eq('script_id', scriptId);
-            const sceneCount = sceneCountData?.length ?? 0;
-            // Also check via count header
-            const { count: exactSceneCount } = await supabase
+            // Optimization 7: Single scene count query (deduplicated)
+            const { count: totalScenes } = await supabase
               .from('scenes')
               .select('*', { count: 'exact', head: true })
               .eq('script_id', scriptId);
-            const totalScenes = exactSceneCount ?? sceneCount;
 
             if (totalScenes > 0 && totalScenes <= 5) {
               // INLINE scene enrichment for small scripts - avoid separate function call overhead
@@ -2522,22 +2527,42 @@ Return ONLY a valid JSON array with one object per scene:
             console.log('[analyze-script] Skipping SceneEnrichmentAgent (already completed)');
           }
 
-          // Update final status
+          // Update final status with graceful degradation (Optimization 8)
           const failedAgents = agentResults.filter(r => !r.success);
-          const finalStatus = failedAgents.length === agentResults.length ? 'failed' : 'completed';
+          const failedCritical = failedAgents.filter(r => CRITICAL_AGENTS.has(r.agent));
+          const failedSupplementary = failedAgents.filter(r => !CRITICAL_AGENTS.has(r.agent));
+          
+          // Only fail if ALL agents failed or critical agents failed
+          const finalStatus = failedAgents.length === agentResults.length ? 'failed' 
+            : failedCritical.length > 0 && failedCritical.length >= Math.ceil(agentResults.filter(r => CRITICAL_AGENTS.has(r.agent)).length * 0.5) ? 'failed'
+            : 'completed';
+          
+          // Include partialFailures in agent_progress metadata for UI
+          if (failedSupplementary.length > 0) {
+            await supabase.rpc('update_agent_progress', {
+              p_analysis_run_id: analysisRunId,
+              p_agent_name: '_meta',
+              p_status: 'info',
+              p_error: null,
+              p_model: null,
+              p_section_content: JSON.stringify({ partialFailures: failedSupplementary.map(f => ({ agent: f.agent, error: f.error })) }),
+            }).catch(() => {/* best effort */});
+          }
           
           await supabase
             .from('analysis_runs')
             .update({ 
               status: finalStatus,
               completed_at: new Date().toISOString(),
-              error_message: failedAgents.length > 0 
-                ? `${failedAgents.length} agents failed: ${failedAgents.map(f => f.agent).join(', ')}`
-                : null
+              error_message: failedCritical.length > 0 
+                ? `${failedCritical.length} critical agents failed: ${failedCritical.map(f => f.agent).join(', ')}`
+                : failedSupplementary.length > 0
+                  ? `Completed with ${failedSupplementary.length} non-critical agent(s) skipped: ${failedSupplementary.map(f => f.agent).join(', ')}`
+                  : null
             })
             .eq('id', analysisRunId);
 
-          console.log(`[analyze-script] ${mode.toUpperCase()} Analysis complete: ${finalStatus}`);
+          console.log(`[analyze-script] ${mode.toUpperCase()} Analysis complete: ${finalStatus} (${failedCritical.length} critical failures, ${failedSupplementary.length} supplementary failures)`);
         };
 
         // Apply global watchdog timeout
@@ -2693,49 +2718,177 @@ async function runStandardAnalysis(
 ): Promise<Array<{ agent: string; success: boolean; error?: string }>> {
   const MAX_AGENT_RETRIES = 3;
   
-  // Adaptive batching: small scripts (≤5 pages or micro dramas) get larger batches and shorter delays
-  const isSmallScript = agentsToRun.length <= 8;
-  const BATCH_SIZE = isSmallScript ? 6 : 3; // Run more agents concurrently for small scripts
-  const BATCH_DELAY_MS = isSmallScript ? 1000 : 3000; // Shorter delay between batches for small scripts
+  // ============= OPTIMIZATION 1: Hoist organization_id lookup =============
+  let organizationId: string | undefined;
+  try {
+    const { data: runData } = await supabase
+      .from('analysis_runs')
+      .select('script_id, scripts!inner(organization_id)')
+      .eq('id', analysisRunId)
+      .single();
+    organizationId = runData?.scripts?.organization_id;
+    console.log(`[analyze-script] Hoisted organization_id: ${organizationId}`);
+  } catch (err) {
+    console.log('[analyze-script] Could not hoist organization_id, agents will query individually');
+  }
+
+  // ============= OPTIMIZATION 2: Batch-load all model configs =============
+  const configId = isUUID(qualityMode) 
+    ? qualityMode 
+    : SYSTEM_PRESET_CONFIG_IDS[qualityMode] || SYSTEM_PRESET_CONFIG_IDS['balanced'];
+  
+  const modelConfigMap = new Map<string, ModelConfig>();
+  try {
+    const agentNames = agentsToRun.map(([name]) => name);
+    const { data: mappings, error } = await supabase
+      .from('agent_model_mappings')
+      .select('agent_name, model, max_retries, retry_delay_ms, temperature')
+      .eq('config_id', configId)
+      .in('agent_name', agentNames);
+
+    if (!error && mappings) {
+      for (const mapping of mappings) {
+        modelConfigMap.set(mapping.agent_name, {
+          model: mapping.model as ModelId,
+          maxRetries: mapping.max_retries || 3,
+          retryDelayMs: mapping.retry_delay_ms || 2000,
+          temperature: mapping.temperature,
+        });
+      }
+      console.log(`[analyze-script] Batch-loaded ${modelConfigMap.size} model configs from DB`);
+    }
+  } catch (err) {
+    console.log('[analyze-script] Batch model config load failed, will use presets:', err);
+  }
+
+  // Helper to get model config from batch-loaded map or fallback to preset
+  const getModelConfig = (agentName: string): ModelConfig => {
+    const cached = modelConfigMap.get(agentName);
+    if (cached) return cached;
+    
+    // Fallback to presets
+    const presetKey = isUUID(qualityMode) ? 'balanced' : (qualityMode as 'fast' | 'balanced' | 'quality');
+    const preset = QUALITY_MODE_PRESETS[presetKey] || QUALITY_MODE_PRESETS['balanced'];
+    const isSynthesis = SYNTHESIS_AGENTS.has(agentName);
+    const isComplex = COMPLEX_AGENTS.has(agentName);
+    const isSystem = SYSTEM_AGENTS.has(agentName);
+    const config = isSynthesis ? preset.synthesis : (isSystem ? preset.system : (isComplex ? preset.complex : preset.default));
+    return config;
+  };
+
+  // ============= OPTIMIZATION 3: Batch-load all prompt configs =============
+  const promptConfigMap = new Map<string, AgentPromptConfig>();
+  try {
+    const agentNames = agentsToRun.map(([name]) => name);
+    
+    // Load org-specific configs first
+    if (organizationId) {
+      const { data: orgConfigs } = await supabase
+        .from('agent_configurations')
+        .select('agent_name, system_prompt, parameters, category')
+        .in('agent_name', agentNames)
+        .eq('organization_id', organizationId)
+        .eq('is_active', true);
+      
+      if (orgConfigs) {
+        for (const config of orgConfigs) {
+          promptConfigMap.set(config.agent_name, {
+            systemPrompt: config.system_prompt,
+            parameters: config.parameters || [],
+            category: config.category || 'analysis',
+          });
+        }
+      }
+    }
+    
+    // Load system configs for agents not found in org configs
+    const missingAgents = agentNames.filter(name => !promptConfigMap.has(name));
+    if (missingAgents.length > 0) {
+      const { data: sysConfigs } = await supabase
+        .from('agent_configurations')
+        .select('agent_name, system_prompt, parameters, category')
+        .in('agent_name', missingAgents)
+        .eq('is_system', true);
+      
+      if (sysConfigs) {
+        for (const config of sysConfigs) {
+          if (!promptConfigMap.has(config.agent_name)) {
+            promptConfigMap.set(config.agent_name, {
+              systemPrompt: config.system_prompt,
+              parameters: config.parameters || [],
+              category: config.category || 'analysis',
+            });
+          }
+        }
+      }
+    }
+    console.log(`[analyze-script] Batch-loaded ${promptConfigMap.size} prompt configs from DB`);
+  } catch (err) {
+    console.log('[analyze-script] Batch prompt config load failed, will use hardcoded:', err);
+  }
+
+  // Helper to get prompt config from batch-loaded map or fallback
+  const getPromptConfig = (agentName: string, agentConfig: any): AgentPromptConfig => {
+    const cached = promptConfigMap.get(agentName);
+    if (cached) return cached;
+    
+    // Fallback to hardcoded AGENTS
+    const hardcoded = AGENTS[agentName];
+    if (hardcoded) {
+      return {
+        systemPrompt: hardcoded.systemPrompt,
+        parameters: hardcoded.parameters,
+        category: hardcoded.category || 'analysis',
+      };
+    }
+    
+    return {
+      systemPrompt: agentConfig.systemPrompt,
+      parameters: agentConfig.parameters,
+      category: agentConfig.category || 'analysis',
+    };
+  };
+  
+  // ============= OPTIMIZATION 6: Adaptive batch delays based on script size =============
+  const agentCount = agentsToRun.length;
+  let BATCH_SIZE: number;
+  let BATCH_DELAY_MS: number;
+  
+  if (agentCount <= 5) {
+    // Very small: run all at once, no delay
+    BATCH_SIZE = agentCount;
+    BATCH_DELAY_MS = 0;
+  } else if (agentCount <= 8) {
+    // Small scripts / micro dramas
+    BATCH_SIZE = 6;
+    BATCH_DELAY_MS = 1000;
+  } else if (agentCount <= 16) {
+    // Medium scripts (6-30 pages)
+    BATCH_SIZE = 4;
+    BATCH_DELAY_MS = 1000;
+  } else {
+    // Large scripts (30+ pages)
+    BATCH_SIZE = 3;
+    BATCH_DELAY_MS = 2000;
+  }
+  
+  console.log(`[analyze-script] Adaptive batching: ${agentCount} agents, batch_size=${BATCH_SIZE}, delay=${BATCH_DELAY_MS}ms`);
   
   // Helper to check if an error is retryable
-  // We now retry ALL errors since JSON parse failures, malformed responses, and API errors
-  // are all worth retrying as the LLM may produce valid output on subsequent attempts
   const isRetryableError = (_error: Error): boolean => {
     return true; // All agent errors are retryable - LLM outputs are non-deterministic
   };
 
   const runSingleAgent = async ([agentName, agentConfig]: [string, any]): Promise<{ agent: string; success: boolean; error?: string }> => {
-    // Get model config for this agent
-    const modelConfig = await getAgentModelConfig(supabase, agentName, qualityMode);
-    
-    // Get prompt config from database (supports org-specific customization)
-    let promptConfig: AgentPromptConfig;
-    try {
-      // Extract organization_id from the analysis run for org-specific configs
-      const { data: runData } = await supabase
-        .from('analysis_runs')
-        .select('script_id, scripts!inner(organization_id)')
-        .eq('id', analysisRunId)
-        .single();
-      
-      const organizationId = runData?.scripts?.organization_id;
-      promptConfig = await getAgentPromptConfig(supabase, agentName, organizationId);
-    } catch (err) {
-      console.log(`[${agentName}] Failed to fetch prompt config, using passed config:`, err);
-      promptConfig = {
-        systemPrompt: agentConfig.systemPrompt,
-        parameters: agentConfig.parameters,
-        category: agentConfig.category || 'analysis',
-      };
-    }
+    // Use batch-loaded configs (Optimizations 1-3)
+    const modelConfig = getModelConfig(agentName);
+    const promptConfig = getPromptConfig(agentName, agentConfig);
     
     let lastError: Error | null = null;
     
     for (let attempt = 0; attempt <= modelConfig.maxRetries; attempt++) {
       try {
         if (attempt > 0) {
-          // Exponential backoff using config's retry delay
           const delay = modelConfig.retryDelayMs * Math.pow(2, attempt - 1);
           console.log(`[${agentName}] Retry attempt ${attempt}/${modelConfig.maxRetries}, waiting ${delay}ms`);
           await new Promise(r => setTimeout(r, delay));
@@ -2752,10 +2905,10 @@ async function runStandardAnalysis(
           .eq('analysis_run_id', analysisRunId)
           .eq('agent_name', agentName);
 
-        for (const score of result.scores) {
-          if (!score.parameterId) continue;
-          
-          await supabase.from('parameter_scores').insert({
+        // ============= OPTIMIZATION 4: Batch insert parameter scores =============
+        const scoresToInsert = result.scores
+          .filter(score => score.parameterId)
+          .map(score => ({
             analysis_run_id: analysisRunId,
             parameter_id: score.parameterId,
             score: score.score,
@@ -2769,26 +2922,29 @@ async function runStandardAnalysis(
             },
             rationale: score.rationale,
             agent_name: agentName,
-          });
+          }));
+        
+        if (scoresToInsert.length > 0) {
+          await supabase.from('parameter_scores').insert(scoresToInsert);
         }
 
+        // Batch insert insights too
         if (result.insights?.length) {
-          for (const insight of result.insights) {
-            await supabase.from('insights').insert({
-              analysis_run_id: analysisRunId,
-              category: insight.category,
-              title: insight.title,
-              description: insight.description,
-              priority: insight.priority,
-              actionable: insight.actionable,
-              supporting_evidence: {
-                evidence: insight.supportingEvidence,
-                affectedStakeholders: insight.affectedStakeholders,
-                minimalFix: insight.minimalFix,
-                maximalFix: insight.maximalFix,
-              },
-            });
-          }
+          const insightsToInsert = result.insights.map(insight => ({
+            analysis_run_id: analysisRunId,
+            category: insight.category,
+            title: insight.title,
+            description: insight.description,
+            priority: insight.priority,
+            actionable: insight.actionable,
+            supporting_evidence: {
+              evidence: insight.supportingEvidence,
+              affectedStakeholders: insight.affectedStakeholders,
+              minimalFix: insight.minimalFix,
+              maximalFix: insight.maximalFix,
+            },
+          }));
+          await supabase.from('insights').insert(insightsToInsert);
         }
 
         // Store sectionContent in agent progress for later collection by generateReport
@@ -2800,20 +2956,25 @@ async function runStandardAnalysis(
         lastError = err instanceof Error ? err : new Error(String(err));
         console.error(`[analyze-script] ${agentName} attempt ${attempt + 1} failed:`, lastError.message);
         
-        // Retry all errors - LLM outputs are non-deterministic so retries often succeed
         if (!isRetryableError(lastError) || attempt === modelConfig.maxRetries) {
           break;
         }
       }
     }
     
-    // All retries exhausted or non-transient error
+    // ============= OPTIMIZATION 8: Graceful degradation for non-critical agents =============
     const errorMessage = lastError?.message || 'Unknown error';
+    const isCritical = CRITICAL_AGENTS.has(agentName);
+    
+    if (!isCritical) {
+      console.log(`[analyze-script] Supplementary agent ${agentName} failed (non-blocking): ${errorMessage}`);
+    }
+    
     await updateAgentProgress(supabase, analysisRunId, agentName, 'failed', errorMessage);
     return { agent: agentName, success: false, error: errorMessage };
   };
 
-  // Run agents in batches to avoid rate limiting
+  // Run agents in batches
   const results: Array<{ agent: string; success: boolean; error?: string }> = [];
   
   for (let i = 0; i < agentsToRun.length; i += BATCH_SIZE) {
@@ -2823,12 +2984,11 @@ async function runStandardAnalysis(
     
     console.log(`[analyze-script] Running batch ${batchNum}/${totalBatches}: ${batch.map(([name]) => name).join(', ')}`);
     
-    // Run batch in parallel
     const batchResults = await Promise.all(batch.map(runSingleAgent));
     results.push(...batchResults);
     
-    // Wait between batches (except for last batch)
-    if (i + BATCH_SIZE < agentsToRun.length) {
+    // Wait between batches (except for last batch), skip if delay is 0
+    if (BATCH_DELAY_MS > 0 && i + BATCH_SIZE < agentsToRun.length) {
       console.log(`[analyze-script] Batch ${batchNum} complete, waiting ${BATCH_DELAY_MS}ms before next batch`);
       await new Promise(r => setTimeout(r, BATCH_DELAY_MS));
     }
@@ -3381,27 +3541,41 @@ async function updateAgentProgress(
   model?: string,
   sectionContent?: SectionContent
 ) {
-  const { data: run } = await supabase
-    .from('analysis_runs')
-    .select('agent_progress')
-    .eq('id', analysisRunId)
-    .single();
+  // Optimization 5: Use atomic RPC to eliminate read-then-write race conditions
+  try {
+    await supabase.rpc('update_agent_progress', {
+      p_analysis_run_id: analysisRunId,
+      p_agent_name: agentName,
+      p_status: status,
+      p_error: error || null,
+      p_model: model || null,
+      p_section_content: sectionContent ? JSON.parse(JSON.stringify(sectionContent)) : null,
+    });
+  } catch (rpcErr) {
+    // Fallback to read-then-write if RPC not available
+    console.log(`[updateAgentProgress] RPC fallback for ${agentName}:`, rpcErr);
+    const { data: run } = await supabase
+      .from('analysis_runs')
+      .select('agent_progress')
+      .eq('id', analysisRunId)
+      .single();
 
-  const progress = run?.agent_progress || {};
-  progress[agentName] = {
-    ...progress[agentName],
-    status,
-    ...(status === 'running' && { startedAt: new Date().toISOString() }),
-    ...(status === 'completed' && { completedAt: new Date().toISOString() }),
-    ...(error && { error }),
-    ...(model && { model }),
-    ...(sectionContent && { sectionContent }),
-  };
+    const progress = run?.agent_progress || {};
+    progress[agentName] = {
+      ...progress[agentName],
+      status,
+      ...(status === 'running' && { startedAt: new Date().toISOString() }),
+      ...(status === 'completed' && { completedAt: new Date().toISOString() }),
+      ...(error && { error }),
+      ...(model && { model }),
+      ...(sectionContent && { sectionContent }),
+    };
 
-  await supabase
-    .from('analysis_runs')
-    .update({ agent_progress: progress })
-    .eq('id', analysisRunId);
+    await supabase
+      .from('analysis_runs')
+      .update({ agent_progress: progress })
+      .eq('id', analysisRunId);
+  }
 }
 
 async function runInsightSynthesis(
