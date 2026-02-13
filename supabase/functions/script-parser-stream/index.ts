@@ -2218,6 +2218,30 @@ serve(async (req) => {
           console.error('[script-parser-stream] Script update error:', updateError);
         }
 
+        // Save extracted text as .txt for analyze-script fallback (avoids raw PDF binary issue)
+        if (extractedText && extractedText.length > 0) {
+          try {
+            const extractedTextBlob = new Blob([extractedText], { type: 'text/plain' });
+            const extractedTextPath = `${scriptId}/extracted.txt`;
+            
+            // Upsert: overwrite if re-parsing
+            const { error: uploadError } = await supabase.storage
+              .from('scripts')
+              .upload(extractedTextPath, extractedTextBlob, { 
+                contentType: 'text/plain',
+                upsert: true 
+              });
+            
+            if (uploadError) {
+              console.warn('[script-parser-stream] Could not save extracted text:', uploadError.message);
+            } else {
+              console.log(`[script-parser-stream] Saved extracted text (${extractedText.length} chars) to ${extractedTextPath}`);
+            }
+          } catch (saveTextErr) {
+            console.warn('[script-parser-stream] Error saving extracted text:', saveTextErr);
+          }
+        }
+
         sendSSE(controller, 'progress', { stage: 'finalize', percent: 100, message: 'All data saved!' });
 
         // Calculate extraction quality
