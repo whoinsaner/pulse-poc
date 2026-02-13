@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DashboardStats } from '@/components/DashboardStats';
+import { RetryQueue } from '@/components/RetryQueue';
 import { Upload, FileText, BarChart3, LogOut, Plus, Settings, Palette, Play, Smartphone } from 'lucide-react';
 
 export default function Dashboard() {
@@ -141,6 +142,9 @@ export default function Dashboard() {
 
         {/* Dashboard Statistics */}
         <DashboardStats className="mb-8" />
+
+        {/* Retry Queue */}
+        <RetryQueue className="mb-8" />
 
         {/* Sample Reports */}
         <Card className="mb-8">
