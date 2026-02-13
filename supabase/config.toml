@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.classify-script-type]
 verify_jwt = false
+
+[functions.validate-invitation]
+verify_jwt = false
