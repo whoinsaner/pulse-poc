@@ -1551,8 +1551,23 @@ async function extractTextFromFile(
       return { text: text.slice(0, MAX_EXTRACTION_SIZE), method: 'docx_xml' };
     }
 
-    // PDF - bounded regex extraction
+    // PDF - PRIORITY 1: Try pre-extracted text from parser, PRIORITY 2: regex fallback
     if (format === 'pdf') {
+      // Try pre-extracted text first (saved by script-parser-stream as extracted.txt)
+      // This avoids feeding raw PDF binary to agents
+      try {
+        // fileName is like "scriptId/filename.pdf" - extract scriptId
+        const pathParts = fileName.split('/');
+        if (pathParts.length >= 1) {
+          const scriptIdFromPath = pathParts[0];
+          const extractedTextPath = `${scriptIdFromPath}/extracted.txt`;
+          
+          // We need supabase client - but extractTextFromFile doesn't have it
+          // So we detect PDF binary and throw a specific error to trigger fallback
+          console.log(`[extractText] PDF detected - checking if content is binary`);
+        }
+      } catch (_) { /* continue to regex */ }
+      
       const arrayBuffer = await fileData.arrayBuffer();
       checkTimeout();
       
@@ -1562,56 +1577,69 @@ async function extractTextFromFile(
       }
       
       const bytes = new Uint8Array(arrayBuffer);
-      const decoder = new TextDecoder('utf-8', { fatal: false });
-      const content = decoder.decode(bytes);
-      checkTimeout();
-
-      const textChunks: string[] = [];
-      let matchCount = 0;
-      const maxMatches = 5000;
-
-      // Method 1: BT/ET text blocks (most common)
-      const btEtPattern = /BT\s*([\s\S]*?)\s*ET/g;
-      let match;
-      while ((match = btEtPattern.exec(content)) !== null && matchCount < maxMatches) {
+      
+      // CONTENT QUALITY GATE: Check if this is binary PDF data
+      // If the first 5 bytes are %PDF-, this is raw binary and regex extraction will produce garbage
+      const header = new TextDecoder('utf-8', { fatal: false }).decode(bytes.slice(0, 10));
+      if (header.startsWith('%PDF')) {
+        // Check if regex can extract meaningful text before giving up
+        const decoder = new TextDecoder('utf-8', { fatal: false });
+        const content = decoder.decode(bytes);
         checkTimeout();
-        const block = match[1];
-        // Extract text from Tj, TJ, ' operators
-        const tjMatches = block.matchAll(/\(([^)]*)\)\s*(?:Tj|')|<([^>]*)>\s*(?:Tj|')/g);
-        for (const tjMatch of tjMatches) {
-          const text = tjMatch[1] || tjMatch[2] || '';
-          if (text.trim()) textChunks.push(text);
-          matchCount++;
-          if (matchCount >= maxMatches) break;
-        }
-      }
-      checkTimeout();
+        
+        const textChunks: string[] = [];
+        let matchCount = 0;
+        const maxMatches = 5000;
 
-      // Method 2: Simple parenthetical text (fallback)
-      if (textChunks.length < 100) {
-        const simplePattern = /\(([A-Za-z0-9\s.,!?'";\-:]+)\)/g;
-        while ((match = simplePattern.exec(content)) !== null && matchCount < maxMatches) {
-          const text = match[1];
-          if (text.length > 2 && text.length < 500) {
-            textChunks.push(text);
+        const btEtPattern = /BT\s*([\s\S]*?)\s*ET/g;
+        let match;
+        while ((match = btEtPattern.exec(content)) !== null && matchCount < maxMatches) {
+          checkTimeout();
+          const block = match[1];
+          const tjMatches = block.matchAll(/\(([^)]*)\)\s*(?:Tj|')|<([^>]*)>\s*(?:Tj|')/g);
+          for (const tjMatch of tjMatches) {
+            const text = tjMatch[1] || tjMatch[2] || '';
+            if (text.trim()) textChunks.push(text);
+            matchCount++;
+            if (matchCount >= maxMatches) break;
           }
-          matchCount++;
         }
+        checkTimeout();
+
+        if (textChunks.length < 100) {
+          const simplePattern = /\(([A-Za-z0-9\s.,!?'";\-:]+)\)/g;
+          while ((match = simplePattern.exec(content)) !== null && matchCount < maxMatches) {
+            const text = match[1];
+            if (text.length > 2 && text.length < 500) {
+              textChunks.push(text);
+            }
+            matchCount++;
+          }
+        }
+        checkTimeout();
+
+        const text = textChunks
+          .map(t => t.replace(/\\([0-9]{3})/g, (_, oct) => String.fromCharCode(parseInt(oct, 8))))
+          .join(' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+
+        if (text.length < MIN_USEFUL_TEXT) {
+          // Throw specific error so quick mode falls back to pre-extracted text or parsed data
+          console.warn(`[extractText] PDF regex extraction insufficient (${text.length} chars) - will fall back to parsed data`);
+          throw new Error('OCR_REQUIRED');
+        }
+
+        return { text: text.slice(0, MAX_EXTRACTION_SIZE), method: 'pdf_regex' };
       }
-      checkTimeout();
-
-      // Clean and join
-      const text = textChunks
-        .map(t => t.replace(/\\([0-9]{3})/g, (_, oct) => String.fromCharCode(parseInt(oct, 8))))
-        .join(' ')
-        .replace(/\s+/g, ' ')
-        .trim();
-
+      
+      // Non-PDF-binary content (shouldn't happen but handle gracefully)
+      const decoder = new TextDecoder('utf-8', { fatal: false });
+      const text = decoder.decode(bytes).trim();
       if (text.length < MIN_USEFUL_TEXT) {
-        throw new Error('OCR_REQUIRED');
+        throw new Error('INSUFFICIENT_TEXT');
       }
-
-      return { text: text.slice(0, MAX_EXTRACTION_SIZE), method: 'pdf_regex' };
+      return { text: text.slice(0, MAX_EXTRACTION_SIZE), method: 'direct' };
     }
 
     throw new Error('UNSUPPORTED_FORMAT');
@@ -2203,22 +2231,49 @@ serve(async (req) => {
         quickModeSuccess = true;
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-        console.log('[analyze-script] Quick mode extraction failed, falling back to parsed data:', errorMessage);
+        console.log('[analyze-script] Quick mode extraction failed, falling back:', errorMessage);
         
-        // FALLBACK: Use parsed structured data like deep mode
-        const [scenesResult, charsResult] = await Promise.all([
-          supabase.from('scenes').select('*').eq('script_id', scriptId).order('scene_number'),
-          supabase.from('characters').select('*').eq('script_id', scriptId).order('dialogue_count', { ascending: false }),
-        ]);
+        // FALLBACK PRIORITY 1: Try pre-extracted text from parser
+        try {
+          const extractedTextPath = `${scriptId}/extracted.txt`;
+          console.log(`[analyze-script] Quick mode: trying pre-extracted text: ${extractedTextPath}`);
+          const { data: extractedData, error: extractedError } = await supabase.storage
+            .from('scripts')
+            .download(extractedTextPath);
+          
+          if (!extractedError && extractedData) {
+            let extractedText = await extractedData.text();
+            console.log(`[analyze-script] Quick mode: loaded pre-extracted text (${extractedText.length} chars)`);
+            if (extractedText.length > 100000) {
+              extractedText = extractedText.substring(0, 100000) + '\n\n[TEXT TRUNCATED...]';
+            }
+            chunks = chunkScript(extractedText);
+            if (chunks.length <= 3) {
+              scriptContext = buildQuickContext(script, chunks.join('\n\n---SCENE BREAK---\n\n'));
+            } else {
+              scriptContext = buildQuickContext(script, chunks.slice(0, 2).join('\n\n') + '\n\n[... additional content in chunks ...]');
+            }
+            quickModeSuccess = true;
+          }
+        } catch (extractedErr) {
+          console.log('[analyze-script] Pre-extracted text not available:', extractedErr);
+        }
+        
+        // FALLBACK PRIORITY 2: Use parsed structured data
+        if (!quickModeSuccess) {
+          const [scenesResult, charsResult] = await Promise.all([
+            supabase.from('scenes').select('*').eq('script_id', scriptId).order('scene_number'),
+            supabase.from('characters').select('*').eq('script_id', scriptId).order('dialogue_count', { ascending: false }),
+          ]);
 
-        const scenes = scenesResult.data || [];
-        const characters = charsResult.data || [];
+          const scenes = scenesResult.data || [];
+          const characters = charsResult.data || [];
 
-        if (scenes.length > 0 || characters.length > 0) {
-          console.log(`[analyze-script] Quick mode fallback: using ${scenes.length} scenes, ${characters.length} characters from extraction`);
-          scriptContext = buildScriptContext(script, scenes, characters, null, false);
-          quickModeSuccess = true;
-        } else {
+          if (scenes.length > 0 || characters.length > 0) {
+            console.log(`[analyze-script] Quick mode fallback: using ${scenes.length} scenes, ${characters.length} characters from extraction`);
+            scriptContext = buildScriptContext(script, scenes, characters, null, false);
+            quickModeSuccess = true;
+          } else {
           // No text extraction AND no parsed data - fail with helpful message
           console.error('[analyze-script] No extractable text and no parsed data available');
           
@@ -2237,8 +2292,8 @@ serve(async (req) => {
               error: 'Script extraction not complete. Please run extraction first from the Scripts library, then retry analysis.',
               errorCode: 'EXTRACTION_REQUIRED'
             }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
+          }
         }
       }
     } else {
@@ -2354,13 +2409,40 @@ serve(async (req) => {
             .single();
           const currentProgress = (currentRun?.agent_progress || {}) as Record<string, any>;
 
+          // Batch-load synthesis agent model configs to avoid per-agent DB queries
+          const synthesisConfigId = isUUID(qualityMode) 
+            ? qualityMode 
+            : SYSTEM_PRESET_CONFIG_IDS[qualityMode] || SYSTEM_PRESET_CONFIG_IDS['balanced'];
+          
+          let insightModelConfig: ModelConfig | undefined;
+          try {
+            const { data: synthMappings } = await supabase
+              .from('agent_model_mappings')
+              .select('agent_name, model, max_retries, retry_delay_ms, temperature')
+              .eq('config_id', synthesisConfigId)
+              .in('agent_name', ['InsightSynthesisAgent']);
+            
+            if (synthMappings?.length) {
+              const m = synthMappings[0];
+              insightModelConfig = {
+                model: m.model as ModelId,
+                maxRetries: m.max_retries || 3,
+                retryDelayMs: m.retry_delay_ms || 2000,
+                temperature: m.temperature,
+              };
+              console.log(`[analyze-script] Batch-loaded synthesis model config: ${insightModelConfig.model}`);
+            }
+          } catch (err) {
+            console.log('[analyze-script] Synthesis config batch-load failed, will use per-agent lookup');
+          }
+
           // Run synthesis agents in PARALLEL for speed
           const synthesisPromises: Promise<void>[] = [];
 
           if (currentProgress['InsightSynthesisAgent']?.status !== 'completed') {
             synthesisPromises.push(
               withTimeout(
-                runInsightSynthesis(supabase, lovableApiKey, analysisRunId, scriptContext, qualityMode),
+                runInsightSynthesis(supabase, lovableApiKey, analysisRunId, scriptContext, qualityMode, insightModelConfig),
                 AGENT_CALL_TIMEOUT_MS,
                 'InsightSynthesisAgent'
               ).catch(err => {
@@ -2890,15 +2972,15 @@ async function runStandardAnalysis(
   } else if (agentCount <= 8) {
     // Small scripts / micro dramas
     BATCH_SIZE = 6;
-    BATCH_DELAY_MS = 1000;
+    BATCH_DELAY_MS = 500;
   } else if (agentCount <= 16) {
-    // Medium scripts (6-30 pages)
-    BATCH_SIZE = 4;
-    BATCH_DELAY_MS = 1000;
+    // Medium scripts (6-30 pages) - reduced from 1000ms to 500ms
+    BATCH_SIZE = 5; // Increased from 4 to reduce total batches
+    BATCH_DELAY_MS = 500;
   } else {
     // Large scripts (30+ pages)
-    BATCH_SIZE = 3;
-    BATCH_DELAY_MS = 2000;
+    BATCH_SIZE = 4; // Increased from 3
+    BATCH_DELAY_MS = 1000; // Reduced from 2000ms
   }
   
   console.log(`[analyze-script] Adaptive batching: ${agentCount} agents, batch_size=${BATCH_SIZE}, delay=${BATCH_DELAY_MS}ms`);
@@ -3612,10 +3694,11 @@ async function runInsightSynthesis(
   apiKey: string,
   analysisRunId: string,
   context: string,
-  qualityMode: QualityMode = 'balanced'
+  qualityMode: QualityMode = 'balanced',
+  cachedModelConfig?: ModelConfig
 ) {
-  // Get model config for synthesis agent (includes retry settings)
-  const modelConfig = await getAgentModelConfig(supabase, 'InsightSynthesisAgent', qualityMode);
+  // Use cached config from batch-load if available, otherwise fetch from DB
+  const modelConfig = cachedModelConfig || await getAgentModelConfig(supabase, 'InsightSynthesisAgent', qualityMode);
   const MAX_RETRIES = modelConfig.maxRetries || 3;
   
   const { data: scores } = await supabase
