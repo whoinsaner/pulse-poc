@@ -391,6 +391,50 @@ export type Database = {
           },
         ]
       }
+      model_config_audit_log: {
+        Row: {
+          agent_name: string | null
+          change_type: string
+          changed_by: string
+          config_id: string
+          created_at: string
+          id: string
+          new_value: Json | null
+          old_value: Json | null
+          summary: string | null
+        }
+        Insert: {
+          agent_name?: string | null
+          change_type: string
+          changed_by: string
+          config_id: string
+          created_at?: string
+          id?: string
+          new_value?: Json | null
+          old_value?: Json | null
+          summary?: string | null
+        }
+        Update: {
+          agent_name?: string | null
+          change_type?: string
+          changed_by?: string
+          config_id?: string
+          created_at?: string
+          id?: string
+          new_value?: Json | null
+          old_value?: Json | null
+          summary?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "model_config_audit_log_config_id_fkey"
+            columns: ["config_id"]
+            isOneToOne: false
+            referencedRelation: "model_configurations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       model_configurations: {
         Row: {
           created_at: string | null

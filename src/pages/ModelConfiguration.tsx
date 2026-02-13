@@ -39,6 +39,7 @@ import {
   Lock,
   Edit2,
   Bot,
+  History,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -65,6 +66,18 @@ interface AgentConfig {
   display_name: string;
   category: string;
   is_active: boolean;
+}
+
+interface AuditLogEntry {
+  id: string;
+  config_id: string;
+  changed_by: string;
+  change_type: string;
+  agent_name: string | null;
+  old_value: any;
+  new_value: any;
+  summary: string | null;
+  created_at: string;
 }
 
 const AVAILABLE_MODELS = [
@@ -99,7 +112,9 @@ export default function ModelConfiguration() {
   const [showNewConfigDialog, setShowNewConfigDialog] = useState(false);
   const [newConfigName, setNewConfigName] = useState('');
   const [newConfigDescription, setNewConfigDescription] = useState('');
-  const [editedMappings, setEditedMappings] = useState<Record<string, { model: string; temperature: number }>>({}); 
+  const [editedMappings, setEditedMappings] = useState<Record<string, { model: string; temperature: number }>>({});
+  const [auditLog, setAuditLog] = useState<AuditLogEntry[]>([]);
+  const [showAuditLog, setShowAuditLog] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -200,9 +215,24 @@ export default function ModelConfiguration() {
     }
   };
 
+  const fetchAuditLog = async (configId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('model_config_audit_log')
+        .select('*')
+        .eq('config_id', configId)
+        .order('created_at', { ascending: false })
+        .limit(50);
+      if (!error) setAuditLog(data || []);
+    } catch (err) {
+      console.error('Error fetching audit log:', err);
+    }
+  };
+
   const handleSelectConfig = async (config: ModelConfiguration) => {
     setSelectedConfig(config);
     await fetchMappings(config.id, agentConfigs);
+    if (showAuditLog) await fetchAuditLog(config.id);
   };
 
   const handleCreateConfig = async () => {
@@ -258,10 +288,53 @@ export default function ModelConfiguration() {
   };
 
   const handleSaveMappings = async () => {
-    if (!selectedConfig || selectedConfig.is_system) return;
+    if (!selectedConfig || !user) return;
 
     setIsSaving(true);
     try {
+      // Build audit log entries by comparing old vs new
+      const auditEntries: Array<{
+        config_id: string;
+        changed_by: string;
+        change_type: string;
+        agent_name: string;
+        old_value: any;
+        new_value: any;
+        summary: string;
+      }> = [];
+
+      const oldMappingsMap: Record<string, { model: string; temperature: number }> = {};
+      mappings.forEach(m => {
+        oldMappingsMap[m.agent_name] = { model: m.model, temperature: m.temperature ?? 0.7 };
+      });
+
+      Object.entries(editedMappings).forEach(([agent, newVal]) => {
+        const oldVal = oldMappingsMap[agent];
+        if (!oldVal) return;
+        if (oldVal.model !== newVal.model) {
+          auditEntries.push({
+            config_id: selectedConfig.id,
+            changed_by: user.id,
+            change_type: 'model_change',
+            agent_name: agent,
+            old_value: { model: oldVal.model },
+            new_value: { model: newVal.model },
+            summary: `Changed ${agent} model from ${oldVal.model} to ${newVal.model}`,
+          });
+        }
+        if (oldVal.temperature !== newVal.temperature) {
+          auditEntries.push({
+            config_id: selectedConfig.id,
+            changed_by: user.id,
+            change_type: 'temperature_change',
+            agent_name: agent,
+            old_value: { temperature: oldVal.temperature },
+            new_value: { temperature: newVal.temperature },
+            summary: `Changed ${agent} temperature from ${oldVal.temperature} to ${newVal.temperature}`,
+          });
+        }
+      });
+
       // Delete existing mappings
       await supabase
         .from('agent_model_mappings')
@@ -278,9 +351,18 @@ export default function ModelConfiguration() {
 
       await supabase.from('agent_model_mappings').insert(newMappings);
 
+      // Log audit entries
+      if (auditEntries.length > 0) {
+        await supabase.from('model_config_audit_log').insert(auditEntries);
+      }
+
+      // Refresh mappings and audit log
+      await fetchMappings(selectedConfig.id);
+      if (showAuditLog) await fetchAuditLog(selectedConfig.id);
+
       toast({
         title: 'Mappings saved',
-        description: 'Agent model mappings have been updated.',
+        description: `${auditEntries.length} change(s) logged to audit trail.`,
       });
     } catch (error) {
       console.error('Error saving mappings:', error);
@@ -468,24 +550,24 @@ export default function ModelConfiguration() {
                   </CardTitle>
                   <CardDescription>
                     {selectedConfig?.name || 'Select a configuration'}
-                    {selectedConfig?.is_system && ' (read-only)'}
+                    {selectedConfig?.is_system && ' (system)'}
                   </CardDescription>
                 </div>
                 <div className="flex gap-2">
                   {selectedConfig && !selectedConfig.is_system && (
-                    <>
-                      <Button variant="outline" size="sm" onClick={handleDeleteConfig}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                      <Button size="sm" onClick={handleSaveMappings} disabled={isSaving}>
-                        {isSaving ? (
-                          <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                        ) : (
-                          <Save className="h-4 w-4 mr-1" />
-                        )}
-                        Save
-                      </Button>
-                    </>
+                    <Button variant="outline" size="sm" onClick={handleDeleteConfig}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                  {selectedConfig && (
+                    <Button size="sm" onClick={handleSaveMappings} disabled={isSaving}>
+                      {isSaving ? (
+                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                      ) : (
+                        <Save className="h-4 w-4 mr-1" />
+                      )}
+                      Save
+                    </Button>
                   )}
                 </div>
               </div>
@@ -532,7 +614,7 @@ export default function ModelConfiguration() {
                               [agent]: { ...mapping, model: value },
                             })
                           }
-                          disabled={selectedConfig?.is_system}
+                          disabled={false}
                         >
                           <SelectTrigger className="w-48">
                             <SelectValue />
@@ -566,7 +648,7 @@ export default function ModelConfiguration() {
                                 [agent]: { ...mapping, temperature: parseFloat(e.target.value) || 0.7 },
                               })
                             }
-                            disabled={selectedConfig?.is_system}
+                            disabled={false}
                             className="text-sm"
                           />
                         </div>
@@ -578,6 +660,54 @@ export default function ModelConfiguration() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Audit Trail */}
+        <Card className="mt-6">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <History className="h-5 w-5" />
+                Change History
+              </CardTitle>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  const next = !showAuditLog;
+                  setShowAuditLog(next);
+                  if (next && selectedConfig) await fetchAuditLog(selectedConfig.id);
+                }}
+              >
+                {showAuditLog ? 'Hide' : 'Show'}
+              </Button>
+            </div>
+          </CardHeader>
+          {showAuditLog && (
+            <CardContent>
+              {auditLog.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">No changes recorded yet.</p>
+              ) : (
+                <ScrollArea className="h-[300px]">
+                  <div className="space-y-2">
+                    {auditLog.map((entry) => (
+                      <div key={entry.id} className="flex items-start gap-3 p-3 rounded-lg border border-border bg-card/50 text-sm">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium">{entry.summary || `${entry.change_type} on ${entry.agent_name}`}</p>
+                          <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                            <Badge variant="outline" className="text-[10px]">
+                              {entry.change_type.replace('_', ' ')}
+                            </Badge>
+                            <span>{new Date(entry.created_at).toLocaleString()}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              )}
+            </CardContent>
+          )}
+        </Card>
 
         {/* Model Legend */}
         <Card className="mt-6">
