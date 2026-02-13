@@ -534,14 +534,14 @@ export function AnalysisTrigger({
       );
     }
 
-    // If no custom configs, skip the config selector and go straight to analysis
+    // If no custom configs, skip the config selector and go straight to stakeholder selection
     if (customConfigs.length === 0) {
-      return (
-        <Button onClick={() => initiateAnalysis(false, 'deep')} className="w-full" size="lg">
-          <Play className="h-4 w-4 mr-2" />
-          Analyze Script
-        </Button>
-      );
+      // Auto-trigger stakeholder selector immediately
+      if (!showStakeholderSelector && !pendingAnalysisMode) {
+        initiateAnalysis(false, 'deep');
+        return null;
+      }
+      return null;
     }
 
     return (
