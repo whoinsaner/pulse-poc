@@ -2378,6 +2378,14 @@ serve(async (req) => {
         const analysisWork = async () => {
           let agentResults: Array<{ agent: string; success: boolean; error?: string }>;
           
+          // Fetch current progress for resume detection (used by both paths)
+          const { data: resumeRunData } = await supabase
+            .from('analysis_runs')
+            .select('agent_progress')
+            .eq('id', analysisRunId)
+            .single();
+          const currentProgress = (resumeRunData?.agent_progress || {}) as Record<string, any>;
+
           if (mode === 'quick' && chunks.length > 3) {
             agentResults = await runChunkedAnalysis(
               supabase,
@@ -2389,7 +2397,69 @@ serve(async (req) => {
               parameterMap,
               qualityMode
             );
+            
+            // Run synthesis after chunked analysis (no overlap for chunked path)
+            await runPostAnalysisSynthesis(supabase, lovableApiKey, analysisRunId, scriptContext, qualityMode, currentProgress);
           } else {
+            // ============= OPTIMIZATION 9: Overlap synthesis with last analysis batch =============
+            // Pre-load synthesis configs before starting analysis so they're ready
+            const synthesisConfigId = isUUID(qualityMode) 
+              ? qualityMode 
+              : SYSTEM_PRESET_CONFIG_IDS[qualityMode] || SYSTEM_PRESET_CONFIG_IDS['balanced'];
+            
+            let insightModelConfig: ModelConfig | undefined;
+            try {
+              const { data: synthMappings } = await supabase
+                .from('agent_model_mappings')
+                .select('agent_name, model, max_retries, retry_delay_ms, temperature')
+                .eq('config_id', synthesisConfigId)
+                .in('agent_name', ['InsightSynthesisAgent']);
+              
+              if (synthMappings?.length) {
+                const m = synthMappings[0];
+                insightModelConfig = {
+                  model: m.model as ModelId,
+                  maxRetries: m.max_retries || 3,
+                  retryDelayMs: m.retry_delay_ms || 2000,
+                  temperature: m.temperature,
+                };
+                console.log(`[analyze-script] Pre-loaded synthesis model config: ${insightModelConfig.model}`);
+              }
+            } catch (err) {
+              console.log('[analyze-script] Synthesis config pre-load failed, will use per-agent lookup');
+            }
+
+            // Synthesis promises that will be started when the last batch begins
+            const synthesisPromises: Promise<void>[] = [];
+            
+            const startSynthesisOverlap = () => {
+              if (currentProgress['InsightSynthesisAgent']?.status !== 'completed') {
+                synthesisPromises.push(
+                  withTimeout(
+                    runInsightSynthesis(supabase, lovableApiKey, analysisRunId, scriptContext, qualityMode, insightModelConfig),
+                    AGENT_CALL_TIMEOUT_MS,
+                    'InsightSynthesisAgent'
+                  ).catch(err => {
+                    console.error('[analyze-script] InsightSynthesis timed out or failed:', err.message);
+                    updateAgentProgress(supabase, analysisRunId, 'InsightSynthesisAgent', 'failed', err.message);
+                  })
+                );
+              }
+
+              if (currentProgress['StakeholderLensAgent']?.status !== 'completed') {
+                synthesisPromises.push(
+                  withTimeout(
+                    runStakeholderLensAgent(supabase, lovableApiKey, analysisRunId),
+                    AGENT_CALL_TIMEOUT_MS,
+                    'StakeholderLensAgent'
+                  ).catch(err => {
+                    console.error('[analyze-script] StakeholderLens timed out or failed:', err.message);
+                    updateAgentProgress(supabase, analysisRunId, 'StakeholderLensAgent', 'failed', err.message);
+                  })
+                );
+              }
+            };
+
             agentResults = await runStandardAnalysis(
               supabase,
               lovableApiKey,
@@ -2397,86 +2467,22 @@ serve(async (req) => {
               scriptContext,
               agentsToRun,
               parameterMap,
-              qualityMode
+              qualityMode,
+              startSynthesisOverlap // Callback fires when last batch starts
             );
-          }
 
-          // ============= OPTIMIZATION 9: Overlap synthesis with analysis =============
-          // StakeholderLensAgent is pure DB computation (no AI call) - run immediately after analysis
-          // InsightSynthesisAgent reads from parameter_scores which are written as each agent completes
-          // So we can start it as soon as enough scores exist (i.e., right after analysis completes)
-          
-          const { data: currentRun } = await supabase
-            .from('analysis_runs')
-            .select('agent_progress')
-            .eq('id', analysisRunId)
-            .single();
-          const currentProgress = (currentRun?.agent_progress || {}) as Record<string, any>;
-
-          // Batch-load synthesis agent model configs
-          const synthesisConfigId = isUUID(qualityMode) 
-            ? qualityMode 
-            : SYSTEM_PRESET_CONFIG_IDS[qualityMode] || SYSTEM_PRESET_CONFIG_IDS['balanced'];
-          
-          let insightModelConfig: ModelConfig | undefined;
-          try {
-            const { data: synthMappings } = await supabase
-              .from('agent_model_mappings')
-              .select('agent_name, model, max_retries, retry_delay_ms, temperature')
-              .eq('config_id', synthesisConfigId)
-              .in('agent_name', ['InsightSynthesisAgent']);
-            
-            if (synthMappings?.length) {
-              const m = synthMappings[0];
-              insightModelConfig = {
-                model: m.model as ModelId,
-                maxRetries: m.max_retries || 3,
-                retryDelayMs: m.retry_delay_ms || 2000,
-                temperature: m.temperature,
-              };
-              console.log(`[analyze-script] Batch-loaded synthesis model config: ${insightModelConfig.model}`);
+            // Wait for synthesis to finish (they started during the last batch)
+            if (synthesisPromises.length > 0) {
+              console.log(`[analyze-script] Waiting for ${synthesisPromises.length} overlapped synthesis agents to complete`);
+              await Promise.all(synthesisPromises);
+            } else {
+              // If no overlap was triggered (e.g., single batch), run synthesis now
+              startSynthesisOverlap();
+              if (synthesisPromises.length > 0) {
+                console.log(`[analyze-script] Running ${synthesisPromises.length} synthesis agents (no overlap needed)`);
+                await Promise.all(synthesisPromises);
+              }
             }
-          } catch (err) {
-            console.log('[analyze-script] Synthesis config batch-load failed, will use per-agent lookup');
-          }
-
-          // Run StakeholderLens + InsightSynthesis in parallel (no sequential dependency)
-          const synthesisPromises: Promise<void>[] = [];
-
-          if (currentProgress['InsightSynthesisAgent']?.status !== 'completed') {
-            synthesisPromises.push(
-              withTimeout(
-                runInsightSynthesis(supabase, lovableApiKey, analysisRunId, scriptContext, qualityMode, insightModelConfig),
-                AGENT_CALL_TIMEOUT_MS,
-                'InsightSynthesisAgent'
-              ).catch(err => {
-                console.error('[analyze-script] InsightSynthesis timed out or failed:', err.message);
-                updateAgentProgress(supabase, analysisRunId, 'InsightSynthesisAgent', 'failed', err.message);
-              })
-            );
-          } else {
-            console.log('[analyze-script] Skipping InsightSynthesisAgent (already completed)');
-          }
-
-          if (currentProgress['StakeholderLensAgent']?.status !== 'completed') {
-            synthesisPromises.push(
-              withTimeout(
-                runStakeholderLensAgent(supabase, lovableApiKey, analysisRunId),
-                AGENT_CALL_TIMEOUT_MS,
-                'StakeholderLensAgent'
-              ).catch(err => {
-                console.error('[analyze-script] StakeholderLens timed out or failed:', err.message);
-                updateAgentProgress(supabase, analysisRunId, 'StakeholderLensAgent', 'failed', err.message);
-              })
-            );
-          } else {
-            console.log('[analyze-script] Skipping StakeholderLensAgent (already completed)');
-          }
-
-          // Wait for all synthesis agents
-          if (synthesisPromises.length > 0) {
-            console.log(`[analyze-script] Running ${synthesisPromises.length} synthesis agents in parallel`);
-            await Promise.all(synthesisPromises);
           }
 
           // Generate report first (scene enrichment runs separately after)
@@ -2829,7 +2835,8 @@ async function runStandardAnalysis(
   scriptContext: string,
   agentsToRun: [string, any][],
   parameterMap: Map<string, any>,
-  qualityMode: QualityMode = 'balanced'
+  qualityMode: QualityMode = 'balanced',
+  onLastBatchStarted?: () => void
 ): Promise<Array<{ agent: string; success: boolean; error?: string }>> {
   const MAX_AGENT_RETRIES = 3;
   
@@ -3096,14 +3103,21 @@ async function runStandardAnalysis(
     const batch = agentsToRun.slice(i, i + BATCH_SIZE);
     const batchNum = Math.floor(i / BATCH_SIZE) + 1;
     const totalBatches = Math.ceil(agentsToRun.length / BATCH_SIZE);
+    const isLastBatch = i + BATCH_SIZE >= agentsToRun.length;
     
     console.log(`[analyze-script] Running batch ${batchNum}/${totalBatches}: ${batch.map(([name]) => name).join(', ')}`);
+    
+    // OPTIMIZATION 9: Fire synthesis agents in parallel with the last batch
+    if (isLastBatch && onLastBatchStarted) {
+      console.log(`[analyze-script] Last batch started — triggering synthesis overlap`);
+      onLastBatchStarted();
+    }
     
     const batchResults = await Promise.all(batch.map(runSingleAgent));
     results.push(...batchResults);
     
     // Wait between batches (except for last batch), skip if delay is 0
-    if (BATCH_DELAY_MS > 0 && i + BATCH_SIZE < agentsToRun.length) {
+    if (BATCH_DELAY_MS > 0 && !isLastBatch) {
       console.log(`[analyze-script] Batch ${batchNum} complete, waiting ${BATCH_DELAY_MS}ms before next batch`);
       await new Promise(r => setTimeout(r, BATCH_DELAY_MS));
     }
@@ -3543,6 +3557,71 @@ SECTION CONTENT: The "sectionContent" field is CRITICAL. It provides narrative d
 
 CRITICAL: You MUST respond with ONLY the JSON object. No text before or after. No markdown code blocks. Start your response with { and end with }.`;
 
+// Helper: Run synthesis agents after analysis (used by chunked path)
+async function runPostAnalysisSynthesis(
+  supabase: any,
+  apiKey: string,
+  analysisRunId: string,
+  scriptContext: string,
+  qualityMode: QualityMode,
+  currentProgress: Record<string, any>
+) {
+  const synthesisConfigId = isUUID(qualityMode) 
+    ? qualityMode 
+    : SYSTEM_PRESET_CONFIG_IDS[qualityMode] || SYSTEM_PRESET_CONFIG_IDS['balanced'];
+  
+  let insightModelConfig: ModelConfig | undefined;
+  try {
+    const { data: synthMappings } = await supabase
+      .from('agent_model_mappings')
+      .select('agent_name, model, max_retries, retry_delay_ms, temperature')
+      .eq('config_id', synthesisConfigId)
+      .in('agent_name', ['InsightSynthesisAgent']);
+    
+    if (synthMappings?.length) {
+      const m = synthMappings[0];
+      insightModelConfig = {
+        model: m.model as ModelId,
+        maxRetries: m.max_retries || 3,
+        retryDelayMs: m.retry_delay_ms || 2000,
+        temperature: m.temperature,
+      };
+    }
+  } catch (_err) { /* fallback to per-agent lookup */ }
+
+  const promises: Promise<void>[] = [];
+  
+  if (currentProgress['InsightSynthesisAgent']?.status !== 'completed') {
+    promises.push(
+      withTimeout(
+        runInsightSynthesis(supabase, apiKey, analysisRunId, scriptContext, qualityMode, insightModelConfig),
+        AGENT_CALL_TIMEOUT_MS,
+        'InsightSynthesisAgent'
+      ).catch(err => {
+        console.error('[analyze-script] InsightSynthesis failed:', err.message);
+        updateAgentProgress(supabase, analysisRunId, 'InsightSynthesisAgent', 'failed', err.message);
+      })
+    );
+  }
+  
+  if (currentProgress['StakeholderLensAgent']?.status !== 'completed') {
+    promises.push(
+      withTimeout(
+        runStakeholderLensAgent(supabase, apiKey, analysisRunId),
+        AGENT_CALL_TIMEOUT_MS,
+        'StakeholderLensAgent'
+      ).catch(err => {
+        console.error('[analyze-script] StakeholderLens failed:', err.message);
+        updateAgentProgress(supabase, analysisRunId, 'StakeholderLensAgent', 'failed', err.message);
+      })
+    );
+  }
+  
+  if (promises.length > 0) {
+    console.log(`[analyze-script] Running ${promises.length} synthesis agents in parallel`);
+    await Promise.all(promises);
+  }
+}
 
   // Use the model config passed from caller
   console.log(`[${agentName}] Using model: ${modelConfig.model}`);
