@@ -88,7 +88,7 @@ export function AnalysisTrigger({
   const [showStakeholderSelector, setShowStakeholderSelector] = useState(false);
   const [selectedStakeholder, setSelectedStakeholder] = useState<StakeholderLens | null>(null);
   const [pendingAnalysisMode, setPendingAnalysisMode] = useState<{ force: boolean; mode: 'quick' | 'deep' } | null>(null);
-  const [qualityMode, setQualityMode] = useState<QualityMode>('balanced');
+  const [qualityMode, setQualityMode] = useState<QualityMode>('quality');
   const [customConfigs, setCustomConfigs] = useState<CustomModelConfig[]>([]);
   const [scriptDetails, setScriptDetails] = useState<{ file_url: string; format: string } | null>(null);
   const [isParsing, setIsParsing] = useState(false);
@@ -542,19 +542,10 @@ export function AnalysisTrigger({
           disabled={false}
           customConfigs={customConfigs}
         />
-        <div className="grid grid-cols-2 gap-2">
-          <Button onClick={() => initiateAnalysis(false, 'quick')} variant="outline" className="w-full">
-            <Zap className="h-4 w-4 mr-2 text-amber-500" />
-            Quick Analysis
-          </Button>
-          <Button onClick={() => initiateAnalysis(false, 'deep')} className="w-full">
-            <Play className="h-4 w-4 mr-2" />
-            Deep Analysis
-          </Button>
-        </div>
-        <p className="text-xs text-muted-foreground text-center">
-          Quick: Direct text analysis (faster) • Deep: Uses parsed structure (more accurate)
-        </p>
+        <Button onClick={() => initiateAnalysis(false, 'deep')} className="w-full" size="lg">
+          <Play className="h-4 w-4 mr-2" />
+          Analyze Script
+        </Button>
       </div>
     );
   }
