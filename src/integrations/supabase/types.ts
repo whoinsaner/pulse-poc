@@ -843,6 +843,50 @@ export type Database = {
           },
         ]
       }
+      script_lines: {
+        Row: {
+          character_name: string | null
+          content: string
+          created_at: string
+          id: string
+          line_number: number
+          line_type: string
+          page_number: number | null
+          scene_number: number
+          script_id: string
+        }
+        Insert: {
+          character_name?: string | null
+          content: string
+          created_at?: string
+          id?: string
+          line_number: number
+          line_type: string
+          page_number?: number | null
+          scene_number: number
+          script_id: string
+        }
+        Update: {
+          character_name?: string | null
+          content?: string
+          created_at?: string
+          id?: string
+          line_number?: number
+          line_type?: string
+          page_number?: number | null
+          scene_number?: number
+          script_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "script_lines_script_id_fkey"
+            columns: ["script_id"]
+            isOneToOne: false
+            referencedRelation: "scripts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       script_versions: {
         Row: {
           created_at: string
