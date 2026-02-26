@@ -16,6 +16,7 @@ import {
   Sparkles,
   FileJson,
   Scale,
+  ShieldBan,
 } from 'lucide-react';
 
 interface NavItem {
@@ -43,6 +44,7 @@ const NAV_ITEMS: NavItem[] = [
     ],
   },
   { label: 'Features', path: '/settings/features', icon: Sparkles, adminOnly: false },
+  { label: 'Parser Stopwords', path: '/settings/stopwords', icon: ShieldBan, adminOnly: false },
 ];
 
 export default function SettingsLayout() {

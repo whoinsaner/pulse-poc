@@ -1955,6 +1955,23 @@ serve(async (req) => {
           if (/'S\s+/i.test(name)) return true;
           return false;
         };
+        // Fetch stopwords from database
+        let dbStopwords = new Set<string>();
+        try {
+          const { data: stopwordRows } = await supabase
+            .from('parser_stopwords')
+            .select('word')
+            .eq('is_active', true);
+          if (stopwordRows && stopwordRows.length > 0) {
+            dbStopwords = new Set(stopwordRows.map((r: { word: string }) => r.word.toUpperCase()));
+            console.log(`[script-parser-stream] Loaded ${dbStopwords.size} stopwords from database`);
+          } else {
+            console.warn(`[script-parser-stream] No stopwords found in database, character filtering may be less effective`);
+          }
+        } catch (e) {
+          console.error(`[script-parser-stream] Failed to fetch stopwords:`, e);
+        }
+
         const nonCharacterPatterns = [
           /^(INT|EXT|INTERIOR|EXTERIOR)\b/i,
           /^(FADE|CUT|DISSOLVE|SMASH|JUMP|MATCH|IRIS|WIPE)\s*(IN|OUT|TO|FROM)?$/i,
@@ -1991,59 +2008,8 @@ serve(async (req) => {
           const nameWords = name.split(/\s+/);
           if (nameWords.length === 1 && name.length <= 3) return true;
           
-          // Comprehensive stopword set - common English words that are never character names
-          const genericSingles = new Set([
-            // Original location/prop/direction words
-            'INSIDE', 'OUTSIDE', 'UPSTAIRS', 'DOWNSTAIRS', 'NEARBY', 'ELSEWHERE',
-            'BIKE', 'CAR', 'PHONE', 'TEMPO', 'PASSAGE', 'CELLAR',
-            'STAND', 'WALL', 'GATE', 'DOOR', 'WINDOW', 'STAIRS', 'STEP',
-            'CONCESSION', 'ASSISTANT', 'ANNOUNCER', 'NARRATOR', 'VOICE',
-            'INTERVAL', 'INTERMISSION', 'FAMILY', 'MESSAGE', 'MOMENT', 'ENDING',
-            'SONG', 'MUSIC', 'SILENCE', 'PAUSE', 'BEAT', 'MONTAGE',
-            'RUINS', 'TEMPLE', 'FORT', 'PALACE', 'MANSION', 'HAVELI', 'MAHAL',
-            'JUNGLE', 'FOREST', 'RIVER', 'LAKE', 'POND', 'WELL', 'BRIDGE',
-            'MARKET', 'BAZAAR', 'CHOWK', 'GHAT', 'MANDIR', 'MASJID', 'CHURCH',
-            'TERRACE', 'ROOFTOP', 'BALCONY', 'VERANDAH', 'COURTYARD', 'GARDEN',
-            'GRAVEYARD', 'CEMETERY', 'CREMATORIUM', 'SHAMSHAAN',
-            'EXTERIOR', 'INTERIOR', 'CONTINUOUS', 'LATER', 'MEANWHILE',
-            // Pronouns
-            'YOU', 'SHE', 'THEY', 'HIM', 'HER', 'THEM', 'YOUR', 'HIS', 'ITS', 'OUR', 'THEIR',
-            'MYSELF', 'YOURSELF', 'HIMSELF', 'HERSELF', 'ITSELF', 'OURSELVES', 'THEMSELVES',
-            // Prepositions
-            'INTO', 'ONTO', 'UPON', 'NEAR', 'BETWEEN', 'THROUGH', 'ACROSS', 'ALONG',
-            'AROUND', 'ABOVE', 'BELOW', 'UNDER', 'OVER', 'BEHIND', 'BESIDE', 'BEYOND',
-            'BENEATH', 'AMONG', 'AGAINST', 'BEFORE', 'AFTER', 'DURING', 'WITHOUT',
-            'TOWARD', 'TOWARDS', 'FROM', 'WITH',
-            // Conjunctions
-            'BECAUSE', 'ALTHOUGH', 'WHILE', 'WHEN', 'WHERE', 'SINCE', 'UNLESS',
-            'UNTIL', 'WHETHER', 'THOUGH', 'WHEREAS',
-            // Articles/Determiners
-            'THIS', 'THAT', 'THESE', 'THOSE', 'SOME', 'EACH', 'EVERY',
-            'BOTH', 'MANY', 'MOST', 'SEVERAL', 'NONE',
-            // Common verbs
-            'BEEN', 'BEING', 'HAVE', 'DOES', 'WOULD', 'SHALL', 'SHOULD',
-            'COULD', 'MIGHT', 'MUST', 'NEED', 'DARE', 'OUGHT',
-            'COME', 'GOES', 'GOING', 'GONE', 'MAKE', 'TAKE', 'GIVE', 'KEEP',
-            'SAID', 'TELL', 'TOLD', 'SHOW', 'SHOWS', 'LOOK', 'FIND', 'KNOW',
-            'THINK', 'WANT', 'SEEM', 'FEEL', 'LEAVE', 'CALL', 'TURN', 'MOVE',
-            'LIVE', 'WORK', 'PLAY', 'READ', 'WRITE', 'DRAW', 'HEAR',
-            'WERE', 'ALSO', 'JUST',
-            // Adverbs
-            'VERY', 'THEN', 'HERE', 'THERE', 'ONLY', 'STILL', 'ALREADY',
-            'AGAIN', 'OFTEN', 'NEVER', 'ALWAYS', 'SOMETIMES', 'SOON',
-            'EVEN', 'QUITE', 'RATHER', 'ALMOST', 'ENOUGH', 'SLIGHTLY',
-            'IMMEDIATELY', 'SLOWLY', 'QUICKLY', 'REALLY', 'SIMPLY', 'MERELY',
-            // Interrogatives
-            'WHAT', 'WHOM', 'WHICH', 'WHERE', 'WHEN', 'HOW', 'WHY',
-            // Other common words
-            'OKAY', 'HELLO', 'PLEASE', 'THANK', 'THANKS', 'SORRY',
-            'NUMBER', 'WATER', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX', 'SEVEN',
-            'EIGHT', 'NINE', 'TEN', 'FIRST', 'SECOND', 'THIRD', 'NEXT', 'LAST',
-            'LITTLE', 'ANOTHER', 'MUCH', 'MORE', 'LESS', 'SAME', 'OTHER',
-            'COMPLAINT', 'PEOPLE', 'EVERYONE', 'SOMEONE', 'ANYONE', 'NOBODY',
-            'NOTHING', 'EVERYTHING', 'SOMETHING', 'ANYTHING',
-          ]);
-          if (genericSingles.has(name)) return true;
+          // Stopwords loaded from database (fetched before filtering)
+          if (dbStopwords.has(name)) return true;
           // Multi-word names where all words are common English nouns/adjectives (not proper names)
           const commonWords = new Set([
             'CONCESSION', 'STAND', 'WALL', 'GATE', 'DOOR', 'SIDE', 'TOP', 'BOTTOM',
