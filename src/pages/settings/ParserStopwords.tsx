@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
-import { Plus, Trash2, Search, Filter } from 'lucide-react';
+import { Plus, Trash2, Search, Filter, Download } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 
 const CATEGORIES = [
@@ -133,9 +133,28 @@ export default function ParserStopwords() {
             {stopwords.length}
           </Badge>
         </h2>
-        <p className="text-sm text-muted-foreground mt-1">
-          Words in this list are excluded during character extraction. Changes apply to future parses.
-        </p>
+        <div className="flex items-center gap-3 mt-1">
+          <p className="text-sm text-muted-foreground">
+            Words in this list are excluded during character extraction. Changes apply to future parses.
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const csv = 'word,category,is_active\n' + stopwords.map(sw => `${sw.word},${sw.category},${sw.is_active}`).join('\n');
+              const blob = new Blob([csv], { type: 'text/csv' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = 'stopwords.csv';
+              a.click();
+              URL.revokeObjectURL(url);
+            }}
+            disabled={stopwords.length === 0}
+          >
+            <Download className="h-4 w-4 mr-1" /> Download CSV
+          </Button>
+        </div>
       </div>
 
       {/* Stats */}
