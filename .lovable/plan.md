@@ -1,65 +1,83 @@
-# Auto-Select Script Type on Upload
 
-## Overview
+# Fix Character Extraction Noise in Script Parser
 
-Add an AI-powered auto-detection step that runs when the user drops/selects a file, automatically pre-selecting the correct script type (feature, comic, web_series, etc.) before they click "Upload & Parse."
+## Problem
+The Khaaki Squad script has 138 extracted characters, but a large portion are common English words being misidentified as character names. Examples from the database:
 
-## How It Works
+| Noise "Character" | Dialogue Count | Type |
+|---|---|---|
+| TO | 19 | Preposition |
+| YOU | 18 | Pronoun |
+| AND | 16 | Conjunction |
+| IN | 12 | Preposition |
+| IS | 11 | Verb |
+| THIS | 9 | Determiner |
+| THAT | 9 | Determiner |
+| ARE | 8 | Verb |
+| HE | 8 | Pronoun |
+| DO | 8 | Verb |
+| FROM | 7 | Preposition |
+| AT | 7 | Preposition |
+| WE | 7 | Pronoun |
+| HAS | 6 | Verb |
+| HIS | 6 | Possessive |
+| WILL | 6 | Modal verb |
+| WAS | 6 | Verb |
+| FOR | 5 | Preposition |
+| THEY | 5 | Pronoun |
+| IT | 5 | Pronoun |
+| BUT | 4 | Conjunction |
+| COME | 4 | Verb |
+| WHAT | 4 | Interrogative |
+| IF | 4 | Conjunction |
+| WITH | 4 | Preposition |
+| WHEN | 4 | Conjunction |
+| SLIGHTLY | 4 | Adverb |
+| COMPLAINT | 4 | Noun |
+| STILL | 3 | Adverb |
+| ...and many more |
 
-1. **On file drop**: After the file is selected, extract a text sample from it client-side (first ~5KB for .txt/.fountain/.highland; for PDFs, use the file's raw bytes sent to a lightweight edge function).
-2. **Call a new edge function** (`classify-script-type`) that reuses the existing `classifyScriptType` AI logic (Gemini Flash Lite) to return a predicted type + confidence score.
-3. **Auto-select the type** in the UI with a visual indicator showing it was AI-suggested (e.g., a small sparkle icon + "Auto-detected" badge). The user can still override it manually.
+Legitimate characters (JEEVANANDAM, ALEX, JEEVA, JOTHI, BHAGATH SINGH, etc.) are present but buried in noise.
+
+## Root Cause
+The `isNonCharacter()` filter in `script-parser-stream/index.ts` has patterns for multi-word phrases starting with prepositions/articles (line 1982-1984), but it lacks a **single-word stopword set** for common English words that can never be character names.
+
+The `nonCharacterWords` set (line 603) is only used during Fountain normalization, not during the final character filtering stage. The final filter's `genericSingles` set (line 1990) covers locations and props but misses basic English stopwords.
+
+## Solution
+Add a comprehensive English stopword set to the `isNonCharacter()` function's `genericSingles` set. These are words that should never be character names.
+
+### Changes
+
+**File: `supabase/functions/script-parser-stream/index.ts`**
+
+Expand the `genericSingles` set (around line 1990) to include common English stopwords:
+
+```text
+Categories to add:
+- Pronouns: I, YOU, HE, SHE, IT, WE, THEY, ME, HIM, HER, US, THEM, MY, YOUR, HIS, ITS, OUR, THEIR
+- Prepositions: TO, IN, ON, AT, BY, FOR, FROM, WITH, INTO, ONTO, UPON, NEAR, BETWEEN, THROUGH, ACROSS, ALONG, AROUND, ABOVE, BELOW, UNDER, OVER, BEHIND, BESIDE, BEYOND, BENEATH, AMONG, AGAINST, BEFORE, AFTER, DURING, WITHOUT, TOWARD, TOWARDS
+- Conjunctions: AND, BUT, OR, SO, IF, NOR, YET, BECAUSE, ALTHOUGH, WHILE, WHEN, WHERE, SINCE, UNLESS, UNTIL, WHETHER, THOUGH, WHEREAS
+- Articles/Determiners: THE, A, AN, THIS, THAT, THESE, THOSE, SOME, ANY, EACH, EVERY, ALL, BOTH, FEW, MANY, MOST, SEVERAL, NO, NONE
+- Common verbs (bare form): IS, ARE, WAS, WERE, BE, BEEN, BEING, HAS, HAVE, HAD, DO, DOES, DID, WILL, WOULD, SHALL, SHOULD, CAN, COULD, MAY, MIGHT, MUST, NEED, DARE, OUGHT, COME, GO, GET, MAKE, TAKE, GIVE, KEEP, LET, PUT, SAY, SAID, TELL, TOLD, SHOW, SHOWS, ASK, LOOK, FIND, KNOW, THINK, WANT, SEEM, FEEL, TRY, LEAVE, CALL, TURN, MOVE, LIVE, RUN, SET, USE, WORK, PLAY, READ, WRITE, DRAW, HEAR, SEE
+- Adverbs: NOT, VERY, ALSO, JUST, NOW, THEN, HERE, THERE, ONLY, STILL, ALREADY, AGAIN, OFTEN, NEVER, ALWAYS, SOMETIMES, SOON, WELL, EVEN, QUITE, RATHER, ALMOST, ENOUGH, TOO, SLIGHTLY, IMMEDIATELY, SLOWLY, QUICKLY, REALLY, SIMPLY, MERELY
+- Interrogatives: WHAT, WHO, WHOM, WHICH, WHERE, WHEN, HOW, WHY
+- Other: YES, NO, OK, OKAY, HELLO, HEY, PLEASE, THANK, THANKS, SORRY, NUMBER, WATER, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, TEN, FIRST, SECOND, THIRD, NEXT, LAST, LITTLE, ANOTHER, MUCH, MORE, LESS, SAME, OTHER
+```
+
+Also add a minimum character name length check: single-character names (just one or two letters like "IN", "TO", "IF", "AT", "DO", "IS", "IT", "WE", "HE", "AN", "AS", "OR", "SO", "MY", "UP", "NO", "BE") should be rejected outright. Any name that is a single word of 3 or fewer characters should be rejected unless it matches known short character name patterns (like "BO", "AL", etc. -- but these are extremely rare and the false positive cost is too high).
+
+### Specific code changes:
+1. Add a length gate: reject single-word names with 3 or fewer characters
+2. Merge the comprehensive stopword list into `genericSingles`
+3. Also add duplicate-name deduplication for near-matches (e.g., "SP" vs "SP AVINASH BIDARI" vs "SP AVINASH", and "ANNAMMA" vs "ANNAMMAL" vs "SUB INSPECTOR ANNAMMAL")
+
+### After deployment:
+- Re-parse the Khaaki Squad script to verify the fix
+- Expected result: ~20-30 legitimate characters instead of 138
 
 ## Technical Details
-
-### 1. New Edge Function: `classify-script-type`
-
-- Accepts a text sample (string, max ~5KB) via POST
-- Runs the existing Gemini Flash Lite classification prompt (already proven in `script-parser-stream`)
-- Returns `{ scriptType: string, confidence: number }`
-- Lightweight and fast (~1-2s response time)
-
-### 2. Client-Side Text Extraction (ScriptUpload.tsx)
-
-- For text-based formats (.fountain, .txt, .highland): read the first 5KB using `FileReader.readAsText()`
-- For .fdx: read as text and extract dialogue/scene content from XML
-- For .pdf and .docx: send the raw file to the edge function which will handle extraction
-- Trigger classification in the `onDrop` callback after file selection
-
-### 3. UI Changes (ScriptUpload.tsx)
-
-- Add state: `autoDetectedType`, `classifying` (boolean), `classificationConfidence`
-- While classifying: show a subtle spinner next to "Script Type" label
-- On result: auto-set `scriptType` to the detected value; show an "Auto-detected" badge next to the selected type pill
-- Low confidence (<60%): don't auto-select, just show a suggestion tooltip
-- User can always click a different type to override (badge disappears on manual selection)
-
-### 4. Edge Function Implementation
-
-```
-POST /classify-script-type
-Body: { textSample: string, fileName: string }
-Response: { scriptType: string, confidence: number }
-```
-
-The function will:
-
-- Use the proven classification prompt from `classifyScriptType` in script-parser-stream
-- Use Gemini 2.5 Flash Lite for speed
-- Return result in under 2 seconds
-
-### 5. Handling PDFs and DOCX
-
-- For binary formats, the edge function will accept a base64-encoded chunk (first ~50KB of the file)
-- Use basic heuristics on the raw text extraction (PDF text layer) to get a sample
-- If no text can be extracted client-side, skip auto-detection (the parser will classify during parsing anyway)
-
-6. Prompt the user if the system classification is different from the user classification. Give the options to either change or accept the system selection. Take the confirmation from the user and move ahead.
-7. Put auto classification behind a feature flag with ability to turn it off at any point if not required. Add it to the configurations page for toggling the feature. 
-
-## What Stays the Same
-
-- User-selected type remains authoritative (per existing constraint)
-- The parser's built-in classification stage still runs as a safety net
-- All 12 script types remain supported
-- Episode length class selector still appears when web_series is selected (auto-detected or manual)
+- Only one file needs to change: `supabase/functions/script-parser-stream/index.ts`
+- The fix is in the `isNonCharacter()` function around lines 1986-2014
+- The edge function will be redeployed automatically
+- Users will need to re-parse existing scripts to benefit from the fix
