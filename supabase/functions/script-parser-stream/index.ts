@@ -1972,6 +1972,32 @@ serve(async (req) => {
           console.error(`[script-parser-stream] Failed to fetch stopwords:`, e);
         }
 
+        // Fetch parser settings from database
+        let shortNameMaxLength = 3;
+        let dialogueStrictThreshold = 2;
+        let dialogueFallbackThreshold = 1;
+        let minCharactersForStrict = 3;
+        try {
+          const { data: settingsRows } = await supabase
+            .from('parser_settings')
+            .select('key, value');
+          if (settingsRows) {
+            for (const row of settingsRows) {
+              const val = Number(row.value);
+              if (isNaN(val)) continue;
+              switch (row.key) {
+                case 'short_name_max_length': shortNameMaxLength = val; break;
+                case 'dialogue_strict_threshold': dialogueStrictThreshold = val; break;
+                case 'dialogue_fallback_threshold': dialogueFallbackThreshold = val; break;
+                case 'min_characters_for_strict': minCharactersForStrict = val; break;
+              }
+            }
+            console.log(`[script-parser-stream] Parser settings: strict=${dialogueStrictThreshold}, fallback=${dialogueFallbackThreshold}, minChars=${minCharactersForStrict}, shortNameMax=${shortNameMaxLength}`);
+          }
+        } catch (e) {
+          console.error(`[script-parser-stream] Failed to fetch parser settings, using defaults:`, e);
+        }
+
         const nonCharacterPatterns = [
           /^(INT|EXT|INTERIOR|EXTERIOR)\b/i,
           /^(FADE|CUT|DISSOLVE|SMASH|JUMP|MATCH|IRIS|WIPE)\s*(IN|OUT|TO|FROM)?$/i,
@@ -2006,7 +2032,7 @@ serve(async (req) => {
           
           // Length gate: reject single-word names with 3 or fewer characters
           const nameWords = name.split(/\s+/);
-          if (nameWords.length === 1 && name.length <= 3) return true;
+          if (nameWords.length === 1 && name.length <= shortNameMaxLength) return true;
           
           // Stopwords loaded from database (fetched before filtering)
           if (dbStopwords.has(name)) return true;
@@ -2022,25 +2048,23 @@ serve(async (req) => {
         };
         
         const filteredCharacters = new Map<string, Character>();
-        // Adaptive threshold: if strict filtering (>=2) leaves too few characters,
-        // relax to include all non-noise entries to avoid 0-character extraction
-        const strictThreshold = 2;
-        let thresholdUsed = strictThreshold;
+        // Adaptive threshold: uses DB-configured values
+        let thresholdUsed = dialogueStrictThreshold;
         
         allCharacters.forEach((char, name) => {
-          if (!isNonCharacter(name) && (char.dialogue_count || 0) >= strictThreshold) {
+          if (!isNonCharacter(name) && (char.dialogue_count || 0) >= dialogueStrictThreshold) {
             filteredCharacters.set(name, char);
           }
         });
         
-        // ADAPTIVE FALLBACK: If strict filtering left fewer than 3 characters,
-        // relax threshold to 1 (include single-line characters)
-        if (filteredCharacters.size < 3 && allCharacters.size > 0) {
-          console.log(`[script-parser-stream] Strict threshold (>=${strictThreshold}) left only ${filteredCharacters.size} characters. Relaxing to >=1.`);
+        // ADAPTIVE FALLBACK: If strict filtering left fewer than minCharactersForStrict,
+        // relax to dialogueFallbackThreshold
+        if (filteredCharacters.size < minCharactersForStrict && allCharacters.size > 0) {
+          console.log(`[script-parser-stream] Strict threshold (>=${dialogueStrictThreshold}) left only ${filteredCharacters.size} characters. Relaxing to >=${dialogueFallbackThreshold}.`);
           filteredCharacters.clear();
-          thresholdUsed = 1;
+          thresholdUsed = dialogueFallbackThreshold;
           allCharacters.forEach((char, name) => {
-            if (!isNonCharacter(name) && (char.dialogue_count || 0) >= 1) {
+            if (!isNonCharacter(name) && (char.dialogue_count || 0) >= dialogueFallbackThreshold) {
               filteredCharacters.set(name, char);
             }
           });

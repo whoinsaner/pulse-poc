@@ -49,6 +49,7 @@ const NAV_ITEMS: NavItem[] = [
     icon: Sparkles,
     adminOnly: false,
     children: [
+      { label: 'Parser Settings', path: '/settings/features/parser' },
       { label: 'Stopwords', path: '/settings/features/stopwords' },
     ],
   },

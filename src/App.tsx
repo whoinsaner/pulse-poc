@@ -91,6 +91,7 @@ import ParametersOverview from "./pages/settings/ParametersOverview";
 import ParametersSchema from "./pages/settings/ParametersSchema";
 import ParametersWeights from "./pages/settings/ParametersWeights";
 import ParserStopwords from "./pages/settings/ParserStopwords";
+import ParserSettings from "./pages/settings/ParserSettings";
 import FrameworkDocumentation from "./pages/FrameworkDocumentation";
 import NotFound from "./pages/NotFound";
 import TestComicAnalysis from "./pages/TestComicAnalysis";
@@ -136,6 +137,7 @@ const App = () => (
               <Route path="parameters/schema" element={<ParametersSchema />} />
               <Route path="parameters/weights" element={<ParametersWeights />} />
               <Route path="features" element={<FeaturesSettings />} />
+              <Route path="features/parser" element={<ParserSettings />} />
               <Route path="features/stopwords" element={<ParserStopwords />} />
             </Route>
             <Route path="/invite/:token" element={<AcceptInvitation />} />

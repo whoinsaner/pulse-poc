@@ -625,6 +625,39 @@ export type Database = {
         }
         Relationships: []
       }
+      parser_settings: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          key: string
+          label: string
+          updated_at: string
+          value: string
+          value_type: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          key: string
+          label: string
+          updated_at?: string
+          value: string
+          value_type?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          key?: string
+          label?: string
+          updated_at?: string
+          value?: string
+          value_type?: string
+        }
+        Relationships: []
+      }
       parser_stopwords: {
         Row: {
           category: string
