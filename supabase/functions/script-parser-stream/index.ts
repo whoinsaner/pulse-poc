@@ -37,6 +37,15 @@ interface Character {
   description: string | null;
 }
 
+interface ScriptLine {
+  scene_number: number;
+  line_number: number;
+  character_name: string | null;
+  line_type: 'dialogue' | 'action' | 'parenthetical' | 'scene_heading' | 'transition';
+  content: string;
+  page_number: number | null;
+}
+
 // SSE helper to send events
 function sendSSE(controller: ReadableStreamDefaultController, event: string, data: any) {
   const message = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
@@ -1412,6 +1421,7 @@ serve(async (req) => {
         console.log(`[script-parser-stream] Script type: ${isComic ? 'comic' : 'screenplay'}`);
         let allScenes: Scene[] = [];
         let allCharacters: Map<string, Character> = new Map();
+        let allScriptLines: ScriptLine[] = [];
         let rawText = '';
         let usedAIRescue = false;
         let extractionMethod = 'regex';
@@ -1434,10 +1444,12 @@ serve(async (req) => {
             const parsed = parseComicFormat(comicNorm.normalizedText, comicNorm.characterNames);
             allScenes = parsed.scenes;
             parsed.characters.forEach(c => allCharacters.set(c.name, c));
+            allScriptLines = parsed.scriptLines;
           } else {
             const parsed = parseTextFormat(textContent);
             allScenes = parsed.scenes;
             parsed.characters.forEach(c => allCharacters.set(c.name, c));
+            allScriptLines = parsed.scriptLines;
           }
           extractionMethod = 'regex';
           console.log(`[script-parser-stream] Regex parse result: ${allScenes.length} scenes, ${allCharacters.size} characters`);
@@ -1681,6 +1693,7 @@ serve(async (req) => {
               const parsed = parseComicFormat(comicNorm.normalizedText, comicNorm.characterNames);
               allScenes = parsed.scenes;
               parsed.characters.forEach(c => allCharacters.set(c.name, c));
+              allScriptLines = parsed.scriptLines;
               extractionMethod = 'comic-text-extraction';
               
               // AI fallback if comic parsing found 0 panels/pages
@@ -1731,6 +1744,7 @@ serve(async (req) => {
               const parsed = parseTextFormat(normalized.fountainText);
               allScenes = parsed.scenes;
               parsed.characters.forEach(c => allCharacters.set(c.name, c));
+              allScriptLines = parsed.scriptLines;
               extractionMethod = 'text-extraction';
               
               // AI fallback if screenplay parsing found 0 scenes
@@ -1828,6 +1842,7 @@ serve(async (req) => {
                   const parsed = parseComicFormat(comicNorm.normalizedText);
                   allScenes = parsed.scenes;
                   parsed.characters.forEach(c => allCharacters.set(c.name, c));
+                  allScriptLines = parsed.scriptLines;
                   
                   // If regex parsing returned 0 scenes, use AI structure detection
                   if (allScenes.length === 0 && lovableApiKey) {
@@ -1847,6 +1862,7 @@ serve(async (req) => {
                   const parsed = parseTextFormat(normalized.fountainText);
                   allScenes = parsed.scenes;
                   parsed.characters.forEach(c => allCharacters.set(c.name, c));
+                  allScriptLines = parsed.scriptLines;
                   
                   // If regex parsing returned 0 scenes, use AI structure detection
                   if (allScenes.length === 0 && lovableApiKey) {
@@ -2142,6 +2158,12 @@ serve(async (req) => {
           .eq('script_id', scriptId);
         if (deleteScenesError) console.warn('[script-parser-stream] Could not clean scenes:', deleteScenesError.message);
         
+        const { error: deleteLinesError } = await supabase
+          .from('script_lines')
+          .delete()
+          .eq('script_id', scriptId);
+        if (deleteLinesError) console.warn('[script-parser-stream] Could not clean script_lines:', deleteLinesError.message);
+        
         console.log(`[script-parser-stream] Cleaned up existing parsed data for script`);
 
         // Insert scenes
@@ -2164,7 +2186,7 @@ serve(async (req) => {
           }
         }
         
-        sendSSE(controller, 'progress', { stage: 'finalize', percent: 40, message: 'Scenes saved...' });
+        sendSSE(controller, 'progress', { stage: 'finalize', percent: 30, message: 'Scenes saved...' });
 
         // Insert characters
         console.log(`[script-parser-stream] Inserting ${characters.length} characters`);
@@ -2186,7 +2208,31 @@ serve(async (req) => {
           }
         }
         
-        sendSSE(controller, 'progress', { stage: 'finalize', percent: 70, message: 'Characters saved...' });
+        sendSSE(controller, 'progress', { stage: 'finalize', percent: 50, message: 'Characters saved...' });
+
+        // Insert script_lines in batches of 500
+        if (allScriptLines.length > 0) {
+          console.log(`[script-parser-stream] Inserting ${allScriptLines.length} script_lines`);
+          const BATCH_SIZE = 500;
+          let linesInserted = 0;
+          for (let batch = 0; batch < allScriptLines.length; batch += BATCH_SIZE) {
+            const chunk = allScriptLines.slice(batch, batch + BATCH_SIZE).map(sl => ({
+              ...sl,
+              script_id: scriptId,
+            }));
+            const { error: linesError } = await supabase
+              .from('script_lines')
+              .insert(chunk);
+            if (linesError) {
+              console.error(`[script-parser-stream] script_lines batch insert error (batch ${Math.floor(batch / BATCH_SIZE) + 1}):`, linesError);
+            } else {
+              linesInserted += chunk.length;
+            }
+          }
+          console.log(`[script-parser-stream] Script lines inserted: ${linesInserted}/${allScriptLines.length}`);
+        }
+        
+        sendSSE(controller, 'progress', { stage: 'finalize', percent: 70, message: 'Script lines saved...' });
 
         // Build and save narrative graph
         console.log(`[script-parser-stream] Building narrative graph`);
@@ -2421,15 +2467,17 @@ serve(async (req) => {
 // ============= PARSING FUNCTIONS =============
 
 // Parse text formats with expanded scene detection
-function parseTextFormat(content: string): { scenes: Scene[]; characters: Character[]; rawText: string } {
+function parseTextFormat(content: string): { scenes: Scene[]; characters: Character[]; rawText: string; scriptLines: ScriptLine[] } {
   const scenes: Scene[] = [];
   const characterMap = new Map<string, Character>();
+  const scriptLines: ScriptLine[] = [];
   const lines = content.split('\n');
   
   let currentSceneNumber = 0;
   let currentScene: Scene | null = null;
   let currentPage = 1;
   let descriptionLines: string[] = [];
+  let globalLineNumber = 0;
   
   // Scene heading patterns - standard + expanded
   const sceneHeadingPattern = /^(?:\d+[A-Z]?\.\s*)?(INT\.|EXT\.|INT\/EXT\.|I\/E\.)\s*(.+?)(?:\s*[-–—]\s*(.+))?$/i;
@@ -2485,6 +2533,8 @@ function parseTextFormat(content: string): { scenes: Scene[]; characters: Charac
       currentPage = Math.max(currentPage, Math.ceil((i + 1) / 55));
     }
     
+    if (!line) continue;
+    
     // Helper: finalize previous scene description
     const finalizeSceneDescription = () => {
       if (currentScene && descriptionLines.length > 0) {
@@ -2513,6 +2563,8 @@ function parseTextFormat(content: string): { scenes: Scene[]; characters: Charac
         page_end: null,
       };
       scenes.push(currentScene);
+      globalLineNumber++;
+      scriptLines.push({ scene_number: currentSceneNumber, line_number: globalLineNumber, character_name: null, line_type: 'scene_heading', content: line, page_number: currentPage });
       continue;
     }
     
@@ -2536,6 +2588,8 @@ function parseTextFormat(content: string): { scenes: Scene[]; characters: Charac
         page_end: null,
       };
       scenes.push(currentScene);
+      globalLineNumber++;
+      scriptLines.push({ scene_number: currentSceneNumber, line_number: globalLineNumber, character_name: null, line_type: 'scene_heading', content: line, page_number: currentPage });
       continue;
     }
     
@@ -2558,6 +2612,8 @@ function parseTextFormat(content: string): { scenes: Scene[]; characters: Charac
         page_end: null,
       };
       scenes.push(currentScene);
+      globalLineNumber++;
+      scriptLines.push({ scene_number: currentSceneNumber, line_number: globalLineNumber, character_name: null, line_type: 'scene_heading', content: line, page_number: currentPage });
       continue;
     }
     
@@ -2580,31 +2636,43 @@ function parseTextFormat(content: string): { scenes: Scene[]; characters: Charac
         page_end: null,
       };
       scenes.push(currentScene);
+      globalLineNumber++;
+      scriptLines.push({ scene_number: currentSceneNumber, line_number: globalLineNumber, character_name: null, line_type: 'scene_heading', content: line, page_number: currentPage });
+      continue;
+    }
+
+    // Check for transitions
+    const isTransition = /^(FADE|CUT|DISSOLVE|SMASH|JUMP|TIME|MATCH|IRIS|WIPE)\b/i.test(line);
+    if (isTransition) {
+      globalLineNumber++;
+      scriptLines.push({ scene_number: currentSceneNumber || 1, line_number: globalLineNumber, character_name: null, line_type: 'transition', content: line, page_number: currentPage });
+      continue;
+    }
+
+    // Check for parenthetical
+    const isParenthetical = /^\(.*\)$/.test(line);
+    if (isParenthetical && currentSceneNumber > 0) {
+      globalLineNumber++;
+      scriptLines.push({ scene_number: currentSceneNumber, line_number: globalLineNumber, character_name: null, line_type: 'parenthetical', content: line, page_number: currentPage });
       continue;
     }
 
     // Accumulate description lines for current scene (action/description text)
     if (currentScene && line.length > 5) {
-      // Skip lines that look like character cues (ALL CAPS short lines) or transitions
       const isCharCue = /^[A-Z][A-Z\s\.']{0,35}(\s*\(.*\))?$/.test(line) && line.length < 40;
-      const isTransition = /^(FADE|CUT|DISSOLVE|SMASH|JUMP|TIME|MATCH|IRIS|WIPE)\b/i.test(line);
-      const isParenthetical = /^\(.*\)$/.test(line);
-      if (!isCharCue && !isTransition && !isParenthetical && descriptionLines.join(' ').length < 500) {
+      if (!isCharCue && !isParenthetical && descriptionLines.join(' ').length < 500) {
         descriptionLines.push(line);
       }
     }
     
     // Character detection - must be ALL CAPS, short, followed by dialogue
     if (line.length > 1 && line.length < 40) {
-      // Character cues in screenplays are ALL CAPS names, optionally with (V.O.), (O.S.), (CONT'D)
       const charCuePattern = /^([A-Z][A-Z\s\.']{0,35})(\s*\(.*\))?$/;
       const charMatch = line.match(charCuePattern);
       if (charMatch && !line.includes(':')) {
         const charName = charMatch[1].trim();
         const nextLine = lines[i + 1]?.trim() || '';
-        const nextNextLine = lines[i + 2]?.trim() || '';
         
-        // Validate: name must be ALL CAPS, not a scene heading, not a transition
         const isAllCaps = charName === charName.toUpperCase();
         const hasDialogueBelow = nextLine.length > 0 && 
           !nextLine.match(sceneHeadingPattern) &&
@@ -2628,8 +2696,38 @@ function parseTextFormat(content: string): { scenes: Scene[]; characters: Charac
             });
           }
           characterMap.get(charName)!.dialogue_count++;
+          
+          // Collect the dialogue line(s) that follow the character cue
+          // Look ahead for dialogue lines (skip parentheticals, collect until blank or next cue)
+          let j = i + 1;
+          while (j < lines.length) {
+            const dl = lines[j].trim();
+            if (!dl) break; // blank line ends dialogue block
+            if (/^\(.*\)$/.test(dl)) {
+              // Parenthetical within dialogue
+              globalLineNumber++;
+              scriptLines.push({ scene_number: currentSceneNumber || 1, line_number: globalLineNumber, character_name: charName, line_type: 'parenthetical', content: dl, page_number: currentPage });
+            } else if (/^[A-Z][A-Z\s\.']{0,35}(\s*\(.*\))?$/.test(dl) && dl.length < 40 && dl === dl.toUpperCase()) {
+              break; // Next character cue
+            } else if (dl.match(sceneHeadingPattern) || dl.match(pageMarkerPattern)) {
+              break; // Next scene
+            } else {
+              globalLineNumber++;
+              scriptLines.push({ scene_number: currentSceneNumber || 1, line_number: globalLineNumber, character_name: charName, line_type: 'dialogue', content: dl, page_number: currentPage });
+            }
+            j++;
+          }
+          // Skip the lines we consumed
+          i = j - 1;
+          continue;
         }
       }
+    }
+    
+    // Action/description line (anything else with substance)
+    if (line.length > 2 && currentSceneNumber > 0) {
+      globalLineNumber++;
+      scriptLines.push({ scene_number: currentSceneNumber, line_number: globalLineNumber, character_name: null, line_type: 'action', content: line, page_number: currentPage });
     }
   }
   
@@ -2639,12 +2737,13 @@ function parseTextFormat(content: string): { scenes: Scene[]; characters: Charac
   }
   if (currentScene) currentScene.page_end = currentPage;
   
-  console.log(`[script-parser-stream] parseTextFormat: ${scenes.length} scenes, ${characterMap.size} characters from ${lines.length} lines`);
+  console.log(`[script-parser-stream] parseTextFormat: ${scenes.length} scenes, ${characterMap.size} characters from ${lines.length} lines, ${scriptLines.length} script_lines collected`);
   
   return {
     scenes,
     characters: Array.from(characterMap.values()),
     rawText: content,
+    scriptLines,
   };
 }
 
@@ -2653,14 +2752,16 @@ function parseTextFormat(content: string): { scenes: Scene[]; characters: Charac
 function parseComicFormat(
   content: string, 
   preDetectedCharacters?: string[]
-): { scenes: Scene[]; characters: Character[]; rawText: string } {
+): { scenes: Scene[]; characters: Character[]; rawText: string; scriptLines: ScriptLine[] } {
   const scenes: Scene[] = [];
   const characterMap = new Map<string, Character>();
+  const scriptLines: ScriptLine[] = [];
   const lines = content.split('\n');
   
   let panelNumber = 0;
   let pageNumber = 0;
   let comicDescLines: string[] = [];
+  let globalLineNumber = 0;
   
   // Seed character map with pre-detected characters from normalization stage
   if (preDetectedCharacters && preDetectedCharacters.length > 0) {
@@ -2678,32 +2779,30 @@ function parseComicFormat(
   
   // Expanded page patterns
   const pagePatterns = [
-    /^PAGE\s*#?\s*(\d+)/i,           // PAGE 1, PAGE #1
-    /^PG\.?\s*#?\s*(\d+)/i,          // PG 1, PG. 1
-    /^P(\d+)\b/i,                     // P1, P2
-    /^\[PAGE\s*(\d+)\]/i,            // [PAGE 1]
-    /^-+\s*PAGE\s*(\d+)\s*-+/i,      // --- PAGE 1 ---
+    /^PAGE\s*#?\s*(\d+)/i,
+    /^PG\.?\s*#?\s*(\d+)/i,
+    /^P(\d+)\b/i,
+    /^\[PAGE\s*(\d+)\]/i,
+    /^-+\s*PAGE\s*(\d+)\s*-+/i,
   ];
   
   // Expanded panel patterns
   const panelPatterns = [
-    /^PANEL\s*#?\s*(\d+)/i,          // PANEL 1
-    /^PNL\.?\s*#?\s*(\d+)/i,         // PNL 1
-    /^P\d+\s*[-:]\s*PANEL\s*(\d+)/i, // P1 - PANEL 1
-    /^\[PANEL\s*(\d+)\]/i,           // [PANEL 1]
-    /^PANEL\s+([A-Z])\b/i,           // PANEL A, PANEL B
+    /^PANEL\s*#?\s*(\d+)/i,
+    /^PNL\.?\s*#?\s*(\d+)/i,
+    /^P\d+\s*[-:]\s*PANEL\s*(\d+)/i,
+    /^\[PANEL\s*(\d+)\]/i,
+    /^PANEL\s+([A-Z])\b/i,
   ];
   
   // Expanded dialogue patterns - colon-based
   const dialoguePatterns = [
-    /^([A-Z][A-Z\s\.']+)(?:\s*\(.*\))?:\s*(.+)/,  // CHARACTER: dialogue
-    /^([A-Z][A-Z\s\.']+)\s*\[.*?\]:\s*(.+)/,      // CHARACTER [V.O.]: dialogue
+    /^([A-Z][A-Z\s\.']+)(?:\s*\(.*\))?:\s*(.+)/,
+    /^([A-Z][A-Z\s\.']+)\s*\[.*?\]:\s*(.+)/,
   ];
   
-  // Standalone character pattern (name on one line, dialogue on next)
   const standaloneCharPattern = /^[A-Z][A-Z\s\.']{1,30}$/;
   
-  // Non-character words for comics
   const nonCharacterWords = new Set([
     'CAPTION', 'SFX', 'NARRATOR', 'SOUND', 'EFFECT', 'BURST',
     'PAGE', 'PANEL', 'PG', 'PNL', 'TITLE', 'CREDITS', 'SPLASH',
@@ -2734,7 +2833,6 @@ function parseComicFormat(
     for (const pattern of panelPatterns) {
       const match = trimmed.match(pattern);
       if (match) {
-        // Finalize previous panel's description
         if (scenes.length > 0 && comicDescLines.length > 0) {
           scenes[scenes.length - 1].description = comicDescLines.join(' ').trim().substring(0, 500);
           comicDescLines = [];
@@ -2751,6 +2849,8 @@ function parseComicFormat(
           page_start: pageNumber || 1,
           page_end: pageNumber || 1,
         });
+        globalLineNumber++;
+        scriptLines.push({ scene_number: panelNumber, line_number: globalLineNumber, character_name: null, line_type: 'scene_heading', content: trimmed, page_number: pageNumber || 1 });
         foundPanel = true;
         break;
       }
@@ -2763,6 +2863,7 @@ function parseComicFormat(
       const match = trimmed.match(pattern);
       if (match) {
         const charName = match[1].trim();
+        const dialogueText = match[2].trim();
         if (!nonCharacterWords.has(charName)) {
           if (!characterMap.has(charName)) {
             characterMap.set(charName, {
@@ -2774,6 +2875,8 @@ function parseComicFormat(
             });
           }
           characterMap.get(charName)!.dialogue_count++;
+          globalLineNumber++;
+          scriptLines.push({ scene_number: panelNumber || 1, line_number: globalLineNumber, character_name: charName, line_type: 'dialogue', content: dialogueText, page_number: pageNumber || null });
         }
         foundDialogue = true;
         break;
@@ -2784,13 +2887,11 @@ function parseComicFormat(
     // Check for standalone character name (name on one line, dialogue on next)
     const nextLine = lines[i + 1]?.trim() || '';
     if (standaloneCharPattern.test(trimmed) && !nonCharacterWords.has(trimmed)) {
-      // Verify next line looks like dialogue (not another structure element)
       const nextIsStructure = pagePatterns.some(p => p.test(nextLine)) || 
                               panelPatterns.some(p => p.test(nextLine)) ||
                               (standaloneCharPattern.test(nextLine) && !nonCharacterWords.has(nextLine));
       
       if (nextLine && nextLine.length > 0 && !nextIsStructure) {
-        // This is a standalone character name followed by dialogue
         if (!characterMap.has(trimmed)) {
           characterMap.set(trimmed, {
             name: trimmed,
@@ -2801,8 +2902,20 @@ function parseComicFormat(
           });
         }
         characterMap.get(trimmed)!.dialogue_count++;
+        // Record the dialogue line (next line)
+        globalLineNumber++;
+        scriptLines.push({ scene_number: panelNumber || 1, line_number: globalLineNumber, character_name: trimmed, line_type: 'dialogue', content: nextLine, page_number: pageNumber || null });
+        i++; // skip the dialogue line we just consumed
+        continue;
       }
       // Accumulate non-dialogue, non-structural lines as panel description
+      if (scenes.length > 0 && trimmed.length > 5 && comicDescLines.join(' ').length < 500) {
+        comicDescLines.push(trimmed);
+      }
+    } else if (trimmed.length > 3) {
+      // Action/description line
+      globalLineNumber++;
+      scriptLines.push({ scene_number: panelNumber || 1, line_number: globalLineNumber, character_name: null, line_type: 'action', content: trimmed, page_number: pageNumber || null });
       if (scenes.length > 0 && trimmed.length > 5 && comicDescLines.join(' ').length < 500) {
         comicDescLines.push(trimmed);
       }
@@ -2814,12 +2927,13 @@ function parseComicFormat(
     scenes[scenes.length - 1].description = comicDescLines.join(' ').trim().substring(0, 500);
   }
   
-  console.log(`[script-parser-stream] parseComicFormat: ${scenes.length} panels, ${characterMap.size} characters from ${lines.length} lines`);
+  console.log(`[script-parser-stream] parseComicFormat: ${scenes.length} panels, ${characterMap.size} characters from ${lines.length} lines, ${scriptLines.length} script_lines collected`);
   
   return {
     scenes,
     characters: Array.from(characterMap.values()),
     rawText: content,
+    scriptLines,
   };
 }
 

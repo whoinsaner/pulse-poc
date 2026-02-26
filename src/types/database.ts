@@ -92,6 +92,20 @@ export interface Character {
   created_at: string;
 }
 
+export type ScriptLineType = 'dialogue' | 'action' | 'parenthetical' | 'scene_heading' | 'transition';
+
+export interface ScriptLine {
+  id: string;
+  script_id: string;
+  scene_number: number;
+  line_number: number;
+  character_name: string | null;
+  line_type: ScriptLineType;
+  content: string;
+  page_number: number | null;
+  created_at: string;
+}
+
 export interface CharacterRelationship {
   character: string;
   type: string;
