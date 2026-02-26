@@ -1986,8 +1986,14 @@ serve(async (req) => {
         const isNonCharacter = (name: string): boolean => {
           if (isLocationLike(name)) return true;
           if (nonCharacterPatterns.some(p => p.test(name))) return true;
-          // Single generic words that aren't names
+          
+          // Length gate: reject single-word names with 3 or fewer characters
+          const nameWords = name.split(/\s+/);
+          if (nameWords.length === 1 && name.length <= 3) return true;
+          
+          // Comprehensive stopword set - common English words that are never character names
           const genericSingles = new Set([
+            // Original location/prop/direction words
             'INSIDE', 'OUTSIDE', 'UPSTAIRS', 'DOWNSTAIRS', 'NEARBY', 'ELSEWHERE',
             'BIKE', 'CAR', 'PHONE', 'TEMPO', 'PASSAGE', 'CELLAR',
             'STAND', 'WALL', 'GATE', 'DOOR', 'WINDOW', 'STAIRS', 'STEP',
@@ -2000,6 +2006,42 @@ serve(async (req) => {
             'TERRACE', 'ROOFTOP', 'BALCONY', 'VERANDAH', 'COURTYARD', 'GARDEN',
             'GRAVEYARD', 'CEMETERY', 'CREMATORIUM', 'SHAMSHAAN',
             'EXTERIOR', 'INTERIOR', 'CONTINUOUS', 'LATER', 'MEANWHILE',
+            // Pronouns
+            'YOU', 'SHE', 'THEY', 'HIM', 'HER', 'THEM', 'YOUR', 'HIS', 'ITS', 'OUR', 'THEIR',
+            'MYSELF', 'YOURSELF', 'HIMSELF', 'HERSELF', 'ITSELF', 'OURSELVES', 'THEMSELVES',
+            // Prepositions
+            'INTO', 'ONTO', 'UPON', 'NEAR', 'BETWEEN', 'THROUGH', 'ACROSS', 'ALONG',
+            'AROUND', 'ABOVE', 'BELOW', 'UNDER', 'OVER', 'BEHIND', 'BESIDE', 'BEYOND',
+            'BENEATH', 'AMONG', 'AGAINST', 'BEFORE', 'AFTER', 'DURING', 'WITHOUT',
+            'TOWARD', 'TOWARDS', 'FROM', 'WITH',
+            // Conjunctions
+            'BECAUSE', 'ALTHOUGH', 'WHILE', 'WHEN', 'WHERE', 'SINCE', 'UNLESS',
+            'UNTIL', 'WHETHER', 'THOUGH', 'WHEREAS',
+            // Articles/Determiners
+            'THIS', 'THAT', 'THESE', 'THOSE', 'SOME', 'EACH', 'EVERY',
+            'BOTH', 'MANY', 'MOST', 'SEVERAL', 'NONE',
+            // Common verbs
+            'BEEN', 'BEING', 'HAVE', 'DOES', 'WOULD', 'SHALL', 'SHOULD',
+            'COULD', 'MIGHT', 'MUST', 'NEED', 'DARE', 'OUGHT',
+            'COME', 'GOES', 'GOING', 'GONE', 'MAKE', 'TAKE', 'GIVE', 'KEEP',
+            'SAID', 'TELL', 'TOLD', 'SHOW', 'SHOWS', 'LOOK', 'FIND', 'KNOW',
+            'THINK', 'WANT', 'SEEM', 'FEEL', 'LEAVE', 'CALL', 'TURN', 'MOVE',
+            'LIVE', 'WORK', 'PLAY', 'READ', 'WRITE', 'DRAW', 'HEAR',
+            'WERE', 'ALSO', 'JUST',
+            // Adverbs
+            'VERY', 'THEN', 'HERE', 'THERE', 'ONLY', 'STILL', 'ALREADY',
+            'AGAIN', 'OFTEN', 'NEVER', 'ALWAYS', 'SOMETIMES', 'SOON',
+            'EVEN', 'QUITE', 'RATHER', 'ALMOST', 'ENOUGH', 'SLIGHTLY',
+            'IMMEDIATELY', 'SLOWLY', 'QUICKLY', 'REALLY', 'SIMPLY', 'MERELY',
+            // Interrogatives
+            'WHAT', 'WHOM', 'WHICH', 'WHERE', 'WHEN', 'HOW', 'WHY',
+            // Other common words
+            'OKAY', 'HELLO', 'PLEASE', 'THANK', 'THANKS', 'SORRY',
+            'NUMBER', 'WATER', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX', 'SEVEN',
+            'EIGHT', 'NINE', 'TEN', 'FIRST', 'SECOND', 'THIRD', 'NEXT', 'LAST',
+            'LITTLE', 'ANOTHER', 'MUCH', 'MORE', 'LESS', 'SAME', 'OTHER',
+            'COMPLAINT', 'PEOPLE', 'EVERYONE', 'SOMEONE', 'ANYONE', 'NOBODY',
+            'NOTHING', 'EVERYTHING', 'SOMETHING', 'ANYTHING',
           ]);
           if (genericSingles.has(name)) return true;
           // Multi-word names where all words are common English nouns/adjectives (not proper names)
@@ -2009,7 +2051,6 @@ serve(async (req) => {
             'BIG', 'SMALL', 'DARK', 'LIGHT', 'OPEN', 'CLOSED', 'BROKEN', 'EMPTY',
             'FLOWER', 'WATER', 'FIRE', 'SMOKE', 'RAIN', 'WIND', 'DUST', 'MUD',
           ]);
-          const nameWords = name.split(/\s+/);
           if (nameWords.length >= 2 && nameWords.every(w => commonWords.has(w))) return true;
           return false;
         };
@@ -2039,6 +2080,36 @@ serve(async (req) => {
           });
         }
         
+        // Near-match deduplication: merge short names into longer variants
+        // e.g. "SP" merges into "SP AVINASH", "ANNAMMA" merges into "SUB INSPECTOR ANNAMMAL"
+        const namesToRemove: string[] = [];
+        const filteredNames = Array.from(filteredCharacters.keys());
+        for (const shortName of filteredNames) {
+          // Find longer names that contain this name as a prefix/substring
+          const longerMatches = filteredNames.filter(
+            n => n !== shortName && n.length > shortName.length && (
+              n.startsWith(shortName + ' ') || // "SP" -> "SP AVINASH"
+              n.endsWith(' ' + shortName) ||    // "ANNAMMAL" -> "SUB INSPECTOR ANNAMMAL"
+              n.includes(' ' + shortName + ' ') // embedded
+            )
+          );
+          if (longerMatches.length > 0) {
+            // Merge dialogue count into the longest match
+            const bestMatch = longerMatches.reduce((a, b) => a.length >= b.length ? a : b);
+            const shortChar = filteredCharacters.get(shortName)!;
+            const longChar = filteredCharacters.get(bestMatch)!;
+            longChar.dialogue_count = (longChar.dialogue_count || 0) + (shortChar.dialogue_count || 0);
+            longChar.scene_count = Math.max(longChar.scene_count || 0, shortChar.scene_count || 0);
+            namesToRemove.push(shortName);
+          }
+        }
+        for (const name of namesToRemove) {
+          filteredCharacters.delete(name);
+        }
+        if (namesToRemove.length > 0) {
+          console.log(`[script-parser-stream] Deduplicated ${namesToRemove.length} near-match character names: ${namesToRemove.join(', ')}`);
+        }
+
         const removedCount = allCharacters.size - filteredCharacters.size;
         if (removedCount > 0) {
           console.log(`[script-parser-stream] Filtered ${removedCount} entries (threshold: >=${thresholdUsed} lines). Kept ${filteredCharacters.size} characters.`);
