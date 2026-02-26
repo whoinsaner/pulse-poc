@@ -136,7 +136,7 @@ const App = () => (
               <Route path="parameters/schema" element={<ParametersSchema />} />
               <Route path="parameters/weights" element={<ParametersWeights />} />
               <Route path="features" element={<FeaturesSettings />} />
-              <Route path="stopwords" element={<ParserStopwords />} />
+              <Route path="features/stopwords" element={<ParserStopwords />} />
             </Route>
             <Route path="/invite/:token" element={<AcceptInvitation />} />
             <Route path="/report/:runId" element={<ReportLayout />}>
