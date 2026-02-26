@@ -127,7 +127,12 @@ export default function ParserStopwords() {
   return (
     <div className="p-6 max-w-4xl space-y-6">
       <div>
-        <h2 className="text-2xl font-bold">Parser Stopwords</h2>
+        <h2 className="text-2xl font-bold">
+          Parser Stopwords
+          <Badge variant="secondary" className="ml-2 text-base font-semibold align-middle">
+            {stopwords.length}
+          </Badge>
+        </h2>
         <p className="text-sm text-muted-foreground mt-1">
           Words in this list are excluded during character extraction. Changes apply to future parses.
         </p>
