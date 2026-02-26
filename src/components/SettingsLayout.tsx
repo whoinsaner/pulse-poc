@@ -43,8 +43,15 @@ const NAV_ITEMS: NavItem[] = [
       { label: 'Lens Weights', path: '/settings/parameters/weights' },
     ],
   },
-  { label: 'Features', path: '/settings/features', icon: Sparkles, adminOnly: false },
-  { label: 'Parser Stopwords', path: '/settings/stopwords', icon: ShieldBan, adminOnly: false },
+  {
+    label: 'Features',
+    path: '/settings/features',
+    icon: Sparkles,
+    adminOnly: false,
+    children: [
+      { label: 'Stopwords', path: '/settings/features/stopwords' },
+    ],
+  },
 ];
 
 export default function SettingsLayout() {
