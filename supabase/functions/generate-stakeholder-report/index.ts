@@ -101,20 +101,21 @@ serve(async (req) => {
       global: { headers: { Authorization: authHeader } }
     });
 
-    // Validate JWT
-    const token = authHeader.replace('Bearer ', '');
-    const { data: authData, error: authError } = await supabase.auth.getClaims(token);
-    if (authError || !authData?.claims) {
+    // Validate user exists and session is active
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
-    const { reportId, stakeholderLens } = await req.json();
+    const body = await req.json();
+    const reportId = typeof body?.reportId === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(body.reportId) ? body.reportId : null;
+    const stakeholderLens = typeof body?.stakeholderLens === 'string' && body.stakeholderLens.length <= 50 ? body.stakeholderLens : null;
 
     if (!reportId || !stakeholderLens) {
-      return new Response(JSON.stringify({ error: 'Missing reportId or stakeholderLens' }), {
+      return new Response(JSON.stringify({ error: 'Missing or invalid reportId (UUID) or stakeholderLens' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });

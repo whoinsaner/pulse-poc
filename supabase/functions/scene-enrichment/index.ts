@@ -137,11 +137,16 @@ serve(async (req) => {
   }
 
   try {
-    const { scriptId, analysisRunId, qualityMode = 'balanced', scriptContext } = await req.json();
+    const body = await req.json();
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const scriptId = typeof body?.scriptId === 'string' && uuidRegex.test(body.scriptId) ? body.scriptId : null;
+    const analysisRunId = typeof body?.analysisRunId === 'string' && uuidRegex.test(body.analysisRunId) ? body.analysisRunId : null;
+    const qualityMode = typeof body?.qualityMode === 'string' && body.qualityMode.length <= 50 ? body.qualityMode : 'balanced';
+    const scriptContext = typeof body?.scriptContext === 'string' ? body.scriptContext.substring(0, 200000) : undefined;
 
     if (!scriptId || !analysisRunId) {
       return new Response(
-        JSON.stringify({ error: 'scriptId and analysisRunId are required' }),
+        JSON.stringify({ error: 'scriptId and analysisRunId must be valid UUIDs' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
