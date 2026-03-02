@@ -20,6 +20,7 @@ import {
   Sunset,
   Home,
   Building,
+  AlignLeft,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -60,6 +61,16 @@ interface NarrativeGraph {
   metadata: Record<string, unknown> | null;
 }
 
+interface ScriptLine {
+  id: string;
+  scene_number: number;
+  line_number: number;
+  character_name: string | null;
+  line_type: string;
+  content: string;
+  page_number: number | null;
+}
+
 const TIME_ICONS: Record<string, React.ReactNode> = {
   day: <Sun className="h-3 w-3" />,
   night: <Moon className="h-3 w-3" />,
@@ -74,13 +85,14 @@ export function ScriptContentViewer({ scriptId, scriptTitle }: ScriptContentView
   const [scenes, setScenes] = useState<Scene[]>([]);
   const [characters, setCharacters] = useState<Character[]>([]);
   const [narrativeGraphs, setNarrativeGraphs] = useState<NarrativeGraph[]>([]);
+  const [scriptLines, setScriptLines] = useState<ScriptLine[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     async function fetchContent() {
       setIsLoading(true);
       
-      const [scenesResult, charactersResult, graphsResult] = await Promise.all([
+      const [scenesResult, charactersResult, graphsResult, linesResult] = await Promise.all([
         supabase
           .from('scenes')
           .select('*')
@@ -95,6 +107,11 @@ export function ScriptContentViewer({ scriptId, scriptTitle }: ScriptContentView
           .from('narrative_graphs')
           .select('*')
           .eq('script_id', scriptId),
+        supabase
+          .from('script_lines')
+          .select('*')
+          .eq('script_id', scriptId)
+          .order('line_number', { ascending: true }),
       ]);
 
       if (scenesResult.data) {
@@ -105,6 +122,9 @@ export function ScriptContentViewer({ scriptId, scriptTitle }: ScriptContentView
       }
       if (graphsResult.data) {
         setNarrativeGraphs(graphsResult.data as unknown as NarrativeGraph[]);
+      }
+      if (linesResult.data) {
+        setScriptLines(linesResult.data as ScriptLine[]);
       }
 
       setIsLoading(false);
@@ -131,7 +151,14 @@ export function ScriptContentViewer({ scriptId, scriptTitle }: ScriptContentView
     );
   }
 
-  const hasContent = scenes.length > 0 || characters.length > 0 || narrativeGraphs.length > 0;
+  const hasContent = scenes.length > 0 || characters.length > 0 || narrativeGraphs.length > 0 || scriptLines.length > 0;
+
+  // Group script lines by scene
+  const linesByScene = scriptLines.reduce<Record<number, ScriptLine[]>>((acc, line) => {
+    if (!acc[line.scene_number]) acc[line.scene_number] = [];
+    acc[line.scene_number].push(line);
+    return acc;
+  }, {});
 
   if (!hasContent) {
     return (
@@ -156,6 +183,12 @@ export function ScriptContentViewer({ scriptId, scriptTitle }: ScriptContentView
           <Users className="h-4 w-4" />
           Characters ({characters.length})
         </TabsTrigger>
+        {scriptLines.length > 0 && (
+          <TabsTrigger value="lines" className="gap-2">
+            <AlignLeft className="h-4 w-4" />
+            Lines ({scriptLines.length})
+          </TabsTrigger>
+        )}
         {narrativeGraphs.length > 0 && (
           <TabsTrigger value="narrative" className="gap-2">
             <Network className="h-4 w-4" />
@@ -277,6 +310,53 @@ export function ScriptContentViewer({ scriptId, scriptTitle }: ScriptContentView
               </CardContent>
             </Card>
           ))}
+        </TabsContent>
+
+        <TabsContent value="lines" className="mt-0 space-y-4">
+          {Object.entries(linesByScene)
+            .sort(([a], [b]) => Number(a) - Number(b))
+            .map(([sceneNum, lines]) => (
+              <Card key={sceneNum} className="bg-muted/30">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <Badge variant="outline" className="text-xs">Scene {sceneNum}</Badge>
+                    <span className="text-muted-foreground text-xs">{lines.length} lines</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-4 pt-0 space-y-1">
+                  {lines.map((line) => {
+                    const isDialogue = line.line_type === 'dialogue';
+                    const isParenthetical = line.line_type === 'parenthetical';
+                    const isHeading = line.line_type === 'scene_heading';
+                    const isTransition = line.line_type === 'transition';
+
+                    return (
+                      <div
+                        key={line.id}
+                        className={cn(
+                          'text-sm py-0.5',
+                          isHeading && 'font-mono font-bold uppercase text-foreground',
+                          isTransition && 'font-mono text-xs text-muted-foreground text-right uppercase',
+                          isDialogue && 'pl-8',
+                          isParenthetical && 'pl-8 italic text-muted-foreground text-xs',
+                          !isDialogue && !isParenthetical && !isHeading && !isTransition && 'text-muted-foreground text-xs'
+                        )}
+                      >
+                        {isDialogue && line.character_name && (
+                          <span className="font-semibold text-primary mr-2 uppercase text-xs tracking-wide">
+                            {line.character_name}:
+                          </span>
+                        )}
+                        {isParenthetical ? `(${line.content})` : line.content}
+                        {line.page_number && (
+                          <span className="text-[10px] text-muted-foreground/50 ml-2">p.{line.page_number}</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </CardContent>
+              </Card>
+            ))}
         </TabsContent>
 
         <TabsContent value="narrative" className="mt-0 space-y-4">
