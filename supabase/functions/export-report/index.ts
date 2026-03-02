@@ -43,7 +43,18 @@ serve(async (req) => {
       );
     }
 
-    const { reportId, format = 'json' } = await req.json() as ExportRequest;
+    const body = await req.json();
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const reportId = typeof body?.reportId === 'string' && uuidRegex.test(body.reportId) ? body.reportId : null;
+    const validFormats = ['json', 'summary', 'full', 'pdf'] as const;
+    const format = (typeof body?.format === 'string' && validFormats.includes(body.format as any) ? body.format : 'json') as ExportRequest['format'];
+
+    if (!reportId) {
+      return new Response(
+        JSON.stringify({ error: 'reportId must be a valid UUID' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Verify user has access to the report via RLS
     const { data: reportAccess, error: accessError } = await supabaseAuth

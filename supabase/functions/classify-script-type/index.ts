@@ -148,16 +148,17 @@ serve(async (req) => {
   }
 
   try {
-    const { textSample, fileName } = await req.json();
+    const body = await req.json();
 
-    if (!textSample || typeof textSample !== 'string') {
+    if (!body?.textSample || typeof body.textSample !== 'string') {
       return new Response(
-        JSON.stringify({ error: 'textSample is required' }),
+        JSON.stringify({ error: 'textSample is required and must be a string' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const sample = textSample.substring(0, 5000);
+    const sample = body.textSample.substring(0, 5000);
+    const fileName = typeof body?.fileName === 'string' ? body.fileName.substring(0, 255) : '';
 
     // Try pattern-based classification first (instant, no AI cost)
     const patternResult = patternClassify(sample);
@@ -180,7 +181,7 @@ serve(async (req) => {
       );
     }
 
-    const aiResult = await aiClassify(apiKey, sample, fileName || '');
+    const aiResult = await aiClassify(apiKey, sample, fileName);
     console.log(`[classify-script-type] AI result: ${aiResult.scriptType} (${aiResult.confidence})`);
 
     // If pattern result exists, merge confidence
