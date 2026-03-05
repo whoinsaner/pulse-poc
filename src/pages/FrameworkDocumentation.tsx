@@ -23,6 +23,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { downloadFrameworkPDF } from '@/lib/pdfGenerator';
 import { downloadPulseV2PDF } from '@/lib/pulseV2PdfGenerator';
+import { downloadPrdPDF } from '@/lib/prdPdfGenerator';
 import { USAF_SECTIONS, USAF_METADATA, DECISION_SIGNALS } from '@/lib/pulseV2Documentation';
 import {
   FRAMEWORK_METADATA,
@@ -38,6 +39,7 @@ import { cn } from '@/lib/utils';
 export default function FrameworkDocumentation() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isGeneratingUSAF, setIsGeneratingUSAF] = useState(false);
+  const [isGeneratingPRD, setIsGeneratingPRD] = useState(false);
   const [activeSection, setActiveSection] = useState('usaf');
 
   const agentCategories = getAgentsByCategory();
@@ -70,6 +72,20 @@ export default function FrameworkDocumentation() {
       toast.error('Failed to generate PDF. Please try again.');
     } finally {
       setIsGeneratingUSAF(false);
+    }
+  };
+
+  const handleDownloadPRD = async () => {
+    setIsGeneratingPRD(true);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      downloadPrdPDF();
+      toast.success('PRD PDF downloaded successfully!');
+    } catch (error) {
+      console.error('Error generating PRD PDF:', error);
+      toast.error('Failed to generate PRD. Please try again.');
+    } finally {
+      setIsGeneratingPRD(false);
     }
   };
 
@@ -236,29 +252,55 @@ export default function FrameworkDocumentation() {
               </CardContent>
             </Card>
 
-            {/* Download CTA */}
-            <Card className="bg-primary/5 border-primary/20">
-              <CardContent className="flex flex-col md:flex-row items-center justify-between gap-4 py-6">
-                <div className="flex items-center gap-4">
-                  <FileText className="h-10 w-10 text-primary" />
-                  <div>
-                    <h3 className="font-semibold">Download USAF Documentation</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Professional PDF with the complete 10-section framework specification
-                    </p>
+            {/* Download CTAs */}
+            <div className="grid md:grid-cols-2 gap-4">
+              <Card className="bg-primary/5 border-primary/20">
+                <CardContent className="flex flex-col items-start gap-4 py-6">
+                  <div className="flex items-center gap-4">
+                    <FileText className="h-10 w-10 text-primary" />
+                    <div>
+                      <h3 className="font-semibold">Download USAF Documentation</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Professional PDF with the complete 10-section framework specification
+                      </p>
+                    </div>
                   </div>
-                </div>
-                <Button 
-                  size="lg" 
-                  onClick={handleDownloadUSAFPDF}
-                  disabled={isGeneratingUSAF}
-                  className="gap-2"
-                >
-                  <Download className="h-5 w-5" />
-                  {isGeneratingUSAF ? 'Generating...' : 'Download USAF PDF'}
-                </Button>
-              </CardContent>
-            </Card>
+                  <Button 
+                    size="lg" 
+                    onClick={handleDownloadUSAFPDF}
+                    disabled={isGeneratingUSAF}
+                    className="gap-2 w-full"
+                  >
+                    <Download className="h-5 w-5" />
+                    {isGeneratingUSAF ? 'Generating...' : 'Download USAF PDF'}
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-accent/5 border-accent/20">
+                <CardContent className="flex flex-col items-start gap-4 py-6">
+                  <div className="flex items-center gap-4">
+                    <BookOpen className="h-10 w-10 text-accent" />
+                    <div>
+                      <h3 className="font-semibold">Download Product PRD</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Complete Product Requirements Document covering all Pulse v3 features
+                      </p>
+                    </div>
+                  </div>
+                  <Button 
+                    size="lg" 
+                    variant="outline"
+                    onClick={handleDownloadPRD}
+                    disabled={isGeneratingPRD}
+                    className="gap-2 w-full"
+                  >
+                    <Download className="h-5 w-5" />
+                    {isGeneratingPRD ? 'Generating...' : 'Download PRD PDF'}
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
           {/* Overview Tab */}
