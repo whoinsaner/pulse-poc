@@ -341,7 +341,7 @@ interface SectionContent {
   supportingCast?: Array<{ name: string; role: string; impact: string }>;
   psychologyInsights?: string;
   // Market-specific fields (MarketAgent)
-  comparableTitles?: Array<{ title: string; relevance: string }>;
+  comparableTitles?: Array<{ title: string; relevance: string; similarityScore?: number }>;
   targetAudience?: string;
   platformFit?: string;
   // Execution-specific fields (ExecutionAgent)
@@ -3378,7 +3378,7 @@ function getSectionContentInstructions(agentName: string): string {
     "keyQuotes": [{"quote": "Key line from script", "context": "Why it matters", "page": 1}],
     "deepDive": "2-3 paragraph narrative analysis of concept originality, genre positioning, logline strength, and commercial viability. Include comparable titles.",
     "recommendations": [{"title": "Action item", "description": "Detail", "priority": "critical|high|medium", "effort": "easy|moderate|hard"}],
-    "comparableTitles": [{"title": "Film/show name", "relevance": "Why it's comparable"}]`;
+    "comparableTitles": [{"title": "Film/show name", "relevance": "Why it's comparable", "similarityScore": 75}]`;
     case 'StructureAgent':
       return `"verdict": "One-sentence structural diagnosis",
     "whatWorks": ["Structural strength with evidence"],
@@ -3446,7 +3446,7 @@ function getSectionContentInstructions(agentName: string): string {
     "whatsUnderdeveloped": ["Market gap"],
     "deepDive": "2-3 paragraph narrative on target audience, platform fit, marketing hooks, comparable titles, and IP potential",
     "recommendations": [{"title": "Action item", "description": "Detail", "priority": "critical|high|medium", "effort": "easy|moderate|hard"}],
-    "comparableTitles": [{"title": "Film/show name", "relevance": "Box office/audience comparison"}],
+    "comparableTitles": [{"title": "Film/show name", "relevance": "Box office/audience comparison", "similarityScore": 70}],
     "targetAudience": "Detailed target audience definition",
     "platformFit": "Platform suitability analysis"`;
     case 'ExecutionAgent':

@@ -586,20 +586,27 @@ function renderAgentNarrative(
       doc.setTextColor(...COLORS.text);
       doc.text('Comparable Titles', MARGINS.left, y);
       y += 7;
-      for (const ct of content.comparableTitles) {
-        y = checkBreak(doc, y, 10, pageNum, sectionName);
-        doc.setFontSize(FONTS.body);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(...COLORS.text);
-        doc.text(ct.title, MARGINS.left + 3, y);
-        y += 5;
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(...COLORS.textLight);
-        const rl = wrapText(doc, ct.relevance, cw - 8);
-        rl.forEach(line => { doc.text(line, MARGINS.left + 3, y); y += 4.5; });
-        y += 2;
-      }
-      y += 4;
+
+      const tableBody = content.comparableTitles.map(ct => [
+        ct.title,
+        ct.relevance,
+        typeof ct.similarityScore === 'number' ? `${ct.similarityScore}%` : '—',
+      ]);
+
+      (doc as any).autoTable({
+        startY: y,
+        head: [['Title', 'Relevance', 'Similarity']],
+        body: tableBody,
+        margin: { left: MARGINS.left, right: MARGINS.right },
+        styles: { fontSize: FONTS.body - 1, cellPadding: 2, textColor: COLORS.text },
+        headStyles: { fillColor: COLORS.primary, textColor: [255, 255, 255] as any, fontStyle: 'bold' },
+        columnStyles: {
+          0: { cellWidth: 40, fontStyle: 'bold' },
+          2: { cellWidth: 22, halign: 'center' as const },
+        },
+        didDrawPage: () => { pageNum.value++; addRunningHeader(doc, sectionName, pageNum); addRunningFooter(doc); },
+      });
+      y = (doc as any).lastAutoTable.finalY + 6;
     }
 
     if (content.targetAudience) {

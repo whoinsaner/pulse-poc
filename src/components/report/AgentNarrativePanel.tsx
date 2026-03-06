@@ -1,6 +1,8 @@
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { VerdictBox } from '@/components/report/ui/VerdictBox';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { 
   CheckCircle, 
@@ -276,14 +278,40 @@ export function CommercialNarrativePanel({ content }: { content: AgentSectionCon
       {content.comparableTitles && content.comparableTitles.length > 0 && (
         <Card className="p-4">
           <h4 className="text-sm font-semibold mb-3">Comparable Titles</h4>
-          <div className="space-y-2">
-            {content.comparableTitles.map((ct, i) => (
-              <div key={i} className="flex items-start gap-2 text-sm">
-                <span className="font-medium">{ct.title}</span>
-                <span className="text-muted-foreground">— {ct.relevance}</span>
-              </div>
-            ))}
-          </div>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[180px]">Title</TableHead>
+                <TableHead>Relevance</TableHead>
+                <TableHead className="w-[140px] text-right">Similarity</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {content.comparableTitles.map((ct, i) => {
+                const score = ct.similarityScore;
+                const hasScore = typeof score === 'number';
+                const color = hasScore
+                  ? score >= 75 ? 'bg-green-500' : score >= 50 ? 'bg-yellow-500' : 'bg-orange-500'
+                  : '';
+                return (
+                  <TableRow key={i}>
+                    <TableCell className="font-medium">{ct.title}</TableCell>
+                    <TableCell className="text-muted-foreground">{ct.relevance}</TableCell>
+                    <TableCell className="text-right">
+                      {hasScore ? (
+                        <div className="flex items-center justify-end gap-2">
+                          <Progress value={score} className="w-16 h-2" indicatorClassName={color} />
+                          <span className="text-xs font-medium w-8">{score}%</span>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
         </Card>
       )}
 
