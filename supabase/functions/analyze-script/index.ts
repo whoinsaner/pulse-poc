@@ -3378,7 +3378,9 @@ function getSectionContentInstructions(agentName: string): string {
     "keyQuotes": [{"quote": "Key line from script", "context": "Why it matters", "page": 1}],
     "deepDive": "2-3 paragraph narrative analysis of concept originality, genre positioning, logline strength, and commercial viability. Include comparable titles.",
     "recommendations": [{"title": "Action item", "description": "Detail", "priority": "critical|high|medium", "effort": "easy|moderate|hard"}],
-    "comparableTitles": [{"title": "Film/show name", "relevance": "Why it's comparable", "similarityScore": 75, "imdbRating": 7.5}]`;
+    "comparableTitles": [{"title": "Film/show name (Year)", "relevance": "Why it's comparable", "similarityScore": 75, "imdbRating": 7.5}]
+
+IMPORTANT: For "comparableTitles", you MUST provide 3-5 real comparable films/shows. For EACH title, you MUST include "similarityScore" (0-100 integer) and "imdbRating" (real IMDb rating as a number like 7.5). Do NOT omit these fields. Use your knowledge of actual IMDb ratings.`;
     case 'StructureAgent':
       return `"verdict": "One-sentence structural diagnosis",
     "whatWorks": ["Structural strength with evidence"],
@@ -3446,7 +3448,9 @@ function getSectionContentInstructions(agentName: string): string {
     "whatsUnderdeveloped": ["Market gap"],
     "deepDive": "2-3 paragraph narrative on target audience, platform fit, marketing hooks, comparable titles, and IP potential",
     "recommendations": [{"title": "Action item", "description": "Detail", "priority": "critical|high|medium", "effort": "easy|moderate|hard"}],
-    "comparableTitles": [{"title": "Film/show name", "relevance": "Box office/audience comparison", "similarityScore": 70, "imdbRating": 7.2}],
+    "comparableTitles": [{"title": "Film/show name (Year)", "relevance": "Box office/audience comparison", "similarityScore": 70, "imdbRating": 7.2}],
+
+IMPORTANT: For "comparableTitles", you MUST provide 3-5 real comparable films/shows. For EACH title, you MUST include "similarityScore" (0-100 integer) and "imdbRating" (real IMDb rating as a number like 7.5). Do NOT omit these fields. Use your knowledge of actual IMDb ratings.
     "targetAudience": "Detailed target audience definition",
     "platformFit": "Platform suitability analysis"`;
     case 'ExecutionAgent':
