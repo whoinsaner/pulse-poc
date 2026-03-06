@@ -1,35 +1,36 @@
 
 
-# Export PRD as PDF
+# Comparable Titles Table with Similarity Score
 
 ## What
-Create a `prdPdfGenerator.ts` that generates a professional Product Requirements Document PDF covering all Pulse v3 features, without any references to code files or functions.
+Replace the current simple list rendering of comparable titles in `CommercialNarrativePanel` with a proper table using shadcn `Table` components. Add a `similarityScore` field to the data contract so the AI pipeline returns a numeric similarity percentage for each comparable title.
 
-## Approach
-Follow the exact same pattern as `pulseV2PdfGenerator.ts` — same helpers (`addHeader`, `addFooter`, `addSectionTitle`, `addParagraph`, `checkPageBreak`), same COLORS/FONTS/MARGINS constants, jsPDF + autoTable.
+## Changes
 
-## PRD Content Structure (all business/product language, zero code references)
+### 1. Update the data contract
+- **`src/types/database.ts`** — Extend `comparableTitles` type from `{ title: string; relevance: string }` to `{ title: string; relevance: string; similarityScore?: number }`.
+- **`supabase/functions/analyze-script/index.ts`** — Update the MarketAgent output schema prompt to include `"similarityScore": 0-100` for each comparable title entry. Also update the ConceptAgent comparableTitles prompt similarly.
 
-1. **Cover Page** — "Pulse v3 — Product Requirements Document", version, date
-2. **Table of Contents**
-3. **Product Overview** — Vision, target users, value proposition
-4. **Script Ingestion & Parsing** — Supported formats (PDF, FDX, Fountain, Word), streaming extraction, scene/character/line-level data capture
-5. **Multi-Agent Analysis Engine** — 10 core agents + 6 format-specialist agents, 145+ parameters, GO/ITERATE/HOLD scoring
-6. **Stakeholder Lens System** — 9 lenses (Studio Executive, Director, Writer, etc.), dynamic score re-weighting, adaptive report navigation
-7. **Report System** — Executive summary, parameter breakdowns, character analysis, narrative timeline, format-specific sections (Comic, Web Series, Micro Drama)
-8. **Export & Sharing** — PDF report, executive summary PDF, raw JSON
-9. **Supported Script Formats** — Feature Film, Pilot, Episode, Comic, Web Series, Micro Drama
-10. **Team & Organization** — Multi-tenant orgs, invitation system, role-based access
-11. **Authentication & Security** — Email-based auth, row-level data isolation, input validation
-12. **Quality Modes** — Standard vs Deep analysis
-13. **Data Model** (high-level entity descriptions, no table/column names) — Scripts, Scenes, Characters, Lines, Analysis Runs, Reports, Parameter Scores
+### 2. Render as a table
+- **`src/components/report/AgentNarrativePanel.tsx`** — Replace the comparable titles `<div>` list (lines 276-287) with a `<Table>` using columns: Title, Relevance, Similarity Score. The similarity score column shows a colored progress bar + numeric value. Gracefully handle missing `similarityScore` (show "—" if not present from older reports).
 
-## Implementation
+### 3. PDF export update
+- **`src/lib/fullReportPdfGenerator.ts`** — Update the comparable titles PDF section to render as an autoTable with 3 columns (Title, Relevance, Similarity %) instead of the current plain text list.
 
-1. Create `src/lib/prdPdfGenerator.ts` — self-contained data + generator (no separate data file needed; all PRD content defined as const objects within the file)
-2. Add a "Download PRD" button — either on the Framework Documentation page or the Index/Dashboard. I'll add it to the Framework Documentation page alongside existing PDF export buttons.
+## Table Design
+```text
+┌──────────────────────┬──────────────────────────────────────┬────────────┐
+│ Title                │ Relevance                            │ Similarity │
+├──────────────────────┼──────────────────────────────────────┼────────────┤
+│ Vikram (2022)        │ Indian action-thriller with branded… │ ██████ 78% │
+│ Jigarthanda DX (23) │ Tamil commercial storytelling that…  │ █████  72% │
+│ Daredevil (Netflix)  │ Grounded vigilante superhero tone…   │ ████   65% │
+└──────────────────────┴──────────────────────────────────────┴────────────┘
+```
 
-## File Changes
-- **New**: `src/lib/prdPdfGenerator.ts` (~400-500 lines)
-- **Edit**: `src/pages/FrameworkDocumentation.tsx` — add import + download button
+## Files
+- **Edit**: `src/types/database.ts` — add `similarityScore` to comparableTitles type
+- **Edit**: `supabase/functions/analyze-script/index.ts` — add similarityScore to MarketAgent + ConceptAgent prompt schemas
+- **Edit**: `src/components/report/AgentNarrativePanel.tsx` — table rendering with progress bar
+- **Edit**: `src/lib/fullReportPdfGenerator.ts` — PDF table for comparables
 
