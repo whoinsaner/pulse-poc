@@ -216,7 +216,7 @@ export interface AgentSectionContent {
   supportingCast?: Array<{ name: string; role: string; impact: string }>;
   psychologyInsights?: string;
   // Market-specific
-  comparableTitles?: Array<{ title: string; relevance: string; similarityScore?: number }>;
+  comparableTitles?: Array<{ title: string; relevance: string; similarityScore?: number; imdbRating?: number }>;
   targetAudience?: string;
   platformFit?: string;
   // Execution-specific

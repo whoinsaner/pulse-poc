@@ -590,19 +590,21 @@ function renderAgentNarrative(
       const tableBody = content.comparableTitles.map(ct => [
         ct.title,
         ct.relevance,
+        typeof ct.imdbRating === 'number' ? ct.imdbRating.toFixed(1) : '—',
         typeof ct.similarityScore === 'number' ? `${ct.similarityScore}%` : '—',
       ]);
 
       (doc as any).autoTable({
         startY: y,
-        head: [['Title', 'Relevance', 'Similarity']],
+        head: [['Title', 'Relevance', 'IMDb', 'Similarity']],
         body: tableBody,
         margin: { left: MARGINS.left, right: MARGINS.right },
         styles: { fontSize: FONTS.body - 1, cellPadding: 2, textColor: COLORS.text },
         headStyles: { fillColor: COLORS.primary, textColor: [255, 255, 255] as any, fontStyle: 'bold' },
         columnStyles: {
-          0: { cellWidth: 40, fontStyle: 'bold' },
-          2: { cellWidth: 22, halign: 'center' as const },
+          0: { cellWidth: 35, fontStyle: 'bold' },
+          2: { cellWidth: 16, halign: 'center' as const },
+          3: { cellWidth: 20, halign: 'center' as const },
         },
         didDrawPage: () => { pageNum.value++; addRunningHeader(doc, sectionName, pageNum); addRunningFooter(doc); },
       });

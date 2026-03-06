@@ -283,6 +283,7 @@ export function CommercialNarrativePanel({ content }: { content: AgentSectionCon
               <TableRow>
                 <TableHead className="w-[180px]">Title</TableHead>
                 <TableHead>Relevance</TableHead>
+                <TableHead className="w-[80px] text-center">IMDb</TableHead>
                 <TableHead className="w-[140px] text-right">Similarity</TableHead>
               </TableRow>
             </TableHeader>
@@ -293,10 +294,22 @@ export function CommercialNarrativePanel({ content }: { content: AgentSectionCon
                 const color = hasScore
                   ? score >= 75 ? 'bg-green-500' : score >= 50 ? 'bg-yellow-500' : 'bg-orange-500'
                   : '';
+                const imdb = ct.imdbRating;
+                const hasImdb = typeof imdb === 'number';
+                const imdbColor = hasImdb
+                  ? imdb >= 7 ? 'text-green-600 dark:text-green-400' : imdb >= 5 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-600 dark:text-red-400'
+                  : '';
                 return (
                   <TableRow key={i}>
                     <TableCell className="font-medium">{ct.title}</TableCell>
                     <TableCell className="text-muted-foreground">{ct.relevance}</TableCell>
+                    <TableCell className="text-center">
+                      {hasImdb ? (
+                        <span className={cn('text-sm font-semibold', imdbColor)}>⭐ {imdb.toFixed(1)}</span>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
                     <TableCell className="text-right">
                       {hasScore ? (
                         <div className="flex items-center justify-end gap-2">
