@@ -1033,6 +1033,9 @@ function renderTocPage(doc: jsPDF, toc: TocEntry[], pageNum: PageCounter): void 
   for (const entry of toc) {
     if (y > getPageHeight(doc) - MARGINS.bottom - 10) break; // TOC overflow protection
 
+    // Clamp page number to actual page count to prevent objId errors
+    const safePage = Math.min(entry.page, totalPages);
+
     if (entry.level === 0) {
       // Part divider
       y += 4;
@@ -1042,10 +1045,10 @@ function renderTocPage(doc: jsPDF, toc: TocEntry[], pageNum: PageCounter): void 
       doc.text(entry.title, MARGINS.left, y);
       doc.setFontSize(FONTS.small);
       doc.setTextColor(...COLORS.textLight);
-      doc.text(`${entry.page}`, MARGINS.left + cw, y, { align: 'right' });
+      doc.text(`${safePage}`, MARGINS.left + cw, y, { align: 'right' });
       // Clickable link over the entire TOC line
       const lineH0 = FONTS.h3 * 0.4;
-      doc.link(MARGINS.left, y - lineH0, cw, lineH0 + 2, { pageNumber: entry.page });
+      doc.link(MARGINS.left, y - lineH0, cw, lineH0 + 2, { pageNumber: safePage });
       y += 7;
     } else {
       doc.setFontSize(FONTS.body);
@@ -1053,10 +1056,10 @@ function renderTocPage(doc: jsPDF, toc: TocEntry[], pageNum: PageCounter): void 
       doc.setTextColor(...COLORS.text);
       doc.text(entry.title, MARGINS.left + 8, y);
       doc.setTextColor(...COLORS.textLight);
-      doc.text(`${entry.page}`, MARGINS.left + cw, y, { align: 'right' });
+      doc.text(`${safePage}`, MARGINS.left + cw, y, { align: 'right' });
       // Clickable link over the entire TOC line
       const lineH1 = FONTS.body * 0.4;
-      doc.link(MARGINS.left + 8, y - lineH1, cw - 8, lineH1 + 2, { pageNumber: entry.page });
+      doc.link(MARGINS.left + 8, y - lineH1, cw - 8, lineH1 + 2, { pageNumber: safePage });
       y += 6;
     }
   }
