@@ -601,6 +601,7 @@ function renderAgentNarrative(
         typeof ct.similarityScore === 'number' ? `${ct.similarityScore}%` : '—',
       ]);
 
+      const ctStartPages = doc.getNumberOfPages();
       autoTable(doc, {
         startY: y,
         head: [['Title', 'Relevance', 'IMDb', 'Similarity']],
@@ -613,8 +614,14 @@ function renderAgentNarrative(
           2: { cellWidth: 16, halign: 'center' as const },
           3: { cellWidth: 20, halign: 'center' as const },
         },
-        didDrawPage: () => { pageNum.value++; addRunningHeader(doc, sectionName, pageNum); addRunningFooter(doc); },
+        didDrawPage: () => {
+          if (doc.getNumberOfPages() > ctStartPages) {
+            addRunningHeader(doc, sectionName, { value: doc.getNumberOfPages() });
+            addRunningFooter(doc);
+          }
+        },
       });
+      pageNum.value = doc.getNumberOfPages();
       y = (doc as any).lastAutoTable.finalY + 6;
     }
 
@@ -868,6 +875,7 @@ function renderCompleteScorecardAppendix(
     p.fixCost || '—',
   ]);
 
+  const scStartPages = doc.getNumberOfPages();
   autoTable(doc, {
     head: [['Parameter', 'Category', 'Score', 'Maturity', 'Fix Cost']],
     body: tableData,
@@ -887,11 +895,13 @@ function renderCompleteScorecardAppendix(
       fillColor: COLORS.tableAlt,
     },
     didDrawPage: () => {
-      pageNum.value++;
-      addRunningHeader(doc, sectionName, pageNum);
-      addRunningFooter(doc);
+      if (doc.getNumberOfPages() > scStartPages) {
+        addRunningHeader(doc, sectionName, { value: doc.getNumberOfPages() });
+        addRunningFooter(doc);
+      }
     },
   });
+  pageNum.value = doc.getNumberOfPages();
 
   return (doc as any).lastAutoTable?.finalY || y + 20;
 }
@@ -912,6 +922,7 @@ function renderCharacterAppendix(
     c.arcSummary || '—',
   ]);
 
+  const chStartPages = doc.getNumberOfPages();
   autoTable(doc, {
     head: [['Character', 'Dialogue', 'Scenes', 'Arc']],
     body: tableData,
@@ -934,11 +945,13 @@ function renderCharacterAppendix(
       3: { cellWidth: 80 },
     },
     didDrawPage: () => {
-      pageNum.value++;
-      addRunningHeader(doc, sectionName, pageNum);
-      addRunningFooter(doc);
+      if (doc.getNumberOfPages() > chStartPages) {
+        addRunningHeader(doc, sectionName, { value: doc.getNumberOfPages() });
+        addRunningFooter(doc);
+      }
     },
   });
+  pageNum.value = doc.getNumberOfPages();
 
   return (doc as any).lastAutoTable?.finalY || y + 20;
 }
@@ -960,6 +973,7 @@ function renderSceneAppendix(
     s.pageStart ? `p.${s.pageStart}` : '—',
   ]);
 
+  const siStartPages = doc.getNumberOfPages();
   autoTable(doc, {
     head: [['#', 'Heading', 'Location', 'Tone', 'Page']],
     body: tableData,
@@ -984,11 +998,13 @@ function renderSceneAppendix(
       4: { cellWidth: 15 },
     },
     didDrawPage: () => {
-      pageNum.value++;
-      addRunningHeader(doc, sectionName, pageNum);
-      addRunningFooter(doc);
+      if (doc.getNumberOfPages() > siStartPages) {
+        addRunningHeader(doc, sectionName, { value: doc.getNumberOfPages() });
+        addRunningFooter(doc);
+      }
     },
   });
+  pageNum.value = doc.getNumberOfPages();
 
   return (doc as any).lastAutoTable?.finalY || y + 20;
 }
@@ -1192,6 +1208,7 @@ export async function generateFullReportPDF(
       s.pageStart ? `p.${s.pageStart}${s.pageEnd && s.pageEnd !== s.pageStart ? `-${s.pageEnd}` : ''}` : '—',
     ]);
 
+    const saStartPages = doc.getNumberOfPages();
     autoTable(doc, {
       head: [['#', 'Heading', 'Emotional Tone', 'Int/Ext', 'Pages']],
       body: sceneTableData,
@@ -1216,11 +1233,13 @@ export async function generateFullReportPDF(
         4: { cellWidth: 20 },
       },
       didDrawPage: () => {
-        pageNum.value++;
-        addRunningHeader(doc, 'Scene Analysis', pageNum);
-        addRunningFooter(doc);
+        if (doc.getNumberOfPages() > saStartPages) {
+          addRunningHeader(doc, 'Scene Analysis', { value: doc.getNumberOfPages() });
+          addRunningFooter(doc);
+        }
       },
     });
+    pageNum.value = doc.getNumberOfPages();
 
     y = (doc as any).lastAutoTable?.finalY || y + 20;
 
