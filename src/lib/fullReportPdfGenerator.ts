@@ -1081,9 +1081,11 @@ export async function generateFullReportPDF(
   let y = newPage(doc, pageNum, 'Executive Summary');
   toc.push({ title: 'Executive Summary', page: pageNum.value, level: 1 });
   y = renderExecutiveSummary(doc, y, data, activeLens, pageNum);
+  console.log('[PDF] After Executive Summary, pages:', pageNum.value);
 
   // === PART I: STORY ANALYSIS ===
   renderPartDivider(doc, pageNum, 'PART I', 'STORY ANALYSIS', toc);
+  console.log('[PDF] After Part I divider, pages:', pageNum.value);
 
   const storySections: SectionDef[] = [
     { id: 'story-diagnosis', title: 'Story Diagnosis', subtitle: 'Overview of narrative strengths and weaknesses' },
