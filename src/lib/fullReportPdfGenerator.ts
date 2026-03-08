@@ -4,7 +4,12 @@
  */
 
 import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import autoTableModule from 'jspdf-autotable';
+
+// jspdf-autotable v5 exports differently depending on bundler
+const autoTable = typeof autoTableModule === 'function' 
+  ? autoTableModule 
+  : (autoTableModule as any).default || autoTableModule;
 import { ReportData, StakeholderLens, LENS_CONFIG, ScriptType, AgentSectionContent, ParameterScoreData } from '@/types/database';
 import { getUSAFNavGroups, getScriptTypeLabel, isComicType, isWebSeriesType } from '@/lib/reportNavigation';
 import { extractScore } from '@/lib/scoreUtils';
@@ -992,6 +997,7 @@ function renderSceneAppendix(
 
 function renderTocPage(doc: jsPDF, toc: TocEntry[], pageNum: PageCounter): void {
   // We reserved page 2 for TOC. Go back and render it.
+  const totalPages = doc.getNumberOfPages();
   doc.setPage(2);
   let y = MARGINS.top + 10;
 
@@ -1038,6 +1044,9 @@ function renderTocPage(doc: jsPDF, toc: TocEntry[], pageNum: PageCounter): void 
       y += 6;
     }
   }
+
+  // CRITICAL: Restore page pointer to last page so doc.output() works correctly
+  doc.setPage(totalPages);
 }
 
 // ============= MAIN EXPORT =============
@@ -1058,6 +1067,7 @@ export async function generateFullReportPDF(
   const pageNum: PageCounter = { value: 1 };
   const toc: TocEntry[] = [];
 
+
   // === PAGE 1: Cover ===
   renderCoverPage(doc, data, title, activeLens, scriptType);
 
@@ -1072,9 +1082,11 @@ export async function generateFullReportPDF(
   let y = newPage(doc, pageNum, 'Executive Summary');
   toc.push({ title: 'Executive Summary', page: pageNum.value, level: 1 });
   y = renderExecutiveSummary(doc, y, data, activeLens, pageNum);
+  
 
   // === PART I: STORY ANALYSIS ===
   renderPartDivider(doc, pageNum, 'PART I', 'STORY ANALYSIS', toc);
+  
 
   const storySections: SectionDef[] = [
     { id: 'story-diagnosis', title: 'Story Diagnosis', subtitle: 'Overview of narrative strengths and weaknesses' },
