@@ -997,6 +997,7 @@ function renderSceneAppendix(
 
 function renderTocPage(doc: jsPDF, toc: TocEntry[], pageNum: PageCounter): void {
   // We reserved page 2 for TOC. Go back and render it.
+  const totalPages = doc.getNumberOfPages();
   doc.setPage(2);
   let y = MARGINS.top + 10;
 
@@ -1043,6 +1044,9 @@ function renderTocPage(doc: jsPDF, toc: TocEntry[], pageNum: PageCounter): void 
       y += 6;
     }
   }
+
+  // CRITICAL: Restore page pointer to last page so doc.output() works correctly
+  doc.setPage(totalPages);
 }
 
 // ============= MAIN EXPORT =============
