@@ -1063,6 +1063,10 @@ export async function generateFullReportPDF(
   const pageNum: PageCounter = { value: 1 };
   const toc: TocEntry[] = [];
 
+  console.log('[PDF] Starting generation. Data keys:', Object.keys(data));
+  console.log('[PDF] Agent content keys:', data.agentContent ? Object.keys(data.agentContent) : 'none');
+  console.log('[PDF] Params:', data.parameterScores?.length, 'Scenes:', data.scenes?.length, 'Characters:', data.characters?.length);
+
   // === PAGE 1: Cover ===
   renderCoverPage(doc, data, title, activeLens, scriptType);
 
