@@ -596,7 +596,7 @@ function renderAgentNarrative(
         typeof ct.similarityScore === 'number' ? `${ct.similarityScore}%` : '—',
       ]);
 
-      (doc as any).autoTable({
+      autoTable(doc, {
         startY: y,
         head: [['Title', 'Relevance', 'IMDb', 'Similarity']],
         body: tableBody,
