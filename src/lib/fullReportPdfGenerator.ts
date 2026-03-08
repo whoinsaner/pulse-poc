@@ -81,6 +81,8 @@ const SECTION_AGENT_MAP: Record<string, string[]> = {
   'craft-visual': ['VisualStorytellingAgent'],
   'craft-emotional': ['EmotionalArcAgent'],
   'craft-scenes': ['SceneEconomyAgent'],
+  'scene-analysis': ['SceneEconomyAgent', 'StructureAgent'],
+  'bible': ['SeriesBibleAgent', 'WorldAgent', 'ThemeAgent', 'CharacterDiagnosisAgent'],
   'format': ['FormatDiagnosisAgent', 'ComicFormatAgent', 'WebSeriesAgent', 'MicroDramaFormatAgent'],
   'format-panel-flow': ['PanelFlowAgent'],
   'format-lettering': ['LetteringAgent'],
@@ -1139,6 +1141,82 @@ export async function generateFullReportPDF(
     }
   }
 
+  // Scene Analysis (data-table approximation of heatmap/timeline)
+  if (data.scenes && data.scenes.length > 0) {
+    y = newPage(doc, pageNum, 'Scene Analysis');
+    toc.push({ title: 'Scene Analysis', page: pageNum.value, level: 1 });
+    y = renderSectionTitle(doc, y, 'Scene Analysis', 'Scene-level metrics, pacing, and complexity');
+
+    // Pacing summary
+    const scenes = data.scenes;
+    const totalScenes = scenes.length;
+    const scenesWithPages = scenes.filter(s => s.pageStart != null && s.pageEnd != null);
+    const avgLength = scenesWithPages.length > 0
+      ? scenesWithPages.reduce((sum, s) => sum + ((s.pageEnd || 0) - (s.pageStart || 0) + 1), 0) / scenesWithPages.length
+      : 0;
+
+    doc.setFontSize(FONTS.h3);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...COLORS.text);
+    doc.text('Pacing Summary', MARGINS.left, y);
+    y += 7;
+    doc.setFontSize(FONTS.body);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...COLORS.textLight);
+    doc.text(`Total Scenes: ${totalScenes}`, MARGINS.left + 3, y);
+    y += 5;
+    if (avgLength > 0) {
+      doc.text(`Avg Scene Length: ${avgLength.toFixed(1)} pages`, MARGINS.left + 3, y);
+      y += 5;
+    }
+    y += 5;
+
+    // Scene analysis table
+    const sceneTableData = scenes.map(s => [
+      `${s.sceneNumber}`,
+      s.heading || '—',
+      s.emotionalTone || '—',
+      s.intExt || '—',
+      s.pageStart ? `p.${s.pageStart}${s.pageEnd && s.pageEnd !== s.pageStart ? `-${s.pageEnd}` : ''}` : '—',
+    ]);
+
+    autoTable(doc, {
+      head: [['#', 'Heading', 'Emotional Tone', 'Int/Ext', 'Pages']],
+      body: sceneTableData,
+      startY: y,
+      margin: { left: MARGINS.left, right: MARGINS.right },
+      headStyles: {
+        fillColor: COLORS.tableHeader,
+        textColor: COLORS.white,
+        fontSize: FONTS.small,
+        fontStyle: 'bold',
+      },
+      bodyStyles: {
+        fontSize: FONTS.tiny,
+        textColor: COLORS.text,
+      },
+      alternateRowStyles: {
+        fillColor: COLORS.tableAlt,
+      },
+      columnStyles: {
+        0: { cellWidth: 12 },
+        1: { cellWidth: 55 },
+        4: { cellWidth: 20 },
+      },
+      didDrawPage: () => {
+        pageNum.value++;
+        addRunningHeader(doc, 'Scene Analysis', pageNum);
+        addRunningFooter(doc);
+      },
+    });
+
+    y = (doc as any).lastAutoTable?.finalY || y + 20;
+
+    // Agent narrative for scene analysis
+    y += 8;
+    y = renderAgentNarrative(doc, y, SECTION_AGENT_MAP['scene-analysis'] || [], data.agentContent, pageNum, 'Scene Analysis');
+  }
+
   // === PART IV: FORMAT (conditional) ===
   if (isComicType(scriptType)) {
     renderPartDivider(doc, pageNum, 'PART IV', 'COMIC FORMAT', toc);
@@ -1196,6 +1274,19 @@ export async function generateFullReportPDF(
       toc.push({ title: sec.title, page: pageNum.value, level: 1 });
       y = renderSection(doc, y, sec.id, sec.title, sec.subtitle, data, pageNum);
     }
+  }
+
+  // Series Bible (conditional — episodic formats)
+  const episodicTypes: ScriptType[] = ['web_series', 'pilot', 'episode', 'micro_drama'];
+  if (episodicTypes.includes(scriptType)) {
+    y = newPage(doc, pageNum, 'Series Bible');
+    toc.push({ title: 'Series Bible', page: pageNum.value, level: 1 });
+    y = renderSectionTitle(doc, y, 'Series Bible', 'Narrative rules, world logic, and series engine');
+
+    // Render agent narrative content from SeriesBibleAgent
+    const bibleAgentKeys = SECTION_AGENT_MAP['bible'] || [];
+    y = renderAgentNarrative(doc, y, bibleAgentKeys, data.agentContent, pageNum, 'Series Bible');
+    y = renderParameterCards(doc, y, 'bible', data.parameterScores || [], pageNum, 'Series Bible');
   }
 
   // === PART V: PRODUCTION & MARKET ===
