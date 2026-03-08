@@ -1,49 +1,36 @@
 
 
-# Align PDF Report with Web Report
+# Comparable Titles Table with Similarity Score
 
-## Gaps Identified
+## What
+Replace the current simple list rendering of comparable titles in `CommercialNarrativePanel` with a proper table using shadcn `Table` components. Add a `similarityScore` field to the data contract so the AI pipeline returns a numeric similarity percentage for each comparable title.
 
-Comparing web navigation (USAF_NAV_GROUPS) with PDF generator sections:
+## Changes
 
-| Web Section | PDF Status |
-|---|---|
-| Cover | ✓ |
-| Story (Diagnosis, Concept, Structure, Conflict) | ✓ |
-| Characters (Diagnosis, Protagonist, Antagonist, Cast) | ✓ |
-| Craft (Diagnosis, Dialogue, Theme, Visual, Emotional, Scene Economy) | ✓ |
-| **Scene Analysis** (Narrative Timeline, Scene Heatmap, Pacing, Complexity) | **Missing** |
-| Format sections (conditional by type) | ✓ |
-| **Series Bible** (for pilot/episode/web_series/micro_drama) | **Missing** |
-| Commercial (Diagnosis, Market, Production) | ✓ |
-| Development Priorities | ✓ |
-| Scorecard | ✓ |
-| Script | Skipped (impractical for PDF) |
+### 1. Update the data contract
+- **`src/types/database.ts`** — Extend `comparableTitles` type from `{ title: string; relevance: string }` to `{ title: string; relevance: string; similarityScore?: number }`.
+- **`supabase/functions/analyze-script/index.ts`** — Update the MarketAgent output schema prompt to include `"similarityScore": 0-100` for each comparable title entry. Also update the ConceptAgent comparableTitles prompt similarly.
 
-PDF-only extras (acceptable): Executive Summary, Character Reference appendix, Scene Index appendix.
+### 2. Render as a table
+- **`src/components/report/AgentNarrativePanel.tsx`** — Replace the comparable titles `<div>` list (lines 276-287) with a `<Table>` using columns: Title, Relevance, Similarity Score. The similarity score column shows a colored progress bar + numeric value. Gracefully handle missing `similarityScore` (show "—" if not present from older reports).
 
-## Plan
+### 3. PDF export update
+- **`src/lib/fullReportPdfGenerator.ts`** — Update the comparable titles PDF section to render as an autoTable with 3 columns (Title, Relevance, Similarity %) instead of the current plain text list.
 
-### 1. Add Scene Analysis to PDF (in Part III Craft, after Scene Economy)
-- **File**: `src/lib/fullReportPdfGenerator.ts`
-- Add `scene-analysis` to `SECTION_AGENT_MAP` mapping to relevant agents
-- After the craft sections loop, render a "Scene Analysis" page with:
-  - Scene-level data table using `autoTable` (scene #, heading, emotional tone, tension level, page)
-  - Pacing summary from scene data (avg scene length, scene count)
-  - This is a data-table approximation since visual charts (heatmaps, timelines) can't render in jsPDF
+## Table Design
+```text
+┌──────────────────────┬──────────────────────────────────────┬────────────┐
+│ Title                │ Relevance                            │ Similarity │
+├──────────────────────┼──────────────────────────────────────┼────────────┤
+│ Vikram (2022)        │ Indian action-thriller with branded… │ ██████ 78% │
+│ Jigarthanda DX (23) │ Tamil commercial storytelling that…  │ █████  72% │
+│ Daredevil (Netflix)  │ Grounded vigilante superhero tone…   │ ████   65% │
+└──────────────────────┴──────────────────────────────────────┴────────────┘
+```
 
-### 2. Add Series Bible to PDF (conditional, after Format sections)
-- **File**: `src/lib/fullReportPdfGenerator.ts`
-- Add `bible` to `SECTION_AGENT_MAP` mapping to relevant agent keys (ThemeAgent, CharacterAgent, WorldAgent as fallbacks)
-- For applicable script types (web_series, pilot, episode, micro_drama), render a "Series Bible" section with agent narrative content
-- Extract structured bible data (core premise, world rules, tonal guardrails, character trajectories, series engine) from agent content and render as formatted subsections
-
-### 3. Update SECTION_AGENT_MAP
-- **File**: `src/lib/fullReportPdfGenerator.ts`
-- Add entries:
-  - `'scene-analysis': ['SceneEconomyAgent', 'StructureAgent']`
-  - `'bible': ['SeriesBibleAgent', 'WorldAgent', 'ThemeAgent', 'CharacterDiagnosisAgent']`
-
-### Files
-- **Edit**: `src/lib/fullReportPdfGenerator.ts` — add Scene Analysis section in Part III, add Series Bible section in Part IV (conditional), update agent mappings
+## Files
+- **Edit**: `src/types/database.ts` — add `similarityScore` to comparableTitles type
+- **Edit**: `supabase/functions/analyze-script/index.ts` — add similarityScore to MarketAgent + ConceptAgent prompt schemas
+- **Edit**: `src/components/report/AgentNarrativePanel.tsx` — table rendering with progress bar
+- **Edit**: `src/lib/fullReportPdfGenerator.ts` — PDF table for comparables
 
