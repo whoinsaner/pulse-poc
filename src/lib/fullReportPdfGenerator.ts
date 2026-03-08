@@ -4,7 +4,12 @@
  */
 
 import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import autoTableModule from 'jspdf-autotable';
+
+// jspdf-autotable v5 exports differently depending on bundler
+const autoTable = typeof autoTableModule === 'function' 
+  ? autoTableModule 
+  : (autoTableModule as any).default || autoTableModule;
 import { ReportData, StakeholderLens, LENS_CONFIG, ScriptType, AgentSectionContent, ParameterScoreData } from '@/types/database';
 import { getUSAFNavGroups, getScriptTypeLabel, isComicType, isWebSeriesType } from '@/lib/reportNavigation';
 import { extractScore } from '@/lib/scoreUtils';
