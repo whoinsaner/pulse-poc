@@ -746,7 +746,7 @@ function renderParameterCards(
         y += 3;
       }
     } catch (err) {
-      console.error(`Error rendering parameter ${p?.name}:`, err);
+      console.error(`Error rendering parameter ${p?.parameterName}:`, err);
     }
   }
 
