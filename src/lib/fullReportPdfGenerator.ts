@@ -987,8 +987,8 @@ function renderCharacterAppendix(doc: jsPDF, y: number, data: ReportData, pageNu
     c.sceneCount != null ? String(c.sceneCount) : '—',
   ]);
 
-  const chStartPages = doc.getNumberOfPages();
-  autoTable(doc, {
+  let chFirstPage = true;
+  const chResult = autoTable(doc, {
     startY: y,
     head: [['Name', 'Description', 'Dialogues', 'Scenes']],
     body: tableData,
@@ -1013,15 +1013,17 @@ function renderCharacterAppendix(doc: jsPDF, y: number, data: ReportData, pageNu
       3: { cellWidth: 18, halign: 'center' as const },
     },
     didDrawPage: () => {
-      if (doc.getNumberOfPages() > chStartPages) {
+      if (!chFirstPage) {
         addRunningHeader(doc, sectionName, { value: doc.getNumberOfPages() });
         addRunningFooter(doc);
       }
+      chFirstPage = false;
     },
   });
   pageNum.value = doc.getNumberOfPages();
+  resetFontStyle(doc);
 
-  return (doc as any).lastAutoTable?.finalY || y + 20;
+  return (chResult as any)?.finalY ? (chResult as any).finalY + 8 : y + 20;
 }
 
 function renderSceneAppendix(doc: jsPDF, y: number, data: ReportData, pageNum: PageCounter): number {
