@@ -1047,8 +1047,8 @@ function renderSceneAppendix(doc: jsPDF, y: number, data: ReportData, pageNum: P
     s.pageStart ? `${s.pageStart}${s.pageEnd && s.pageEnd !== s.pageStart ? `-${s.pageEnd}` : ''}` : '—',
   ]);
 
-  const siStartPages = doc.getNumberOfPages();
-  autoTable(doc, {
+  let siFirstPage = true;
+  const siResult = autoTable(doc, {
     startY: y,
     head: [['#', 'Heading', 'Tone', 'Int/Ext', 'Pages']],
     body: tableData,
@@ -1072,15 +1072,17 @@ function renderSceneAppendix(doc: jsPDF, y: number, data: ReportData, pageNum: P
       4: { cellWidth: 15 },
     },
     didDrawPage: () => {
-      if (doc.getNumberOfPages() > siStartPages) {
+      if (!siFirstPage) {
         addRunningHeader(doc, sectionName, { value: doc.getNumberOfPages() });
         addRunningFooter(doc);
       }
+      siFirstPage = false;
     },
   });
   pageNum.value = doc.getNumberOfPages();
+  resetFontStyle(doc);
 
-  return (doc as any).lastAutoTable?.finalY || y + 20;
+  return (siResult as any)?.finalY ? (siResult as any).finalY + 8 : y + 20;
 }
 
 // ============= TOC =============
