@@ -624,8 +624,8 @@ function renderAgentNarrative(
           typeof ct?.similarityScore === 'number' ? `${ct.similarityScore}%` : '—',
         ]);
 
-        const ctStartPages = doc.getNumberOfPages();
-        autoTable(doc, {
+        let ctFirstPage = true;
+        const ctResult = autoTable(doc, {
           startY: y,
           head: [['Title', 'Relevance', 'IMDb', 'Similarity']],
           body: tableBody,
@@ -638,14 +638,16 @@ function renderAgentNarrative(
             3: { cellWidth: 20, halign: 'center' as const },
           },
           didDrawPage: () => {
-            if (doc.getNumberOfPages() > ctStartPages) {
+            if (!ctFirstPage) {
               addRunningHeader(doc, sectionName, { value: doc.getNumberOfPages() });
               addRunningFooter(doc);
             }
+            ctFirstPage = false;
           },
         });
         pageNum.value = doc.getNumberOfPages();
-        y = (doc as any).lastAutoTable?.finalY ? (doc as any).lastAutoTable.finalY + 6 : y + 30;
+        y = (ctResult as any)?.finalY ? (ctResult as any).finalY + 6 : y + 30;
+        resetFontStyle(doc);
       }
 
       if (content.targetAudience) {
@@ -927,8 +929,8 @@ function renderCompleteScorecardAppendix(doc: jsPDF, y: number, data: ReportData
     p.maturity || '—',
   ]);
 
-  const scStartPages = doc.getNumberOfPages();
-  autoTable(doc, {
+  let scFirstPage = true;
+  const scResult = autoTable(doc, {
     startY: y,
     head: [['Parameter', 'Category', 'Score', 'Maturity']],
     body: tableData,
@@ -952,15 +954,17 @@ function renderCompleteScorecardAppendix(doc: jsPDF, y: number, data: ReportData
       3: { cellWidth: 25, halign: 'center' as const },
     },
     didDrawPage: () => {
-      if (doc.getNumberOfPages() > scStartPages) {
+      if (!scFirstPage) {
         addRunningHeader(doc, sectionName, { value: doc.getNumberOfPages() });
         addRunningFooter(doc);
       }
+      scFirstPage = false;
     },
   });
   pageNum.value = doc.getNumberOfPages();
+  resetFontStyle(doc);
 
-  return (doc as any).lastAutoTable?.finalY || y + 20;
+  return (scResult as any)?.finalY ? (scResult as any).finalY + 8 : y + 20;
 }
 
 function renderCharacterAppendix(doc: jsPDF, y: number, data: ReportData, pageNum: PageCounter): number {
@@ -983,8 +987,8 @@ function renderCharacterAppendix(doc: jsPDF, y: number, data: ReportData, pageNu
     c.sceneCount != null ? String(c.sceneCount) : '—',
   ]);
 
-  const chStartPages = doc.getNumberOfPages();
-  autoTable(doc, {
+  let chFirstPage = true;
+  const chResult = autoTable(doc, {
     startY: y,
     head: [['Name', 'Description', 'Dialogues', 'Scenes']],
     body: tableData,
@@ -1009,15 +1013,17 @@ function renderCharacterAppendix(doc: jsPDF, y: number, data: ReportData, pageNu
       3: { cellWidth: 18, halign: 'center' as const },
     },
     didDrawPage: () => {
-      if (doc.getNumberOfPages() > chStartPages) {
+      if (!chFirstPage) {
         addRunningHeader(doc, sectionName, { value: doc.getNumberOfPages() });
         addRunningFooter(doc);
       }
+      chFirstPage = false;
     },
   });
   pageNum.value = doc.getNumberOfPages();
+  resetFontStyle(doc);
 
-  return (doc as any).lastAutoTable?.finalY || y + 20;
+  return (chResult as any)?.finalY ? (chResult as any).finalY + 8 : y + 20;
 }
 
 function renderSceneAppendix(doc: jsPDF, y: number, data: ReportData, pageNum: PageCounter): number {
@@ -1041,8 +1047,8 @@ function renderSceneAppendix(doc: jsPDF, y: number, data: ReportData, pageNum: P
     s.pageStart ? `${s.pageStart}${s.pageEnd && s.pageEnd !== s.pageStart ? `-${s.pageEnd}` : ''}` : '—',
   ]);
 
-  const siStartPages = doc.getNumberOfPages();
-  autoTable(doc, {
+  let siFirstPage = true;
+  const siResult = autoTable(doc, {
     startY: y,
     head: [['#', 'Heading', 'Tone', 'Int/Ext', 'Pages']],
     body: tableData,
@@ -1066,15 +1072,17 @@ function renderSceneAppendix(doc: jsPDF, y: number, data: ReportData, pageNum: P
       4: { cellWidth: 15 },
     },
     didDrawPage: () => {
-      if (doc.getNumberOfPages() > siStartPages) {
+      if (!siFirstPage) {
         addRunningHeader(doc, sectionName, { value: doc.getNumberOfPages() });
         addRunningFooter(doc);
       }
+      siFirstPage = false;
     },
   });
   pageNum.value = doc.getNumberOfPages();
+  resetFontStyle(doc);
 
-  return (doc as any).lastAutoTable?.finalY || y + 20;
+  return (siResult as any)?.finalY ? (siResult as any).finalY + 8 : y + 20;
 }
 
 // ============= TOC =============
@@ -1294,8 +1302,8 @@ export async function generateFullReportPDF(
         s.pageStart ? `p.${s.pageStart}${s.pageEnd && s.pageEnd !== s.pageStart ? `-${s.pageEnd}` : ''}` : '—',
       ]);
 
-      const saStartPages = doc.getNumberOfPages();
-      autoTable(doc, {
+      let saFirstPage = true;
+      const saResult = autoTable(doc, {
         head: [['#', 'Heading', 'Emotional Tone', 'Int/Ext', 'Pages']],
         body: sceneTableData,
         startY: y,
@@ -1319,15 +1327,17 @@ export async function generateFullReportPDF(
           4: { cellWidth: 20 },
         },
         didDrawPage: () => {
-          if (doc.getNumberOfPages() > saStartPages) {
+          if (!saFirstPage) {
             addRunningHeader(doc, 'Scene Analysis', { value: doc.getNumberOfPages() });
             addRunningFooter(doc);
           }
+          saFirstPage = false;
         },
       });
       pageNum.value = doc.getNumberOfPages();
+      resetFontStyle(doc);
 
-      y = (doc as any).lastAutoTable?.finalY || y + 20;
+      y = (saResult as any)?.finalY ? (saResult as any).finalY + 8 : y + 20;
 
       // Agent narrative for scene analysis
       y += 8;
