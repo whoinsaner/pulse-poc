@@ -1302,8 +1302,8 @@ export async function generateFullReportPDF(
         s.pageStart ? `p.${s.pageStart}${s.pageEnd && s.pageEnd !== s.pageStart ? `-${s.pageEnd}` : ''}` : '—',
       ]);
 
-      const saStartPages = doc.getNumberOfPages();
-      autoTable(doc, {
+      let saFirstPage = true;
+      const saResult = autoTable(doc, {
         head: [['#', 'Heading', 'Emotional Tone', 'Int/Ext', 'Pages']],
         body: sceneTableData,
         startY: y,
@@ -1327,15 +1327,17 @@ export async function generateFullReportPDF(
           4: { cellWidth: 20 },
         },
         didDrawPage: () => {
-          if (doc.getNumberOfPages() > saStartPages) {
+          if (!saFirstPage) {
             addRunningHeader(doc, 'Scene Analysis', { value: doc.getNumberOfPages() });
             addRunningFooter(doc);
           }
+          saFirstPage = false;
         },
       });
       pageNum.value = doc.getNumberOfPages();
+      resetFontStyle(doc);
 
-      y = (doc as any).lastAutoTable?.finalY || y + 20;
+      y = (saResult as any)?.finalY ? (saResult as any).finalY + 8 : y + 20;
 
       // Agent narrative for scene analysis
       y += 8;
