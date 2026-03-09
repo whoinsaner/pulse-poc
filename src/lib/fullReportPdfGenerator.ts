@@ -284,12 +284,12 @@ function renderCoverPage(doc: jsPDF, data: ReportData, title: string, activeLens
   doc.text(getReadinessLabel(score), pw / 2, scoreY + 45, { align: 'center' });
 
   // Metadata pills
-  const meta = data.scriptMetadata || {};
+  const meta = data.scriptMetadata;
   const pills: string[] = [];
-  if (meta.genre) pills.push(meta.genre);
-  if (meta.pageCount) pills.push(`${meta.pageCount} pages`);
-  if (meta.characterCount) pills.push(`${meta.characterCount} characters`);
-  if (meta.sceneCount) pills.push(`${meta.sceneCount} scenes`);
+  if (meta?.genre) pills.push(meta.genre);
+  if (meta?.pageCount) pills.push(`${meta.pageCount} pages`);
+  if (meta?.characterCount) pills.push(`${meta.characterCount} characters`);
+  if (meta?.sceneCount) pills.push(`${meta.sceneCount} scenes`);
   
   if (pills.length > 0) {
     doc.setFontSize(FONTS.small);
@@ -709,7 +709,7 @@ function renderParameterCards(
       doc.setFontSize(FONTS.body);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(...COLORS.text);
-      doc.text(p.displayName || p.name || 'Unknown', barX + 4, y + 3);
+      doc.text(p.displayName || p.parameterName || 'Unknown', barX + 4, y + 3);
 
       // Score
       const score = typeof p.score === 'number' ? p.score : 0;
@@ -746,7 +746,7 @@ function renderParameterCards(
         y += 3;
       }
     } catch (err) {
-      console.error(`Error rendering parameter ${p?.name}:`, err);
+      console.error(`Error rendering parameter ${p?.parameterName}:`, err);
     }
   }
 
@@ -909,7 +909,7 @@ function renderCompleteScorecardAppendix(doc: jsPDF, y: number, data: ReportData
   y = renderSectionTitle(doc, y, 'Complete Scorecard', 'All parameter scores across categories');
 
   const params = (data.parameterScores || []).filter(p => 
-    p && !INTERNAL_PARAMETER_NAMES.has(p.name) && !HIDDEN_CATEGORIES.has(p.category)
+    p && !INTERNAL_PARAMETER_NAMES.has(p.parameterName) && !HIDDEN_CATEGORIES.has(p.category)
   );
 
   if (params.length === 0) {
@@ -921,7 +921,7 @@ function renderCompleteScorecardAppendix(doc: jsPDF, y: number, data: ReportData
   }
 
   const tableData = params.map(p => [
-    p.displayName || p.name || '—',
+    p.displayName || p.parameterName || '—',
     p.category || '—',
     `${Math.round(p.score ?? 0)}`,
     p.maturity || '—',
