@@ -284,12 +284,12 @@ function renderCoverPage(doc: jsPDF, data: ReportData, title: string, activeLens
   doc.text(getReadinessLabel(score), pw / 2, scoreY + 45, { align: 'center' });
 
   // Metadata pills
-  const meta = data.scriptMetadata || {};
+  const meta = data.scriptMetadata;
   const pills: string[] = [];
-  if (meta.genre) pills.push(meta.genre);
-  if (meta.pageCount) pills.push(`${meta.pageCount} pages`);
-  if (meta.characterCount) pills.push(`${meta.characterCount} characters`);
-  if (meta.sceneCount) pills.push(`${meta.sceneCount} scenes`);
+  if (meta?.genre) pills.push(meta.genre);
+  if (meta?.pageCount) pills.push(`${meta.pageCount} pages`);
+  if (meta?.characterCount) pills.push(`${meta.characterCount} characters`);
+  if (meta?.sceneCount) pills.push(`${meta.sceneCount} scenes`);
   
   if (pills.length > 0) {
     doc.setFontSize(FONTS.small);
