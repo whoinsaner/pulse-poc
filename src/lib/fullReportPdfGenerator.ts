@@ -909,7 +909,7 @@ function renderCompleteScorecardAppendix(doc: jsPDF, y: number, data: ReportData
   y = renderSectionTitle(doc, y, 'Complete Scorecard', 'All parameter scores across categories');
 
   const params = (data.parameterScores || []).filter(p => 
-    p && !INTERNAL_PARAMETER_NAMES.has(p.name) && !HIDDEN_CATEGORIES.has(p.category)
+    p && !INTERNAL_PARAMETER_NAMES.has(p.parameterName) && !HIDDEN_CATEGORIES.has(p.category)
   );
 
   if (params.length === 0) {
