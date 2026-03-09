@@ -624,8 +624,8 @@ function renderAgentNarrative(
           typeof ct?.similarityScore === 'number' ? `${ct.similarityScore}%` : '—',
         ]);
 
-        const ctStartPages = doc.getNumberOfPages();
-        autoTable(doc, {
+        let ctFirstPage = true;
+        const ctResult = autoTable(doc, {
           startY: y,
           head: [['Title', 'Relevance', 'IMDb', 'Similarity']],
           body: tableBody,
@@ -638,14 +638,16 @@ function renderAgentNarrative(
             3: { cellWidth: 20, halign: 'center' as const },
           },
           didDrawPage: () => {
-            if (doc.getNumberOfPages() > ctStartPages) {
+            if (!ctFirstPage) {
               addRunningHeader(doc, sectionName, { value: doc.getNumberOfPages() });
               addRunningFooter(doc);
             }
+            ctFirstPage = false;
           },
         });
         pageNum.value = doc.getNumberOfPages();
-        y = (doc as any).lastAutoTable?.finalY ? (doc as any).lastAutoTable.finalY + 6 : y + 30;
+        y = (ctResult as any)?.finalY ? (ctResult as any).finalY + 6 : y + 30;
+        resetFontStyle(doc);
       }
 
       if (content.targetAudience) {
