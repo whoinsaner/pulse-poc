@@ -709,7 +709,7 @@ function renderParameterCards(
       doc.setFontSize(FONTS.body);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(...COLORS.text);
-      doc.text(p.displayName || p.name || 'Unknown', barX + 4, y + 3);
+      doc.text(p.displayName || p.parameterName || 'Unknown', barX + 4, y + 3);
 
       // Score
       const score = typeof p.score === 'number' ? p.score : 0;
