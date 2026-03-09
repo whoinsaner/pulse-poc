@@ -921,7 +921,7 @@ function renderCompleteScorecardAppendix(doc: jsPDF, y: number, data: ReportData
   }
 
   const tableData = params.map(p => [
-    p.displayName || p.name || '—',
+    p.displayName || p.parameterName || '—',
     p.category || '—',
     `${Math.round(p.score ?? 0)}`,
     p.maturity || '—',
