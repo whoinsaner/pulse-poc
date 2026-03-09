@@ -929,8 +929,8 @@ function renderCompleteScorecardAppendix(doc: jsPDF, y: number, data: ReportData
     p.maturity || '—',
   ]);
 
-  const scStartPages = doc.getNumberOfPages();
-  autoTable(doc, {
+  let scFirstPage = true;
+  const scResult = autoTable(doc, {
     startY: y,
     head: [['Parameter', 'Category', 'Score', 'Maturity']],
     body: tableData,
@@ -954,15 +954,17 @@ function renderCompleteScorecardAppendix(doc: jsPDF, y: number, data: ReportData
       3: { cellWidth: 25, halign: 'center' as const },
     },
     didDrawPage: () => {
-      if (doc.getNumberOfPages() > scStartPages) {
+      if (!scFirstPage) {
         addRunningHeader(doc, sectionName, { value: doc.getNumberOfPages() });
         addRunningFooter(doc);
       }
+      scFirstPage = false;
     },
   });
   pageNum.value = doc.getNumberOfPages();
+  resetFontStyle(doc);
 
-  return (doc as any).lastAutoTable?.finalY || y + 20;
+  return (scResult as any)?.finalY ? (scResult as any).finalY + 8 : y + 20;
 }
 
 function renderCharacterAppendix(doc: jsPDF, y: number, data: ReportData, pageNum: PageCounter): number {
