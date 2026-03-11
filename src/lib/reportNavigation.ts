@@ -28,6 +28,7 @@ import {
   Zap,
   Activity,
   Smartphone,
+  Tag,
   LucideIcon
 } from 'lucide-react';
 import { ScriptType } from '@/types/database';
@@ -158,6 +159,14 @@ const USAF_NAV_GROUPS: NavGroup[] = [
     applicableTypes: 'all',
     items: [
       { id: 'development', label: 'Development Priorities', icon: ListTodo, path: '/development' },
+    ],
+  },
+  {
+    id: 'production',
+    label: 'Production',
+    applicableTypes: 'all',
+    items: [
+      { id: 'breakdown', label: 'Script Breakdown', icon: Tag, path: '/breakdown' },
     ],
   },
   {
