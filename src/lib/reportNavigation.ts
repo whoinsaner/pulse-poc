@@ -161,6 +161,14 @@ const USAF_NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
+    id: 'production',
+    label: 'Production',
+    applicableTypes: 'all',
+    items: [
+      { id: 'breakdown', label: 'Script Breakdown', icon: Tag, path: '/breakdown' },
+    ],
+  },
+  {
     id: 'reference',
     label: 'Reference',
     applicableTypes: 'all',
