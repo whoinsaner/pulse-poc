@@ -28,6 +28,7 @@ import {
   Zap,
   Activity,
   Smartphone,
+  Tag,
   LucideIcon
 } from 'lucide-react';
 import { ScriptType } from '@/types/database';
