@@ -224,6 +224,57 @@ export type Database = {
           },
         ]
       }
+      breakdown_tags: {
+        Row: {
+          category: Database["public"]["Enums"]["breakdown_category"]
+          created_at: string
+          created_by: string
+          element_name: string
+          id: string
+          notes: string | null
+          scene_id: string
+          script_id: string
+          updated_at: string
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["breakdown_category"]
+          created_at?: string
+          created_by: string
+          element_name: string
+          id?: string
+          notes?: string | null
+          scene_id: string
+          script_id: string
+          updated_at?: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["breakdown_category"]
+          created_at?: string
+          created_by?: string
+          element_name?: string
+          id?: string
+          notes?: string | null
+          scene_id?: string
+          script_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "breakdown_tags_scene_id_fkey"
+            columns: ["scene_id"]
+            isOneToOne: false
+            referencedRelation: "scenes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "breakdown_tags_script_id_fkey"
+            columns: ["script_id"]
+            isOneToOne: false
+            referencedRelation: "scripts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       characters: {
         Row: {
           arc_summary: string | null
@@ -1158,6 +1209,23 @@ export type Database = {
     Enums: {
       analysis_status: "pending" | "processing" | "completed" | "failed"
       app_role: "admin" | "analyst" | "viewer"
+      breakdown_category:
+        | "cast"
+        | "extras"
+        | "props"
+        | "wardrobe"
+        | "makeup"
+        | "vehicles"
+        | "animals"
+        | "vfx"
+        | "sfx"
+        | "stunts"
+        | "music"
+        | "sound"
+        | "set_dressing"
+        | "greenery"
+        | "special_equipment"
+        | "notes"
       script_format: "pdf" | "fdx" | "fountain" | "highland" | "txt" | "docx"
       script_type:
         | "feature"
@@ -1311,6 +1379,24 @@ export const Constants = {
     Enums: {
       analysis_status: ["pending", "processing", "completed", "failed"],
       app_role: ["admin", "analyst", "viewer"],
+      breakdown_category: [
+        "cast",
+        "extras",
+        "props",
+        "wardrobe",
+        "makeup",
+        "vehicles",
+        "animals",
+        "vfx",
+        "sfx",
+        "stunts",
+        "music",
+        "sound",
+        "set_dressing",
+        "greenery",
+        "special_equipment",
+        "notes",
+      ],
       script_format: ["pdf", "fdx", "fountain", "highland", "txt", "docx"],
       script_type: [
         "feature",
