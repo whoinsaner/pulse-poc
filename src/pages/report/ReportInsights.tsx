@@ -2,7 +2,7 @@ import { useOutletContext } from 'react-router-dom';
 import { ReportData, StakeholderLens } from '@/types/database';
 import { EnhancedInsightsSection } from '@/components/report/EnhancedInsightsSection';
 import { ThemeMotifTracker } from '@/components/report/ThemeMotifTracker';
-import { BudgetEstimator } from '@/components/report/BudgetEstimator';
+import { BudgetSimulator } from '@/components/report/BudgetSimulator';
 import { RiskMap } from '@/components/report/RiskMap';
 import { Report } from '@/types/database';
 
@@ -67,7 +67,7 @@ export default function ReportInsights() {
             Estimated production costs and resource requirements
           </p>
         </div>
-        <BudgetEstimator 
+        <BudgetSimulator 
           scenes={reportData.scenes || []} 
           characters={reportData.characters || []} 
         />
