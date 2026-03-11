@@ -67,7 +67,7 @@ export default function ReportInsights() {
             Estimated production costs and resource requirements
           </p>
         </div>
-        <BudgetEstimator 
+        <BudgetSimulator 
           scenes={reportData.scenes || []} 
           characters={reportData.characters || []} 
         />
