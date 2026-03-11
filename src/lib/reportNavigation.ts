@@ -149,7 +149,7 @@ const USAF_NAV_GROUPS: NavGroup[] = [
       { id: 'commercial-diagnosis', label: 'Commercial Diagnosis', icon: TrendingUp, path: '/commercial', requiredCategories: ['Market', 'Execution'] },
       { id: 'commercial-market', label: 'Market Analysis', icon: TrendingUp, path: '/commercial/market', requiredCategories: ['Market'] },
       { id: 'commercial-production', label: 'Production Viability', icon: Film, path: '/commercial/production', requiredCategories: ['Execution'] },
-      
+      { id: 'insights', label: 'Insights & Budget', icon: Lightbulb, path: '/insights' },
     ],
   },
   {
