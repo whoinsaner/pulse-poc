@@ -181,6 +181,7 @@ const App = () => (
               <Route path="development/scenes" element={<Navigate to="../craft/scenes" replace />} />
               <Route path="scorecard" element={<CompleteScorecard />} />
               <Route path="script" element={<ReportScript />} />
+              <Route path="breakdown" element={<ScriptBreakdown />} />
               
               {/* Legacy routes - redirect to consolidated pages */}
               <Route path="concept" element={<Navigate to="../story" replace />} />
