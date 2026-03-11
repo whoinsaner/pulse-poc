@@ -58,6 +58,7 @@ import SampleMicroDramaReportLayout from "./pages/SampleMicroDramaReport";
 import ComicGallery from "./pages/ComicGallery";
 import MicroDramaAnalysis from "./pages/report/MicroDramaAnalysis";
 import ReportScript from "./pages/report/ReportScript";
+import ScriptBreakdown from "./pages/report/ScriptBreakdown";
 // New USAF Redesign Pages
 import ReportCover from "./pages/report/ReportCover";
 import StoryDiagnosis from "./pages/report/StoryDiagnosis";
