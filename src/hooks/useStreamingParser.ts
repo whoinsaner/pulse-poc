@@ -93,7 +93,7 @@ export function useStreamingParser(options: UseStreamingParserOptions = {}) {
   const [eta, setEta] = useState<ETAInfo | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const startTimeRef = useRef<number | null>(null);
-  const etaIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const etaIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastProgressRef = useRef<number>(0);
 
   // Update ETA calculations
