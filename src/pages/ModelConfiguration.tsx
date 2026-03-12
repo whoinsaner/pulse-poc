@@ -628,87 +628,165 @@ export default function ModelConfiguration() {
             </CardHeader>
             <CardContent>
              <ScrollArea className="h-[500px] pr-4">
-                {/* Column Headers */}
+                {/* Sortable Column Headers */}
                 <div className="flex items-center gap-4 px-3 pb-2 mb-1 border-b border-border text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  <div className="flex-1 min-w-0">Agent</div>
-                  <div className="w-48 text-center">Model</div>
-                  <div className="w-20 text-center" title="Controls randomness: 0 = deterministic, 2 = creative">Temp</div>
+                  <button
+                    className="flex-1 min-w-0 flex items-center gap-1 hover:text-foreground transition-colors text-left"
+                    onClick={() => {
+                      if (sortField === 'name') setSortDirection(d => d === 'asc' ? 'desc' : 'asc');
+                      else { setSortField('name'); setSortDirection('asc'); }
+                    }}
+                  >
+                    Agent
+                    {sortField === 'name' ? (sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : null}
+                  </button>
+                  <button
+                    className="flex items-center gap-1 hover:text-foreground transition-colors"
+                    onClick={() => {
+                      if (sortField === 'category') setSortDirection(d => d === 'asc' ? 'desc' : 'asc');
+                      else { setSortField('category'); setSortDirection('asc'); }
+                    }}
+                  >
+                    Category
+                    {sortField === 'category' ? (sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : null}
+                  </button>
+                  <button
+                    className="w-48 text-center flex items-center justify-center gap-1 hover:text-foreground transition-colors"
+                    onClick={() => {
+                      if (sortField === 'model') setSortDirection(d => d === 'asc' ? 'desc' : 'asc');
+                      else { setSortField('model'); setSortDirection('asc'); }
+                    }}
+                  >
+                    Model
+                    {sortField === 'model' ? (sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : null}
+                  </button>
+                  <button
+                    className="w-20 text-center flex items-center justify-center gap-1 hover:text-foreground transition-colors"
+                    title="Controls randomness: 0 = deterministic, 2 = creative"
+                    onClick={() => {
+                      if (sortField === 'temperature') setSortDirection(d => d === 'asc' ? 'desc' : 'asc');
+                      else { setSortField('temperature'); setSortDirection('asc'); }
+                    }}
+                  >
+                    Temp
+                    {sortField === 'temperature' ? (sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : null}
+                  </button>
                 </div>
-                <div className="space-y-3">
-                  {Object.entries(editedMappings)
-                    .sort(([a], [b]) => {
-                      const agentA = agentConfigs.find(ac => ac.agent_name === a);
-                      const agentB = agentConfigs.find(ac => ac.agent_name === b);
-                      const catOrder = (cat: string) => AGENT_CATEGORY_ORDER.indexOf(cat);
-                      const catA = catOrder(agentA?.category || 'analysis');
-                      const catB = catOrder(agentB?.category || 'analysis');
-                      if (catA !== catB) return catA - catB;
-                      return (agentA?.display_name || a).localeCompare(agentB?.display_name || b);
-                    })
-                    .map(([agent, mapping]) => {
-                    const agentConfig = agentConfigs.find(ac => ac.agent_name === agent);
-                    const displayName = agentConfig?.display_name || agent.replace(/Agent$/, '').replace(/([A-Z])/g, ' $1').trim();
-                    const category = agentConfig?.category || 'unknown';
-                    const modelInfo = AVAILABLE_MODELS.find(m => m.id === mapping.model);
+                <div className="space-y-1">
+                  {(() => {
+                    const sorted = Object.entries(editedMappings)
+                      .sort(([a, mA], [b, mB]) => {
+                        const agentA = agentConfigs.find(ac => ac.agent_name === a);
+                        const agentB = agentConfigs.find(ac => ac.agent_name === b);
+                        const dir = sortDirection === 'asc' ? 1 : -1;
 
-                    return (
-                      <div
-                        key={agent}
-                        className="flex items-center gap-4 p-3 rounded-lg border border-border bg-card/50"
-                      >
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm truncate">{displayName}</p>
-                          <p className="text-[10px] text-muted-foreground font-mono">{agent}</p>
-                        </div>
-                        <Select
-                          value={mapping.model}
-                          onValueChange={(value) =>
-                            setEditedMappings({
-                              ...editedMappings,
-                              [agent]: { ...mapping, model: value },
-                            })
+                        switch (sortField) {
+                          case 'category': {
+                            const catOrder = (cat: string) => {
+                              const idx = AGENT_CATEGORY_ORDER.indexOf(cat);
+                              return idx === -1 ? 999 : idx;
+                            };
+                            const catA = catOrder(agentA?.category || 'analysis');
+                            const catB = catOrder(agentB?.category || 'analysis');
+                            if (catA !== catB) return (catA - catB) * dir;
+                            return (agentA?.display_name || a).localeCompare(agentB?.display_name || b);
                           }
-                          disabled={false}
-                        >
-                          <SelectTrigger className="w-48">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {AVAILABLE_MODELS.map((model) => (
-                              <SelectItem key={model.id} value={model.id}>
-                                <div className="flex items-center gap-2">
-                                  <Badge
-                                    variant="outline"
-                                    className={cn('text-[10px] px-1', getModelTierColor(model.tier))}
-                                  >
-                                    {getModelTierIcon(model.tier)}
-                                  </Badge>
-                                  <span>{model.name}</span>
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <div className="w-20">
-                          <Input
-                            type="number"
-                            min="0"
-                            max="2"
-                            step="0.1"
-                            value={mapping.temperature}
-                            onChange={(e) =>
-                              setEditedMappings({
-                                ...editedMappings,
-                                [agent]: { ...mapping, temperature: parseFloat(e.target.value) || 0.7 },
-                              })
-                            }
-                            disabled={false}
-                            className="text-sm"
-                          />
+                          case 'name':
+                            return (agentA?.display_name || a).localeCompare(agentB?.display_name || b) * dir;
+                          case 'model':
+                            return mA.model.localeCompare(mB.model) * dir;
+                          case 'temperature':
+                            return (mA.temperature - mB.temperature) * dir;
+                          default:
+                            return 0;
+                        }
+                      });
+
+                    let lastCategory = '';
+
+                    return sorted.map(([agent, mapping]) => {
+                      const agentConfig = agentConfigs.find(ac => ac.agent_name === agent);
+                      const displayName = agentConfig?.display_name || agent.replace(/Agent$/, '').replace(/([A-Z])/g, ' $1').trim();
+                      const category = agentConfig?.category || 'unknown';
+                      const modelInfo = AVAILABLE_MODELS.find(m => m.id === mapping.model);
+
+                      // Category group header (only when sorting by category)
+                      let categoryHeader = null;
+                      if (sortField === 'category' && category !== lastCategory) {
+                        lastCategory = category;
+                        categoryHeader = (
+                          <div key={`cat-${category}`} className="pt-3 pb-1 px-1 first:pt-1">
+                            <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70">
+                              {category.replace(/_/g, ' ')}
+                            </span>
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div key={agent}>
+                          {categoryHeader}
+                          <div className="flex items-center gap-4 p-3 rounded-lg border border-border bg-card/50">
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-sm truncate">{displayName}</p>
+                              <p className="text-[10px] text-muted-foreground font-mono">{agent}</p>
+                            </div>
+                            {sortField !== 'category' && (
+                              <Badge variant="outline" className="text-[10px] shrink-0">
+                                {category.replace(/_/g, ' ')}
+                              </Badge>
+                            )}
+                            <Select
+                              value={mapping.model}
+                              onValueChange={(value) =>
+                                setEditedMappings({
+                                  ...editedMappings,
+                                  [agent]: { ...mapping, model: value },
+                                })
+                              }
+                              disabled={false}
+                            >
+                              <SelectTrigger className="w-48">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {AVAILABLE_MODELS.map((model) => (
+                                  <SelectItem key={model.id} value={model.id}>
+                                    <div className="flex items-center gap-2">
+                                      <Badge
+                                        variant="outline"
+                                        className={cn('text-[10px] px-1', getModelTierColor(model.tier))}
+                                      >
+                                        {getModelTierIcon(model.tier)}
+                                      </Badge>
+                                      <span>{model.name}</span>
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <div className="w-20">
+                              <Input
+                                type="number"
+                                min="0"
+                                max="2"
+                                step="0.1"
+                                value={mapping.temperature}
+                                onChange={(e) =>
+                                  setEditedMappings({
+                                    ...editedMappings,
+                                    [agent]: { ...mapping, temperature: parseFloat(e.target.value) || 0.7 },
+                                  })
+                                }
+                                disabled={false}
+                                className="text-sm"
+                              />
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    });
+                  })()}
                 </div>
               </ScrollArea>
             </CardContent>
