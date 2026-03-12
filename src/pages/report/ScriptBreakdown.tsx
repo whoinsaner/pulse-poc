@@ -22,6 +22,7 @@ import {
   Sparkles,
   Check,
   CheckCheck,
+  Database,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -140,6 +141,7 @@ export default function ScriptBreakdown() {
   }, [tags]);
 
   const aiPendingCount = useMemo(() => tags.filter(t => t.source === 'ai').length, [tags]);
+  const parserTagCount = useMemo(() => tags.filter(t => t.source === 'parser').length, [tags]);
 
   const filteredScenes = useMemo(() => {
     let result = scenes;
@@ -468,9 +470,17 @@ export default function ScriptBreakdown() {
             className="pl-9"
           />
         </div>
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Layers className="h-4 w-4" />
-          <span>{tags.length} elements across {scenes.length} scenes</span>
+        <div className="flex items-center gap-3 text-sm text-muted-foreground">
+          <div className="flex items-center gap-2">
+            <Layers className="h-4 w-4" />
+            <span>{tags.length} elements across {scenes.length} scenes</span>
+          </div>
+          {parserTagCount > 0 && (
+            <div className="flex items-center gap-1">
+              <Database className="h-3.5 w-3.5" />
+              <span>{parserTagCount} from parser</span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -583,6 +593,7 @@ export default function ScriptBreakdown() {
                                 {groupedTags[cat].map(tag => {
                                   const isAi = tag.source === 'ai';
                                   const isAiAccepted = tag.source === 'ai_accepted';
+                                  const isParser = tag.source === 'parser';
                                   return (
                                     <span
                                       key={tag.id}
@@ -590,9 +601,13 @@ export default function ScriptBreakdown() {
                                         'group inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium',
                                         config.bgClass, config.textClass, config.borderClass,
                                         isAi && 'border-dashed',
+                                        isParser && 'border-solid',
                                         tag.confidence !== null && tag.confidence < 0.5 && 'opacity-70',
                                       )}
                                     >
+                                      {isParser && (
+                                        <Database className="h-2.5 w-2.5 shrink-0 text-muted-foreground" />
+                                      )}
                                       {(isAi || isAiAccepted) && (
                                         <Sparkles className={cn('h-2.5 w-2.5 shrink-0', isAiAccepted ? 'text-primary/50' : 'text-primary')} />
                                       )}
