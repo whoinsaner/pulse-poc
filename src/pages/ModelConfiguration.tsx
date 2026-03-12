@@ -40,6 +40,9 @@ import {
   Edit2,
   Bot,
   History,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
