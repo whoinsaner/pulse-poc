@@ -1,4 +1,3 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const corsHeaders = {
@@ -14,49 +13,22 @@ const VALID_CATEGORIES = [
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
+async function processExtraction(
+  jobId: string,
+  scriptId: string,
+  userId: string,
+  supabaseUrl: string,
+  serviceRoleKey: string,
+  lovableApiKey: string,
+) {
+  const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
   try {
-    // Auth validation
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-    }
-
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
-
-    if (!lovableApiKey) {
-      return new Response(JSON.stringify({ error: 'AI service not configured' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
-
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    if (authError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-    }
-    const userId = user.id;
-
-    // Parse and validate input
-    const { script_id } = await req.json();
-    if (!script_id || !UUID_REGEX.test(script_id)) {
-      return new Response(JSON.stringify({ error: 'Invalid script_id' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-    }
-
-    // Fetch scenes and script_lines
+    // Fetch scenes, lines, existing tags
     const [scenesRes, linesRes, existingTagsRes] = await Promise.all([
-      supabase.from('scenes').select('*').eq('script_id', script_id).order('scene_number'),
-      supabase.from('script_lines').select('*').eq('script_id', script_id).order('scene_number').order('line_number'),
-      supabase.from('breakdown_tags').select('scene_id, category, element_name').eq('script_id', script_id),
+      adminClient.from('scenes').select('*').eq('script_id', scriptId).order('scene_number'),
+      adminClient.from('script_lines').select('*').eq('script_id', scriptId).order('scene_number').order('line_number'),
+      adminClient.from('breakdown_tags').select('scene_id, category, element_name').eq('script_id', scriptId),
     ]);
 
     if (scenesRes.error) throw new Error(`Failed to fetch scenes: ${scenesRes.error.message}`);
@@ -67,11 +39,18 @@ serve(async (req) => {
     const existingTags = existingTagsRes.data || [];
 
     if (scenes.length === 0) {
-      return new Response(JSON.stringify({ error: 'No scenes found for this script', extracted: 0 }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      await adminClient.from('extraction_jobs').update({
+        status: 'failed', error: 'No scenes found for this script', updated_at: new Date().toISOString(),
+      }).eq('id', jobId);
+      return;
     }
 
-    // Fetch model configuration for BreakdownExtractorAgent
-    const adminClient = createClient(supabaseUrl, serviceRoleKey);
+    // Update job with total scenes
+    await adminClient.from('extraction_jobs').update({
+      total_scenes: scenes.length, updated_at: new Date().toISOString(),
+    }).eq('id', jobId);
+
+    // Fetch model configuration
     let aiModel = 'google/gemini-3-flash-preview';
     let aiTemperature = 0.3;
 
@@ -95,28 +74,27 @@ serve(async (req) => {
         if (mapping) {
           aiModel = mapping.model;
           aiTemperature = mapping.temperature ?? 0.3;
-          console.log(`Using configured model: ${aiModel} (temp: ${aiTemperature})`);
         }
       }
     } catch (e) {
       console.warn('Failed to fetch model config, using default:', e);
     }
 
-    // Build existing tags lookup for deduplication
+    // Build dedup set
     const existingSet = new Set(
       existingTags.map(t => `${t.scene_id}::${t.category}::${t.element_name.toLowerCase().trim()}`)
     );
 
-    // Group lines by scene_number
+    // Group lines by scene
     const linesByScene: Record<number, typeof lines> = {};
     for (const line of lines) {
       if (!linesByScene[line.scene_number]) linesByScene[line.scene_number] = [];
       linesByScene[line.scene_number].push(line);
     }
 
-    // Batch scenes (10 per batch)
     const BATCH_SIZE = 10;
     const allInserts: any[] = [];
+    let scenesProcessed = 0;
 
     for (let i = 0; i < scenes.length; i += BATCH_SIZE) {
       const batch = scenes.slice(i, i + BATCH_SIZE);
@@ -157,132 +135,219 @@ For each scene, identify elements in these categories:
 
 Be thorough but precise. Only extract elements explicitly mentioned or clearly implied. Assign a confidence score (0.0 to 1.0) based on how clearly the element is referenced.`;
 
-      const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${lovableApiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: aiModel,
-          temperature: aiTemperature,
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: `Extract all production elements from these scenes:\n\n${sceneDescriptions}` },
-          ],
-          tools: [{
-            type: 'function',
-            function: {
-              name: 'extract_breakdown_elements',
-              description: 'Extract production breakdown elements from script scenes',
-              parameters: {
-                type: 'object',
-                properties: {
-                  elements: {
-                    type: 'array',
-                    items: {
-                      type: 'object',
-                      properties: {
-                        scene_number: { type: 'number', description: 'The scene number' },
-                        category: { type: 'string', enum: VALID_CATEGORIES },
-                        element_name: { type: 'string', description: 'Name of the production element' },
-                        confidence: { type: 'number', description: 'Confidence score 0.0-1.0' },
+      try {
+        const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${lovableApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: aiModel,
+            temperature: aiTemperature,
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: `Extract all production elements from these scenes:\n\n${sceneDescriptions}` },
+            ],
+            tools: [{
+              type: 'function',
+              function: {
+                name: 'extract_breakdown_elements',
+                description: 'Extract production breakdown elements from script scenes',
+                parameters: {
+                  type: 'object',
+                  properties: {
+                    elements: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          scene_number: { type: 'number', description: 'The scene number' },
+                          category: { type: 'string', enum: VALID_CATEGORIES },
+                          element_name: { type: 'string', description: 'Name of the production element' },
+                          confidence: { type: 'number', description: 'Confidence score 0.0-1.0' },
+                        },
+                        required: ['scene_number', 'category', 'element_name', 'confidence'],
+                        additionalProperties: false,
                       },
-                      required: ['scene_number', 'category', 'element_name', 'confidence'],
-                      additionalProperties: false,
                     },
                   },
+                  required: ['elements'],
+                  additionalProperties: false,
                 },
-                required: ['elements'],
-                additionalProperties: false,
               },
-            },
-          }],
-          tool_choice: { type: 'function', function: { name: 'extract_breakdown_elements' } },
-        }),
-      });
-
-      if (!response.ok) {
-        if (response.status === 429) {
-          return new Response(JSON.stringify({ error: 'Rate limit exceeded. Please try again in a moment.', extracted: allInserts.length }), {
-            status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
-        }
-        if (response.status === 402) {
-          return new Response(JSON.stringify({ error: 'AI credits exhausted. Please add credits to continue.', extracted: allInserts.length }), {
-            status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
-        }
-        const errText = await response.text();
-        console.error(`AI gateway error (batch ${i / BATCH_SIZE}):`, response.status, errText);
-        continue; // Skip batch on error, continue with others
-      }
-
-      const aiResult = await response.json();
-      const toolCall = aiResult.choices?.[0]?.message?.tool_calls?.[0];
-      if (!toolCall?.function?.arguments) {
-        console.error(`No tool call in batch ${i / BATCH_SIZE}`);
-        continue;
-      }
-
-      let parsed: { elements: Array<{ scene_number: number; category: string; element_name: string; confidence: number }> };
-      try {
-        parsed = JSON.parse(toolCall.function.arguments);
-      } catch (e) {
-        console.error(`Failed to parse tool call arguments in batch ${i / BATCH_SIZE}:`, e);
-        continue;
-      }
-
-      // Map scene_number to scene_id and deduplicate
-      const sceneMap = new Map(batch.map(s => [s.scene_number, s.id]));
-
-      for (const el of parsed.elements) {
-        const sceneId = sceneMap.get(el.scene_number);
-        if (!sceneId) continue;
-        if (!VALID_CATEGORIES.includes(el.category)) continue;
-        if (!el.element_name?.trim()) continue;
-
-        const dedupeKey = `${sceneId}::${el.category}::${el.element_name.toLowerCase().trim()}`;
-        if (existingSet.has(dedupeKey)) continue;
-        existingSet.add(dedupeKey); // Prevent intra-batch duplicates
-
-        const confidence = Math.max(0, Math.min(1, Number(el.confidence) || 0.5));
-
-        allInserts.push({
-          scene_id: sceneId,
-          script_id: script_id,
-          category: el.category,
-          element_name: el.element_name.trim(),
-          confidence,
-          source: 'ai',
-          created_by: userId,
+            }],
+            tool_choice: { type: 'function', function: { name: 'extract_breakdown_elements' } },
+          }),
         });
+
+        if (!response.ok) {
+          const errText = await response.text();
+          console.error(`AI gateway error (batch ${i / BATCH_SIZE}):`, response.status, errText);
+          if (response.status === 429 || response.status === 402) {
+            const errorMsg = response.status === 429
+              ? 'Rate limit exceeded. Please try again in a moment.'
+              : 'AI credits exhausted. Please add credits to continue.';
+            await adminClient.from('extraction_jobs').update({
+              status: 'failed', error: errorMsg, extracted_count: allInserts.length, updated_at: new Date().toISOString(),
+            }).eq('id', jobId);
+            return;
+          }
+          continue;
+        }
+
+        const aiResult = await response.json();
+        const toolCall = aiResult.choices?.[0]?.message?.tool_calls?.[0];
+        if (!toolCall?.function?.arguments) {
+          console.error(`No tool call in batch ${i / BATCH_SIZE}`);
+          continue;
+        }
+
+        let parsed: { elements: Array<{ scene_number: number; category: string; element_name: string; confidence: number }> };
+        try {
+          parsed = JSON.parse(toolCall.function.arguments);
+        } catch (e) {
+          console.error(`Failed to parse tool call arguments in batch ${i / BATCH_SIZE}:`, e);
+          continue;
+        }
+
+        const sceneMap = new Map(batch.map(s => [s.scene_number, s.id]));
+
+        for (const el of parsed.elements) {
+          const sceneId = sceneMap.get(el.scene_number);
+          if (!sceneId) continue;
+          if (!VALID_CATEGORIES.includes(el.category)) continue;
+          if (!el.element_name?.trim()) continue;
+
+          const dedupeKey = `${sceneId}::${el.category}::${el.element_name.toLowerCase().trim()}`;
+          if (existingSet.has(dedupeKey)) continue;
+          existingSet.add(dedupeKey);
+
+          allInserts.push({
+            scene_id: sceneId,
+            script_id: scriptId,
+            category: el.category,
+            element_name: el.element_name.trim(),
+            confidence: Math.max(0, Math.min(1, Number(el.confidence) || 0.5)),
+            source: 'ai',
+            created_by: userId,
+          });
+        }
+      } catch (batchError) {
+        console.error(`Batch ${i / BATCH_SIZE} error:`, batchError);
+        continue;
       }
 
-      // Small delay between batches to avoid rate limiting
+      scenesProcessed += batch.length;
+
+      // Update progress
+      const progress = Math.round((scenesProcessed / scenes.length) * 100);
+      await adminClient.from('extraction_jobs').update({
+        progress, extracted_count: allInserts.length, updated_at: new Date().toISOString(),
+      }).eq('id', jobId);
+
+      // Small delay between batches
       if (i + BATCH_SIZE < scenes.length) {
-        await new Promise(r => setTimeout(r, 500));
+        await new Promise(r => setTimeout(r, 300));
       }
     }
 
     // Bulk insert
     if (allInserts.length > 0) {
-      const { error: insertError } = await supabase
+      const { error: insertError } = await adminClient
         .from('breakdown_tags')
         .insert(allInserts);
 
       if (insertError) {
         console.error('Insert error:', insertError);
-        return new Response(JSON.stringify({ error: `Failed to save extracted elements: ${insertError.message}`, extracted: 0 }), {
-          status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+        await adminClient.from('extraction_jobs').update({
+          status: 'failed', error: `Failed to save: ${insertError.message}`, updated_at: new Date().toISOString(),
+        }).eq('id', jobId);
+        return;
       }
     }
 
+    // Mark complete
+    await adminClient.from('extraction_jobs').update({
+      status: 'completed',
+      progress: 100,
+      extracted_count: allInserts.length,
+      updated_at: new Date().toISOString(),
+    }).eq('id', jobId);
+
+    console.log(`Extraction complete: ${allInserts.length} elements from ${scenes.length} scenes`);
+
+  } catch (error) {
+    console.error('processExtraction error:', error);
+    await adminClient.from('extraction_jobs').update({
+      status: 'failed',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      updated_at: new Date().toISOString(),
+    }).eq('id', jobId);
+  }
+}
+
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    // Auth validation
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
+
+    if (!lovableApiKey) {
+      return new Response(JSON.stringify({ error: 'AI service not configured' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    const { script_id } = await req.json();
+    if (!script_id || !UUID_REGEX.test(script_id)) {
+      return new Response(JSON.stringify({ error: 'Invalid script_id' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    // Create job record
+    const { data: job, error: jobError } = await supabase
+      .from('extraction_jobs')
+      .insert({
+        script_id,
+        status: 'processing',
+        created_by: user.id,
+      })
+      .select()
+      .single();
+
+    if (jobError || !job) {
+      console.error('Failed to create extraction job:', jobError);
+      return new Response(JSON.stringify({ error: 'Failed to create extraction job' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    // Start background processing
+    (globalThis as any).EdgeRuntime.waitUntil(
+      processExtraction(job.id, script_id, user.id, supabaseUrl, serviceRoleKey, lovableApiKey)
+    );
+
+    // Return immediately with job ID
     return new Response(JSON.stringify({
-      success: true,
-      extracted: allInserts.length,
-      scenes_processed: scenes.length,
+      job_id: job.id,
+      status: 'processing',
     }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
   } catch (error) {
