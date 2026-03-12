@@ -116,6 +116,8 @@ export default function ModelConfiguration() {
   const [editedMappings, setEditedMappings] = useState<Record<string, { model: string; temperature: number }>>({});
   const [auditLog, setAuditLog] = useState<AuditLogEntry[]>([]);
   const [showAuditLog, setShowAuditLog] = useState(false);
+  const [sortField, setSortField] = useState<'category' | 'name' | 'model' | 'temperature'>('category');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   useEffect(() => {
     if (!authLoading && !user) {
