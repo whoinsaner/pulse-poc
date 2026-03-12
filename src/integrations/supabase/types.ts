@@ -227,6 +227,7 @@ export type Database = {
       breakdown_tags: {
         Row: {
           category: Database["public"]["Enums"]["breakdown_category"]
+          confidence: number | null
           created_at: string
           created_by: string
           element_name: string
@@ -234,10 +235,12 @@ export type Database = {
           notes: string | null
           scene_id: string
           script_id: string
+          source: string
           updated_at: string
         }
         Insert: {
           category: Database["public"]["Enums"]["breakdown_category"]
+          confidence?: number | null
           created_at?: string
           created_by: string
           element_name: string
@@ -245,10 +248,12 @@ export type Database = {
           notes?: string | null
           scene_id: string
           script_id: string
+          source?: string
           updated_at?: string
         }
         Update: {
           category?: Database["public"]["Enums"]["breakdown_category"]
+          confidence?: number | null
           created_at?: string
           created_by?: string
           element_name?: string
@@ -256,6 +261,7 @@ export type Database = {
           notes?: string | null
           scene_id?: string
           script_id?: string
+          source?: string
           updated_at?: string
         }
         Relationships: [
