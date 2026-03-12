@@ -376,18 +376,28 @@ export default function ScriptBreakdown() {
             Tag production elements by scene — props, wardrobe, VFX, cast, and more
           </p>
         </div>
-        <Button
-          onClick={runAutoExtract}
-          disabled={extracting || scenes.length === 0}
-          className="gap-2 shrink-0"
-        >
-          {extracting ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Sparkles className="h-4 w-4" />
+        <div className="flex flex-col items-end gap-1 shrink-0">
+          <Button
+            onClick={runAutoExtract}
+            disabled={extracting || scenes.length === 0}
+            className="gap-2"
+          >
+            {extracting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Sparkles className="h-4 w-4" />
+            )}
+            {extracting ? `Extracting... ${extractionProgress}%` : 'Auto-Extract'}
+          </Button>
+          {extracting && (
+            <div className="w-full h-1.5 rounded-full bg-muted overflow-hidden">
+              <div
+                className="h-full bg-primary transition-all duration-500 rounded-full"
+                style={{ width: `${extractionProgress}%` }}
+              />
+            </div>
           )}
-          {extracting ? 'Extracting...' : 'Auto-Extract'}
-        </Button>
+        </div>
       </div>
 
       {/* AI Pending Banner */}
