@@ -140,6 +140,7 @@ export default function ScriptBreakdown() {
   }, [tags]);
 
   const aiPendingCount = useMemo(() => tags.filter(t => t.source === 'ai').length, [tags]);
+  const parserTagCount = useMemo(() => tags.filter(t => t.source === 'parser').length, [tags]);
 
   const filteredScenes = useMemo(() => {
     let result = scenes;
