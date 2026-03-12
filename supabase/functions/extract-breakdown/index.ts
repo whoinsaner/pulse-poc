@@ -5,6 +5,13 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
+// Categories the AI should extract (cast excluded — handled by parser pre-tagging)
+const AI_CATEGORIES = [
+  'extras', 'props', 'wardrobe', 'makeup', 'vehicles',
+  'animals', 'vfx', 'sfx', 'stunts', 'music', 'sound',
+  'set_dressing', 'greenery', 'special_equipment', 'notes',
+];
+
 const VALID_CATEGORIES = [
   'cast', 'extras', 'props', 'wardrobe', 'makeup', 'vehicles',
   'animals', 'vfx', 'sfx', 'stunts', 'music', 'sound',
@@ -24,11 +31,12 @@ async function processExtraction(
   const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
   try {
-    // Fetch scenes, lines, existing tags
-    const [scenesRes, linesRes, existingTagsRes] = await Promise.all([
+    // Fetch scenes, lines, existing tags, and characters in parallel
+    const [scenesRes, linesRes, existingTagsRes, charactersRes] = await Promise.all([
       adminClient.from('scenes').select('*').eq('script_id', scriptId).order('scene_number'),
       adminClient.from('script_lines').select('*').eq('script_id', scriptId).order('scene_number').order('line_number'),
       adminClient.from('breakdown_tags').select('scene_id, category, element_name').eq('script_id', scriptId),
+      adminClient.from('characters').select('name').eq('script_id', scriptId),
     ]);
 
     if (scenesRes.error) throw new Error(`Failed to fetch scenes: ${scenesRes.error.message}`);
@@ -37,6 +45,7 @@ async function processExtraction(
     const scenes = scenesRes.data || [];
     const lines = linesRes.data || [];
     const existingTags = existingTagsRes.data || [];
+    const characters = charactersRes.data || [];
 
     if (scenes.length === 0) {
       await adminClient.from('extraction_jobs').update({
@@ -49,6 +58,90 @@ async function processExtraction(
     await adminClient.from('extraction_jobs').update({
       total_scenes: scenes.length, updated_at: new Date().toISOString(),
     }).eq('id', jobId);
+
+    // Build dedup set
+    const existingSet = new Set(
+      existingTags.map(t => `${t.scene_id}::${t.category}::${t.element_name.toLowerCase().trim()}`)
+    );
+
+    // Group lines by scene
+    const linesByScene: Record<number, typeof lines> = {};
+    for (const line of lines) {
+      if (!linesByScene[line.scene_number]) linesByScene[line.scene_number] = [];
+      linesByScene[line.scene_number].push(line);
+    }
+
+    // ── STEP 1: Pre-tag from parsed data ──
+    const parserInserts: any[] = [];
+
+    // Build a set of known character names (normalized)
+    const characterNameSet = new Set(characters.map(c => c.name.toLowerCase().trim()));
+
+    for (const scene of scenes) {
+      const sceneLines = linesByScene[scene.scene_number] || [];
+
+      // Cast: find unique character_names in this scene's script_lines that match known characters
+      const seenCharacters = new Set<string>();
+      for (const line of sceneLines) {
+        if (line.character_name) {
+          const normalized = line.character_name.toLowerCase().trim();
+          if (characterNameSet.has(normalized) && !seenCharacters.has(normalized)) {
+            seenCharacters.add(normalized);
+
+            // Use the original casing from the characters table
+            const originalName = characters.find(c => c.name.toLowerCase().trim() === normalized)?.name || line.character_name;
+
+            const dedupeKey = `${scene.id}::cast::${originalName.toLowerCase().trim()}`;
+            if (!existingSet.has(dedupeKey)) {
+              existingSet.add(dedupeKey);
+              parserInserts.push({
+                scene_id: scene.id,
+                script_id: scriptId,
+                category: 'cast',
+                element_name: originalName,
+                confidence: 1.0,
+                source: 'parser',
+                created_by: userId,
+              });
+            }
+          }
+        }
+      }
+
+      // Location → set_dressing tag
+      if (scene.location && scene.location.trim()) {
+        const locationName = scene.location.trim();
+        const dedupeKey = `${scene.id}::set_dressing::${locationName.toLowerCase()}`;
+        if (!existingSet.has(dedupeKey)) {
+          existingSet.add(dedupeKey);
+          parserInserts.push({
+            scene_id: scene.id,
+            script_id: scriptId,
+            category: 'set_dressing',
+            element_name: locationName,
+            confidence: 1.0,
+            source: 'parser',
+            created_by: userId,
+          });
+        }
+      }
+    }
+
+    // Bulk insert parser tags
+    if (parserInserts.length > 0) {
+      const { error: parserInsertError } = await adminClient
+        .from('breakdown_tags')
+        .insert(parserInserts);
+
+      if (parserInsertError) {
+        console.error('Parser tag insert error:', parserInsertError);
+        // Non-fatal — continue with AI extraction
+      } else {
+        console.log(`Pre-tagged ${parserInserts.length} elements from parsed data (cast + locations)`);
+      }
+    }
+
+    // ── STEP 2: AI extraction for remaining categories ──
 
     // Fetch model configuration
     let aiModel = 'google/gemini-3-flash-preview';
@@ -80,20 +173,8 @@ async function processExtraction(
       console.warn('Failed to fetch model config, using default:', e);
     }
 
-    // Build dedup set
-    const existingSet = new Set(
-      existingTags.map(t => `${t.scene_id}::${t.category}::${t.element_name.toLowerCase().trim()}`)
-    );
-
-    // Group lines by scene
-    const linesByScene: Record<number, typeof lines> = {};
-    for (const line of lines) {
-      if (!linesByScene[line.scene_number]) linesByScene[line.scene_number] = [];
-      linesByScene[line.scene_number].push(line);
-    }
-
     const BATCH_SIZE = 10;
-    const allInserts: any[] = [];
+    const aiInserts: any[] = [];
     let scenesProcessed = 0;
 
     for (let i = 0; i < scenes.length; i += BATCH_SIZE) {
@@ -113,10 +194,9 @@ async function processExtraction(
         return `--- SCENE ${scene.scene_number} ---\nHeading: ${scene.heading}\nLocation: ${scene.location || 'Unknown'}\nTime: ${scene.time_of_day || 'Unknown'}\nInt/Ext: ${scene.int_ext || 'Unknown'}\nDescription: ${scene.description || 'None'}\n\nScript Content:\n${lineText || '(no lines parsed)'}`;
       }).join('\n\n');
 
-      const systemPrompt = `You are a professional script breakdown artist working on a film/TV production. Your job is to identify all production elements from scene descriptions and dialogue.
+      const systemPrompt = `You are a professional script breakdown artist working on a film/TV production. Your job is to identify production elements from scene descriptions and dialogue.
 
-For each scene, identify elements in these categories:
-- cast: Named speaking characters appearing in the scene
+IMPORTANT: Cast members and location/set_dressing have already been extracted automatically. Do NOT include them. Focus ONLY on these categories:
 - extras: Background actors, crowds, groups
 - props: Hand props, set props, any physical objects handled or referenced
 - wardrobe: Specific costume pieces, uniforms, distinctive clothing mentioned
@@ -128,7 +208,6 @@ For each scene, identify elements in these categories:
 - stunts: Fight choreography, falls, car chases, physical stunts
 - music: Source music, live performances, instruments
 - sound: Specific sound design needs (gunshots, ambient sounds mentioned in action)
-- set_dressing: Furniture, decorations, environmental details
 - greenery: Plants, trees, landscaping
 - special_equipment: Camera rigs, cranes, specialty gear implied by the scene
 - notes: Important production notes or considerations
@@ -163,7 +242,7 @@ Be thorough but precise. Only extract elements explicitly mentioned or clearly i
                         type: 'object',
                         properties: {
                           scene_number: { type: 'number', description: 'The scene number' },
-                          category: { type: 'string', enum: VALID_CATEGORIES },
+                          category: { type: 'string', enum: AI_CATEGORIES },
                           element_name: { type: 'string', description: 'Name of the production element' },
                           confidence: { type: 'number', description: 'Confidence score 0.0-1.0' },
                         },
@@ -189,7 +268,7 @@ Be thorough but precise. Only extract elements explicitly mentioned or clearly i
               ? 'Rate limit exceeded. Please try again in a moment.'
               : 'AI credits exhausted. Please add credits to continue.';
             await adminClient.from('extraction_jobs').update({
-              status: 'failed', error: errorMsg, extracted_count: allInserts.length, updated_at: new Date().toISOString(),
+              status: 'failed', error: errorMsg, extracted_count: parserInserts.length + aiInserts.length, updated_at: new Date().toISOString(),
             }).eq('id', jobId);
             return;
           }
@@ -223,7 +302,7 @@ Be thorough but precise. Only extract elements explicitly mentioned or clearly i
           if (existingSet.has(dedupeKey)) continue;
           existingSet.add(dedupeKey);
 
-          allInserts.push({
+          aiInserts.push({
             scene_id: sceneId,
             script_id: scriptId,
             category: el.category,
@@ -243,7 +322,7 @@ Be thorough but precise. Only extract elements explicitly mentioned or clearly i
       // Update progress
       const progress = Math.round((scenesProcessed / scenes.length) * 100);
       await adminClient.from('extraction_jobs').update({
-        progress, extracted_count: allInserts.length, updated_at: new Date().toISOString(),
+        progress, extracted_count: parserInserts.length + aiInserts.length, updated_at: new Date().toISOString(),
       }).eq('id', jobId);
 
       // Small delay between batches
@@ -252,11 +331,11 @@ Be thorough but precise. Only extract elements explicitly mentioned or clearly i
       }
     }
 
-    // Bulk insert
-    if (allInserts.length > 0) {
+    // Bulk insert AI tags
+    if (aiInserts.length > 0) {
       const { error: insertError } = await adminClient
         .from('breakdown_tags')
-        .insert(allInserts);
+        .insert(aiInserts);
 
       if (insertError) {
         console.error('Insert error:', insertError);
@@ -267,15 +346,17 @@ Be thorough but precise. Only extract elements explicitly mentioned or clearly i
       }
     }
 
+    const totalExtracted = parserInserts.length + aiInserts.length;
+
     // Mark complete
     await adminClient.from('extraction_jobs').update({
       status: 'completed',
       progress: 100,
-      extracted_count: allInserts.length,
+      extracted_count: totalExtracted,
       updated_at: new Date().toISOString(),
     }).eq('id', jobId);
 
-    console.log(`Extraction complete: ${allInserts.length} elements from ${scenes.length} scenes`);
+    console.log(`Extraction complete: ${totalExtracted} elements (${parserInserts.length} parser + ${aiInserts.length} AI) from ${scenes.length} scenes`);
 
   } catch (error) {
     console.error('processExtraction error:', error);

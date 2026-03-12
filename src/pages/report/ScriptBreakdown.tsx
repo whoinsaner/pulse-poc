@@ -585,6 +585,7 @@ export default function ScriptBreakdown() {
                                 {groupedTags[cat].map(tag => {
                                   const isAi = tag.source === 'ai';
                                   const isAiAccepted = tag.source === 'ai_accepted';
+                                  const isParser = tag.source === 'parser';
                                   return (
                                     <span
                                       key={tag.id}
@@ -592,9 +593,13 @@ export default function ScriptBreakdown() {
                                         'group inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium',
                                         config.bgClass, config.textClass, config.borderClass,
                                         isAi && 'border-dashed',
+                                        isParser && 'border-solid',
                                         tag.confidence !== null && tag.confidence < 0.5 && 'opacity-70',
                                       )}
                                     >
+                                      {isParser && (
+                                        <Database className="h-2.5 w-2.5 shrink-0 text-muted-foreground" />
+                                      )}
                                       {(isAi || isAiAccepted) && (
                                         <Sparkles className={cn('h-2.5 w-2.5 shrink-0', isAiAccepted ? 'text-primary/50' : 'text-primary')} />
                                       )}
