@@ -1,36 +1,64 @@
 
 
-# Comparable Titles Table with Similarity Score
+# AI-Powered Script Breakdown Auto-Extraction
 
-## What
-Replace the current simple list rendering of comparable titles in `CommercialNarrativePanel` with a proper table using shadcn `Table` components. Add a `similarityScore` field to the data contract so the AI pipeline returns a numeric similarity percentage for each comparable title.
+## Overview
+Build a new edge function that uses AI to scan scene descriptions and `script_lines` data, automatically identifying production elements (cast, props, wardrobe, VFX, etc.) per scene. Results are inserted as `breakdown_tags` with a `source` field distinguishing AI-suggested vs. manually added tags. The UI gets an "Auto-Extract" button and visual indicators for AI suggestions that users can accept, dismiss, or edit.
 
-## Changes
+## Database Changes
 
-### 1. Update the data contract
-- **`src/types/database.ts`** — Extend `comparableTitles` type from `{ title: string; relevance: string }` to `{ title: string; relevance: string; similarityScore?: number }`.
-- **`supabase/functions/analyze-script/index.ts`** — Update the MarketAgent output schema prompt to include `"similarityScore": 0-100` for each comparable title entry. Also update the ConceptAgent comparableTitles prompt similarly.
+Add a `source` column to `breakdown_tags` and a `confidence` column for AI suggestions:
 
-### 2. Render as a table
-- **`src/components/report/AgentNarrativePanel.tsx`** — Replace the comparable titles `<div>` list (lines 276-287) with a `<Table>` using columns: Title, Relevance, Similarity Score. The similarity score column shows a colored progress bar + numeric value. Gracefully handle missing `similarityScore` (show "—" if not present from older reports).
-
-### 3. PDF export update
-- **`src/lib/fullReportPdfGenerator.ts`** — Update the comparable titles PDF section to render as an autoTable with 3 columns (Title, Relevance, Similarity %) instead of the current plain text list.
-
-## Table Design
-```text
-┌──────────────────────┬──────────────────────────────────────┬────────────┐
-│ Title                │ Relevance                            │ Similarity │
-├──────────────────────┼──────────────────────────────────────┼────────────┤
-│ Vikram (2022)        │ Indian action-thriller with branded… │ ██████ 78% │
-│ Jigarthanda DX (23) │ Tamil commercial storytelling that…  │ █████  72% │
-│ Daredevil (Netflix)  │ Grounded vigilante superhero tone…   │ ████   65% │
-└──────────────────────┴──────────────────────────────────────┴────────────┘
+```sql
+ALTER TABLE breakdown_tags 
+  ADD COLUMN source text NOT NULL DEFAULT 'manual',
+  ADD COLUMN confidence numeric DEFAULT NULL;
 ```
 
-## Files
-- **Edit**: `src/types/database.ts` — add `similarityScore` to comparableTitles type
-- **Edit**: `supabase/functions/analyze-script/index.ts` — add similarityScore to MarketAgent + ConceptAgent prompt schemas
-- **Edit**: `src/components/report/AgentNarrativePanel.tsx` — table rendering with progress bar
-- **Edit**: `src/lib/fullReportPdfGenerator.ts` — PDF table for comparables
+`source` values: `'manual'` (default, backward-compatible), `'ai'`, `'ai_accepted'`
+
+## New Edge Function: `extract-breakdown`
+
+**File**: `supabase/functions/extract-breakdown/index.ts`
+
+- Accepts `script_id` and `quality_mode`
+- Fetches all scenes + script_lines for the script
+- Batches scenes (10 per batch) and sends each batch to Lovable AI (Gemini 3 Flash Preview) with a prompt that:
+  - Receives scene heading, description, and all dialogue/action lines
+  - Returns structured output via **tool calling** with a schema like:
+    ```json
+    { "elements": [{ "scene_number": 1, "category": "props", "element_name": "revolver", "confidence": 0.9 }] }
+    ```
+- Deduplicates against existing `breakdown_tags` for the script
+- Inserts new tags with `source = 'ai'` and `confidence` value
+- Uses existing model config system (`getAgentModelConfig`) for consistency
+- Handles 429/402 errors properly
+
+## UI Changes: `ScriptBreakdown.tsx`
+
+1. **"Auto-Extract" button** in the header area — triggers the edge function, shows progress toast
+2. **AI badge** on tags where `source = 'ai'` — a small sparkle icon or "AI" label
+3. **Accept/Dismiss** controls on AI-suggested tags:
+   - Accept: updates `source` to `'ai_accepted'`
+   - Dismiss: deletes the tag
+   - "Accept All" bulk action per scene or globally
+4. **Confidence indicator** — subtle opacity or dot color based on confidence score
+5. Manually added tags remain unchanged (`source = 'manual'`)
+
+## Technical Details
+
+- Edge function config: `verify_jwt = false` in `config.toml`
+- Uses `LOVABLE_API_KEY` (already configured) via the AI gateway
+- Tool calling extracts structured JSON — no fragile prompt-based JSON parsing
+- Batching prevents token limit issues on large scripts (100+ scenes)
+- Existing RLS policies on `breakdown_tags` apply — no changes needed since inserts go through the authenticated client
+
+## File Changes Summary
+
+| File | Action |
+|------|--------|
+| `supabase/functions/extract-breakdown/index.ts` | Create |
+| `supabase/config.toml` | Add function entry |
+| `src/pages/report/ScriptBreakdown.tsx` | Add auto-extract button, AI tag indicators, accept/dismiss UI |
+| Migration SQL | Add `source` and `confidence` columns to `breakdown_tags` |
 
