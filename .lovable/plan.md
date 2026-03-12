@@ -1,36 +1,48 @@
 
 
-# Comparable Titles Table with Similarity Score
+## Plan: Pre-populate Breakdown Tags from Parsed Data
 
-## What
-Replace the current simple list rendering of comparable titles in `CommercialNarrativePanel` with a proper table using shadcn `Table` components. Add a `similarityScore` field to the data contract so the AI pipeline returns a numeric similarity percentage for each comparable title.
+### Problem
+The extraction function sends all 16 categories to the LLM, including **cast** and **locations** (set_dressing/notes), even though characters and locations are already stored in the `characters` and `scenes` tables from the parser.
 
-## Changes
+### Approach
+Add a **pre-tagging step** in the `extract-breakdown` edge function that runs before the AI loop. It will:
 
-### 1. Update the data contract
-- **`src/types/database.ts`** — Extend `comparableTitles` type from `{ title: string; relevance: string }` to `{ title: string; relevance: string; similarityScore?: number }`.
-- **`supabase/functions/analyze-script/index.ts`** — Update the MarketAgent output schema prompt to include `"similarityScore": 0-100` for each comparable title entry. Also update the ConceptAgent comparableTitles prompt similarly.
+1. **Characters → `cast` tags**: Query the `characters` table for the script, then cross-reference with `script_lines` to determine which characters appear in which scenes. Insert breakdown tags with `source: 'parser'` and `confidence: 1.0`.
 
-### 2. Render as a table
-- **`src/components/report/AgentNarrativePanel.tsx`** — Replace the comparable titles `<div>` list (lines 276-287) with a `<Table>` using columns: Title, Relevance, Similarity Score. The similarity score column shows a colored progress bar + numeric value. Gracefully handle missing `similarityScore` (show "—" if not present from older reports).
+2. **Locations → `set_dressing` tags**: Use each scene's `location` field from the `scenes` table to create a location tag per scene, also with `source: 'parser'` and `confidence: 1.0`.
 
-### 3. PDF export update
-- **`src/lib/fullReportPdfGenerator.ts`** — Update the comparable titles PDF section to render as an autoTable with 3 columns (Title, Relevance, Similarity %) instead of the current plain text list.
+3. **Exclude pre-tagged categories from AI prompt**: When building the AI prompt for each batch, inform the LLM that `cast` members have already been identified and it should skip them, focusing on the remaining categories (props, wardrobe, VFX, stunts, etc.).
 
-## Table Design
+4. **UI distinction**: Tags with `source: 'parser'` will be visually distinct (e.g., a different badge) so users know they came from parsed data, not AI inference.
+
+### Files to Change
+
+1. **`supabase/functions/extract-breakdown/index.ts`**
+   - After fetching scenes/lines/existing tags, query the `characters` table
+   - Build cast tags per scene by matching `script_lines.character_name` to character names per `scene_number`
+   - Build location tags from `scenes.location`
+   - Insert these as `source: 'parser'`, `confidence: 1.0` before the AI loop
+   - Update the AI system prompt to exclude `cast` from extraction (already handled)
+
+2. **`src/pages/report/ScriptBreakdown.tsx`**
+   - Add visual indicator for `source: 'parser'` tags (e.g., a small icon or badge color)
+
+3. **`src/lib/breakdownCategories.ts`** (if needed)
+   - Verify no changes needed; categories already include `cast`
+
+### Technical Detail
+
 ```text
-┌──────────────────────┬──────────────────────────────────────┬────────────┐
-│ Title                │ Relevance                            │ Similarity │
-├──────────────────────┼──────────────────────────────────────┼────────────┤
-│ Vikram (2022)        │ Indian action-thriller with branded… │ ██████ 78% │
-│ Jigarthanda DX (23) │ Tamil commercial storytelling that…  │ █████  72% │
-│ Daredevil (Netflix)  │ Grounded vigilante superhero tone…   │ ████   65% │
-└──────────────────────┴──────────────────────────────────────┴────────────┘
+Pipeline flow:
+  1. Fetch characters, scenes, script_lines, existing_tags
+  2. Pre-tag: characters → cast tags per scene (via script_lines grouping)
+  3. Pre-tag: scene.location → set_dressing tag per scene
+  4. Dedup against existing tags
+  5. Bulk insert parser tags
+  6. AI loop for remaining categories (exclude cast from prompt)
+  7. Bulk insert AI tags
 ```
 
-## Files
-- **Edit**: `src/types/database.ts` — add `similarityScore` to comparableTitles type
-- **Edit**: `supabase/functions/analyze-script/index.ts` — add similarityScore to MarketAgent + ConceptAgent prompt schemas
-- **Edit**: `src/components/report/AgentNarrativePanel.tsx` — table rendering with progress bar
-- **Edit**: `src/lib/fullReportPdfGenerator.ts` — PDF table for comparables
+The `source` field already exists on `breakdown_tags` with values `manual`, `ai`, `ai_accepted`. We'll add `parser` as a new source value. No schema migration needed since `source` is a `text` column.
 
