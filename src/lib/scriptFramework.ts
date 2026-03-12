@@ -104,7 +104,7 @@ export const INTERACTION_TAGS = [
 
 // ============= AGENT DEFINITIONS =============
 
-export type AgentCategory = 'system' | 'analysis' | 'comic' | 'meta' | 'enrichment';
+export type AgentCategory = 'system' | 'analysis' | 'comic' | 'meta' | 'enrichment' | 'production';
 
 export interface AgentDefinition {
   id: string;
