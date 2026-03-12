@@ -508,6 +508,7 @@ export const ALL_AGENTS: AgentDefinition[] = [
   ...WEB_SERIES_AGENTS,
   ...MICRO_DRAMA_AGENTS,
   ...ENRICHMENT_AGENTS,
+  ...PRODUCTION_AGENTS,
   ...META_AGENTS,
 ];
 

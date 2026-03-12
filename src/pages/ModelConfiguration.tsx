@@ -96,7 +96,7 @@ const AVAILABLE_MODELS = [
 ];
 
 // Agent categories for grouping in the UI
-const AGENT_CATEGORY_ORDER = ['system', 'analysis', 'comic', 'meta', 'enrichment', 'micro_drama', 'web_series', 'audio'];
+const AGENT_CATEGORY_ORDER = ['system', 'analysis', 'comic', 'meta', 'enrichment', 'production', 'micro_drama', 'web_series', 'audio'];
 
 export default function ModelConfiguration() {
   const navigate = useNavigate();
