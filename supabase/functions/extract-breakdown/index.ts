@@ -70,6 +70,38 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'No scenes found for this script', extracted: 0 }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
+    // Fetch model configuration for BreakdownExtractorAgent
+    const adminClient = createClient(supabaseUrl, serviceRoleKey);
+    let aiModel = 'google/gemini-3-flash-preview';
+    let aiTemperature = 0.3;
+
+    try {
+      const { data: defaultConfig } = await adminClient
+        .from('model_configurations')
+        .select('id')
+        .or('is_default.eq.true,and(is_system.eq.true,name.eq.quality)')
+        .order('is_default', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (defaultConfig) {
+        const { data: mapping } = await adminClient
+          .from('agent_model_mappings')
+          .select('model, temperature')
+          .eq('config_id', defaultConfig.id)
+          .eq('agent_name', 'BreakdownExtractorAgent')
+          .maybeSingle();
+
+        if (mapping) {
+          aiModel = mapping.model;
+          aiTemperature = mapping.temperature ?? 0.3;
+          console.log(`Using configured model: ${aiModel} (temp: ${aiTemperature})`);
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to fetch model config, using default:', e);
+    }
+
     // Build existing tags lookup for deduplication
     const existingSet = new Set(
       existingTags.map(t => `${t.scene_id}::${t.category}::${t.element_name.toLowerCase().trim()}`)
