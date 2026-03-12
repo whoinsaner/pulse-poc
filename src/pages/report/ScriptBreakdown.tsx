@@ -19,6 +19,9 @@ import {
   Search,
   Loader2,
   Layers,
+  Sparkles,
+  Check,
+  CheckCheck,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -59,6 +62,8 @@ interface BreakdownTag {
   element_name: string;
   notes: string | null;
   created_by: string;
+  source: string;
+  confidence: number | null;
 }
 
 export default function ScriptBreakdown() {
@@ -74,6 +79,7 @@ export default function ScriptBreakdown() {
   const [newElementName, setNewElementName] = useState('');
   const [newCategory, setNewCategory] = useState<BreakdownCategory>('props');
   const [saving, setSaving] = useState(false);
+  const [extracting, setExtracting] = useState(false);
 
   const scriptId = report?.script_id;
 
@@ -100,13 +106,14 @@ export default function ScriptBreakdown() {
         setTags(tagsRes.data.map(t => ({
           ...t,
           category: t.category as BreakdownCategory,
+          source: (t as any).source || 'manual',
+          confidence: (t as any).confidence ?? null,
         })));
       }
       if (scenesRes.error) toast.error('Failed to load scenes');
       if (tagsRes.error) toast.error('Failed to load breakdown tags');
       setLoading(false);
 
-      // Expand first 3 scenes by default
       if (scenesRes.data && scenesRes.data.length > 0) {
         setExpandedScenes(new Set(scenesRes.data.slice(0, 3).map(s => s.id)));
       }
@@ -124,7 +131,6 @@ export default function ScriptBreakdown() {
     return map;
   }, [tags]);
 
-  // Summary stats
   const categoryCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     for (const tag of tags) {
@@ -132,6 +138,8 @@ export default function ScriptBreakdown() {
     }
     return counts;
   }, [tags]);
+
+  const aiPendingCount = useMemo(() => tags.filter(t => t.source === 'ai').length, [tags]);
 
   const filteredScenes = useMemo(() => {
     let result = scenes;
@@ -178,7 +186,12 @@ export default function ScriptBreakdown() {
     if (error) {
       toast.error('Failed to add element');
     } else if (data) {
-      setTags(prev => [...prev, { ...data, category: data.category as BreakdownCategory }]);
+      setTags(prev => [...prev, {
+        ...data,
+        category: data.category as BreakdownCategory,
+        source: (data as any).source || 'manual',
+        confidence: (data as any).confidence ?? null,
+      }]);
       setNewElementName('');
       toast.success(`Added "${data.element_name}" as ${BREAKDOWN_CATEGORIES[newCategory].label}`);
     }
@@ -198,6 +211,112 @@ export default function ScriptBreakdown() {
     }
   };
 
+  const acceptTag = async (tagId: string) => {
+    const { error } = await supabase
+      .from('breakdown_tags')
+      .update({ source: 'ai_accepted' } as any)
+      .eq('id', tagId);
+
+    if (error) {
+      toast.error('Failed to accept suggestion');
+    } else {
+      setTags(prev => prev.map(t => t.id === tagId ? { ...t, source: 'ai_accepted' } : t));
+    }
+  };
+
+  const acceptAllAiTags = async (sceneId?: string) => {
+    const aiTags = tags.filter(t => t.source === 'ai' && (!sceneId || t.scene_id === sceneId));
+    if (aiTags.length === 0) return;
+
+    const ids = aiTags.map(t => t.id);
+    const { error } = await supabase
+      .from('breakdown_tags')
+      .update({ source: 'ai_accepted' } as any)
+      .in('id', ids);
+
+    if (error) {
+      toast.error('Failed to accept all suggestions');
+    } else {
+      setTags(prev => prev.map(t => ids.includes(t.id) ? { ...t, source: 'ai_accepted' } : t));
+      toast.success(`Accepted ${ids.length} AI suggestions`);
+    }
+  };
+
+  const dismissAllAiTags = async (sceneId?: string) => {
+    const aiTags = tags.filter(t => t.source === 'ai' && (!sceneId || t.scene_id === sceneId));
+    if (aiTags.length === 0) return;
+
+    const ids = aiTags.map(t => t.id);
+    const { error } = await supabase
+      .from('breakdown_tags')
+      .delete()
+      .in('id', ids);
+
+    if (error) {
+      toast.error('Failed to dismiss suggestions');
+    } else {
+      setTags(prev => prev.filter(t => !ids.includes(t.id)));
+      toast.success(`Dismissed ${ids.length} AI suggestions`);
+    }
+  };
+
+  const runAutoExtract = async () => {
+    if (!scriptId || extracting) return;
+    setExtracting(true);
+    const toastId = toast.loading('AI is scanning your script for production elements...', { duration: 120000 });
+
+    try {
+      const { data, error } = await supabase.functions.invoke('extract-breakdown', {
+        body: { script_id: scriptId },
+      });
+
+      toast.dismiss(toastId);
+
+      if (error) {
+        toast.error(error.message || 'Extraction failed');
+        setExtracting(false);
+        return;
+      }
+
+      if (data?.error) {
+        if (data.error.includes('Rate limit')) {
+          toast.error('Rate limit reached. Please wait a moment and try again.');
+        } else if (data.error.includes('credits')) {
+          toast.error('AI credits exhausted. Please add credits in Settings → Workspace → Usage.');
+        } else {
+          toast.error(data.error);
+        }
+        setExtracting(false);
+        return;
+      }
+
+      toast.success(`Extracted ${data.extracted} elements across ${data.scenes_processed} scenes`);
+
+      // Refresh tags
+      const { data: freshTags } = await supabase
+        .from('breakdown_tags')
+        .select('*')
+        .eq('script_id', scriptId);
+
+      if (freshTags) {
+        setTags(freshTags.map(t => ({
+          ...t,
+          category: t.category as BreakdownCategory,
+          source: (t as any).source || 'manual',
+          confidence: (t as any).confidence ?? null,
+        })));
+        // Expand all scenes that got new tags
+        setExpandedScenes(new Set(scenes.map(s => s.id)));
+      }
+    } catch (e) {
+      toast.dismiss(toastId);
+      toast.error('Auto-extraction failed. Please try again.');
+      console.error('Auto-extract error:', e);
+    }
+
+    setExtracting(false);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -209,12 +328,49 @@ export default function ScriptBreakdown() {
   return (
     <div className="space-y-6 max-w-5xl">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Script Breakdown</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Tag production elements by scene — props, wardrobe, VFX, cast, and more
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Script Breakdown</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Tag production elements by scene — props, wardrobe, VFX, cast, and more
+          </p>
+        </div>
+        <Button
+          onClick={runAutoExtract}
+          disabled={extracting || scenes.length === 0}
+          className="gap-2 shrink-0"
+        >
+          {extracting ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Sparkles className="h-4 w-4" />
+          )}
+          {extracting ? 'Extracting...' : 'Auto-Extract'}
+        </Button>
       </div>
+
+      {/* AI Pending Banner */}
+      {aiPendingCount > 0 && (
+        <Card className="border-primary/30 bg-primary/5">
+          <CardContent className="py-3 flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm">
+              <Sparkles className="h-4 w-4 text-primary" />
+              <span className="text-foreground font-medium">{aiPendingCount} AI suggestions</span>
+              <span className="text-muted-foreground">awaiting review</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => acceptAllAiTags()}>
+                <CheckCheck className="h-3 w-3" />
+                Accept All
+              </Button>
+              <Button size="sm" variant="ghost" className="h-7 text-xs gap-1 text-destructive hover:text-destructive" onClick={() => dismissAllAiTags()}>
+                <X className="h-3 w-3" />
+                Dismiss All
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Category Legend + Stats */}
       <Card>
@@ -276,12 +432,13 @@ export default function ScriptBreakdown() {
             ? sceneTags
             : sceneTags.filter(t => t.category === filterCategory);
 
-          // Group tags by category
           const groupedTags: Record<string, BreakdownTag[]> = {};
           for (const tag of filteredTags) {
             if (!groupedTags[tag.category]) groupedTags[tag.category] = [];
             groupedTags[tag.category].push(tag);
           }
+
+          const sceneAiCount = sceneTags.filter(t => t.source === 'ai').length;
 
           return (
             <Card key={scene.id} className="overflow-hidden">
@@ -310,8 +467,13 @@ export default function ScriptBreakdown() {
                   )}
                 </div>
 
-                {/* Mini category dots */}
                 <div className="flex items-center gap-1 shrink-0">
+                  {sceneAiCount > 0 && (
+                    <span className="inline-flex items-center gap-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-medium px-1.5 py-0.5">
+                      <Sparkles className="h-2.5 w-2.5" />
+                      {sceneAiCount}
+                    </span>
+                  )}
                   {Object.keys(groupedTags).map(cat => (
                     <span
                       key={cat}
@@ -334,8 +496,25 @@ export default function ScriptBreakdown() {
                     </div>
                   )}
 
+                  {/* Per-scene AI actions */}
+                  {sceneAiCount > 0 && (
+                    <div className="px-4 py-2 bg-primary/5 border-b border-border flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Sparkles className="h-3 w-3 text-primary" />
+                        {sceneAiCount} AI suggestion{sceneAiCount !== 1 ? 's' : ''}
+                      </span>
+                      <div className="flex gap-1">
+                        <Button size="sm" variant="ghost" className="h-6 text-[10px] gap-0.5 px-2" onClick={() => acceptAllAiTags(scene.id)}>
+                          <CheckCheck className="h-3 w-3" /> Accept All
+                        </Button>
+                        <Button size="sm" variant="ghost" className="h-6 text-[10px] gap-0.5 px-2 text-destructive hover:text-destructive" onClick={() => dismissAllAiTags(scene.id)}>
+                          <X className="h-3 w-3" /> Dismiss All
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="p-4 space-y-3">
-                    {/* Tagged Elements by Category */}
                     {Object.entries(groupedTags).length > 0 ? (
                       <div className="space-y-2">
                         {CATEGORY_ORDER.filter(cat => groupedTags[cat]).map(cat => {
@@ -350,23 +529,48 @@ export default function ScriptBreakdown() {
                                 {config.label}
                               </span>
                               <div className="flex flex-wrap gap-1.5">
-                                {groupedTags[cat].map(tag => (
-                                  <span
-                                    key={tag.id}
-                                    className={cn(
-                                      'group inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium',
-                                      config.bgClass, config.textClass, config.borderClass
-                                    )}
-                                  >
-                                    {tag.element_name}
-                                    <button
-                                      onClick={() => removeTag(tag.id)}
-                                      className="opacity-0 group-hover:opacity-100 transition-opacity hover:text-destructive"
+                                {groupedTags[cat].map(tag => {
+                                  const isAi = tag.source === 'ai';
+                                  const isAiAccepted = tag.source === 'ai_accepted';
+                                  return (
+                                    <span
+                                      key={tag.id}
+                                      className={cn(
+                                        'group inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium',
+                                        config.bgClass, config.textClass, config.borderClass,
+                                        isAi && 'border-dashed',
+                                        tag.confidence !== null && tag.confidence < 0.5 && 'opacity-70',
+                                      )}
                                     >
-                                      <X className="h-3 w-3" />
-                                    </button>
-                                  </span>
-                                ))}
+                                      {(isAi || isAiAccepted) && (
+                                        <Sparkles className={cn('h-2.5 w-2.5 shrink-0', isAiAccepted ? 'text-primary/50' : 'text-primary')} />
+                                      )}
+                                      {tag.element_name}
+                                      {tag.confidence !== null && (
+                                        <span className="text-[9px] opacity-50 ml-0.5">{Math.round(tag.confidence * 100)}%</span>
+                                      )}
+                                      {isAi && (
+                                        <button
+                                          onClick={() => acceptTag(tag.id)}
+                                          className="opacity-0 group-hover:opacity-100 transition-opacity hover:text-primary"
+                                          title="Accept suggestion"
+                                        >
+                                          <Check className="h-3 w-3" />
+                                        </button>
+                                      )}
+                                      <button
+                                        onClick={() => removeTag(tag.id)}
+                                        className={cn(
+                                          'transition-opacity hover:text-destructive',
+                                          isAi ? 'opacity-0 group-hover:opacity-100' : 'opacity-0 group-hover:opacity-100'
+                                        )}
+                                        title={isAi ? 'Dismiss suggestion' : 'Remove element'}
+                                      >
+                                        <X className="h-3 w-3" />
+                                      </button>
+                                    </span>
+                                  );
+                                })}
                               </div>
                             </div>
                           );
