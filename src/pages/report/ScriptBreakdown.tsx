@@ -260,17 +260,74 @@ export default function ScriptBreakdown() {
     }
   };
 
+  const [extractionProgress, setExtractionProgress] = useState<number>(0);
+
+  const pollExtractionJob = useCallback(async (jobId: string) => {
+    const poll = async (): Promise<void> => {
+      const { data, error } = await supabase
+        .from('extraction_jobs')
+        .select('status, progress, extracted_count, error')
+        .eq('id', jobId)
+        .single();
+
+      if (error || !data) {
+        toast.error('Failed to check extraction status');
+        setExtracting(false);
+        setExtractionProgress(0);
+        return;
+      }
+
+      setExtractionProgress(data.progress || 0);
+
+      if (data.status === 'completed') {
+        toast.success(`Extracted ${data.extracted_count} elements`);
+        setExtracting(false);
+        setExtractionProgress(0);
+
+        // Refresh tags
+        if (scriptId) {
+          const { data: freshTags } = await supabase
+            .from('breakdown_tags')
+            .select('*')
+            .eq('script_id', scriptId);
+
+          if (freshTags) {
+            setTags(freshTags.map(t => ({
+              ...t,
+              category: t.category as BreakdownCategory,
+              source: (t as any).source || 'manual',
+              confidence: (t as any).confidence ?? null,
+            })));
+            setExpandedScenes(new Set(scenes.map(s => s.id)));
+          }
+        }
+        return;
+      }
+
+      if (data.status === 'failed') {
+        toast.error(data.error || 'Extraction failed');
+        setExtracting(false);
+        setExtractionProgress(0);
+        return;
+      }
+
+      // Still processing — poll again
+      await new Promise(r => setTimeout(r, 2000));
+      return poll();
+    };
+
+    return poll();
+  }, [scriptId, scenes]);
+
   const runAutoExtract = async () => {
     if (!scriptId || extracting) return;
     setExtracting(true);
-    const toastId = toast.loading('AI is scanning your script for production elements...', { duration: 120000 });
+    setExtractionProgress(0);
 
     try {
       const { data, error } = await supabase.functions.invoke('extract-breakdown', {
         body: { script_id: scriptId },
       });
-
-      toast.dismiss(toastId);
 
       if (error) {
         toast.error(error.message || 'Extraction failed');
@@ -290,31 +347,15 @@ export default function ScriptBreakdown() {
         return;
       }
 
-      toast.success(`Extracted ${data.extracted} elements across ${data.scenes_processed} scenes`);
-
-      // Refresh tags
-      const { data: freshTags } = await supabase
-        .from('breakdown_tags')
-        .select('*')
-        .eq('script_id', scriptId);
-
-      if (freshTags) {
-        setTags(freshTags.map(t => ({
-          ...t,
-          category: t.category as BreakdownCategory,
-          source: (t as any).source || 'manual',
-          confidence: (t as any).confidence ?? null,
-        })));
-        // Expand all scenes that got new tags
-        setExpandedScenes(new Set(scenes.map(s => s.id)));
+      if (data?.job_id) {
+        toast.info('AI extraction started — scanning scenes...');
+        await pollExtractionJob(data.job_id);
       }
     } catch (e) {
-      toast.dismiss(toastId);
       toast.error('Auto-extraction failed. Please try again.');
       console.error('Auto-extract error:', e);
+      setExtracting(false);
     }
-
-    setExtracting(false);
   };
 
   if (loading) {
