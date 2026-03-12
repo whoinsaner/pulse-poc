@@ -328,6 +328,53 @@ export type Database = {
           },
         ]
       }
+      extraction_jobs: {
+        Row: {
+          created_at: string
+          created_by: string
+          error: string | null
+          extracted_count: number
+          id: string
+          progress: number
+          script_id: string
+          status: string
+          total_scenes: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          error?: string | null
+          extracted_count?: number
+          id?: string
+          progress?: number
+          script_id: string
+          status?: string
+          total_scenes?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          error?: string | null
+          extracted_count?: number
+          id?: string
+          progress?: number
+          script_id?: string
+          status?: string
+          total_scenes?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "extraction_jobs_script_id_fkey"
+            columns: ["script_id"]
+            isOneToOne: false
+            referencedRelation: "scripts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       insights: {
         Row: {
           actionable: boolean | null
