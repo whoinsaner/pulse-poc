@@ -214,51 +214,69 @@ IMPORTANT: Cast members and location/set_dressing have already been extracted au
 
 Be thorough but precise. Only extract elements explicitly mentioned or clearly implied. Assign a confidence score (0.0 to 1.0) based on how clearly the element is referenced.`;
 
-      try {
-        const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      const makeRequest = async (temp: number | undefined) => {
+        const body: any = {
+          model: aiModel,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: `Extract all production elements from these scenes:\n\n${sceneDescriptions}` },
+          ],
+          tools: [{
+            type: 'function',
+            function: {
+              name: 'extract_breakdown_elements',
+              description: 'Extract production breakdown elements from script scenes',
+              parameters: {
+                type: 'object',
+                properties: {
+                  elements: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        scene_number: { type: 'number', description: 'The scene number' },
+                        category: { type: 'string', enum: AI_CATEGORIES },
+                        element_name: { type: 'string', description: 'Name of the production element' },
+                        confidence: { type: 'number', description: 'Confidence score 0.0-1.0' },
+                      },
+                      required: ['scene_number', 'category', 'element_name', 'confidence'],
+                      additionalProperties: false,
+                    },
+                  },
+                },
+                required: ['elements'],
+                additionalProperties: false,
+              },
+            },
+          }],
+          tool_choice: { type: 'function', function: { name: 'extract_breakdown_elements' } },
+        };
+        if (temp !== undefined) body.temperature = temp;
+        return fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${lovableApiKey}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            model: aiModel,
-            temperature: aiTemperature,
-            messages: [
-              { role: 'system', content: systemPrompt },
-              { role: 'user', content: `Extract all production elements from these scenes:\n\n${sceneDescriptions}` },
-            ],
-            tools: [{
-              type: 'function',
-              function: {
-                name: 'extract_breakdown_elements',
-                description: 'Extract production breakdown elements from script scenes',
-                parameters: {
-                  type: 'object',
-                  properties: {
-                    elements: {
-                      type: 'array',
-                      items: {
-                        type: 'object',
-                        properties: {
-                          scene_number: { type: 'number', description: 'The scene number' },
-                          category: { type: 'string', enum: AI_CATEGORIES },
-                          element_name: { type: 'string', description: 'Name of the production element' },
-                          confidence: { type: 'number', description: 'Confidence score 0.0-1.0' },
-                        },
-                        required: ['scene_number', 'category', 'element_name', 'confidence'],
-                        additionalProperties: false,
-                      },
-                    },
-                  },
-                  required: ['elements'],
-                  additionalProperties: false,
-                },
-              },
-            }],
-            tool_choice: { type: 'function', function: { name: 'extract_breakdown_elements' } },
-          }),
+          body: JSON.stringify(body),
         });
+      };
+
+      try {
+        let response = await makeRequest(aiTemperature);
+
+        // If temperature is unsupported, retry without it
+        if (response.status === 400) {
+          const errText = await response.text();
+          if (errText.includes('temperature')) {
+            console.warn(`Temperature ${aiTemperature} unsupported for ${aiModel}, retrying without temperature`);
+            aiTemperature = undefined as any; // disable for all future batches too
+            response = await makeRequest(undefined);
+          } else {
+            console.error(`AI gateway error (batch ${i / BATCH_SIZE}):`, response.status, errText);
+            continue;
+          }
+        }
 
         if (!response.ok) {
           const errText = await response.text();
