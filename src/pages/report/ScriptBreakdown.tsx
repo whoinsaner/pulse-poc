@@ -470,9 +470,17 @@ export default function ScriptBreakdown() {
             className="pl-9"
           />
         </div>
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Layers className="h-4 w-4" />
-          <span>{tags.length} elements across {scenes.length} scenes</span>
+        <div className="flex items-center gap-3 text-sm text-muted-foreground">
+          <div className="flex items-center gap-2">
+            <Layers className="h-4 w-4" />
+            <span>{tags.length} elements across {scenes.length} scenes</span>
+          </div>
+          {parserTagCount > 0 && (
+            <div className="flex items-center gap-1">
+              <Database className="h-3.5 w-3.5" />
+              <span>{parserTagCount} from parser</span>
+            </div>
+          )}
         </div>
       </div>
 
