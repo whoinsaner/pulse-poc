@@ -164,7 +164,8 @@ Be thorough but precise. Only extract elements explicitly mentioned or clearly i
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'google/gemini-3-flash-preview',
+          model: aiModel,
+          temperature: aiTemperature,
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: `Extract all production elements from these scenes:\n\n${sceneDescriptions}` },
