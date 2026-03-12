@@ -104,7 +104,7 @@ export const INTERACTION_TAGS = [
 
 // ============= AGENT DEFINITIONS =============
 
-export type AgentCategory = 'system' | 'analysis' | 'comic' | 'meta' | 'enrichment';
+export type AgentCategory = 'system' | 'analysis' | 'comic' | 'meta' | 'enrichment' | 'production';
 
 export interface AgentDefinition {
   id: string;
@@ -483,6 +483,21 @@ export const ENRICHMENT_AGENTS: AgentDefinition[] = [
   },
 ];
 
+// Production Agents (Breakdown & Scheduling)
+export const PRODUCTION_AGENTS: AgentDefinition[] = [
+  {
+    id: 'BreakdownExtractorAgent',
+    name: 'Breakdown Extractor',
+    category: 'production',
+    description: 'AI-powered extraction of production elements (cast, props, wardrobe, VFX, stunts, vehicles, etc.) from scene descriptions and dialogue for script breakdown sheets',
+    parameters: ['extraction_coverage', 'element_accuracy', 'confidence_calibration'],
+    reportSections: ['Script Breakdown'],
+    applicableScriptTypes: 'all',
+    color: 'bg-orange-500/10 text-orange-500 border-orange-500/30',
+    icon: 'Pickaxe'
+  },
+];
+
 // All agents combined
 export const ALL_AGENTS: AgentDefinition[] = [
   ...SYSTEM_AGENTS,
@@ -493,6 +508,7 @@ export const ALL_AGENTS: AgentDefinition[] = [
   ...WEB_SERIES_AGENTS,
   ...MICRO_DRAMA_AGENTS,
   ...ENRICHMENT_AGENTS,
+  ...PRODUCTION_AGENTS,
   ...META_AGENTS,
 ];
 

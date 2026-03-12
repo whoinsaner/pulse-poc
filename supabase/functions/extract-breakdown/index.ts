@@ -28,6 +28,7 @@ serve(async (req) => {
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
 
     if (!lovableApiKey) {
@@ -67,6 +68,38 @@ serve(async (req) => {
 
     if (scenes.length === 0) {
       return new Response(JSON.stringify({ error: 'No scenes found for this script', extracted: 0 }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    // Fetch model configuration for BreakdownExtractorAgent
+    const adminClient = createClient(supabaseUrl, serviceRoleKey);
+    let aiModel = 'google/gemini-3-flash-preview';
+    let aiTemperature = 0.3;
+
+    try {
+      const { data: defaultConfig } = await adminClient
+        .from('model_configurations')
+        .select('id')
+        .or('is_default.eq.true,and(is_system.eq.true,name.eq.quality)')
+        .order('is_default', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (defaultConfig) {
+        const { data: mapping } = await adminClient
+          .from('agent_model_mappings')
+          .select('model, temperature')
+          .eq('config_id', defaultConfig.id)
+          .eq('agent_name', 'BreakdownExtractorAgent')
+          .maybeSingle();
+
+        if (mapping) {
+          aiModel = mapping.model;
+          aiTemperature = mapping.temperature ?? 0.3;
+          console.log(`Using configured model: ${aiModel} (temp: ${aiTemperature})`);
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to fetch model config, using default:', e);
     }
 
     // Build existing tags lookup for deduplication
@@ -131,7 +164,8 @@ Be thorough but precise. Only extract elements explicitly mentioned or clearly i
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'google/gemini-3-flash-preview',
+          model: aiModel,
+          temperature: aiTemperature,
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: `Extract all production elements from these scenes:\n\n${sceneDescriptions}` },
