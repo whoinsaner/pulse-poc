@@ -188,7 +188,7 @@ async function processExtraction(
     }
 
     const BATCH_SIZE = 10;
-    const aiInserts: any[] = [];
+    let totalAiInserted = 0;
     let scenesProcessed = 0;
 
     for (let i = 0; i < scenes.length; i += BATCH_SIZE) {
@@ -276,6 +276,8 @@ Be thorough but precise. Only extract elements explicitly mentioned or clearly i
         });
       };
 
+      const batchInserts: any[] = [];
+
       try {
         let response = await makeRequest(aiTemperature);
 
@@ -284,7 +286,7 @@ Be thorough but precise. Only extract elements explicitly mentioned or clearly i
           const errText = await response.text();
           if (errText.includes('temperature')) {
             console.warn(`Temperature ${aiTemperature} unsupported for ${aiModel}, retrying without temperature`);
-            aiTemperature = undefined as any; // disable for all future batches too
+            aiTemperature = undefined as any;
             response = await makeRequest(undefined);
           } else {
             console.error(`AI gateway error (batch ${i / BATCH_SIZE}):`, response.status, errText);
@@ -300,7 +302,7 @@ Be thorough but precise. Only extract elements explicitly mentioned or clearly i
               ? 'Rate limit exceeded. Please try again in a moment.'
               : 'AI credits exhausted. Please add credits to continue.';
             await adminClient.from('extraction_jobs').update({
-              status: 'failed', error: errorMsg, extracted_count: parserInserts.length + aiInserts.length, updated_at: new Date().toISOString(),
+              status: 'failed', error: errorMsg, extracted_count: parserInserts.length + totalAiInserted, updated_at: new Date().toISOString(),
             }).eq('id', jobId);
             return;
           }
@@ -334,7 +336,7 @@ Be thorough but precise. Only extract elements explicitly mentioned or clearly i
           if (existingSet.has(dedupeKey)) continue;
           existingSet.add(dedupeKey);
 
-          aiInserts.push({
+          batchInserts.push({
             scene_id: sceneId,
             script_id: scriptId,
             category: el.category,
@@ -349,32 +351,31 @@ Be thorough but precise. Only extract elements explicitly mentioned or clearly i
         continue;
       }
 
+      // Insert AI tags immediately per batch (prevents loss on timeout)
+      if (batchInserts.length > 0) {
+        const { error: batchInsertError } = await adminClient
+          .from('breakdown_tags')
+          .insert(batchInserts);
+
+        if (batchInsertError) {
+          console.error(`Batch ${i / BATCH_SIZE} insert error:`, batchInsertError);
+        } else {
+          totalAiInserted += batchInserts.length;
+          console.log(`Batch ${i / BATCH_SIZE}: inserted ${batchInserts.length} AI tags`);
+        }
+      }
+
       scenesProcessed += batch.length;
 
       // Update progress
       const progress = Math.round((scenesProcessed / scenes.length) * 100);
       await adminClient.from('extraction_jobs').update({
-        progress, extracted_count: parserInserts.length + aiInserts.length, updated_at: new Date().toISOString(),
+        progress, extracted_count: parserInserts.length + totalAiInserted, updated_at: new Date().toISOString(),
       }).eq('id', jobId);
 
       // Small delay between batches
       if (i + BATCH_SIZE < scenes.length) {
         await new Promise(r => setTimeout(r, 300));
-      }
-    }
-
-    // Bulk insert AI tags
-    if (aiInserts.length > 0) {
-      const { error: insertError } = await adminClient
-        .from('breakdown_tags')
-        .insert(aiInserts);
-
-      if (insertError) {
-        console.error('Insert error:', insertError);
-        await adminClient.from('extraction_jobs').update({
-          status: 'failed', error: `Failed to save: ${insertError.message}`, updated_at: new Date().toISOString(),
-        }).eq('id', jobId);
-        return;
       }
     }
 
