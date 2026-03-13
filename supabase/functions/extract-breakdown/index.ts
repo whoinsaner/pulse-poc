@@ -80,31 +80,45 @@ async function processExtraction(
     for (const scene of scenes) {
       const sceneLines = linesByScene[scene.scene_number] || [];
 
-      // Cast: find unique character_names in this scene's script_lines that match known characters
+      // Cast: find characters in this scene via script_lines.character_name OR scene.description text matching
       const seenCharacters = new Set<string>();
+
+      // Method 1: Match via script_lines character_name (if available)
       for (const line of sceneLines) {
         if (line.character_name) {
           const normalized = line.character_name.toLowerCase().trim();
           if (characterNameSet.has(normalized) && !seenCharacters.has(normalized)) {
             seenCharacters.add(normalized);
-
-            // Use the original casing from the characters table
-            const originalName = characters.find(c => c.name.toLowerCase().trim() === normalized)?.name || line.character_name;
-
-            const dedupeKey = `${scene.id}::cast::${originalName.toLowerCase().trim()}`;
-            if (!existingSet.has(dedupeKey)) {
-              existingSet.add(dedupeKey);
-              parserInserts.push({
-                scene_id: scene.id,
-                script_id: scriptId,
-                category: 'cast',
-                element_name: originalName,
-                confidence: 1.0,
-                source: 'parser',
-                created_by: userId,
-              });
-            }
           }
+        }
+      }
+
+      // Method 2: If no script_lines matches, scan scene description for character names
+      if (seenCharacters.size === 0 && scene.description) {
+        const descUpper = scene.description.toUpperCase();
+        for (const char of characters) {
+          const charUpper = char.name.toUpperCase().trim();
+          if (charUpper && descUpper.includes(charUpper) && !seenCharacters.has(char.name.toLowerCase().trim())) {
+            seenCharacters.add(char.name.toLowerCase().trim());
+          }
+        }
+      }
+
+      // Insert cast tags for matched characters
+      for (const normalizedName of seenCharacters) {
+        const originalName = characters.find(c => c.name.toLowerCase().trim() === normalizedName)?.name || normalizedName;
+        const dedupeKey = `${scene.id}::cast::${originalName.toLowerCase().trim()}`;
+        if (!existingSet.has(dedupeKey)) {
+          existingSet.add(dedupeKey);
+          parserInserts.push({
+            scene_id: scene.id,
+            script_id: scriptId,
+            category: 'cast',
+            element_name: originalName,
+            confidence: 1.0,
+            source: 'parser',
+            created_by: userId,
+          });
         }
       }
 
