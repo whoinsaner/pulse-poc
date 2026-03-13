@@ -379,7 +379,7 @@ Be thorough but precise. Only extract elements explicitly mentioned or clearly i
       }
     }
 
-    const totalExtracted = parserInserts.length + aiInserts.length;
+    const totalExtracted = parserInserts.length + totalAiInserted;
 
     // Mark complete
     await adminClient.from('extraction_jobs').update({
@@ -389,7 +389,7 @@ Be thorough but precise. Only extract elements explicitly mentioned or clearly i
       updated_at: new Date().toISOString(),
     }).eq('id', jobId);
 
-    console.log(`Extraction complete: ${totalExtracted} elements (${parserInserts.length} parser + ${aiInserts.length} AI) from ${scenes.length} scenes`);
+    console.log(`Extraction complete: ${totalExtracted} elements (${parserInserts.length} parser + ${totalAiInserted} AI) from ${scenes.length} scenes`);
 
   } catch (error) {
     console.error('processExtraction error:', error);
