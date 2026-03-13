@@ -80,31 +80,45 @@ async function processExtraction(
     for (const scene of scenes) {
       const sceneLines = linesByScene[scene.scene_number] || [];
 
-      // Cast: find unique character_names in this scene's script_lines that match known characters
+      // Cast: find characters in this scene via script_lines.character_name OR scene.description text matching
       const seenCharacters = new Set<string>();
+
+      // Method 1: Match via script_lines character_name (if available)
       for (const line of sceneLines) {
         if (line.character_name) {
           const normalized = line.character_name.toLowerCase().trim();
           if (characterNameSet.has(normalized) && !seenCharacters.has(normalized)) {
             seenCharacters.add(normalized);
-
-            // Use the original casing from the characters table
-            const originalName = characters.find(c => c.name.toLowerCase().trim() === normalized)?.name || line.character_name;
-
-            const dedupeKey = `${scene.id}::cast::${originalName.toLowerCase().trim()}`;
-            if (!existingSet.has(dedupeKey)) {
-              existingSet.add(dedupeKey);
-              parserInserts.push({
-                scene_id: scene.id,
-                script_id: scriptId,
-                category: 'cast',
-                element_name: originalName,
-                confidence: 1.0,
-                source: 'parser',
-                created_by: userId,
-              });
-            }
           }
+        }
+      }
+
+      // Method 2: If no script_lines matches, scan scene description for character names
+      if (seenCharacters.size === 0 && scene.description) {
+        const descUpper = scene.description.toUpperCase();
+        for (const char of characters) {
+          const charUpper = char.name.toUpperCase().trim();
+          if (charUpper && descUpper.includes(charUpper) && !seenCharacters.has(char.name.toLowerCase().trim())) {
+            seenCharacters.add(char.name.toLowerCase().trim());
+          }
+        }
+      }
+
+      // Insert cast tags for matched characters
+      for (const normalizedName of seenCharacters) {
+        const originalName = characters.find(c => c.name.toLowerCase().trim() === normalizedName)?.name || normalizedName;
+        const dedupeKey = `${scene.id}::cast::${originalName.toLowerCase().trim()}`;
+        if (!existingSet.has(dedupeKey)) {
+          existingSet.add(dedupeKey);
+          parserInserts.push({
+            scene_id: scene.id,
+            script_id: scriptId,
+            category: 'cast',
+            element_name: originalName,
+            confidence: 1.0,
+            source: 'parser',
+            created_by: userId,
+          });
         }
       }
 
@@ -174,7 +188,7 @@ async function processExtraction(
     }
 
     const BATCH_SIZE = 10;
-    const aiInserts: any[] = [];
+    let totalAiInserted = 0;
     let scenesProcessed = 0;
 
     for (let i = 0; i < scenes.length; i += BATCH_SIZE) {
@@ -262,6 +276,8 @@ Be thorough but precise. Only extract elements explicitly mentioned or clearly i
         });
       };
 
+      const batchInserts: any[] = [];
+
       try {
         let response = await makeRequest(aiTemperature);
 
@@ -270,7 +286,7 @@ Be thorough but precise. Only extract elements explicitly mentioned or clearly i
           const errText = await response.text();
           if (errText.includes('temperature')) {
             console.warn(`Temperature ${aiTemperature} unsupported for ${aiModel}, retrying without temperature`);
-            aiTemperature = undefined as any; // disable for all future batches too
+            aiTemperature = undefined as any;
             response = await makeRequest(undefined);
           } else {
             console.error(`AI gateway error (batch ${i / BATCH_SIZE}):`, response.status, errText);
@@ -286,7 +302,7 @@ Be thorough but precise. Only extract elements explicitly mentioned or clearly i
               ? 'Rate limit exceeded. Please try again in a moment.'
               : 'AI credits exhausted. Please add credits to continue.';
             await adminClient.from('extraction_jobs').update({
-              status: 'failed', error: errorMsg, extracted_count: parserInserts.length + aiInserts.length, updated_at: new Date().toISOString(),
+              status: 'failed', error: errorMsg, extracted_count: parserInserts.length + totalAiInserted, updated_at: new Date().toISOString(),
             }).eq('id', jobId);
             return;
           }
@@ -320,7 +336,7 @@ Be thorough but precise. Only extract elements explicitly mentioned or clearly i
           if (existingSet.has(dedupeKey)) continue;
           existingSet.add(dedupeKey);
 
-          aiInserts.push({
+          batchInserts.push({
             scene_id: sceneId,
             script_id: scriptId,
             category: el.category,
@@ -335,12 +351,26 @@ Be thorough but precise. Only extract elements explicitly mentioned or clearly i
         continue;
       }
 
+      // Insert AI tags immediately per batch (prevents loss on timeout)
+      if (batchInserts.length > 0) {
+        const { error: batchInsertError } = await adminClient
+          .from('breakdown_tags')
+          .insert(batchInserts);
+
+        if (batchInsertError) {
+          console.error(`Batch ${i / BATCH_SIZE} insert error:`, batchInsertError);
+        } else {
+          totalAiInserted += batchInserts.length;
+          console.log(`Batch ${i / BATCH_SIZE}: inserted ${batchInserts.length} AI tags`);
+        }
+      }
+
       scenesProcessed += batch.length;
 
       // Update progress
       const progress = Math.round((scenesProcessed / scenes.length) * 100);
       await adminClient.from('extraction_jobs').update({
-        progress, extracted_count: parserInserts.length + aiInserts.length, updated_at: new Date().toISOString(),
+        progress, extracted_count: parserInserts.length + totalAiInserted, updated_at: new Date().toISOString(),
       }).eq('id', jobId);
 
       // Small delay between batches
@@ -349,22 +379,7 @@ Be thorough but precise. Only extract elements explicitly mentioned or clearly i
       }
     }
 
-    // Bulk insert AI tags
-    if (aiInserts.length > 0) {
-      const { error: insertError } = await adminClient
-        .from('breakdown_tags')
-        .insert(aiInserts);
-
-      if (insertError) {
-        console.error('Insert error:', insertError);
-        await adminClient.from('extraction_jobs').update({
-          status: 'failed', error: `Failed to save: ${insertError.message}`, updated_at: new Date().toISOString(),
-        }).eq('id', jobId);
-        return;
-      }
-    }
-
-    const totalExtracted = parserInserts.length + aiInserts.length;
+    const totalExtracted = parserInserts.length + totalAiInserted;
 
     // Mark complete
     await adminClient.from('extraction_jobs').update({
@@ -374,7 +389,7 @@ Be thorough but precise. Only extract elements explicitly mentioned or clearly i
       updated_at: new Date().toISOString(),
     }).eq('id', jobId);
 
-    console.log(`Extraction complete: ${totalExtracted} elements (${parserInserts.length} parser + ${aiInserts.length} AI) from ${scenes.length} scenes`);
+    console.log(`Extraction complete: ${totalExtracted} elements (${parserInserts.length} parser + ${totalAiInserted} AI) from ${scenes.length} scenes`);
 
   } catch (error) {
     console.error('processExtraction error:', error);
