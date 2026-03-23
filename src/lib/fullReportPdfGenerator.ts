@@ -668,8 +668,8 @@ function renderAgentNarrative(
         const tableBody = content.comparableTitles.map(ct => [
           ct?.title || '-',
           ct?.relevance || '-',
-          typeof ct?.imdbRating === 'number' ? ct.imdbRating.toFixed(1) : '—',
-          typeof ct?.similarityScore === 'number' ? `${ct.similarityScore}%` : '—',
+          typeof ct?.imdbRating === 'number' ? ct.imdbRating.toFixed(1) : '-',
+          typeof ct?.similarityScore === 'number' ? `${ct.similarityScore}%` : '-',
         ]);
 
         let ctFirstPage = true;
@@ -1035,9 +1035,9 @@ function renderCharacterAppendix(doc: jsPDF, y: number, data: ReportData, pageNu
 
   const tableData = chars.map(c => [
     c.name || '-',
-    c.description ? (c.description.length > 60 ? c.description.substring(0, 57) + '...' : c.description) : '—',
-    c.dialogueCount != null ? String(c.dialogueCount) : '—',
-    c.sceneCount != null ? String(c.sceneCount) : '—',
+    c.description ? (c.description.length > 60 ? c.description.substring(0, 57) + '...' : c.description) : '-',
+    c.dialogueCount != null ? String(c.dialogueCount) : '-',
+    c.sceneCount != null ? String(c.sceneCount) : '-',
   ]);
 
   let chFirstPage = true;
@@ -1097,7 +1097,7 @@ function renderSceneAppendix(doc: jsPDF, y: number, data: ReportData, pageNum: P
     s.heading || '-',
     s.emotionalTone || '-',
     s.intExt || '-',
-    s.pageStart ? `${s.pageStart}${s.pageEnd && s.pageEnd !== s.pageStart ? `-${s.pageEnd}` : ''}` : '—',
+    s.pageStart ? `${s.pageStart}${s.pageEnd && s.pageEnd !== s.pageStart ? `-${s.pageEnd}` : ''}` : '-',
   ]);
 
   let siFirstPage = true;
