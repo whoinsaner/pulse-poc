@@ -40,11 +40,14 @@ export default function Auth() {
   const { signIn, signUp, user } = useAuth();
   const { toast } = useToast();
 
+  // Determine where to redirect after auth
+  const redirectTo = searchParams.get('redirect') || '/dashboard';
+
   useEffect(() => {
     if (user) {
-      navigate('/dashboard');
+      navigate(redirectTo);
     }
-  }, [user, navigate]);
+  }, [user, navigate, redirectTo]);
 
   const loginForm = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
