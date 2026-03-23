@@ -94,7 +94,8 @@ export default function ReportLayout() {
 
       let reportResult;
 
-      if (canUseSharedAccess) {
+      if (hasShareToken) {
+        // When a share token is present, don't filter by org — let RLS validate via token
         reportResult = await supabase
           .from('reports')
           .select('*')
@@ -106,7 +107,7 @@ export default function ReportLayout() {
           .select('*')
           .eq('analysis_run_id', runId);
 
-        if (!hasShareToken && hasOrgAccess) {
+        if (hasOrgAccess) {
           reportQuery = reportQuery.eq('organization_id', profile!.current_organization_id!);
         }
 
