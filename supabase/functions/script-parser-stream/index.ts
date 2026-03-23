@@ -235,7 +235,9 @@ async function extractPDFWithPython(
       console.log(`[script-parser-stream] Calling PyMuPDF service at ${serviceUrl} (${(pdfBytes.byteLength / 1024).toFixed(0)}KB) [attempt ${attempt}/${maxAttempts}]`);
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
+      // Scale timeout based on PDF size: 30s base + 0.5s per 100KB (large scripts need more time)
+      const timeoutMs = Math.min(180000, 30000 + Math.floor(pdfBytes.byteLength / (100 * 1024)) * 500);
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
       const response = await fetch(serviceUrl, {
         method: 'POST',
@@ -288,7 +290,7 @@ async function extractPDFWithPython(
         text: '',
         pageCount: 0,
         success: false,
-        error: isTimeout ? 'Python extraction service timed out (30s)' : errorMsg,
+        error: isTimeout ? `Python extraction service timed out (${Math.round(timeoutMs/1000)}s)` : errorMsg,
       };
     }
   }
@@ -1551,9 +1553,9 @@ serve(async (req) => {
               
               sendSSE(controller, 'progress', { stage: 'extract', percent: 20, message: 'Using AI vision for text extraction...' });
               
-              // Quick page count from PDF structure
+              // Page count from PDF structure - scan full file for accuracy
               const decoder = new TextDecoder('latin1', { fatal: false });
-              const rawContent = decoder.decode(new Uint8Array(bytes).slice(0, 50000));
+              const rawContent = decoder.decode(new Uint8Array(bytes));
               const pageMatches = rawContent.match(/\/Type\s*\/Page[^s]/g);
               actualPdfPageCount = pageMatches ? pageMatches.length : estimatedPages;
               
@@ -2263,18 +2265,21 @@ serve(async (req) => {
         // Update script with page count and AI-classified metadata
         console.log(`[script-parser-stream] Updating script metadata`);
         
-        // Calculate extracted pages - consider scene count as alternative for FDX/text formats
-        // where page numbers aren't embedded in the format
+        // Calculate extracted pages - prefer actual PDF page count from extraction service
+        // Only fall back to heuristics for non-PDF or when actual count is unavailable
         const scenePageMax = Math.max(...allScenes.map(s => s.page_end || s.page_start || 0), 0);
         const textBasedPages = Math.ceil(rawText.length / 3000);
         
         // For FDX and text formats, estimate pages from scene count (avg ~1 page per scene for features)
-        // This is more reliable than text length for XML formats
         const sceneBasedPages = format === 'fdx' || ['fountain', 'highland', 'txt'].includes(format)
-          ? Math.ceil(allScenes.length * 0.9) // ~0.9 pages per scene average
+          ? Math.ceil(allScenes.length * 0.9)
           : 0;
         
-        const extractedPages = Math.max(scenePageMax, textBasedPages, sceneBasedPages);
+        // Use actual PDF page count when available — it's the ground truth
+        // Only fall back to heuristic-based calculation for non-PDF formats
+        const extractedPages = (format === 'pdf' && actualPdfPageCount && actualPdfPageCount > 0)
+          ? actualPdfPageCount
+          : Math.max(scenePageMax, textBasedPages, sceneBasedPages);
 
         // AI classification for genre/subgenre/theme
         let classifiedGenre: string | null = null;
