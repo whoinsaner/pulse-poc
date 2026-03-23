@@ -781,7 +781,12 @@ function renderDiagnosisOverview(
       doc.setFontSize(FONTS.body);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(...COLORS.text);
-      doc.text(cat, MARGINS.left + 3, y);
+      // Truncate long category names to fit before the score bar
+      const maxCatWidth = cw * 0.5;
+      const catText = doc.getTextWidth(cat) > maxCatWidth 
+        ? cat.substring(0, Math.floor(cat.length * maxCatWidth / doc.getTextWidth(cat))) + '…' 
+        : cat;
+      doc.text(catText, MARGINS.left + 3, y);
 
       // Mini score bar
       const barX = MARGINS.left + cw * 0.55;
