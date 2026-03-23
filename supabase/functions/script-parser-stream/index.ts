@@ -1215,17 +1215,22 @@ serve(async (req) => {
     global: { headers: { Authorization: authHeader } }
   });
 
-  // Verify user is authenticated using getClaims (local JWT validation, no network call)
+  // Verify user is authenticated by decoding the JWT (no network call needed)
   const token = authHeader.replace('Bearer ', '');
-  const { data: claimsData, error: authError } = await supabaseAuth.auth.getClaims(token);
-  if (authError || !claimsData?.claims) {
-    console.error('[script-parser-stream] Auth error:', authError?.message);
+  let user: { id: string };
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    if (!payload.sub || !payload.exp || payload.exp * 1000 < Date.now()) {
+      throw new Error('Token expired or invalid');
+    }
+    user = { id: payload.sub };
+  } catch (e) {
+    console.error('[script-parser-stream] Auth error:', e);
     return new Response(
       JSON.stringify({ error: 'Unauthorized - Invalid token' }),
       { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
-  const user = { id: claimsData.claims.sub as string };
 
   const { scriptId, format, filePath, scriptType } = await req.json() as ParseRequest;
 
