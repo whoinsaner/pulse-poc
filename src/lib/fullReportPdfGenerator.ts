@@ -484,8 +484,11 @@ function renderAgentNarrative(
           doc.setFont('helvetica', 'normal');
           doc.setFontSize(FONTS.tiny);
           const ctx = q.page ? `${q.context || ''} (p.${q.page})` : (q.context || '');
-          if (ctx) doc.text(`— ${ctx}`, MARGINS.left + 5, y);
-          y += 6;
+          if (ctx) {
+            const ctxLines = wrapText(doc, `— ${ctx}`, cw - 10);
+            ctxLines.forEach(line => { doc.text(line, MARGINS.left + 5, y); y += 4; });
+          }
+          y += 3;
         }
         y += 3;
       }
