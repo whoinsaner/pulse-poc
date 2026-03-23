@@ -223,9 +223,50 @@ function getReadinessLabel(score: number): string {
   return 'Needs Work';
 }
 
+/** Sanitize text for jsPDF's built-in fonts (no Unicode support) */
+function sanitizeText(text: string): string {
+  if (!text) return '';
+  return String(text)
+    .replace(/[\u2018\u2019\u201A]/g, "'")   // smart single quotes → '
+    .replace(/[\u201C\u201D\u201E]/g, '"')    // smart double quotes → "
+    .replace(/\u2014/g, '--')                  // em dash → --
+    .replace(/\u2013/g, '-')                   // en dash → -
+    .replace(/\u2026/g, '...')                 // ellipsis → ...
+    .replace(/\u2192/g, '->')                  // → arrow
+    .replace(/\u2190/g, '<-')                  // ← arrow
+    .replace(/\u2191/g, '^')                   // ↑ arrow
+    .replace(/\u2193/g, 'v')                   // ↓ arrow
+    .replace(/\u2022/g, '*')                   // bullet •
+    .replace(/\u00A0/g, ' ')                   // non-breaking space
+    .replace(/\u200B/g, '')                    // zero-width space
+    .replace(/[\u2000-\u200A]/g, ' ')          // various Unicode spaces
+    .replace(/\u00D7/g, 'x')                   // × multiplication
+    .replace(/\u2212/g, '-')                   // minus sign
+    .replace(/\u2032/g, "'")                   // prime → '
+    .replace(/\u2033/g, '"')                   // double prime → "
+    .replace(/[^\x00-\x7F]/g, (ch) => {        // fallback: any remaining non-ASCII
+      // Keep common accented Latin chars (they work in Helvetica)
+      if (ch.charCodeAt(0) >= 0x00C0 && ch.charCodeAt(0) <= 0x00FF) return ch;
+      return '';
+    });
+}
+
 function wrapText(doc: jsPDF, text: string, maxWidth: number): string[] {
   if (!text) return [];
-  return doc.splitTextToSize(String(text), Math.max(10, maxWidth)) as string[];
+  return doc.splitTextToSize(sanitizeText(String(text)), Math.max(10, maxWidth)) as string[];
+}
+
+/** Reliably get finalY from autoTable result, with fallback */
+function getTableFinalY(doc: jsPDF, result: unknown, fallbackY: number): number {
+  // Try the returned result first (jspdf-autotable v5 functional pattern)
+  if (result && typeof result === 'object' && typeof (result as any).finalY === 'number') {
+    return (result as any).finalY;
+  }
+  // Fallback: lastAutoTable property (older pattern)
+  if ((doc as any).lastAutoTable && typeof (doc as any).lastAutoTable.finalY === 'number') {
+    return (doc as any).lastAutoTable.finalY;
+  }
+  return fallbackY;
 }
 
 // ============= SECTION RENDERERS =============
@@ -625,10 +666,10 @@ function renderAgentNarrative(
         y += 7;
 
         const tableBody = content.comparableTitles.map(ct => [
-          ct?.title || '—',
-          ct?.relevance || '—',
-          typeof ct?.imdbRating === 'number' ? ct.imdbRating.toFixed(1) : '—',
-          typeof ct?.similarityScore === 'number' ? `${ct.similarityScore}%` : '—',
+          ct?.title || '-',
+          ct?.relevance || '-',
+          typeof ct?.imdbRating === 'number' ? ct.imdbRating.toFixed(1) : '-',
+          typeof ct?.similarityScore === 'number' ? `${ct.similarityScore}%` : '-',
         ]);
 
         let ctFirstPage = true;
@@ -653,7 +694,7 @@ function renderAgentNarrative(
           },
         });
         pageNum.value = doc.getNumberOfPages();
-        y = (ctResult as any)?.finalY ? (ctResult as any).finalY + 6 : y + 30;
+        y = getTableFinalY(doc, ctResult, y + 30) + 6;
         resetFontStyle(doc);
       }
 
@@ -935,10 +976,10 @@ function renderCompleteScorecardAppendix(doc: jsPDF, y: number, data: ReportData
   }
 
   const tableData = params.map(p => [
-    p.displayName || p.parameterName || '—',
-    p.category || '—',
+    p.displayName || p.parameterName || '-',
+    p.category || '-',
     `${Math.round(p.score ?? 0)}`,
-    p.maturity || '—',
+    p.maturity || '-',
   ]);
 
   let scFirstPage = true;
@@ -976,7 +1017,7 @@ function renderCompleteScorecardAppendix(doc: jsPDF, y: number, data: ReportData
   pageNum.value = doc.getNumberOfPages();
   resetFontStyle(doc);
 
-  return (scResult as any)?.finalY ? (scResult as any).finalY + 8 : y + 20;
+  return getTableFinalY(doc, scResult, y + 20) + 8;
 }
 
 function renderCharacterAppendix(doc: jsPDF, y: number, data: ReportData, pageNum: PageCounter): number {
@@ -992,12 +1033,15 @@ function renderCharacterAppendix(doc: jsPDF, y: number, data: ReportData, pageNu
     return y + 10;
   }
 
-  const tableData = chars.map(c => [
-    c.name || '—',
-    c.description ? (c.description.length > 60 ? c.description.substring(0, 57) + '...' : c.description) : '—',
-    c.dialogueCount != null ? String(c.dialogueCount) : '—',
-    c.sceneCount != null ? String(c.sceneCount) : '—',
-  ]);
+  const tableData = chars.map(c => {
+    const desc = sanitizeText(c.description || '');
+    return [
+      sanitizeText(c.name || '-'),
+      desc.length > 60 ? desc.substring(0, 57) + '...' : (desc || '-'),
+      c.dialogueCount != null ? String(c.dialogueCount) : '-',
+      c.sceneCount != null ? String(c.sceneCount) : '-',
+    ];
+  });
 
   let chFirstPage = true;
   const chResult = autoTable(doc, {
@@ -1035,7 +1079,7 @@ function renderCharacterAppendix(doc: jsPDF, y: number, data: ReportData, pageNu
   pageNum.value = doc.getNumberOfPages();
   resetFontStyle(doc);
 
-  return (chResult as any)?.finalY ? (chResult as any).finalY + 8 : y + 20;
+  return getTableFinalY(doc, chResult, y + 20) + 8;
 }
 
 function renderSceneAppendix(doc: jsPDF, y: number, data: ReportData, pageNum: PageCounter): number {
@@ -1052,11 +1096,11 @@ function renderSceneAppendix(doc: jsPDF, y: number, data: ReportData, pageNum: P
   }
 
   const tableData = scenes.map(s => [
-    `${s.sceneNumber ?? '—'}`,
-    s.heading || '—',
-    s.emotionalTone || '—',
-    s.intExt || '—',
-    s.pageStart ? `${s.pageStart}${s.pageEnd && s.pageEnd !== s.pageStart ? `-${s.pageEnd}` : ''}` : '—',
+    `${s.sceneNumber ?? '-'}`,
+    s.heading || '-',
+    s.emotionalTone || '-',
+    s.intExt || '-',
+    s.pageStart ? `${s.pageStart}${s.pageEnd && s.pageEnd !== s.pageStart ? `-${s.pageEnd}` : ''}` : '-',
   ]);
 
   let siFirstPage = true;
@@ -1094,7 +1138,7 @@ function renderSceneAppendix(doc: jsPDF, y: number, data: ReportData, pageNum: P
   pageNum.value = doc.getNumberOfPages();
   resetFontStyle(doc);
 
-  return (siResult as any)?.finalY ? (siResult as any).finalY + 8 : y + 20;
+  return getTableFinalY(doc, siResult, y + 20) + 8;
 }
 
 // ============= TOC =============
@@ -1307,11 +1351,11 @@ export async function generateFullReportPDF(
 
       // Scene analysis table
       const sceneTableData = scenes.map(s => [
-        `${s.sceneNumber ?? '—'}`,
-        s.heading || '—',
-        s.emotionalTone || '—',
-        s.intExt || '—',
-        s.pageStart ? `p.${s.pageStart}${s.pageEnd && s.pageEnd !== s.pageStart ? `-${s.pageEnd}` : ''}` : '—',
+        `${s.sceneNumber ?? '-'}`,
+        sanitizeText(s.heading || '-'),
+        sanitizeText(s.emotionalTone || '-'),
+        sanitizeText(s.intExt || '-'),
+        s.pageStart ? `p.${s.pageStart}${s.pageEnd && s.pageEnd !== s.pageStart ? `-${s.pageEnd}` : ''}` : '-',
       ]);
 
       let saFirstPage = true;
@@ -1349,10 +1393,10 @@ export async function generateFullReportPDF(
       pageNum.value = doc.getNumberOfPages();
       resetFontStyle(doc);
 
-      y = (saResult as any)?.finalY ? (saResult as any).finalY + 8 : y + 20;
+      y = getTableFinalY(doc, saResult, y + 20) + 8;
 
-      // Agent narrative for scene analysis
-      y += 8;
+      // Agent narrative for scene analysis — start on a fresh page if table consumed most of this one
+      y = checkBreak(doc, y, 60, pageNum, 'Scene Analysis');
       y = renderAgentNarrative(doc, y, SECTION_AGENT_MAP['scene-analysis'] || [], data.agentContent, pageNum, 'Scene Analysis');
     }
 
