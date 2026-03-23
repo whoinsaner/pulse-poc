@@ -290,7 +290,7 @@ async function extractPDFWithPython(
         text: '',
         pageCount: 0,
         success: false,
-        error: isTimeout ? 'Python extraction service timed out (30s)' : errorMsg,
+        error: isTimeout ? `Python extraction service timed out (${Math.round(timeoutMs/1000)}s)` : errorMsg,
       };
     }
   }
