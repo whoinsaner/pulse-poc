@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/lib/auth';
 import { Logo } from '@/components/Logo';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,8 @@ export default function Onboarding() {
   const [isLoading, setIsLoading] = useState(false);
   
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const redirectTo = searchParams.get('redirect') || '/dashboard';
   const { createOrganization, profile, currentOrganization, user, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
 
@@ -24,7 +26,7 @@ export default function Onboarding() {
       if (!user) {
         navigate('/auth');
       } else if (currentOrganization) {
-        navigate('/dashboard');
+        navigate(redirectTo);
       }
     }
   }, [user, currentOrganization, authLoading, navigate]);
@@ -199,7 +201,7 @@ export default function Onboarding() {
               </div>
 
               <Button
-                onClick={() => navigate('/dashboard')}
+                onClick={() => navigate(redirectTo)}
                 className="w-full h-12"
               >
                 Go to Dashboard

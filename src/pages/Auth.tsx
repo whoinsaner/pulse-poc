@@ -40,11 +40,14 @@ export default function Auth() {
   const { signIn, signUp, user } = useAuth();
   const { toast } = useToast();
 
+  // Determine where to redirect after auth
+  const redirectTo = searchParams.get('redirect') || '/dashboard';
+
   useEffect(() => {
     if (user) {
-      navigate('/dashboard');
+      navigate(redirectTo);
     }
-  }, [user, navigate]);
+  }, [user, navigate, redirectTo]);
 
   const loginForm = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -70,11 +73,7 @@ export default function Auth() {
         variant: 'destructive',
       });
     } else {
-      toast({
-        title: 'Welcome back!',
-        description: 'You have successfully logged in.',
-      });
-      navigate('/dashboard');
+      navigate(redirectTo);
     }
   };
 
@@ -98,7 +97,11 @@ export default function Auth() {
         title: 'Account created!',
         description: 'Welcome to Pulse. Let\'s get started.',
       });
-      navigate('/onboarding');
+      // Pass the redirect through to onboarding so the user lands on the right page after setup
+      const onboardingUrl = redirectTo !== '/dashboard' 
+        ? `/onboarding?redirect=${encodeURIComponent(redirectTo)}` 
+        : '/onboarding';
+      navigate(onboardingUrl);
     }
   };
 
