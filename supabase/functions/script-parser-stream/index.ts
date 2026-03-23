@@ -1553,9 +1553,9 @@ serve(async (req) => {
               
               sendSSE(controller, 'progress', { stage: 'extract', percent: 20, message: 'Using AI vision for text extraction...' });
               
-              // Quick page count from PDF structure
+              // Page count from PDF structure - scan full file for accuracy
               const decoder = new TextDecoder('latin1', { fatal: false });
-              const rawContent = decoder.decode(new Uint8Array(bytes).slice(0, 50000));
+              const rawContent = decoder.decode(new Uint8Array(bytes));
               const pageMatches = rawContent.match(/\/Type\s*\/Page[^s]/g);
               actualPdfPageCount = pageMatches ? pageMatches.length : estimatedPages;
               
