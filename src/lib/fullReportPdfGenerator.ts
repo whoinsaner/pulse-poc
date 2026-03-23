@@ -1017,7 +1017,7 @@ function renderCompleteScorecardAppendix(doc: jsPDF, y: number, data: ReportData
   pageNum.value = doc.getNumberOfPages();
   resetFontStyle(doc);
 
-  return (scResult as any)?.finalY ? (scResult as any).finalY + 8 : y + 20;
+  return getTableFinalY(doc, scResult, y + 20) + 8;
 }
 
 function renderCharacterAppendix(doc: jsPDF, y: number, data: ReportData, pageNum: PageCounter): number {
