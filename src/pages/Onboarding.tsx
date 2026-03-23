@@ -15,6 +15,8 @@ export default function Onboarding() {
   const [isLoading, setIsLoading] = useState(false);
   
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const redirectTo = searchParams.get('redirect') || '/dashboard';
   const { createOrganization, profile, currentOrganization, user, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
 
