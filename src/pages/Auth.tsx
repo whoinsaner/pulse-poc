@@ -97,7 +97,11 @@ export default function Auth() {
         title: 'Account created!',
         description: 'Welcome to Pulse. Let\'s get started.',
       });
-      navigate('/onboarding');
+      // Pass the redirect through to onboarding so the user lands on the right page after setup
+      const onboardingUrl = redirectTo !== '/dashboard' 
+        ? `/onboarding?redirect=${encodeURIComponent(redirectTo)}` 
+        : '/onboarding';
+      navigate(onboardingUrl);
     }
   };
 
