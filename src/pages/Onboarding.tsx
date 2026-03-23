@@ -26,7 +26,7 @@ export default function Onboarding() {
       if (!user) {
         navigate('/auth');
       } else if (currentOrganization) {
-        navigate('/dashboard');
+        navigate(redirectTo);
       }
     }
   }, [user, currentOrganization, authLoading, navigate]);
