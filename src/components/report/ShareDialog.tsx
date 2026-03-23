@@ -117,7 +117,7 @@ export function ShareDialog({ open, onOpenChange, reportId, reportTitle, runId }
   };
 
   const buildShareUrl = (token: string) => {
-    return `${window.location.origin}/report/${runId}/overview?share=${token}`;
+    return `${window.location.origin}/report/${runId}?share=${token}`;
   };
 
   const activeShares = shares.filter(s => !s.revoked_at && new Date(s.expires_at) > new Date());
