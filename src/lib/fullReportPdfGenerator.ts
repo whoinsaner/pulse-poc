@@ -526,7 +526,8 @@ function renderAgentNarrative(
         doc.setFontSize(FONTS.h3);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(...COLORS.text);
-        doc.text(`Protagonist: ${p.name || 'Unknown'}`, MARGINS.left, y);
+        const protLines = wrapText(doc, `Protagonist: ${p.name || 'Unknown'}`, cw);
+        protLines.forEach(line => { doc.text(line, MARGINS.left, y); y += 6; });
         y += 7;
         doc.setFontSize(FONTS.body);
         const fields = [
