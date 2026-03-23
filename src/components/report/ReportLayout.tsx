@@ -53,6 +53,8 @@ export default function ReportLayout() {
   const { runId } = useParams<{ runId: string }>();
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const shareToken = searchParams.get('share');
   const { user, profile, isLoading: authLoading } = useAuth();
   const [report, setReport] = useState<Report | null>(null);
   const [loading, setLoading] = useState(true);
@@ -62,6 +64,8 @@ export default function ReportLayout() {
   const [isRetrying, setIsRetrying] = useState(false);
   const [stakeholderLens, setStakeholderLens] = useState<StakeholderLens | null>(null);
   const [exportTriggerRef, setExportTriggerRef] = useState<HTMLButtonElement | null>(null);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [isSharedAccess, setIsSharedAccess] = useState(false);
   const mainRef = useRef<HTMLElement>(null);
 
   // Scroll main content to top on route change
