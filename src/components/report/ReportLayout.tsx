@@ -75,9 +75,10 @@ export default function ReportLayout() {
 
   useEffect(() => {
     if (!authLoading && !user) {
-      navigate('/auth');
+      const redirectParam = `?redirect=${encodeURIComponent(location.pathname + location.search)}`;
+      navigate(`/auth${redirectParam}`);
     }
-  }, [user, authLoading, navigate]);
+  }, [user, authLoading, navigate, location]);
 
   useEffect(() => {
     async function fetchReportAndAnalysis() {
