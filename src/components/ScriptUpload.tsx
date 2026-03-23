@@ -774,9 +774,7 @@ export function ScriptUpload({ onUploadComplete, onClose }: ScriptUploadProps) {
                       <p className="text-xs text-muted-foreground">Characters</p>
                     </div>
                     <div className="text-center p-3 rounded-lg bg-background/50">
-                      <p className="text-2xl font-bold">
-                        {parseResult.extractedPages || 0}/{parseResult.estimatedPages || '?'}
-                      </p>
+                      <p className="text-2xl font-bold">{parseResult.extractedPages || 0}</p>
                       <p className="text-xs text-muted-foreground">Pages Extracted</p>
                     </div>
                   </div>

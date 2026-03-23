@@ -51,6 +51,15 @@ export function StreamingParsingStatus({
   format,
   result,
 }: StreamingParsingStatusProps) {
+  const visibleWarnings = warnings
+    ? {
+        ...warnings,
+        warnings: warnings.warnings.filter((warning) => {
+          if (format !== 'pdf') return true;
+          return !warning.includes('appears to be ~') && !warning.includes('quite long');
+        }),
+      }
+    : null;
   if (!isActive && !progress && !result) return null;
   
   const extractionMethod = result?.extractionMethod;
@@ -179,15 +188,15 @@ export function StreamingParsingStatus({
       )}
 
       {/* Warnings */}
-      {warnings && warnings.warnings.length > 0 && (
+      {visibleWarnings && visibleWarnings.warnings.length > 0 && (
         <div className="p-3 rounded-lg bg-warning/10 border border-warning/20">
           <div className="flex items-start gap-2">
             <AlertTriangle className="h-4 w-4 text-warning mt-0.5 shrink-0" />
             <div className="flex-1 space-y-1">
-              {warnings.warnings.map((warning, i) => (
+              {visibleWarnings.warnings.map((warning, i) => (
                 <p key={i} className="text-sm text-warning">{warning}</p>
               ))}
-              {warnings.recommendations?.map((rec, i) => (
+              {visibleWarnings.recommendations?.map((rec, i) => (
                 <p key={`rec-${i}`} className="text-xs text-muted-foreground">{rec}</p>
               ))}
             </div>
