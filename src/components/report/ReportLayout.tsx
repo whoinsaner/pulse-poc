@@ -138,6 +138,20 @@ export default function ReportLayout() {
       setReport(reportResult.data as unknown as Report);
       setIsSharedAccess(!!shareToken);
 
+      // Fetch share link expiration when accessed via share token
+      if (shareToken && reportResult.data?.id) {
+        const { data: shareData } = await supabase
+          .from('report_shares')
+          .select('expires_at')
+          .eq('report_id', reportResult.data.id)
+          .eq('token', shareToken)
+          .is('revoked_at', null)
+          .single();
+        if (shareData?.expires_at) {
+          setShareExpiry(shareData.expires_at);
+        }
+      }
+
       if (analysisResult.data?.agent_progress) {
         setAgentProgress(analysisResult.data.agent_progress as AgentProgress);
       }
