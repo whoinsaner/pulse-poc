@@ -1392,8 +1392,8 @@ export async function generateFullReportPDF(
 
       y = getTableFinalY(doc, saResult, y + 20) + 8;
 
-      // Agent narrative for scene analysis
-      y += 8;
+      // Agent narrative for scene analysis — start on a fresh page if table consumed most of this one
+      y = checkBreak(doc, y, 60, pageNum, 'Scene Analysis');
       y = renderAgentNarrative(doc, y, SECTION_AGENT_MAP['scene-analysis'] || [], data.agentContent, pageNum, 'Scene Analysis');
     }
 
