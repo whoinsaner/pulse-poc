@@ -1348,11 +1348,11 @@ export async function generateFullReportPDF(
 
       // Scene analysis table
       const sceneTableData = scenes.map(s => [
-        `${s.sceneNumber ?? '—'}`,
-        s.heading || '—',
-        s.emotionalTone || '—',
-        s.intExt || '—',
-        s.pageStart ? `p.${s.pageStart}${s.pageEnd && s.pageEnd !== s.pageStart ? `-${s.pageEnd}` : ''}` : '—',
+        `${s.sceneNumber ?? '-'}`,
+        sanitizeText(s.heading || '-'),
+        sanitizeText(s.emotionalTone || '-'),
+        sanitizeText(s.intExt || '-'),
+        s.pageStart ? `p.${s.pageStart}${s.pageEnd && s.pageEnd !== s.pageStart ? `-${s.pageEnd}` : ''}` : '-',
       ]);
 
       let saFirstPage = true;
