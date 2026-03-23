@@ -20,7 +20,9 @@ export function ProtectedRoute({ children, requireOrg = true }: ProtectedRoutePr
         const redirectParam = location.pathname !== '/' ? `?redirect=${encodeURIComponent(location.pathname + location.search)}` : '';
         navigate(`/auth${redirectParam}`);
       } else if (requireOrg && !currentOrganization) {
-        navigate('/onboarding');
+        // Preserve the current path so onboarding can redirect back after org creation
+        const redirectParam = location.pathname !== '/' ? `?redirect=${encodeURIComponent(location.pathname + location.search)}` : '';
+        navigate(`/onboarding${redirectParam}`);
       }
     }
   }, [user, currentOrganization, isLoading, navigate, requireOrg, location]);
