@@ -99,7 +99,8 @@ import TestComicAnalysis from "./pages/TestComicAnalysis";
 
 function ReportsRedirect() {
   const { runId } = useParams<{ runId: string }>();
-  return <Navigate to={`/report/${runId}`} replace />;
+  const location = useLocation();
+  return <Navigate to={`/report/${runId}${location.search}`} replace />;
 }
 
 const queryClient = new QueryClient({
