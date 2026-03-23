@@ -2311,33 +2311,33 @@ serve(async (req) => {
       let rawScriptText: string | null = null;
       let usingFallbackMode = false;
 
+      // Always try to load pre-extracted text for deep mode — agents need actual script content
+      // (scene headings + character lists alone are not enough for quality analysis)
+      try {
+        const extractedTextPath = `${scriptId}/extracted.txt`;
+        console.log(`[analyze-script] Deep mode: loading pre-extracted text: ${extractedTextPath}`);
+        const { data: extractedData, error: extractedError } = await supabase.storage
+          .from('scripts')
+          .download(extractedTextPath);
+        
+        if (!extractedError && extractedData) {
+          rawScriptText = await extractedData.text();
+          console.log(`[analyze-script] Loaded pre-extracted text: ${rawScriptText.length} chars`);
+          if (rawScriptText.length > 500000) {
+            rawScriptText = rawScriptText.substring(0, 500000) + '\n\n[TEXT TRUNCATED...]';
+          }
+        }
+      } catch (err) {
+        console.log('[analyze-script] No pre-extracted text available:', err);
+      }
+
       if (!hasStructuredData) {
         // Auto-enable fallback mode only when BOTH scenes AND characters are missing
         console.log('[analyze-script] Deep mode: No structured data found (0 scenes, 0 characters), auto-enabling fallback to raw text analysis');
         forceAnalysis = true;
         usingFallbackMode = true;
         
-        // PRIORITY 1: Try to load pre-extracted text (saved by script-parser-stream)
-        // This avoids the P0 bug of feeding raw PDF binary to agents
-        try {
-          const extractedTextPath = `${scriptId}/extracted.txt`;
-          console.log(`[analyze-script] Trying extracted text: ${extractedTextPath}`);
-          const { data: extractedData, error: extractedError } = await supabase.storage
-            .from('scripts')
-            .download(extractedTextPath);
-          
-          if (!extractedError && extractedData) {
-            rawScriptText = await extractedData.text();
-            console.log(`[analyze-script] Loaded pre-extracted text: ${rawScriptText.length} chars`);
-            if (rawScriptText.length > 500000) {
-              rawScriptText = rawScriptText.substring(0, 500000) + '\n\n[TEXT TRUNCATED...]';
-            }
-          }
-        } catch (err) {
-          console.log('[analyze-script] No pre-extracted text available:', err);
-        }
-        
-        // PRIORITY 2: Fall back to raw file download (only for non-PDF formats)
+        // If we didn't get extracted text above, try raw file download (only for non-PDF formats)
         if (!rawScriptText) {
           console.log('[analyze-script] Deep mode fallback: downloading raw file');
           try {
@@ -2351,7 +2351,6 @@ serve(async (req) => {
               // CONTENT QUALITY GATE: Detect PDF binary and reject it
               if (rawContent.startsWith('%PDF') || rawContent.includes('FlateDecode') || rawContent.includes('endstream')) {
                 console.warn('[analyze-script] Raw file is PDF binary - cannot use as script text. Skipping fallback.');
-                // Don't set rawScriptText - agents will work with whatever context is available
               } else {
                 rawScriptText = rawContent;
                 if (rawScriptText.length > 500000) {
@@ -2365,8 +2364,19 @@ serve(async (req) => {
         }
       }
 
-      scriptContext = buildScriptContext(script, scenes, characters, rawScriptText, usingFallbackMode);
-      console.log(`[analyze-script] Deep mode context: ${scenes.length} scenes, ${characters.length} characters, fallback: ${usingFallbackMode}`);
+      // For deep mode with large extracted text, use chunked analysis
+      if (rawScriptText && rawScriptText.length > 80000 && hasStructuredData) {
+        // Large script with structured data: use chunked deep analysis
+        // Build context with scene/character metadata + raw text via chunks
+        chunks = chunkScript(rawScriptText);
+        console.log(`[analyze-script] Deep mode: large script (${rawScriptText.length} chars), using ${chunks.length} chunks`);
+        scriptContext = buildScriptContext(script, scenes, characters, null, false);
+        // Append a note that full text is analyzed via chunks
+        scriptContext += '\n\nNOTE: Full script text is provided via chunked analysis for comprehensive coverage.';
+      } else {
+        scriptContext = buildScriptContext(script, scenes, characters, rawScriptText, usingFallbackMode);
+      }
+      console.log(`[analyze-script] Deep mode context: ${scenes.length} scenes, ${characters.length} characters, fallback: ${usingFallbackMode}, hasRawText: ${!!rawScriptText}, chunks: ${chunks.length}`);
     }
 
     // ============= RUN AGENTS AS BACKGROUND TASK =============
