@@ -1135,7 +1135,7 @@ function renderSceneAppendix(doc: jsPDF, y: number, data: ReportData, pageNum: P
   pageNum.value = doc.getNumberOfPages();
   resetFontStyle(doc);
 
-  return (siResult as any)?.finalY ? (siResult as any).finalY + 8 : y + 20;
+  return getTableFinalY(doc, siResult, y + 20) + 8;
 }
 
 // ============= TOC =============
