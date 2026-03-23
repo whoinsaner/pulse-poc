@@ -2354,8 +2354,8 @@ serve(async (req) => {
                 // Don't set rawScriptText - agents will work with whatever context is available
               } else {
                 rawScriptText = rawContent;
-                if (rawScriptText.length > 100000) {
-                  rawScriptText = rawScriptText.substring(0, 100000) + '\n\n[TEXT TRUNCATED...]';
+                if (rawScriptText.length > 500000) {
+                  rawScriptText = rawScriptText.substring(0, 500000) + '\n\n[TEXT TRUNCATED...]';
                 }
               }
             }
