@@ -1459,7 +1459,7 @@ export async function generateFullReportPDF(
 
     // === PART VI: RECOMMENDATIONS ===
     console.log('[PDF] Rendering Recommendations');
-    const recPartNum = isComicType(scriptType) || isWebSeriesType(scriptType) || scriptType === 'micro_drama' ? 'PART VI' : 'PART V';
+    const recPartNum = hasFormatPart ? 'PART VI' : 'PART V';
     renderPartDivider(doc, pageNum, recPartNum, 'RECOMMENDATIONS', toc);
 
     y = newPage(doc, pageNum, 'Development Priorities');
