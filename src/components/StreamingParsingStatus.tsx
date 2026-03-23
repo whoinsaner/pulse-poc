@@ -51,6 +51,15 @@ export function StreamingParsingStatus({
   format,
   result,
 }: StreamingParsingStatusProps) {
+  const visibleWarnings = warnings
+    ? {
+        ...warnings,
+        warnings: warnings.warnings.filter((warning) => {
+          if (format !== 'pdf') return true;
+          return !warning.includes('appears to be ~') && !warning.includes('quite long');
+        }),
+      }
+    : null;
   if (!isActive && !progress && !result) return null;
   
   const extractionMethod = result?.extractionMethod;
