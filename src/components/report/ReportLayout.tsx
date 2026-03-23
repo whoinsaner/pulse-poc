@@ -14,7 +14,10 @@ import {
   AlertTriangle,
   RefreshCw,
   Loader2,
+  Link2,
+  Clock,
 } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 
 interface AgentProgress {
