@@ -666,8 +666,8 @@ function renderAgentNarrative(
         y += 7;
 
         const tableBody = content.comparableTitles.map(ct => [
-          ct?.title || '—',
-          ct?.relevance || '—',
+          ct?.title || '-',
+          ct?.relevance || '-',
           typeof ct?.imdbRating === 'number' ? ct.imdbRating.toFixed(1) : '—',
           typeof ct?.similarityScore === 'number' ? `${ct.similarityScore}%` : '—',
         ]);
@@ -976,10 +976,10 @@ function renderCompleteScorecardAppendix(doc: jsPDF, y: number, data: ReportData
   }
 
   const tableData = params.map(p => [
-    p.displayName || p.parameterName || '—',
-    p.category || '—',
+    p.displayName || p.parameterName || '-',
+    p.category || '-',
     `${Math.round(p.score ?? 0)}`,
-    p.maturity || '—',
+    p.maturity || '-',
   ]);
 
   let scFirstPage = true;
@@ -1034,7 +1034,7 @@ function renderCharacterAppendix(doc: jsPDF, y: number, data: ReportData, pageNu
   }
 
   const tableData = chars.map(c => [
-    c.name || '—',
+    c.name || '-',
     c.description ? (c.description.length > 60 ? c.description.substring(0, 57) + '...' : c.description) : '—',
     c.dialogueCount != null ? String(c.dialogueCount) : '—',
     c.sceneCount != null ? String(c.sceneCount) : '—',
@@ -1093,10 +1093,10 @@ function renderSceneAppendix(doc: jsPDF, y: number, data: ReportData, pageNum: P
   }
 
   const tableData = scenes.map(s => [
-    `${s.sceneNumber ?? '—'}`,
-    s.heading || '—',
-    s.emotionalTone || '—',
-    s.intExt || '—',
+    `${s.sceneNumber ?? '-'}`,
+    s.heading || '-',
+    s.emotionalTone || '-',
+    s.intExt || '-',
     s.pageStart ? `${s.pageStart}${s.pageEnd && s.pageEnd !== s.pageStart ? `-${s.pageEnd}` : ''}` : '—',
   ]);
 
