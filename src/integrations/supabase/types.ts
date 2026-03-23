@@ -830,6 +830,44 @@ export type Database = {
           },
         ]
       }
+      report_shares: {
+        Row: {
+          created_at: string
+          created_by: string
+          expires_at: string
+          id: string
+          report_id: string
+          revoked_at: string | null
+          token: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          expires_at?: string
+          id?: string
+          report_id: string
+          revoked_at?: string | null
+          token?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          expires_at?: string
+          id?: string
+          report_id?: string
+          revoked_at?: string | null
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_shares_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reports: {
         Row: {
           analysis_run_id: string
@@ -1235,6 +1273,10 @@ export type Database = {
         Returns: Json
       }
       get_user_current_org: { Args: { _user_id: string }; Returns: string }
+      has_report_share_access: {
+        Args: { _report_id: string; _token: string; _user_id: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _org_id: string
