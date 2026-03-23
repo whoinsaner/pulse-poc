@@ -74,11 +74,12 @@ export default function ReportLayout() {
   }, [location.pathname]);
 
   useEffect(() => {
-    if (!authLoading && !user && !shareToken) {
+    if (!authLoading && !user) {
+      // Always require login — preserve full path + share token for redirect after auth
       const redirectParam = `?redirect=${encodeURIComponent(location.pathname + location.search)}`;
       navigate(`/auth${redirectParam}`);
     }
-  }, [user, authLoading, navigate, location, shareToken]);
+  }, [user, authLoading, navigate, location]);
 
   useEffect(() => {
     async function fetchReportAndAnalysis() {
