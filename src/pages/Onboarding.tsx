@@ -201,7 +201,7 @@ export default function Onboarding() {
               </div>
 
               <Button
-                onClick={() => navigate('/dashboard')}
+                onClick={() => navigate(redirectTo)}
                 className="w-full h-12"
               >
                 Go to Dashboard
