@@ -1272,6 +1272,7 @@ export type Database = {
         Args: { p_token: string; p_user_id: string }
         Returns: Json
       }
+      get_report_org_id: { Args: { _report_id: string }; Returns: string }
       get_user_current_org: { Args: { _user_id: string }; Returns: string }
       has_report_share_access: {
         Args: { _report_id: string; _token: string; _user_id: string }
