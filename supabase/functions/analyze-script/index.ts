@@ -2244,8 +2244,8 @@ serve(async (req) => {
           if (!extractedError && extractedData) {
             let extractedText = await extractedData.text();
             console.log(`[analyze-script] Quick mode: loaded pre-extracted text (${extractedText.length} chars)`);
-            if (extractedText.length > 100000) {
-              extractedText = extractedText.substring(0, 100000) + '\n\n[TEXT TRUNCATED...]';
+            if (extractedText.length > 500000) {
+              extractedText = extractedText.substring(0, 500000) + '\n\n[TEXT TRUNCATED...]';
             }
             chunks = chunkScript(extractedText);
             if (chunks.length <= 3) {
