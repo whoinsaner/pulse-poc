@@ -528,7 +528,7 @@ function renderAgentNarrative(
         doc.setTextColor(...COLORS.text);
         const protLines = wrapText(doc, `Protagonist: ${p.name || 'Unknown'}`, cw);
         protLines.forEach(line => { doc.text(line, MARGINS.left, y); y += 6; });
-        y += 7;
+        y += 1;
         doc.setFontSize(FONTS.body);
         const fields = [
           ['Want', p.want], ['Need', p.need], ['Flaw', p.flaw], ['Arc', p.arc]
