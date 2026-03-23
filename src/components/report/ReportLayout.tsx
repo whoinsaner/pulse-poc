@@ -74,47 +74,55 @@ export default function ReportLayout() {
   }, [location.pathname]);
 
   useEffect(() => {
-    if (!authLoading && !user) {
+    if (!authLoading && !user && !shareToken) {
       const redirectParam = `?redirect=${encodeURIComponent(location.pathname + location.search)}`;
       navigate(`/auth${redirectParam}`);
     }
-  }, [user, authLoading, navigate, location]);
+  }, [user, authLoading, navigate, location, shareToken]);
 
   useEffect(() => {
     async function fetchReportAndAnalysis() {
       if (!runId) return;
-      // Allow access if user is in org OR has a share token
+
       const hasOrgAccess = !!profile?.current_organization_id;
       const hasShareToken = !!shareToken;
-      
+      const canUseSharedAccess = hasShareToken && !user;
+
       if (!hasOrgAccess && !hasShareToken) return;
 
       setLoading(true);
-      
-      // Build report query — with share token, skip org filter (RLS handles access via report_shares policy)
-      let reportQuery = supabase
-        .from('reports')
-        .select('*')
-        .eq('analysis_run_id', runId);
-      
-      if (!hasShareToken && hasOrgAccess) {
-        reportQuery = reportQuery.eq('organization_id', profile!.current_organization_id!);
+
+      let reportResult;
+
+      if (canUseSharedAccess) {
+        reportResult = await supabase
+          .from('reports')
+          .select('*')
+          .eq('analysis_run_id', runId)
+          .single();
+      } else {
+        let reportQuery = supabase
+          .from('reports')
+          .select('*')
+          .eq('analysis_run_id', runId);
+
+        if (!hasShareToken && hasOrgAccess) {
+          reportQuery = reportQuery.eq('organization_id', profile!.current_organization_id!);
+        }
+
+        reportResult = await reportQuery.single();
       }
 
-      const [reportResult, analysisResult] = await Promise.all([
-        reportQuery.single(),
-        supabase
-          .from('analysis_runs')
-          .select('agent_progress, status, stakeholder_lens')
-          .eq('id', runId)
-          .single()
-      ]);
+      const analysisResult = await supabase
+        .from('analysis_runs')
+        .select('agent_progress, status, stakeholder_lens')
+        .eq('id', runId)
+        .single();
 
       if (reportResult.error) {
         console.error('Error fetching report:', reportResult.error);
-        
-        // If share token access failed, the token may be expired/revoked
-        if (hasShareToken && !hasOrgAccess) {
+
+        if (hasShareToken) {
           toast.error('Share link is invalid, expired, or has been revoked');
         }
         setLoading(false);
@@ -122,22 +130,22 @@ export default function ReportLayout() {
       }
 
       setReport(reportResult.data as unknown as Report);
-      setIsSharedAccess(hasShareToken && !hasOrgAccess);
-      
+      setIsSharedAccess(canUseSharedAccess);
+
       if (analysisResult.data?.agent_progress) {
         setAgentProgress(analysisResult.data.agent_progress as AgentProgress);
       }
-      
+
       if (analysisResult.data?.stakeholder_lens) {
         setStakeholderLens(analysisResult.data.stakeholder_lens as StakeholderLens);
         setActiveLens(analysisResult.data.stakeholder_lens as StakeholderLens);
       }
-      
+
       setLoading(false);
     }
 
     fetchReportAndAnalysis();
-  }, [runId, profile?.current_organization_id, shareToken]);
+  }, [runId, profile?.current_organization_id, shareToken, user]);
 
   const failedAgents = agentProgress 
     ? Object.entries(agentProgress)
