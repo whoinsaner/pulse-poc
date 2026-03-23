@@ -1076,7 +1076,7 @@ function renderCharacterAppendix(doc: jsPDF, y: number, data: ReportData, pageNu
   pageNum.value = doc.getNumberOfPages();
   resetFontStyle(doc);
 
-  return (chResult as any)?.finalY ? (chResult as any).finalY + 8 : y + 20;
+  return getTableFinalY(doc, chResult, y + 20) + 8;
 }
 
 function renderSceneAppendix(doc: jsPDF, y: number, data: ReportData, pageNum: PageCounter): number {
