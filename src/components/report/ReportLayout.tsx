@@ -188,12 +188,7 @@ export default function ReportLayout() {
   const currentPath = location.pathname.replace(`/report/${runId}`, '') || '';
 
   const handleShare = () => {
-    const shareUrl = window.location.href;
-    navigator.clipboard.writeText(shareUrl).then(() => {
-      toast.success('Link copied to clipboard');
-    }).catch(() => {
-      toast.error('Failed to copy link');
-    });
+    setShareDialogOpen(true);
   };
 
   if (authLoading || loading) {
