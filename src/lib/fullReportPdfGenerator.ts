@@ -1390,7 +1390,7 @@ export async function generateFullReportPDF(
       pageNum.value = doc.getNumberOfPages();
       resetFontStyle(doc);
 
-      y = (saResult as any)?.finalY ? (saResult as any).finalY + 8 : y + 20;
+      y = getTableFinalY(doc, saResult, y + 20) + 8;
 
       // Agent narrative for scene analysis
       y += 8;
