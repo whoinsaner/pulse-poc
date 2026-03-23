@@ -600,7 +600,7 @@ function renderAgentNarrative(
           doc.setTextColor(...COLORS.text);
           const castLines = wrapText(doc, `${c.name || 'Unknown'} — ${c.role || ''}`, cw - 8);
           castLines.forEach(line => { doc.text(line, MARGINS.left + 3, y); y += 5; });
-          y += 5;
+          
           doc.setFont('helvetica', 'normal');
           doc.setTextColor(...COLORS.textLight);
           if (c.impact) {
