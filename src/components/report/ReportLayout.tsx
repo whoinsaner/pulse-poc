@@ -69,6 +69,7 @@ export default function ReportLayout() {
   const [exportTriggerRef, setExportTriggerRef] = useState<HTMLButtonElement | null>(null);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [isSharedAccess, setIsSharedAccess] = useState(false);
+  const [shareExpiry, setShareExpiry] = useState<string | null>(null);
   const mainRef = useRef<HTMLElement>(null);
 
   // Scroll main content to top on route change
