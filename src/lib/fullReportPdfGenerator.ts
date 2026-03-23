@@ -1468,7 +1468,7 @@ export async function generateFullReportPDF(
 
     // === APPENDICES ===
     console.log('[PDF] Rendering Appendices');
-    const appPartNum = isComicType(scriptType) || isWebSeriesType(scriptType) || scriptType === 'micro_drama' ? 'PART VII' : 'PART VI';
+    const appPartNum = hasFormatPart ? 'PART VII' : 'PART VI';
     renderPartDivider(doc, pageNum, appPartNum, 'APPENDICES', toc);
 
     // Scorecard
