@@ -145,6 +145,7 @@ const App = () => (
             <Route path="/report/:runId" element={<ReportLayout />}>
               {/* USAF Consolidated Routes (primary) */}
               <Route index element={<ReportCover />} />
+              <Route path="overview" element={<ReportCover />} />
               <Route path="story" element={<StoryDiagnosis />} />
               <Route path="story/concept" element={<StoryConceptHook />} />
               <Route path="story/structure" element={<StoryStructure />} />
