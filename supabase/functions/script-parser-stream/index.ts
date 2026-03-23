@@ -2265,18 +2265,21 @@ serve(async (req) => {
         // Update script with page count and AI-classified metadata
         console.log(`[script-parser-stream] Updating script metadata`);
         
-        // Calculate extracted pages - consider scene count as alternative for FDX/text formats
-        // where page numbers aren't embedded in the format
+        // Calculate extracted pages - prefer actual PDF page count from extraction service
+        // Only fall back to heuristics for non-PDF or when actual count is unavailable
         const scenePageMax = Math.max(...allScenes.map(s => s.page_end || s.page_start || 0), 0);
         const textBasedPages = Math.ceil(rawText.length / 3000);
         
         // For FDX and text formats, estimate pages from scene count (avg ~1 page per scene for features)
-        // This is more reliable than text length for XML formats
         const sceneBasedPages = format === 'fdx' || ['fountain', 'highland', 'txt'].includes(format)
-          ? Math.ceil(allScenes.length * 0.9) // ~0.9 pages per scene average
+          ? Math.ceil(allScenes.length * 0.9)
           : 0;
         
-        const extractedPages = Math.max(scenePageMax, textBasedPages, sceneBasedPages);
+        // Use actual PDF page count when available — it's the ground truth
+        // Only fall back to heuristic-based calculation for non-PDF formats
+        const extractedPages = (format === 'pdf' && actualPdfPageCount && actualPdfPageCount > 0)
+          ? actualPdfPageCount
+          : Math.max(scenePageMax, textBasedPages, sceneBasedPages);
 
         // AI classification for genre/subgenre/theme
         let classifiedGenre: string | null = null;
