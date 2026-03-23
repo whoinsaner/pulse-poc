@@ -2329,8 +2329,8 @@ serve(async (req) => {
           if (!extractedError && extractedData) {
             rawScriptText = await extractedData.text();
             console.log(`[analyze-script] Loaded pre-extracted text: ${rawScriptText.length} chars`);
-            if (rawScriptText.length > 100000) {
-              rawScriptText = rawScriptText.substring(0, 100000) + '\n\n[TEXT TRUNCATED...]';
+            if (rawScriptText.length > 500000) {
+              rawScriptText = rawScriptText.substring(0, 500000) + '\n\n[TEXT TRUNCATED...]';
             }
           }
         } catch (err) {
