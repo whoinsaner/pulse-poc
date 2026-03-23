@@ -74,11 +74,11 @@ export default function ReportLayout() {
   }, [location.pathname]);
 
   useEffect(() => {
-    if (!authLoading && !user) {
+    if (!authLoading && !user && !shareToken) {
       const redirectParam = `?redirect=${encodeURIComponent(location.pathname + location.search)}`;
       navigate(`/auth${redirectParam}`);
     }
-  }, [user, authLoading, navigate, location]);
+  }, [user, authLoading, navigate, location, shareToken]);
 
   useEffect(() => {
     async function fetchReportAndAnalysis() {
