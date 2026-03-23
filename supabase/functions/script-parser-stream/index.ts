@@ -1215,14 +1215,17 @@ serve(async (req) => {
     global: { headers: { Authorization: authHeader } }
   });
 
-  // Verify user is authenticated
-  const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
-  if (authError || !user) {
+  // Verify user is authenticated using getClaims (local JWT validation, no network call)
+  const token = authHeader.replace('Bearer ', '');
+  const { data: claimsData, error: authError } = await supabaseAuth.auth.getClaims(token);
+  if (authError || !claimsData?.claims) {
+    console.error('[script-parser-stream] Auth error:', authError?.message);
     return new Response(
       JSON.stringify({ error: 'Unauthorized - Invalid token' }),
       { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
+  const user = { id: claimsData.claims.sub as string };
 
   const { scriptId, format, filePath, scriptType } = await req.json() as ParseRequest;
 
