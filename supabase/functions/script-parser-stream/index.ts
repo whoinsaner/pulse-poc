@@ -1070,7 +1070,7 @@ function validateFile(fileSize: number, format: string): { valid: boolean; warni
     recommendations.push('Consider splitting into smaller files if parsing fails.');
   }
   
-  if (estimatedPages > 150) {
+  if (format !== 'pdf' && estimatedPages > 150) {
     warnings.push(`Script appears to be ~${estimatedPages} pages, which is quite long.`);
     recommendations.push('Long scripts may have incomplete extraction. Feature-length (90-120 pages) works best.');
   }
@@ -1326,12 +1326,14 @@ serve(async (req) => {
           fileData = downloadedData;
           fileSize = fileData.size;
           expectedPages = estimatePageCount(fileSize, format);
-          console.log(`[script-parser-stream] Downloaded: ${fileSize} bytes, ~${expectedPages} pages`);
+          console.log(`[script-parser-stream] Downloaded: ${fileSize} bytes${format === 'pdf' ? '' : `, ~${expectedPages} pages`}`);
           
           sendSSE(controller, 'progress', { 
             stage: 'download', 
             percent: 100, 
-            message: `Downloaded ${(fileSize / 1024).toFixed(0)}KB, ~${expectedPages} pages` 
+            message: format === 'pdf'
+              ? `Downloaded ${(fileSize / 1024).toFixed(0)}KB`
+              : `Downloaded ${(fileSize / 1024).toFixed(0)}KB, ~${expectedPages} pages`
           });
         }
 
