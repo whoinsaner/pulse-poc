@@ -1272,6 +1272,10 @@ export type Database = {
         Args: { p_token: string; p_user_id: string }
         Returns: Json
       }
+      analysis_run_has_valid_share: {
+        Args: { _run_id: string }
+        Returns: boolean
+      }
       get_report_org_id: { Args: { _report_id: string }; Returns: string }
       get_user_current_org: { Args: { _user_id: string }; Returns: string }
       has_report_share_access: {
@@ -1286,6 +1290,8 @@ export type Database = {
         }
         Returns: boolean
       }
+      report_has_valid_share: { Args: { _report_id: string }; Returns: boolean }
+      script_has_valid_share: { Args: { _script_id: string }; Returns: boolean }
       update_agent_progress: {
         Args: {
           p_agent_name: string
