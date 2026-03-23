@@ -73,11 +73,7 @@ export default function Auth() {
         variant: 'destructive',
       });
     } else {
-      toast({
-        title: 'Welcome back!',
-        description: 'You have successfully logged in.',
-      });
-      navigate('/dashboard');
+      navigate(redirectTo);
     }
   };
 

@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/lib/auth';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -10,17 +10,20 @@ interface ProtectedRouteProps {
 
 export function ProtectedRoute({ children, requireOrg = true }: ProtectedRouteProps) {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, currentOrganization, isLoading } = useAuth();
 
   useEffect(() => {
     if (!isLoading) {
       if (!user) {
-        navigate('/auth');
+        // Preserve the current path so we can redirect back after login
+        const redirectParam = location.pathname !== '/' ? `?redirect=${encodeURIComponent(location.pathname + location.search)}` : '';
+        navigate(`/auth${redirectParam}`);
       } else if (requireOrg && !currentOrganization) {
         navigate('/onboarding');
       }
     }
-  }, [user, currentOrganization, isLoading, navigate, requireOrg]);
+  }, [user, currentOrganization, isLoading, navigate, requireOrg, location]);
 
   if (isLoading) {
     return (
