@@ -131,7 +131,7 @@ export default function ReportLayout() {
       }
 
       setReport(reportResult.data as unknown as Report);
-      setIsSharedAccess(canUseSharedAccess);
+      setIsSharedAccess(!!shareToken);
 
       if (analysisResult.data?.agent_progress) {
         setAgentProgress(analysisResult.data.agent_progress as AgentProgress);
