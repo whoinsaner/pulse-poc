@@ -694,7 +694,7 @@ function renderAgentNarrative(
           },
         });
         pageNum.value = doc.getNumberOfPages();
-        y = (ctResult as any)?.finalY ? (ctResult as any).finalY + 6 : y + 30;
+        y = getTableFinalY(doc, ctResult, y + 30) + 6;
         resetFontStyle(doc);
       }
 
