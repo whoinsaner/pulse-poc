@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate, useLocation, Outlet } from 'react-router-dom';
+import { useParams, useNavigate, useLocation, useSearchParams, Outlet } from 'react-router-dom';
 import { useAuth } from '@/lib/auth';
 import { supabase } from '@/integrations/supabase/client';
 import { Report, StakeholderLens, ReportData, LENS_CONFIG } from '@/types/database';
 import { CommandHeader } from '@/components/report/CommandHeader';
 import { ReportSidebar } from '@/components/report/ReportSidebar';
 import { ExportDialog } from '@/components/report/ExportDialog';
+import { ShareDialog } from '@/components/report/ShareDialog';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
@@ -52,6 +53,8 @@ export default function ReportLayout() {
   const { runId } = useParams<{ runId: string }>();
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const shareToken = searchParams.get('share');
   const { user, profile, isLoading: authLoading } = useAuth();
   const [report, setReport] = useState<Report | null>(null);
   const [loading, setLoading] = useState(true);
@@ -61,6 +64,8 @@ export default function ReportLayout() {
   const [isRetrying, setIsRetrying] = useState(false);
   const [stakeholderLens, setStakeholderLens] = useState<StakeholderLens | null>(null);
   const [exportTriggerRef, setExportTriggerRef] = useState<HTMLButtonElement | null>(null);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [isSharedAccess, setIsSharedAccess] = useState(false);
   const mainRef = useRef<HTMLElement>(null);
 
   // Scroll main content to top on route change
@@ -70,23 +75,34 @@ export default function ReportLayout() {
 
   useEffect(() => {
     if (!authLoading && !user) {
-      navigate('/auth');
+      const redirectParam = `?redirect=${encodeURIComponent(location.pathname + location.search)}`;
+      navigate(`/auth${redirectParam}`);
     }
-  }, [user, authLoading, navigate]);
+  }, [user, authLoading, navigate, location]);
 
   useEffect(() => {
     async function fetchReportAndAnalysis() {
-      if (!runId || !profile?.current_organization_id) return;
+      if (!runId) return;
+      // Allow access if user is in org OR has a share token
+      const hasOrgAccess = !!profile?.current_organization_id;
+      const hasShareToken = !!shareToken;
+      
+      if (!hasOrgAccess && !hasShareToken) return;
 
       setLoading(true);
       
+      // Build report query — with share token, skip org filter (RLS handles access via report_shares policy)
+      let reportQuery = supabase
+        .from('reports')
+        .select('*')
+        .eq('analysis_run_id', runId);
+      
+      if (!hasShareToken && hasOrgAccess) {
+        reportQuery = reportQuery.eq('organization_id', profile!.current_organization_id!);
+      }
+
       const [reportResult, analysisResult] = await Promise.all([
-        supabase
-          .from('reports')
-          .select('*')
-          .eq('analysis_run_id', runId)
-          .eq('organization_id', profile.current_organization_id)
-          .single(),
+        reportQuery.single(),
         supabase
           .from('analysis_runs')
           .select('agent_progress, status, stakeholder_lens')
@@ -96,11 +112,17 @@ export default function ReportLayout() {
 
       if (reportResult.error) {
         console.error('Error fetching report:', reportResult.error);
+        
+        // If share token access failed, the token may be expired/revoked
+        if (hasShareToken && !hasOrgAccess) {
+          toast.error('Share link is invalid, expired, or has been revoked');
+        }
         setLoading(false);
         return;
       }
 
       setReport(reportResult.data as unknown as Report);
+      setIsSharedAccess(hasShareToken && !hasOrgAccess);
       
       if (analysisResult.data?.agent_progress) {
         setAgentProgress(analysisResult.data.agent_progress as AgentProgress);
@@ -115,7 +137,7 @@ export default function ReportLayout() {
     }
 
     fetchReportAndAnalysis();
-  }, [runId, profile?.current_organization_id]);
+  }, [runId, profile?.current_organization_id, shareToken]);
 
   const failedAgents = agentProgress 
     ? Object.entries(agentProgress)
@@ -167,12 +189,7 @@ export default function ReportLayout() {
   const currentPath = location.pathname.replace(`/report/${runId}`, '') || '';
 
   const handleShare = () => {
-    const shareUrl = window.location.href;
-    navigator.clipboard.writeText(shareUrl).then(() => {
-      toast.success('Link copied to clipboard');
-    }).catch(() => {
-      toast.error('Failed to copy link');
-    });
+    setShareDialogOpen(true);
   };
 
   if (authLoading || loading) {
@@ -279,6 +296,17 @@ export default function ReportLayout() {
         <div className="fixed bottom-4 right-4 z-50 lg:hidden">
           <ExportDialog reportId={report.id} reportTitle={report.title} reportData={reportData} activeLens={activeLens} scriptType={scriptType} />
         </div>
+
+        {/* Share Dialog */}
+        {!isSharedAccess && (
+          <ShareDialog
+            open={shareDialogOpen}
+            onOpenChange={setShareDialogOpen}
+            reportId={report.id}
+            reportTitle={report.title}
+            runId={runId!}
+          />
+        )}
       </div>
     </ReportContext.Provider>
   );
