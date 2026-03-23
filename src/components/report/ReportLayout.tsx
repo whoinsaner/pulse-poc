@@ -81,17 +81,27 @@ export default function ReportLayout() {
 
   useEffect(() => {
     async function fetchReportAndAnalysis() {
-      if (!runId || !profile?.current_organization_id) return;
+      if (!runId) return;
+      // Allow access if user is in org OR has a share token
+      const hasOrgAccess = !!profile?.current_organization_id;
+      const hasShareToken = !!shareToken;
+      
+      if (!hasOrgAccess && !hasShareToken) return;
 
       setLoading(true);
       
+      // Build report query — with share token, skip org filter (RLS handles access via report_shares policy)
+      let reportQuery = supabase
+        .from('reports')
+        .select('*')
+        .eq('analysis_run_id', runId);
+      
+      if (!hasShareToken && hasOrgAccess) {
+        reportQuery = reportQuery.eq('organization_id', profile!.current_organization_id!);
+      }
+
       const [reportResult, analysisResult] = await Promise.all([
-        supabase
-          .from('reports')
-          .select('*')
-          .eq('analysis_run_id', runId)
-          .eq('organization_id', profile.current_organization_id)
-          .single(),
+        reportQuery.single(),
         supabase
           .from('analysis_runs')
           .select('agent_progress, status, stakeholder_lens')
@@ -101,11 +111,17 @@ export default function ReportLayout() {
 
       if (reportResult.error) {
         console.error('Error fetching report:', reportResult.error);
+        
+        // If share token access failed, the token may be expired/revoked
+        if (hasShareToken && !hasOrgAccess) {
+          toast.error('Share link is invalid, expired, or has been revoked');
+        }
         setLoading(false);
         return;
       }
 
       setReport(reportResult.data as unknown as Report);
+      setIsSharedAccess(hasShareToken && !hasOrgAccess);
       
       if (analysisResult.data?.agent_progress) {
         setAgentProgress(analysisResult.data.agent_progress as AgentProgress);
@@ -120,7 +136,7 @@ export default function ReportLayout() {
     }
 
     fetchReportAndAnalysis();
-  }, [runId, profile?.current_organization_id]);
+  }, [runId, profile?.current_organization_id, shareToken]);
 
   const failedAgents = agentProgress 
     ? Object.entries(agentProgress)
