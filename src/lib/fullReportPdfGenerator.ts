@@ -560,7 +560,7 @@ function renderAgentNarrative(
         doc.setTextColor(...COLORS.text);
         const antLines = wrapText(doc, `Antagonist: ${a.name || 'Unknown'}`, cw);
         antLines.forEach(line => { doc.text(line, MARGINS.left, y); y += 6; });
-        y += 7;
+        y += 1;
         doc.setFontSize(FONTS.body);
         const fields = [
           ['Motivation', a.motivation], ['Threat', a.threat], ['Complexity', a.complexity]
