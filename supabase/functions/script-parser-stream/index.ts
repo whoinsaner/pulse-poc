@@ -235,7 +235,9 @@ async function extractPDFWithPython(
       console.log(`[script-parser-stream] Calling PyMuPDF service at ${serviceUrl} (${(pdfBytes.byteLength / 1024).toFixed(0)}KB) [attempt ${attempt}/${maxAttempts}]`);
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
+      // Scale timeout based on PDF size: 30s base + 0.5s per 100KB (large scripts need more time)
+      const timeoutMs = Math.min(180000, 30000 + Math.floor(pdfBytes.byteLength / (100 * 1024)) * 500);
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
       const response = await fetch(serviceUrl, {
         method: 'POST',
