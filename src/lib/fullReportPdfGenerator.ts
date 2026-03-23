@@ -505,7 +505,8 @@ function renderAgentNarrative(
           doc.setFont('helvetica', 'bold');
           doc.setTextColor(...COLORS.text);
           const priorityTag = `[${(rec.priority || 'medium').toUpperCase()}/${(rec.effort || 'medium').toUpperCase()}]`;
-          doc.text(`${priorityTag}  ${rec.title}`, MARGINS.left + 3, y);
+          const recTitleLines = wrapText(doc, `${priorityTag}  ${rec.title}`, cw - 8);
+          recTitleLines.forEach(line => { doc.text(line, MARGINS.left + 3, y); y += 5; });
           y += 5;
           doc.setFont('helvetica', 'normal');
           doc.setTextColor(...COLORS.textLight);
