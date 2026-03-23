@@ -1033,12 +1033,15 @@ function renderCharacterAppendix(doc: jsPDF, y: number, data: ReportData, pageNu
     return y + 10;
   }
 
-  const tableData = chars.map(c => [
-    c.name || '-',
-    c.description ? (c.description.length > 60 ? c.description.substring(0, 57) + '...' : c.description) : '-',
-    c.dialogueCount != null ? String(c.dialogueCount) : '-',
-    c.sceneCount != null ? String(c.sceneCount) : '-',
-  ]);
+  const tableData = chars.map(c => {
+    const desc = sanitizeText(c.description || '');
+    return [
+      sanitizeText(c.name || '-'),
+      desc.length > 60 ? desc.substring(0, 57) + '...' : (desc || '-'),
+      c.dialogueCount != null ? String(c.dialogueCount) : '-',
+      c.sceneCount != null ? String(c.sceneCount) : '-',
+    ];
+  });
 
   let chFirstPage = true;
   const chResult = autoTable(doc, {
