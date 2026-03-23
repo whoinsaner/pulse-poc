@@ -484,8 +484,11 @@ function renderAgentNarrative(
           doc.setFont('helvetica', 'normal');
           doc.setFontSize(FONTS.tiny);
           const ctx = q.page ? `${q.context || ''} (p.${q.page})` : (q.context || '');
-          if (ctx) doc.text(`— ${ctx}`, MARGINS.left + 5, y);
-          y += 6;
+          if (ctx) {
+            const ctxLines = wrapText(doc, `— ${ctx}`, cw - 10);
+            ctxLines.forEach(line => { doc.text(line, MARGINS.left + 5, y); y += 4; });
+          }
+          y += 3;
         }
         y += 3;
       }
@@ -505,7 +508,8 @@ function renderAgentNarrative(
           doc.setFont('helvetica', 'bold');
           doc.setTextColor(...COLORS.text);
           const priorityTag = `[${(rec.priority || 'medium').toUpperCase()}/${(rec.effort || 'medium').toUpperCase()}]`;
-          doc.text(`${priorityTag}  ${rec.title}`, MARGINS.left + 3, y);
+          const recTitleLines = wrapText(doc, `${priorityTag}  ${rec.title}`, cw - 8);
+          recTitleLines.forEach(line => { doc.text(line, MARGINS.left + 3, y); y += 5; });
           y += 5;
           doc.setFont('helvetica', 'normal');
           doc.setTextColor(...COLORS.textLight);
@@ -525,8 +529,9 @@ function renderAgentNarrative(
         doc.setFontSize(FONTS.h3);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(...COLORS.text);
-        doc.text(`Protagonist: ${p.name || 'Unknown'}`, MARGINS.left, y);
-        y += 7;
+        const protLines = wrapText(doc, `Protagonist: ${p.name || 'Unknown'}`, cw);
+        protLines.forEach(line => { doc.text(line, MARGINS.left, y); y += 6; });
+        y += 1;
         doc.setFontSize(FONTS.body);
         const fields = [
           ['Want', p.want], ['Need', p.need], ['Flaw', p.flaw], ['Arc', p.arc]
@@ -556,8 +561,9 @@ function renderAgentNarrative(
         doc.setFontSize(FONTS.h3);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(...COLORS.text);
-        doc.text(`Antagonist: ${a.name || 'Unknown'}`, MARGINS.left, y);
-        y += 7;
+        const antLines = wrapText(doc, `Antagonist: ${a.name || 'Unknown'}`, cw);
+        antLines.forEach(line => { doc.text(line, MARGINS.left, y); y += 6; });
+        y += 1;
         doc.setFontSize(FONTS.body);
         const fields = [
           ['Motivation', a.motivation], ['Threat', a.threat], ['Complexity', a.complexity]
@@ -595,8 +601,9 @@ function renderAgentNarrative(
           doc.setFontSize(FONTS.body);
           doc.setFont('helvetica', 'bold');
           doc.setTextColor(...COLORS.text);
-          doc.text(`${c.name || 'Unknown'} — ${c.role || ''}`, MARGINS.left + 3, y);
-          y += 5;
+          const castLines = wrapText(doc, `${c.name || 'Unknown'} — ${c.role || ''}`, cw - 8);
+          castLines.forEach(line => { doc.text(line, MARGINS.left + 3, y); y += 5; });
+          
           doc.setFont('helvetica', 'normal');
           doc.setTextColor(...COLORS.textLight);
           if (c.impact) {
@@ -774,7 +781,12 @@ function renderDiagnosisOverview(
       doc.setFontSize(FONTS.body);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(...COLORS.text);
-      doc.text(cat, MARGINS.left + 3, y);
+      // Truncate long category names to fit before the score bar
+      const maxCatWidth = cw * 0.5;
+      const catText = doc.getTextWidth(cat) > maxCatWidth 
+        ? cat.substring(0, Math.floor(cat.length * maxCatWidth / doc.getTextWidth(cat))) + '…' 
+        : cat;
+      doc.text(catText, MARGINS.left + 3, y);
 
       // Mini score bar
       const barX = MARGINS.left + cw * 0.55;
@@ -1447,7 +1459,7 @@ export async function generateFullReportPDF(
 
     // === PART VI: RECOMMENDATIONS ===
     console.log('[PDF] Rendering Recommendations');
-    const recPartNum = isComicType(scriptType) || isWebSeriesType(scriptType) || scriptType === 'micro_drama' ? 'PART VI' : 'PART V';
+    const recPartNum = hasFormatPart ? 'PART VI' : 'PART V';
     renderPartDivider(doc, pageNum, recPartNum, 'RECOMMENDATIONS', toc);
 
     y = newPage(doc, pageNum, 'Development Priorities');
@@ -1456,7 +1468,7 @@ export async function generateFullReportPDF(
 
     // === APPENDICES ===
     console.log('[PDF] Rendering Appendices');
-    const appPartNum = isComicType(scriptType) || isWebSeriesType(scriptType) || scriptType === 'micro_drama' ? 'PART VII' : 'PART VI';
+    const appPartNum = hasFormatPart ? 'PART VII' : 'PART VI';
     renderPartDivider(doc, pageNum, appPartNum, 'APPENDICES', toc);
 
     // Scorecard
