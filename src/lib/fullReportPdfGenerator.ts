@@ -598,7 +598,8 @@ function renderAgentNarrative(
           doc.setFontSize(FONTS.body);
           doc.setFont('helvetica', 'bold');
           doc.setTextColor(...COLORS.text);
-          doc.text(`${c.name || 'Unknown'} — ${c.role || ''}`, MARGINS.left + 3, y);
+          const castLines = wrapText(doc, `${c.name || 'Unknown'} — ${c.role || ''}`, cw - 8);
+          castLines.forEach(line => { doc.text(line, MARGINS.left + 3, y); y += 5; });
           y += 5;
           doc.setFont('helvetica', 'normal');
           doc.setTextColor(...COLORS.textLight);
