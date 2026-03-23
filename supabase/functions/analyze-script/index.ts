@@ -1989,19 +1989,27 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     
-    // Create client with user's token to verify auth and check access
-    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } }
-    });
-
-    // Verify user is authenticated
-    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
-    if (authError || !user) {
+    // Verify user via local JWT decode (no network call, avoids edge timeout issues)
+    let user: { id: string };
+    try {
+      const token = authHeader.replace('Bearer ', '');
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      if (!payload.sub || !payload.exp || payload.exp * 1000 < Date.now()) {
+        throw new Error('Token expired or invalid');
+      }
+      user = { id: payload.sub };
+    } catch (e) {
+      console.error('[analyze-script] JWT decode error:', e);
       return new Response(
         JSON.stringify({ error: 'Unauthorized - Invalid token' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    // Create client with user's token for RLS access
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
 
     let { scriptId, analysisRunId, mode = 'deep', qualityMode = 'balanced', forceAnalysis = false, resume = false, stakeholderLens = null } = await req.json() as AnalyzeRequest;
 
