@@ -295,6 +295,17 @@ export default function ReportLayout() {
         <div className="fixed bottom-4 right-4 z-50 lg:hidden">
           <ExportDialog reportId={report.id} reportTitle={report.title} reportData={reportData} activeLens={activeLens} scriptType={scriptType} />
         </div>
+
+        {/* Share Dialog */}
+        {!isSharedAccess && (
+          <ShareDialog
+            open={shareDialogOpen}
+            onOpenChange={setShareDialogOpen}
+            reportId={report.id}
+            reportTitle={report.title}
+            runId={runId!}
+          />
+        )}
       </div>
     </ReportContext.Provider>
   );
