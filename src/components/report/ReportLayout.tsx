@@ -14,7 +14,10 @@ import {
   AlertTriangle,
   RefreshCw,
   Loader2,
+  Link2,
+  Clock,
 } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 
 interface AgentProgress {
@@ -66,6 +69,7 @@ export default function ReportLayout() {
   const [exportTriggerRef, setExportTriggerRef] = useState<HTMLButtonElement | null>(null);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [isSharedAccess, setIsSharedAccess] = useState(false);
+  const [shareExpiry, setShareExpiry] = useState<string | null>(null);
   const mainRef = useRef<HTMLElement>(null);
 
   // Scroll main content to top on route change
@@ -133,6 +137,20 @@ export default function ReportLayout() {
 
       setReport(reportResult.data as unknown as Report);
       setIsSharedAccess(!!shareToken);
+
+      // Fetch share link expiration when accessed via share token
+      if (shareToken && reportResult.data?.id) {
+        const { data: shareData } = await supabase
+          .from('report_shares')
+          .select('expires_at')
+          .eq('report_id', reportResult.data.id)
+          .eq('token', shareToken)
+          .is('revoked_at', null)
+          .single();
+        if (shareData?.expires_at) {
+          setShareExpiry(shareData.expires_at);
+        }
+      }
 
       if (analysisResult.data?.agent_progress) {
         setAgentProgress(analysisResult.data.agent_progress as AgentProgress);
@@ -274,6 +292,25 @@ export default function ReportLayout() {
               )}
               Retry Failed
             </Button>
+          </div>
+        )}
+
+        {/* Shared Access Banner */}
+        {isSharedAccess && (
+          <div className="bg-primary/5 border-b border-primary/20 px-6 py-2 flex items-center gap-3">
+            <Link2 className="h-4 w-4 text-primary shrink-0" />
+            <span className="text-sm font-medium text-primary">
+              Shared report
+            </span>
+            {shareExpiry && (
+              <span className="text-sm text-muted-foreground flex items-center gap-1">
+                <Clock className="h-3.5 w-3.5" />
+                Expires {formatDistanceToNow(new Date(shareExpiry), { addSuffix: true })}
+              </span>
+            )}
+            <span className="text-xs text-muted-foreground ml-auto">
+              View-only access via share link
+            </span>
           </div>
         )}
 
