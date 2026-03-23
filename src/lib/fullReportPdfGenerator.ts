@@ -223,9 +223,50 @@ function getReadinessLabel(score: number): string {
   return 'Needs Work';
 }
 
+/** Sanitize text for jsPDF's built-in fonts (no Unicode support) */
+function sanitizeText(text: string): string {
+  if (!text) return '';
+  return String(text)
+    .replace(/[\u2018\u2019\u201A]/g, "'")   // smart single quotes → '
+    .replace(/[\u201C\u201D\u201E]/g, '"')    // smart double quotes → "
+    .replace(/\u2014/g, '--')                  // em dash → --
+    .replace(/\u2013/g, '-')                   // en dash → -
+    .replace(/\u2026/g, '...')                 // ellipsis → ...
+    .replace(/\u2192/g, '->')                  // → arrow
+    .replace(/\u2190/g, '<-')                  // ← arrow
+    .replace(/\u2191/g, '^')                   // ↑ arrow
+    .replace(/\u2193/g, 'v')                   // ↓ arrow
+    .replace(/\u2022/g, '*')                   // bullet •
+    .replace(/\u00A0/g, ' ')                   // non-breaking space
+    .replace(/\u200B/g, '')                    // zero-width space
+    .replace(/[\u2000-\u200A]/g, ' ')          // various Unicode spaces
+    .replace(/\u00D7/g, 'x')                   // × multiplication
+    .replace(/\u2212/g, '-')                   // minus sign
+    .replace(/\u2032/g, "'")                   // prime → '
+    .replace(/\u2033/g, '"')                   // double prime → "
+    .replace(/[^\x00-\x7F]/g, (ch) => {        // fallback: any remaining non-ASCII
+      // Keep common accented Latin chars (they work in Helvetica)
+      if (ch.charCodeAt(0) >= 0x00C0 && ch.charCodeAt(0) <= 0x00FF) return ch;
+      return '';
+    });
+}
+
 function wrapText(doc: jsPDF, text: string, maxWidth: number): string[] {
   if (!text) return [];
-  return doc.splitTextToSize(String(text), Math.max(10, maxWidth)) as string[];
+  return doc.splitTextToSize(sanitizeText(String(text)), Math.max(10, maxWidth)) as string[];
+}
+
+/** Reliably get finalY from autoTable result, with fallback */
+function getTableFinalY(doc: jsPDF, result: unknown, fallbackY: number): number {
+  // Try the returned result first (jspdf-autotable v5 functional pattern)
+  if (result && typeof result === 'object' && typeof (result as any).finalY === 'number') {
+    return (result as any).finalY;
+  }
+  // Fallback: lastAutoTable property (older pattern)
+  if ((doc as any).lastAutoTable && typeof (doc as any).lastAutoTable.finalY === 'number') {
+    return (doc as any).lastAutoTable.finalY;
+  }
+  return fallbackY;
 }
 
 // ============= SECTION RENDERERS =============
