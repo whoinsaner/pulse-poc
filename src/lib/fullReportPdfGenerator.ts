@@ -521,7 +521,7 @@ function renderAgentNarrative(
           doc.setFont('helvetica', 'italic');
           doc.setTextColor(...COLORS.textLight);
           const qLines = wrapText(doc, `"${q.quote}"`, cw - 10);
-          qLines.forEach(line => { doc.text(line, MARGINS.left + 5, y); y += 4.5; });
+          for (const line of qLines) { y = checkBreak(doc, y, 5, pageNum, sectionName); doc.text(line, MARGINS.left + 5, y); y += 4.5; }
           doc.setFont('helvetica', 'normal');
           doc.setFontSize(FONTS.tiny);
           const ctx = q.page ? `${q.context || ''} (p.${q.page})` : (q.context || '');
