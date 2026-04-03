@@ -527,7 +527,7 @@ function renderAgentNarrative(
           const ctx = q.page ? `${q.context || ''} (p.${q.page})` : (q.context || '');
           if (ctx) {
             const ctxLines = wrapText(doc, `— ${ctx}`, cw - 10);
-            ctxLines.forEach(line => { doc.text(line, MARGINS.left + 5, y); y += 4; });
+            for (const line of ctxLines) { y = checkBreak(doc, y, 4, pageNum, sectionName); doc.text(line, MARGINS.left + 5, y); y += 4; }
           }
           y += 3;
         }
