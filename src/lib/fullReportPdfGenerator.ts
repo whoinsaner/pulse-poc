@@ -500,7 +500,7 @@ function renderAgentNarrative(
         for (const item of content.whatsUnderdeveloped) {
           y = checkBreak(doc, y, 6, pageNum, sectionName);
           const lines = wrapText(doc, `- ${toDisplayString(item)}`, cw - 5);
-          lines.forEach(line => { doc.text(line, MARGINS.left + 3, y); y += 5; });
+          for (const line of lines) { y = checkBreak(doc, y, 5, pageNum, sectionName); doc.text(line, MARGINS.left + 3, y); y += 5; }
           y += 1;
         }
         y += 4;
