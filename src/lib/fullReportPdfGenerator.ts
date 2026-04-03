@@ -787,10 +787,9 @@ function renderParameterCards(
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(...COLORS.textLight);
         const rLines = wrapText(doc, String(p.rationale), cw - 8);
-        const maxLines = Math.min(rLines.length, 3);
-        for (let i = 0; i < maxLines; i++) {
+        for (const line of rLines) {
           y = checkBreak(doc, y, 5, pageNum, sectionName);
-          doc.text(rLines[i], MARGINS.left + 4, y);
+          doc.text(line, MARGINS.left + 4, y);
           y += 4.5;
         }
         y += 3;
