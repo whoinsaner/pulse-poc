@@ -550,7 +550,7 @@ function renderAgentNarrative(
           doc.setTextColor(...COLORS.text);
           const priorityTag = `[${(rec.priority || 'medium').toUpperCase()}/${(rec.effort || 'medium').toUpperCase()}]`;
           const recTitleLines = wrapText(doc, `${priorityTag}  ${rec.title}`, cw - 8);
-          recTitleLines.forEach(line => { doc.text(line, MARGINS.left + 3, y); y += 5; });
+          for (const line of recTitleLines) { y = checkBreak(doc, y, 5, pageNum, sectionName); doc.text(line, MARGINS.left + 3, y); y += 5; }
           y += 5;
           doc.setFont('helvetica', 'normal');
           doc.setTextColor(...COLORS.textLight);
