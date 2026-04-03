@@ -604,7 +604,7 @@ function renderAgentNarrative(
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(...COLORS.text);
         const antLines = wrapText(doc, `Antagonist: ${a.name || 'Unknown'}`, cw);
-        antLines.forEach(line => { doc.text(line, MARGINS.left, y); y += 6; });
+        for (const line of antLines) { y = checkBreak(doc, y, 6, pageNum, sectionName); doc.text(line, MARGINS.left, y); y += 6; }
         y += 1;
         doc.setFontSize(FONTS.body);
         const fields = [
