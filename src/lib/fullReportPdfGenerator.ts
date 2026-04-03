@@ -587,10 +587,11 @@ function renderAgentNarrative(
             doc.setFont('helvetica', 'normal');
             doc.setTextColor(...COLORS.text);
             const valLines = wrapText(doc, String(val), cw - labelW - 8);
-            valLines.forEach((line, i) => {
-              doc.text(line, MARGINS.left + 3 + (i === 0 ? labelW : 0), y);
+            for (let i = 0; i < valLines.length; i++) {
+              if (i > 0) y = checkBreak(doc, y, 5, pageNum, sectionName);
+              doc.text(valLines[i], MARGINS.left + 3 + (i === 0 ? labelW : 0), y);
               y += 5;
-            });
+            }
           }
         }
         y += 4;
