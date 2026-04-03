@@ -420,10 +420,11 @@ function renderAgentNarrative(
         doc.setFont('helvetica', 'bolditalic');
         doc.setTextColor(...COLORS.primary);
         const lines = wrapText(doc, `"${content.verdict}"`, cw);
-        lines.forEach(line => {
+        for (const line of lines) {
+          y = checkBreak(doc, y, 5, pageNum, sectionName);
           doc.text(line, MARGINS.left, y);
           y += 5;
-        });
+        }
         y += 4;
         resetFontStyle(doc);
       }
