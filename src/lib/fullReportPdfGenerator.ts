@@ -460,7 +460,7 @@ function renderAgentNarrative(
         for (const item of content.whatWorks) {
           y = checkBreak(doc, y, 6, pageNum, sectionName);
           const lines = wrapText(doc, `+ ${toDisplayString(item)}`, cw - 5);
-          lines.forEach(line => { doc.text(line, MARGINS.left + 3, y); y += 5; });
+          for (const line of lines) { y = checkBreak(doc, y, 5, pageNum, sectionName); doc.text(line, MARGINS.left + 3, y); y += 5; }
           y += 1;
         }
         y += 4;
@@ -480,7 +480,7 @@ function renderAgentNarrative(
         for (const item of content.whatsBroken) {
           y = checkBreak(doc, y, 6, pageNum, sectionName);
           const lines = wrapText(doc, `✗ ${toDisplayString(item)}`, cw - 5);
-          lines.forEach(line => { doc.text(line, MARGINS.left + 3, y); y += 5; });
+          for (const line of lines) { y = checkBreak(doc, y, 5, pageNum, sectionName); doc.text(line, MARGINS.left + 3, y); y += 5; }
           y += 1;
         }
         y += 4;
@@ -500,7 +500,7 @@ function renderAgentNarrative(
         for (const item of content.whatsUnderdeveloped) {
           y = checkBreak(doc, y, 6, pageNum, sectionName);
           const lines = wrapText(doc, `- ${toDisplayString(item)}`, cw - 5);
-          lines.forEach(line => { doc.text(line, MARGINS.left + 3, y); y += 5; });
+          for (const line of lines) { y = checkBreak(doc, y, 5, pageNum, sectionName); doc.text(line, MARGINS.left + 3, y); y += 5; }
           y += 1;
         }
         y += 4;
@@ -521,13 +521,13 @@ function renderAgentNarrative(
           doc.setFont('helvetica', 'italic');
           doc.setTextColor(...COLORS.textLight);
           const qLines = wrapText(doc, `"${q.quote}"`, cw - 10);
-          qLines.forEach(line => { doc.text(line, MARGINS.left + 5, y); y += 4.5; });
+          for (const line of qLines) { y = checkBreak(doc, y, 5, pageNum, sectionName); doc.text(line, MARGINS.left + 5, y); y += 4.5; }
           doc.setFont('helvetica', 'normal');
           doc.setFontSize(FONTS.tiny);
           const ctx = q.page ? `${q.context || ''} (p.${q.page})` : (q.context || '');
           if (ctx) {
             const ctxLines = wrapText(doc, `— ${ctx}`, cw - 10);
-            ctxLines.forEach(line => { doc.text(line, MARGINS.left + 5, y); y += 4; });
+            for (const line of ctxLines) { y = checkBreak(doc, y, 4, pageNum, sectionName); doc.text(line, MARGINS.left + 5, y); y += 4; }
           }
           y += 3;
         }
@@ -550,13 +550,13 @@ function renderAgentNarrative(
           doc.setTextColor(...COLORS.text);
           const priorityTag = `[${(rec.priority || 'medium').toUpperCase()}/${(rec.effort || 'medium').toUpperCase()}]`;
           const recTitleLines = wrapText(doc, `${priorityTag}  ${rec.title}`, cw - 8);
-          recTitleLines.forEach(line => { doc.text(line, MARGINS.left + 3, y); y += 5; });
+          for (const line of recTitleLines) { y = checkBreak(doc, y, 5, pageNum, sectionName); doc.text(line, MARGINS.left + 3, y); y += 5; }
           y += 5;
           doc.setFont('helvetica', 'normal');
           doc.setTextColor(...COLORS.textLight);
           if (rec.description) {
             const dLines = wrapText(doc, rec.description, cw - 8);
-            dLines.forEach(line => { doc.text(line, MARGINS.left + 3, y); y += 4.5; });
+            for (const line of dLines) { y = checkBreak(doc, y, 5, pageNum, sectionName); doc.text(line, MARGINS.left + 3, y); y += 4.5; }
           }
           y += 3;
         }
@@ -571,7 +571,7 @@ function renderAgentNarrative(
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(...COLORS.text);
         const protLines = wrapText(doc, `Protagonist: ${p.name || 'Unknown'}`, cw);
-        protLines.forEach(line => { doc.text(line, MARGINS.left, y); y += 6; });
+        for (const line of protLines) { y = checkBreak(doc, y, 6, pageNum, sectionName); doc.text(line, MARGINS.left, y); y += 6; }
         y += 1;
         doc.setFontSize(FONTS.body);
         const fields = [
@@ -587,10 +587,11 @@ function renderAgentNarrative(
             doc.setFont('helvetica', 'normal');
             doc.setTextColor(...COLORS.text);
             const valLines = wrapText(doc, String(val), cw - labelW - 8);
-            valLines.forEach((line, i) => {
-              doc.text(line, MARGINS.left + 3 + (i === 0 ? labelW : 0), y);
+            for (let i = 0; i < valLines.length; i++) {
+              if (i > 0) y = checkBreak(doc, y, 5, pageNum, sectionName);
+              doc.text(valLines[i], MARGINS.left + 3 + (i === 0 ? labelW : 0), y);
               y += 5;
-            });
+            }
           }
         }
         y += 4;
@@ -603,7 +604,7 @@ function renderAgentNarrative(
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(...COLORS.text);
         const antLines = wrapText(doc, `Antagonist: ${a.name || 'Unknown'}`, cw);
-        antLines.forEach(line => { doc.text(line, MARGINS.left, y); y += 6; });
+        for (const line of antLines) { y = checkBreak(doc, y, 6, pageNum, sectionName); doc.text(line, MARGINS.left, y); y += 6; }
         y += 1;
         doc.setFontSize(FONTS.body);
         const fields = [
@@ -619,10 +620,11 @@ function renderAgentNarrative(
             doc.setFont('helvetica', 'normal');
             doc.setTextColor(...COLORS.text);
             const vl = wrapText(doc, String(val), cw - lw - 8);
-            vl.forEach((line, i) => {
-              doc.text(line, MARGINS.left + 3 + (i === 0 ? lw : 0), y);
+            for (let i = 0; i < vl.length; i++) {
+              if (i > 0) y = checkBreak(doc, y, 5, pageNum, sectionName);
+              doc.text(vl[i], MARGINS.left + 3 + (i === 0 ? lw : 0), y);
               y += 5;
-            });
+            }
           }
         }
         y += 4;
@@ -643,13 +645,13 @@ function renderAgentNarrative(
           doc.setFont('helvetica', 'bold');
           doc.setTextColor(...COLORS.text);
           const castLines = wrapText(doc, `${c.name || 'Unknown'} — ${c.role || ''}`, cw - 8);
-          castLines.forEach(line => { doc.text(line, MARGINS.left + 3, y); y += 5; });
+          for (const line of castLines) { y = checkBreak(doc, y, 5, pageNum, sectionName); doc.text(line, MARGINS.left + 3, y); y += 5; }
           
           doc.setFont('helvetica', 'normal');
           doc.setTextColor(...COLORS.textLight);
           if (c.impact) {
             const il = wrapText(doc, c.impact, cw - 8);
-            il.forEach(line => { doc.text(line, MARGINS.left + 3, y); y += 4.5; });
+            for (const line of il) { y = checkBreak(doc, y, 5, pageNum, sectionName); doc.text(line, MARGINS.left + 3, y); y += 4.5; }
           }
           y += 3;
         }
