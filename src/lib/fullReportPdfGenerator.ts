@@ -651,7 +651,7 @@ function renderAgentNarrative(
           doc.setTextColor(...COLORS.textLight);
           if (c.impact) {
             const il = wrapText(doc, c.impact, cw - 8);
-            il.forEach(line => { doc.text(line, MARGINS.left + 3, y); y += 4.5; });
+            for (const line of il) { y = checkBreak(doc, y, 5, pageNum, sectionName); doc.text(line, MARGINS.left + 3, y); y += 4.5; }
           }
           y += 3;
         }
