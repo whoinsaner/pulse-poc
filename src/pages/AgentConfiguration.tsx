@@ -64,6 +64,8 @@ const CATEGORY_CONFIG: Record<string, { label: string; icon: React.ElementType; 
   system: { label: "System", icon: Cpu, color: "bg-slate-500" },
   analysis: { label: "Analysis", icon: Sparkles, color: "bg-primary" },
   comic: { label: "Comic", icon: Layers, color: "bg-purple-500" },
+  enrichment: { label: "Enrichment", icon: Search, color: "bg-cyan-500" },
+  production: { label: "Production", icon: Cpu, color: "bg-orange-500" },
   meta: { label: "Meta", icon: Wand2, color: "bg-amber-500" },
 };
 
@@ -78,6 +80,8 @@ export default function AgentConfiguration() {
     system: true,
     analysis: true,
     comic: true,
+    enrichment: true,
+    production: true,
     meta: true,
   });
   const [promptExpanded, setPromptExpanded] = useState(false);

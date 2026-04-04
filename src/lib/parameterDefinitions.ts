@@ -182,6 +182,33 @@ export const COMIC_PARAMETERS: ParameterDefinition[] = [
   },
 ];
 
+// ============= SYSTEM PARAMETERS (Cinema Tradition) =============
+
+export const SYSTEM_PARAMETERS: ParameterDefinition[] = [
+  {
+    id: 'tradition_confidence',
+    name: 'tradition_confidence',
+    displayName: 'Tradition Confidence',
+    category: 'System',
+    agentSource: 'CinemaTraditionAgent',
+    description: 'Confidence level in detecting the cinema tradition/industry origin of the script. Higher scores indicate clearer cultural and structural signals.',
+    scoringGuide: '9-10: Unmistakable tradition markers. 7-8: Strong signals with minor ambiguity. 5-6: Moderate signals, best-guess classification. 3-4: Weak signals, low confidence. 1-2: Cannot determine tradition.',
+    applicableScriptTypes: 'all',
+    weight: 0.5,
+  },
+  {
+    id: 'format_type_clarity',
+    name: 'format_type_clarity',
+    displayName: 'Format Type Clarity',
+    category: 'System',
+    agentSource: 'CinemaTraditionAgent',
+    description: 'Clarity of the screenplay format type (shooting script, director\'s spec, literary, treatment). Determines how to interpret technical direction density.',
+    scoringGuide: '9-10: Clear format with consistent conventions. 7-8: Mostly clear with minor inconsistencies. 5-6: Mixed format signals. 3-4: Ambiguous format. 1-2: Cannot determine format type.',
+    applicableScriptTypes: 'all',
+    weight: 0.5,
+  },
+];
+
 // ============= CORE PARAMETERS (All Script Types) =============
 
 export const CORE_PARAMETERS: ParameterDefinition[] = [
@@ -1305,6 +1332,7 @@ export const SERIES_BIBLE_PARAMETERS: ParameterDefinition[] = [
 // ============= COMBINED PARAMETER LIST =============
 
 export const ALL_PARAMETERS: ParameterDefinition[] = [
+  ...SYSTEM_PARAMETERS,
   ...CORE_PARAMETERS,
   ...COMIC_PARAMETERS,
   ...WEB_SERIES_PARAMETERS,
@@ -1409,8 +1437,9 @@ export const COMIC_SECONDARY_TAGS = [
 // Export format for downloadable parameter file
 export function exportParametersToJSON(): string {
   return JSON.stringify({
-    version: '3.1.0',
+    version: '4.0.0',
     exportDate: new Date().toISOString(),
+    systemParameters: SYSTEM_PARAMETERS,
     coreParameters: CORE_PARAMETERS,
     comicParameters: COMIC_PARAMETERS,
     webSeriesParameters: WEB_SERIES_PARAMETERS,

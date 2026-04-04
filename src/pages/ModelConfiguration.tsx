@@ -86,12 +86,12 @@ interface AuditLogEntry {
 const AVAILABLE_MODELS = [
   // Premium tier - best reasoning and capability
   { id: 'google/gemini-2.5-pro', name: 'Gemini 2.5 Pro', tier: 'premium', description: 'Top-tier reasoning, multimodal' },
-  { id: 'google/gemini-3-pro-preview', name: 'Gemini 3 Pro Preview', tier: 'premium', description: 'Next-gen Pro model' },
+  { id: 'google/gemini-3.1-pro-preview', name: 'Gemini 3.1 Pro Preview', tier: 'premium', description: 'Latest next-gen reasoning model' },
+  { id: 'google/gemini-3-flash-preview', name: 'Gemini 3 Flash Preview', tier: 'premium', description: 'Fast next-gen model' },
   { id: 'openai/gpt-5', name: 'GPT-5', tier: 'premium', description: 'Powerful reasoning, multimodal' },
   { id: 'openai/gpt-5.2', name: 'GPT-5.2', tier: 'premium', description: 'Latest OpenAI model' },
   // Standard tier - balanced speed and capability
   { id: 'google/gemini-2.5-flash', name: 'Gemini 2.5 Flash', tier: 'standard', description: 'Balanced speed and quality' },
-  { id: 'google/gemini-3-flash-preview', name: 'Gemini 3 Flash Preview', tier: 'standard', description: 'Fast next-gen model' },
   { id: 'openai/gpt-5-mini', name: 'GPT-5 Mini', tier: 'standard', description: 'Fast with strong reasoning' },
   // Economy tier - fastest and cheapest
   { id: 'google/gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash Lite', tier: 'economy', description: 'Fastest, most economical' },
