@@ -94,73 +94,63 @@ export function useRealtimeAnalysis({
     }
   }, [analysisRunId, scriptId, onError]);
 
-  // Set up realtime subscription
+  // Set up polling (realtime removed from analysis_runs for security)
   useEffect(() => {
     fetchAnalysis();
 
     if (!analysisRunId && !scriptId) return;
 
-    // Subscribe to changes
-    const channel = supabase
-      .channel(`analysis-${analysisRunId || scriptId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'analysis_runs',
-          filter: analysisRunId 
-            ? `id=eq.${analysisRunId}` 
-            : `script_id=eq.${scriptId}`
-        },
-        (payload) => {
-          console.log('[Realtime] Analysis update received:', payload);
-          
-          const newData = payload.new as {
-            id: string;
-            script_id: string;
-            status: AnalysisStatus;
-            agent_progress: Record<string, AgentProgress> | null;
-            error_message: string | null;
-            created_at: string;
-            started_at: string | null;
-            completed_at: string | null;
-            stakeholder_lens: string | null;
-          };
-          
-          setAnalysis(prev => {
-            if (!prev) return null;
-            
-            const updated: AnalysisRun = {
-              ...prev,
-              ...newData,
-              agent_progress: newData.agent_progress as Record<string, AgentProgress> | null
-            };
-            
-            // Trigger callbacks
-            if (newData.status !== prev.status) {
-              onStatusChange?.(newData.status);
-              
-              if (newData.status === 'completed') {
-                onComplete?.(updated);
-              }
-              
-              if (newData.status === 'failed' && newData.error_message) {
-                onError?.(newData.error_message);
-              }
-            }
-            
-            return updated;
-          });
+    // Poll every 3 seconds while analysis is in progress
+    const intervalId = setInterval(async () => {
+      try {
+        let query = supabase
+          .from('analysis_runs')
+          .select('id, script_id, status, agent_progress, error_message, created_at, started_at, completed_at, stakeholder_lens');
+
+        if (analysisRunId) {
+          query = query.eq('id', analysisRunId);
+        } else if (scriptId) {
+          query = query.eq('script_id', scriptId).order('created_at', { ascending: false }).limit(1);
         }
-      )
-      .subscribe((status) => {
-        console.log('[Realtime] Subscription status:', status);
-      });
+
+        const { data } = await query.maybeSingle();
+        if (!data) return;
+
+        setAnalysis(prev => {
+          const updated: AnalysisRun = {
+            ...prev,
+            ...data,
+            agent_progress: data.agent_progress as Record<string, AgentProgress> | null,
+            scripts: prev?.scripts,
+          };
+
+          // Trigger callbacks on status change
+          if (prev && data.status !== prev.status) {
+            onStatusChange?.(data.status as AnalysisStatus);
+
+            if (data.status === 'completed') {
+              onComplete?.(updated);
+            }
+
+            if (data.status === 'failed' && data.error_message) {
+              onError?.(data.error_message);
+            }
+          }
+
+          // Stop polling when terminal
+          if (data.status === 'completed' || data.status === 'failed') {
+            clearInterval(intervalId);
+          }
+
+          return updated;
+        });
+      } catch {
+        // Silently continue polling
+      }
+    }, 3000);
 
     return () => {
-      console.log('[Realtime] Unsubscribing from analysis updates');
-      supabase.removeChannel(channel);
+      clearInterval(intervalId);
     };
   }, [analysisRunId, scriptId, fetchAnalysis, onStatusChange, onComplete, onError]);
 
