@@ -210,14 +210,13 @@ function checkBreak(doc: jsPDF, y: number, needed: number, pageNum: PageCounter,
     // Save current font state before page break
     const savedFontSize = doc.getFontSize();
     const savedFont = doc.getFont();
-    const savedTextColor = (doc as any).__lastTextColor;
 
     const newY = newPage(doc, pageNum, sectionName);
 
     // Restore caller's font state so continued text renders correctly
     doc.setFontSize(savedFontSize);
     doc.setFont(savedFont.fontName, savedFont.fontStyle);
-    
+
     return newY;
   }
   return y;
