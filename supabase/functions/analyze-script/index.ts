@@ -2925,13 +2925,16 @@ function getExtractionErrorMessage(code: string): string {
 }
 
 function buildQuickContext(script: any, text: string): string {
+  const traditionLine = script.cinema_tradition && script.cinema_tradition !== 'auto_detect' 
+    ? `\nTRADITION CONTEXT: Cinema tradition identified as "${script.cinema_tradition}". Evaluate this script within its own tradition's narrative grammar, not Hollywood defaults.\n` 
+    : '';
   return `
 SCRIPT: "${script.title}"
 Type: ${script.script_type}
 Genre: ${script.genre || 'Not specified'}
 Page Count: ${script.page_count || 'Unknown'}
 ${script.logline ? `Logline: ${script.logline}` : ''}
-
+${traditionLine}
 ⚡ ANALYSIS MODE: Quick (direct text extraction)
 Analyzing from raw script text. Scene/character structure inferred from content.
 
