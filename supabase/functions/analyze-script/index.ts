@@ -691,6 +691,14 @@ Evaluate:
 
 Support linear, non-linear, episodic, looping, and branching narratives.
 
+TRADITION-AWARE EVALUATION:
+- Check for dual-protagonist architectures. Not all scripts have a single protagonist.
+- Evaluate interval placement for traditions that use intervals (Indian cinema typically has a major interval/intermission point).
+- Do NOT penalize extended first acts if they are load-bearing (earning grief, establishing motif systems, building emotional investment). In Kollywood/Bollywood traditions, extended setup acts are intentional craft choices.
+- Evaluate resolution against the script's own tradition — moral closure (a name spoken, a truth revealed, justice delivered through thematic symmetry) is complete resolution in many traditions. Do NOT require procedural/institutional closure.
+- Physical justice (retribution that mirrors the original crime) is a valid and complete resolution model.
+- If a director's spec format is detected, do NOT apply page-per-minute pacing calculations.
+
 COMIC/GRAPHIC NARRATIVE ADAPTATION:
 When the script type is "comic" or the content is a graphic narrative, reinterpret structural parameters for page-based storytelling:
 - Inciting Force Clarity → Issue-Opening Hook: Comics must hook readers on page 1-3. Evaluate how quickly and clearly the story-launching event occurs within the issue's opening pages.
