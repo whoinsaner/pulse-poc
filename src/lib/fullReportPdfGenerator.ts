@@ -67,7 +67,7 @@ const FONTS = {
   tiny: 8,
 };
 
-const MARGINS = { left: 20, right: 20, top: 25, bottom: 25 };
+const MARGINS = { left: 20, right: 20, top: 25, bottom: 32 };
 
 // ============= AGENT KEY MAPPING =============
 
