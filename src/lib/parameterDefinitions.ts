@@ -1332,6 +1332,7 @@ export const SERIES_BIBLE_PARAMETERS: ParameterDefinition[] = [
 // ============= COMBINED PARAMETER LIST =============
 
 export const ALL_PARAMETERS: ParameterDefinition[] = [
+  ...SYSTEM_PARAMETERS,
   ...CORE_PARAMETERS,
   ...COMIC_PARAMETERS,
   ...WEB_SERIES_PARAMETERS,

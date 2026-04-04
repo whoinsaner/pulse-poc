@@ -23,6 +23,7 @@ export interface ParameterSyncStatus {
 
 // Combine all parameters from the framework
 export const ALL_FRAMEWORK_PARAMETERS: ParameterDefinition[] = [
+  ...SYSTEM_PARAMETERS,
   ...CORE_PARAMETERS,
   ...COMIC_PARAMETERS,
   ...WEB_SERIES_PARAMETERS,
