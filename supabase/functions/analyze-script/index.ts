@@ -109,6 +109,7 @@ const SYSTEM_AGENTS = new Set([
   'ScriptTypeClassifierAgent', 
   'ClassifierArbitrationAgent',
   'MultiTypeBlendingAgent',
+  'CinemaTraditionAgent',
 ]);
 
 // Agents that require deeper reasoning (complex tier)
