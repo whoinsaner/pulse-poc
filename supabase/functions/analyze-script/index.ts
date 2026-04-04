@@ -843,6 +843,12 @@ Analyze dialogue for:
 
 Adapt analysis to the script's medium.
 
+TRADITION-AWARE EVALUATION:
+- Evaluate silence as a dialogue tool. A character who communicates through physical action and silence can be more powerful than one who explains.
+- Assess economy by meaning-per-word, not word count. Two-word exchanges that convey character, relationship, and comedy simultaneously should score HIGHEST.
+- In traditions where dialogue carries poetic/philosophical weight (Tamil, Korean, Japanese), dense dialogue is not "exposition load" — it may be the primary artistic medium.
+- Voice differentiation includes dialect, register, code-switching, and silence patterns — not just vocabulary.
+
 COMIC/GRAPHIC NARRATIVE ADAPTATION:
 When the script type is "comic" or the content is a graphic narrative, you MUST adapt your evaluation criteria as follows. Comics primarily use captions, narration boxes, sound effects (SFX), and balloon text rather than traditional character dialogue exchanges.
 
