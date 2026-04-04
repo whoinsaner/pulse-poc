@@ -163,6 +163,8 @@ function resetFontStyle(doc: jsPDF): void {
 
 function addRunningHeader(doc: jsPDF, sectionName: string, pageNum: PageCounter) {
   const pw = getPageWidth(doc);
+  const prevFont = doc.getFont();
+  const prevSize = doc.getFontSize();
   doc.setDrawColor(...COLORS.border);
   doc.setLineWidth(0.3);
   doc.line(MARGINS.left, 15, pw - MARGINS.right, 15);
@@ -171,11 +173,15 @@ function addRunningHeader(doc: jsPDF, sectionName: string, pageNum: PageCounter)
   doc.setTextColor(...COLORS.textLight);
   doc.text(sectionName, MARGINS.left, 12);
   doc.text(`Page ${pageNum.value}`, pw - MARGINS.right, 12, { align: 'right' });
+  doc.setFont(prevFont.fontName, prevFont.fontStyle);
+  doc.setFontSize(prevSize);
 }
 
 function addRunningFooter(doc: jsPDF) {
   const pw = getPageWidth(doc);
   const ph = getPageHeight(doc);
+  const prevFont = doc.getFont();
+  const prevSize = doc.getFontSize();
   doc.setDrawColor(...COLORS.border);
   doc.setLineWidth(0.2);
   doc.line(MARGINS.left, ph - 15, pw - MARGINS.right, ph - 15);
@@ -186,6 +192,8 @@ function addRunningFooter(doc: jsPDF) {
     `Generated ${new Date().toLocaleDateString()} • USAF v3.0 Analysis Report`,
     pw / 2, ph - 10, { align: 'center' }
   );
+  doc.setFont(prevFont.fontName, prevFont.fontStyle);
+  doc.setFontSize(prevSize);
 }
 
 function newPage(doc: jsPDF, pageNum: PageCounter, sectionName: string): number {
