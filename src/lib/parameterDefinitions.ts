@@ -1437,8 +1437,9 @@ export const COMIC_SECONDARY_TAGS = [
 // Export format for downloadable parameter file
 export function exportParametersToJSON(): string {
   return JSON.stringify({
-    version: '3.1.0',
+    version: '4.0.0',
     exportDate: new Date().toISOString(),
+    systemParameters: SYSTEM_PARAMETERS,
     coreParameters: CORE_PARAMETERS,
     comicParameters: COMIC_PARAMETERS,
     webSeriesParameters: WEB_SERIES_PARAMETERS,
