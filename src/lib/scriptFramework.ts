@@ -208,6 +208,17 @@ export const SYSTEM_AGENTS: AgentDefinition[] = [
     color: 'bg-purple-500/10 text-purple-500 border-purple-500/30',
     icon: 'Blend'
   },
+  {
+    id: 'CinemaTraditionAgent',
+    name: 'Cinema Tradition Classifier',
+    category: 'system',
+    description: 'Identifies the cinema tradition/industry origin and screenplay format type to calibrate all downstream agents against the correct narrative grammar',
+    parameters: ['tradition_confidence', 'format_type_clarity'],
+    reportSections: ['Project Snapshot'],
+    applicableScriptTypes: 'all',
+    color: 'bg-rose-500/10 text-rose-500 border-rose-500/30',
+    icon: 'Globe2'
+  },
 ];
 
 // Meta Agents (Post-processing & Feedback)
