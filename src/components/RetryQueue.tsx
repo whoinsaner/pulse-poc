@@ -86,7 +86,7 @@ export function RetryQueue({ className }: RetryQueueProps) {
         initiated_by: profile.user_id,
         status: 'pending',
         parent_run_id: run.id,
-        quality_mode: run.quality_mode || 'balanced',
+        quality_mode: run.quality_mode || 'quality',
         stakeholder_lens: run.stakeholder_lens,
         retry_count: run.retry_count + 1,
         max_retries: run.max_retries,

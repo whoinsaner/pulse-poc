@@ -4030,6 +4030,7 @@ Return JSON array:
             { role: 'system', content: 'You are InsightSynthesisAgent, a senior script analyst synthesizing findings into executive-level actionable insights. Return ONLY valid JSON arrays. Keep descriptions concise.' },
             { role: 'user', content: prompt }
           ],
+          ...(modelConfig.reasoning ? { reasoning: modelConfig.reasoning } : {}),
         }),
       });
 
