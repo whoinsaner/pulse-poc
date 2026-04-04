@@ -73,7 +73,8 @@ export function AnalysisTrigger({
   scriptTitle, 
   scriptType = 'feature',
   resumeRunId,
-  onAnalysisComplete 
+  onAnalysisComplete,
+  onCancel,
 }: AnalysisTriggerProps) {
   const { user, profile } = useAuth();
   const { toast } = useToast();
