@@ -779,6 +779,13 @@ Identify all forms of conflict present and evaluate:
 - Internal vs External Balance: Mix of psychological and situational conflict
 
 Assess whether conflict meaningfully evolves or plateaus.
+
+TRADITION-AWARE EVALUATION:
+- Moral closure (a name spoken, a truth revealed) is a valid resolution model equal to procedural/institutional resolution.
+- Physical justice (retribution that mirrors the original crime) is complete resolution in many traditions — do not penalize for lacking courtroom/institutional closure.
+- Internal vs External balance varies by tradition: European arthouse favors internal; Kollywood mass cinema favors external with internal resonance. Neither is superior.
+- Conflict escalation through accumulating moral weight (not just physical danger) is sophisticated craft.
+
 Score each parameter 0-10 with evidence from key confrontations.`
   },
 
