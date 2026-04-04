@@ -737,6 +737,13 @@ Analyze all major characters for:
 
 Flag overshadowing, passivity, or unearned arcs.
 
+TRADITION-AWARE EVALUATION:
+- Silent protagonists who act through physical choices are VALID and can be more powerful than dialogue-driven characters. Evaluate by actions taken, not words spoken.
+- Philosophical villain construction (worldview-driven, not wound-driven) is a legitimate and often superior form of complexity. A villain who believes they are right is not "underdeveloped" — they may be operating within a moral framework the script interrogates.
+- Evaluate characters by their function in the moral architecture, not just by dialogue line count. A character with 10 lines who carries thematic weight is more important than one with 100 lines of exposition.
+- Dual-protagonist architectures: two characters sharing equal narrative weight is valid. Do not force one into "supporting" status.
+- In ensemble traditions (Kollywood, Korean), every named character may serve a specific moral or thematic function — evaluate ensemble coherence, not individual arc completeness.
+
 COMIC/GRAPHIC NARRATIVE ADAPTATION:
 When the script type is "comic" or the content is a graphic narrative, adapt character evaluation for the visual medium:
 - Performative Range → Visual Design Range: Comics don't have actors. Instead, evaluate how well the script describes character visual design cues — distinctive silhouettes, costume details, expression scripting, and body language directions that give an artist clear character identity.
