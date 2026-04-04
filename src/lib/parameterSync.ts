@@ -6,7 +6,7 @@
  */
 
 import { supabase } from "@/integrations/supabase/client";
-import { CORE_PARAMETERS, COMIC_PARAMETERS, WEB_SERIES_PARAMETERS, ParameterDefinition } from "./parameterDefinitions";
+import { CORE_PARAMETERS, COMIC_PARAMETERS, WEB_SERIES_PARAMETERS, SYSTEM_PARAMETERS, ParameterDefinition } from "./parameterDefinitions";
 
 export interface ParameterSyncResult {
   success: boolean;
