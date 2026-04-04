@@ -80,6 +80,8 @@ export default function AgentConfiguration() {
     system: true,
     analysis: true,
     comic: true,
+    enrichment: true,
+    production: true,
     meta: true,
   });
   const [promptExpanded, setPromptExpanded] = useState(false);
