@@ -620,6 +620,10 @@ export default function Scripts() {
                   setResumeRunId(null);
                   navigate(`/reports/${runId}`);
                 }}
+                onCancel={() => {
+                  setShowAnalyzeDialog(false);
+                  setResumeRunId(null);
+                }}
               />
             )}
           </DialogContent>

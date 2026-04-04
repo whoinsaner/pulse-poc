@@ -474,6 +474,7 @@ export function AnalysisTrigger({
         onCancel={() => {
           setShowStakeholderSelector(false);
           setPendingAnalysisMode(null);
+          onCancel?.();
         }}
         selectedLens={selectedStakeholder}
       />
