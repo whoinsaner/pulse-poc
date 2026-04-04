@@ -1,0 +1,1 @@
+UPDATE public.scripts SET cinema_tradition = 'kollywood' WHERE id = '0dfd7c7f-a401-4919-ab1a-a9f43d39de7f';
