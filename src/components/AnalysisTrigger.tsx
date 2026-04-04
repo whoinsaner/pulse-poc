@@ -27,6 +27,7 @@ interface AnalysisTriggerProps {
   scriptType?: ScriptType;
   resumeRunId?: string;
   onAnalysisComplete?: (analysisRunId: string) => void;
+  onCancel?: () => void;
 }
 
 // USAF Agent definitions with modules
@@ -72,7 +73,8 @@ export function AnalysisTrigger({
   scriptTitle, 
   scriptType = 'feature',
   resumeRunId,
-  onAnalysisComplete 
+  onAnalysisComplete,
+  onCancel,
 }: AnalysisTriggerProps) {
   const { user, profile } = useAuth();
   const { toast } = useToast();
@@ -472,6 +474,7 @@ export function AnalysisTrigger({
         onCancel={() => {
           setShowStakeholderSelector(false);
           setPendingAnalysisMode(null);
+          onCancel?.();
         }}
         selectedLens={selectedStakeholder}
       />
