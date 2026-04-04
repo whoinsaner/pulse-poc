@@ -141,7 +141,7 @@ export function AnalysisRunHistory({ scriptId, scriptTitle }: AnalysisRunHistory
           scriptId,
           analysisRunId: newRun.id,
           mode: 'deep',
-          qualityMode: failedRun.quality_mode || 'balanced',
+          qualityMode: failedRun.quality_mode || 'quality',
           forceAnalysis: false,
           resume: false,
           stakeholderLens: failedRun.stakeholder_lens || null,

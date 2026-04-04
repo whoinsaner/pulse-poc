@@ -55,6 +55,50 @@ export const SCRIPT_TYPES: ScriptType[] = [
   { value: 'anthology_comic', label: 'Comic Anthology', description: 'Collection of short comic stories', category: 'film', formatTags: ['anthology', 'short_form'], distributionTags: ['print', 'digital'] },
 ];
 
+// ============= CINEMA TRADITIONS =============
+
+export type CinemaTradition = 
+  | 'auto_detect'
+  | 'hollywood_mainstream'
+  | 'hollywood_indie'
+  | 'kollywood'
+  | 'bollywood'
+  | 'tollywood'
+  | 'korean'
+  | 'japanese'
+  | 'european_arthouse'
+  | 'latin_american'
+  | 'african'
+  | 'middle_eastern'
+  | 'chinese'
+  | 'southeast_asian'
+  | 'other';
+
+export interface CinemaTraditionOption {
+  value: CinemaTradition;
+  label: string;
+  description: string;
+  region: string;
+}
+
+export const CINEMA_TRADITIONS: CinemaTraditionOption[] = [
+  { value: 'auto_detect', label: 'Auto-Detect', description: 'Let AI identify the tradition from script content', region: 'Global' },
+  { value: 'hollywood_mainstream', label: 'Hollywood', description: 'Mainstream studio conventions (3-act, procedural closure)', region: 'North America' },
+  { value: 'hollywood_indie', label: 'Indie / A24', description: 'Independent cinema (character-driven, ambiguous endings)', region: 'North America' },
+  { value: 'kollywood', label: 'Kollywood / Tamil', description: 'Tamil cinema (interval structure, mass-hero logic, moral closure)', region: 'South Asia' },
+  { value: 'bollywood', label: 'Bollywood / Hindi', description: 'Hindi cinema (song sequences, melodrama, family dynamics)', region: 'South Asia' },
+  { value: 'tollywood', label: 'Tollywood / Telugu', description: 'Telugu cinema (mass appeal, action set pieces)', region: 'South Asia' },
+  { value: 'korean', label: 'Korean', description: 'K-cinema (genre-blending, tonal shifts, social commentary)', region: 'East Asia' },
+  { value: 'japanese', label: 'Japanese', description: 'J-cinema (mono no aware, restraint, cyclical narratives)', region: 'East Asia' },
+  { value: 'chinese', label: 'Chinese', description: 'Chinese cinema (wuxia, social realism, ensemble structures)', region: 'East Asia' },
+  { value: 'european_arthouse', label: 'European Arthouse', description: 'European art cinema (ambiguity, philosophical, slow cinema)', region: 'Europe' },
+  { value: 'latin_american', label: 'Latin American', description: 'Latin cinema (magical realism, social urgency)', region: 'Americas' },
+  { value: 'african', label: 'African', description: 'African cinema (oral tradition, community narratives)', region: 'Africa' },
+  { value: 'middle_eastern', label: 'Middle Eastern', description: 'Middle Eastern cinema (allegory, social critique, poetic realism)', region: 'Middle East' },
+  { value: 'southeast_asian', label: 'Southeast Asian', description: 'SEA cinema (spiritual themes, genre hybridity)', region: 'Asia' },
+  { value: 'other', label: 'Other', description: 'Other regional or hybrid tradition', region: 'Global' },
+];
+
 // Legacy script type mapping for database compatibility
 export const LEGACY_SCRIPT_TYPE_MAP: Record<string, string> = {
   'feature': 'feature_film',

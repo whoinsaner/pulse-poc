@@ -1,0 +1,1 @@
+ALTER TABLE public.analysis_runs ALTER COLUMN quality_mode SET DEFAULT 'quality';
