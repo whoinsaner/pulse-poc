@@ -59,22 +59,22 @@ type ModelId = keyof typeof MODEL_REGISTRY;
 type QualityMode = 'fast' | 'balanced' | 'quality' | string; // string for custom config UUIDs
 
 // ============= QUALITY MODE PRESETS (Fallback when DB unavailable) =============
-const QUALITY_MODE_PRESETS: Record<'fast' | 'balanced' | 'quality', Record<string, { model: ModelId; maxRetries: number; retryDelayMs: number }>> = {
+const QUALITY_MODE_PRESETS: Record<'fast' | 'balanced' | 'quality', Record<string, { model: ModelId; maxRetries: number; retryDelayMs: number; reasoning?: { effort: string } }>> = {
   fast: {
     default: { model: 'google/gemini-2.5-flash-lite', maxRetries: 3, retryDelayMs: 1500 },
     complex: { model: 'google/gemini-2.5-flash', maxRetries: 3, retryDelayMs: 2000 },
     synthesis: { model: 'google/gemini-2.5-flash', maxRetries: 3, retryDelayMs: 2000 },
-    system: { model: 'google/gemini-2.5-flash', maxRetries: 3, retryDelayMs: 2000 }, // System agents need reliable JSON
+    system: { model: 'google/gemini-2.5-flash', maxRetries: 3, retryDelayMs: 2000 },
   },
   balanced: {
-    default: { model: 'google/gemini-2.5-flash-lite', maxRetries: 3, retryDelayMs: 1500 },
-    complex: { model: 'google/gemini-2.5-flash', maxRetries: 3, retryDelayMs: 2000 },
+    default: { model: 'google/gemini-2.5-flash', maxRetries: 3, retryDelayMs: 2000 },
+    complex: { model: 'google/gemini-2.5-pro', maxRetries: 3, retryDelayMs: 3000 },
     synthesis: { model: 'google/gemini-2.5-pro', maxRetries: 3, retryDelayMs: 3000 },
-    system: { model: 'google/gemini-2.5-flash', maxRetries: 3, retryDelayMs: 2000 }, // Upgraded from flash-lite for better JSON reliability
+    system: { model: 'google/gemini-2.5-flash', maxRetries: 3, retryDelayMs: 2000 },
   },
   quality: {
     default: { model: 'google/gemini-2.5-flash', maxRetries: 3, retryDelayMs: 2000 },
-    complex: { model: 'google/gemini-2.5-pro', maxRetries: 3, retryDelayMs: 3000 },
+    complex: { model: 'openai/gpt-5', maxRetries: 3, retryDelayMs: 3000, reasoning: { effort: 'medium' } },
     synthesis: { model: 'google/gemini-2.5-pro', maxRetries: 3, retryDelayMs: 3000 },
     system: { model: 'google/gemini-2.5-flash', maxRetries: 3, retryDelayMs: 2000 },
   },
