@@ -2950,6 +2950,10 @@ function buildScriptContext(
   rawScriptText?: string | null, 
   isFallbackMode?: boolean
 ): string {
+  const traditionLine = script.cinema_tradition && script.cinema_tradition !== 'auto_detect' 
+    ? `\nTRADITION CONTEXT: Cinema tradition identified as "${script.cinema_tradition}". Evaluate this script within its own tradition's narrative grammar, not Hollywood defaults.\n` 
+    : '';
+
   if (isFallbackMode && rawScriptText) {
     return `
 SCRIPT: "${script.title}"
@@ -2957,7 +2961,7 @@ Type: ${script.script_type}
 Genre: ${script.genre || 'Not specified'}
 Page Count: ${script.page_count || 'Unknown'}
 ${script.logline ? `Logline: ${script.logline}` : ''}
-
+${traditionLine}
 ⚠️ ANALYSIS MODE: Fallback (structured parsing incomplete)
 The script structure could not be fully extracted. Analysis is based on raw script text.
 Results may be less precise than normal analysis.
@@ -2981,7 +2985,7 @@ Type: ${script.script_type}
 Genre: ${script.genre || 'Not specified'}
 Page Count: ${script.page_count || 'Unknown'}
 ${script.logline ? `Logline: ${script.logline}` : ''}
-
+${traditionLine}
 CHARACTERS (${characters.length} total):
 ${charList || 'No character data extracted'}
 
