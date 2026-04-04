@@ -1069,6 +1069,7 @@ export type Database = {
       }
       scripts: {
         Row: {
+          cinema_tradition: string | null
           created_at: string
           episode_length_class: string | null
           file_size_bytes: number | null
@@ -1087,6 +1088,7 @@ export type Database = {
           uploaded_by: string
         }
         Insert: {
+          cinema_tradition?: string | null
           created_at?: string
           episode_length_class?: string | null
           file_size_bytes?: number | null
@@ -1105,6 +1107,7 @@ export type Database = {
           uploaded_by: string
         }
         Update: {
+          cinema_tradition?: string | null
           created_at?: string
           episode_length_class?: string | null
           file_size_bytes?: number | null

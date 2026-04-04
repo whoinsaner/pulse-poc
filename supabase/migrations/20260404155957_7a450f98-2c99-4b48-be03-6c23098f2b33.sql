@@ -1,0 +1,1 @@
+ALTER TABLE public.scripts ADD COLUMN cinema_tradition text DEFAULT NULL;
