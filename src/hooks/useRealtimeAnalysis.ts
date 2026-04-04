@@ -120,7 +120,7 @@ export function useRealtimeAnalysis({
           const updated: AnalysisRun = {
             ...prev,
             ...data,
-            agent_progress: data.agent_progress as Record<string, AgentProgress> | null,
+            agent_progress: data.agent_progress as unknown as Record<string, AgentProgress> | null,
             scripts: prev?.scripts,
           };
 
