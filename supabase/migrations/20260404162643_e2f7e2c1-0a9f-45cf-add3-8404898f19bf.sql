@@ -1,0 +1,1 @@
+DROP POLICY "Users can view share by valid token" ON public.report_shares;
