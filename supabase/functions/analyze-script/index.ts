@@ -114,7 +114,9 @@ const SYSTEM_AGENTS = new Set([
 
 // Agents that require deeper reasoning (complex tier)
 const COMPLEX_AGENTS = new Set([
+  'StructureAgent',
   'CharacterAgent',
+  'ConflictAgent',
   'ThemeAgent',
   'DialogueAgent',
   'EmotionalArcAgent',
