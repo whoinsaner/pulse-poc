@@ -2197,7 +2197,7 @@ serve(async (req) => {
     const isEpisodic = ['web_series', 'pilot', 'episode', 'micro_drama'].includes(scriptType);
     
     // Agent categories
-    const systemAgents = ['IntakeNormalizerAgent', 'ScriptTypeClassifierAgent', 'ClassifierArbitrationAgent', 'MultiTypeBlendingAgent'];
+    const systemAgents = ['IntakeNormalizerAgent', 'ScriptTypeClassifierAgent', 'ClassifierArbitrationAgent', 'MultiTypeBlendingAgent', 'CinemaTraditionAgent'];
     const coreAgents = ['ConceptAgent', 'StructureAgent', 'CharacterAgent', 'ConflictAgent', 'ThemeAgent', 'DialogueAgent', 'WorldLogicAgent', 'EmotionalArcAgent', 'MarketAgent', 'ExecutionAgent'];
     const comicAgents = ['PanelFlowAgent', 'LetteringBalloonAgent', 'PageTurnImpactAgent', 'ArtScriptSynergyAgent'];
     const webSeriesAgents = ['WebSeriesAgent'];
