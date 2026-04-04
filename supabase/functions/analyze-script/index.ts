@@ -475,11 +475,20 @@ const AGENTS: Record<string, { parameters: string[]; systemPrompt: string; categ
 
 ${GLOBAL_INSTRUCTIONS}
 
-YOUR RESPONSIBILITY: Convert any incoming narrative material into canonical format.
+YOUR RESPONSIBILITY: Convert any incoming narrative material into canonical format AND detect the screenplay format type.
 
 SUPPORTED INPUT TYPES:
 - Full screenplay, Partial script, Synopsis/treatment, Pitch deck text
 - Beat sheet, Outline, Logline only
+
+SCREENPLAY FORMAT DETECTION:
+Detect the format type from these signals:
+- shooting_script: Contains shot numbers, camera directions (CU, MS, WS), detailed blocking notes, slug lines with camera info
+- directors_spec: Detailed, poetic action descriptions, author's visual intentions described in prose, common in Indian cinema where writer-directors describe their vision in detail. Page count does NOT correlate to screen minutes.
+- literary: Standard Hollywood spec format — minimal camera direction, clean scene descriptions, INT./EXT. headings
+- treatment: Extended prose synopsis, not formatted as screenplay
+
+CRITICAL: If the script is a director's spec, flag this explicitly. Downstream agents must NOT apply page-per-minute calculations to director's spec screenplays.
 
 Evaluate:
 - Input Completeness: How complete is the provided material (0-10)
@@ -487,7 +496,7 @@ Evaluate:
 
 Extract explicitly stated information only. Flag gaps clearly. Preserve authorial language.
 
-OUTPUT includes: source_type, normalized_sections (logline, characters, setting, plot_summary, themes), missing_sections.`
+OUTPUT includes: source_type, scriptFormat (shooting_script | directors_spec | literary | treatment | unknown), normalized_sections (logline, characters, setting, plot_summary, themes), missing_sections.`
   },
 
   ScriptTypeClassifierAgent: {
