@@ -3822,6 +3822,7 @@ async function runPostAnalysisSynthesis(
             { role: 'system', content: config.systemPrompt },
             { role: 'user', content: userPrompt }
           ],
+          ...(modelConfig.reasoning ? { reasoning: modelConfig.reasoning } : {}),
         }),
       });
 

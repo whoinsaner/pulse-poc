@@ -559,6 +559,54 @@ export function ScriptUpload({ onUploadComplete, onClose }: ScriptUploadProps) {
             </div>
           )}
 
+          {/* Cinema Tradition */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium">Cinema Tradition</label>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  <p className="text-sm">
+                    Specifying the cinema tradition ensures the analysis respects your script's 
+                    narrative grammar — interval placement, closure models, protagonist architecture, 
+                    and cultural conventions — instead of defaulting to Hollywood standards.
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
+            <select
+              value={cinemaTradition}
+              onChange={(e) => setCinemaTradition(e.target.value)}
+              className="w-full px-4 py-2 rounded-lg bg-secondary border border-border focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary text-sm"
+            >
+              <option value="auto_detect">Auto-Detect (recommended)</option>
+              <optgroup label="North America">
+                <option value="hollywood_mainstream">Hollywood (mainstream studio)</option>
+                <option value="hollywood_indie">Indie / A24</option>
+              </optgroup>
+              <optgroup label="South Asia">
+                <option value="kollywood">Kollywood / Tamil</option>
+                <option value="bollywood">Bollywood / Hindi</option>
+                <option value="tollywood">Tollywood / Telugu</option>
+              </optgroup>
+              <optgroup label="East Asia">
+                <option value="korean">Korean</option>
+                <option value="japanese">Japanese</option>
+                <option value="chinese">Chinese</option>
+              </optgroup>
+              <optgroup label="Other">
+                <option value="european_arthouse">European Arthouse</option>
+                <option value="latin_american">Latin American</option>
+                <option value="african">African</option>
+                <option value="middle_eastern">Middle Eastern</option>
+                <option value="southeast_asian">Southeast Asian</option>
+                <option value="other">Other</option>
+              </optgroup>
+            </select>
+          </div>
+
           {/* Mismatch prompt */}
           {showMismatchPrompt && mismatchDetectedType && (
             <Card className="p-4 border-primary/30 bg-primary/5">
