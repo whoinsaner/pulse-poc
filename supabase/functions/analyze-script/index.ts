@@ -145,6 +145,7 @@ interface ModelConfig {
   maxRetries: number;
   retryDelayMs: number;
   temperature?: number;
+  reasoning?: { effort: string };
 }
 
 // Helper to check if a value is a UUID (custom config)
