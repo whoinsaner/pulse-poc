@@ -67,6 +67,7 @@ export function ScriptUpload({ onUploadComplete, onClose }: ScriptUploadProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [detectedFormat, setDetectedFormat] = useState<ScriptFormat | null>(null);
   const [scriptType, setScriptType] = useState<ScriptType>('feature');
+  const [cinemaTradition, setCinemaTradition] = useState<string>('auto_detect');
   const [episodeLengthClass, setEpisodeLengthClass] = useState<EpisodeLengthClass>('mid_form_web');
   const [title, setTitle] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -288,7 +289,8 @@ export function ScriptUpload({ onUploadComplete, onClose }: ScriptUploadProps) {
           uploaded_by: user.id,
           file_size_bytes: selectedFile.size,
           episode_length_class: isWebSeries ? episodeLengthClass : null,
-        })
+          cinema_tradition: cinemaTradition !== 'auto_detect' ? cinemaTradition : null,
+        } as any)
         .select()
         .single();
 

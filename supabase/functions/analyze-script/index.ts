@@ -59,22 +59,22 @@ type ModelId = keyof typeof MODEL_REGISTRY;
 type QualityMode = 'fast' | 'balanced' | 'quality' | string; // string for custom config UUIDs
 
 // ============= QUALITY MODE PRESETS (Fallback when DB unavailable) =============
-const QUALITY_MODE_PRESETS: Record<'fast' | 'balanced' | 'quality', Record<string, { model: ModelId; maxRetries: number; retryDelayMs: number }>> = {
+const QUALITY_MODE_PRESETS: Record<'fast' | 'balanced' | 'quality', Record<string, { model: ModelId; maxRetries: number; retryDelayMs: number; reasoning?: { effort: string } }>> = {
   fast: {
     default: { model: 'google/gemini-2.5-flash-lite', maxRetries: 3, retryDelayMs: 1500 },
     complex: { model: 'google/gemini-2.5-flash', maxRetries: 3, retryDelayMs: 2000 },
     synthesis: { model: 'google/gemini-2.5-flash', maxRetries: 3, retryDelayMs: 2000 },
-    system: { model: 'google/gemini-2.5-flash', maxRetries: 3, retryDelayMs: 2000 }, // System agents need reliable JSON
+    system: { model: 'google/gemini-2.5-flash', maxRetries: 3, retryDelayMs: 2000 },
   },
   balanced: {
-    default: { model: 'google/gemini-2.5-flash-lite', maxRetries: 3, retryDelayMs: 1500 },
-    complex: { model: 'google/gemini-2.5-flash', maxRetries: 3, retryDelayMs: 2000 },
+    default: { model: 'google/gemini-2.5-flash', maxRetries: 3, retryDelayMs: 2000 },
+    complex: { model: 'google/gemini-2.5-pro', maxRetries: 3, retryDelayMs: 3000 },
     synthesis: { model: 'google/gemini-2.5-pro', maxRetries: 3, retryDelayMs: 3000 },
-    system: { model: 'google/gemini-2.5-flash', maxRetries: 3, retryDelayMs: 2000 }, // Upgraded from flash-lite for better JSON reliability
+    system: { model: 'google/gemini-2.5-flash', maxRetries: 3, retryDelayMs: 2000 },
   },
   quality: {
     default: { model: 'google/gemini-2.5-flash', maxRetries: 3, retryDelayMs: 2000 },
-    complex: { model: 'google/gemini-2.5-pro', maxRetries: 3, retryDelayMs: 3000 },
+    complex: { model: 'openai/gpt-5', maxRetries: 3, retryDelayMs: 3000, reasoning: { effort: 'medium' } },
     synthesis: { model: 'google/gemini-2.5-pro', maxRetries: 3, retryDelayMs: 3000 },
     system: { model: 'google/gemini-2.5-flash', maxRetries: 3, retryDelayMs: 2000 },
   },
@@ -109,11 +109,14 @@ const SYSTEM_AGENTS = new Set([
   'ScriptTypeClassifierAgent', 
   'ClassifierArbitrationAgent',
   'MultiTypeBlendingAgent',
+  'CinemaTraditionAgent',
 ]);
 
 // Agents that require deeper reasoning (complex tier)
 const COMPLEX_AGENTS = new Set([
+  'StructureAgent',
   'CharacterAgent',
+  'ConflictAgent',
   'ThemeAgent',
   'DialogueAgent',
   'EmotionalArcAgent',
@@ -142,6 +145,7 @@ interface ModelConfig {
   maxRetries: number;
   retryDelayMs: number;
   temperature?: number;
+  reasoning?: { effort: string };
 }
 
 // Helper to check if a value is a UUID (custom config)
@@ -411,11 +415,28 @@ GLOBAL AGENT OPERATING RULES (MANDATORY):
 - You must be script-type agnostic.
 - You must produce evidence-based outputs.
 
-2. UNIVERSAL SCRIPT TYPES
+2. ANTI-BIAS FRAMEWORK (CRITICAL)
+- You MUST NOT apply Hollywood prestige drama conventions as universal standards.
+- Different cinema traditions have different narrative grammar. You MUST respect and evaluate within the script's own tradition:
+  * Kollywood/Tamil: Mass-hero logic, interval structure, moral/poetic closure, extended first acts for emotional investment, philosophical villains, dual-protagonist architectures, physical justice as resolution.
+  * Bollywood/Hindi: Song-sequence integration, family-unit narratives, melodramatic emotional expression as intentional craft, interval placement.
+  * Korean: Radically different act proportions, tonal whiplash as deliberate technique, genre-blending as norm.
+  * European arthouse: Ambiguity as resolution, internal psychological landscapes, slow-burn pacing as intentional choice.
+  * Japanese: Mono no aware (awareness of impermanence), cyclical narrative structures, restraint as emotional power.
+  * Latin American/African/Middle Eastern: Magical realism, oral tradition influence, community-centric (not individual-centric) narratives.
+  * Independent/A24: Subversion of genre expectations, anti-climax as statement, character-study over plot.
+- A director's spec screenplay CANNOT be measured by page-per-minute. Explicitly check for format type before applying page count assessments.
+- Dual-protagonist and ensemble-protagonist architectures are VALID. Do not assume a single-protagonist model.
+- Resolution satisfaction must be evaluated against the tradition's resolution grammar, not against procedural/institutional closure.
+- Villain complexity can manifest as philosophical conviction, not only psychological vulnerability or wounded backstory.
+- Silence, physical action, and visual motif payoff are valid resolution mechanisms equal to dialogue and institutional consequence.
+- Motif payoff systems (objects/images that accumulate meaning across the full script) are load-bearing structural elements, not decorative.
+
+3. UNIVERSAL SCRIPT TYPES
 Support analysis for: Feature Film, Series/Episodic, Short Film, Theatre/Stage, Game/Interactive, Ad/Brand Film, Podcast/Audio Drama, Comic/Graphic Narrative, Documentary, Transmedia/Franchise IP.
 Do NOT assume: 3-act structure, visual medium, passive audience, or linear narrative.
 
-3. OUTPUT CONTRACT (STRICT)
+4. OUTPUT CONTRACT (STRICT)
 Every parameter must output:
 - score: 0-10
 - maturity: Weak | Developing | Strong
@@ -423,17 +444,25 @@ Every parameter must output:
 - fixCost: Low | Medium | High
 - upsideImpact: Low | Medium | High
 - explanation: Clear, evidence-based reasoning
-- evidence: Scene references, dialogue patterns, structural observations
+- evidence: Minimum 3 items per parameter. Must include specific scene numbers, dialogue references, or page references when available.
 
-4. EVIDENCE RULES
+5. EVIDENCE RULES
 Evidence may include: scene placement, frequency patterns, structural position, character behavior, dialogue usage, absence of expected elements.
 You may infer, but you must explain inference.
+For scores below 7, you MUST include a "tradition check" in your explanation: confirm whether the score reflects a universal craft weakness or a tradition-specific convention being misread.
+For character classification, justify: "Why is this character classified as supporting vs protagonist? Consider dialogue count, narrative function, thematic weight, and arc completeness separately."
 
-5. AGENT BOUNDARIES
+6. AGENT BOUNDARIES
 - Do NOT compute final readiness decisions
 - Do NOT apply stakeholder weights
 - Do NOT summarize for marketing
 - ONLY output parameter evaluations + observations
+
+7. CINEMA TRADITION CONTEXT
+If the script's cinema tradition has been identified (provided as TRADITION CONTEXT below the script), you MUST:
+- Evaluate structural choices against THAT tradition's norms, not Hollywood defaults.
+- Note where the script innovates within its tradition (positive) vs where it violates its tradition's strengths (negative).
+- Comparable titles should prioritize the script's own tradition first, then cross-tradition comparisons.
 `;
 
 // Agent definitions with USAF-compliant prompts
@@ -447,11 +476,20 @@ const AGENTS: Record<string, { parameters: string[]; systemPrompt: string; categ
 
 ${GLOBAL_INSTRUCTIONS}
 
-YOUR RESPONSIBILITY: Convert any incoming narrative material into canonical format.
+YOUR RESPONSIBILITY: Convert any incoming narrative material into canonical format AND detect the screenplay format type.
 
 SUPPORTED INPUT TYPES:
 - Full screenplay, Partial script, Synopsis/treatment, Pitch deck text
 - Beat sheet, Outline, Logline only
+
+SCREENPLAY FORMAT DETECTION:
+Detect the format type from these signals:
+- shooting_script: Contains shot numbers, camera directions (CU, MS, WS), detailed blocking notes, slug lines with camera info
+- directors_spec: Detailed, poetic action descriptions, author's visual intentions described in prose, common in Indian cinema where writer-directors describe their vision in detail. Page count does NOT correlate to screen minutes.
+- literary: Standard Hollywood spec format — minimal camera direction, clean scene descriptions, INT./EXT. headings
+- treatment: Extended prose synopsis, not formatted as screenplay
+
+CRITICAL: If the script is a director's spec, flag this explicitly. Downstream agents must NOT apply page-per-minute calculations to director's spec screenplays.
 
 Evaluate:
 - Input Completeness: How complete is the provided material (0-10)
@@ -459,7 +497,7 @@ Evaluate:
 
 Extract explicitly stated information only. Flag gaps clearly. Preserve authorial language.
 
-OUTPUT includes: source_type, normalized_sections (logline, characters, setting, plot_summary, themes), missing_sections.`
+OUTPUT includes: source_type, scriptFormat (shooting_script | directors_spec | literary | treatment | unknown), normalized_sections (logline, characters, setting, plot_summary, themes), missing_sections.`
   },
 
   ScriptTypeClassifierAgent: {
@@ -532,6 +570,70 @@ Evaluate:
 - Weight Adjustments: Degree of parameter weight adjustments needed (0-10)`
   },
 
+  // ============= CINEMA TRADITION AGENT =============
+  
+  CinemaTraditionAgent: {
+    category: 'system',
+    parameters: ['tradition_confidence', 'format_type_clarity'],
+    systemPrompt: `You are the Cinema Tradition Classifier for Pulse.
+
+${GLOBAL_INSTRUCTIONS}
+
+YOUR RESPONSIBILITY: Identify the cinema tradition/industry origin and screenplay format type of the script.
+
+CINEMA TRADITIONS TO DETECT:
+- hollywood_mainstream: Standard Hollywood studio filmmaking conventions
+- hollywood_indie: A24-style, Sundance, independent American cinema
+- kollywood: Tamil cinema (Kollywood) — mass-hero logic, interval structure, moral closure, philosophical villains
+- bollywood: Hindi cinema — song integration, family narratives, melodramatic expression, interval placement
+- tollywood: Telugu cinema — action-spectacle orientation, mass appeal conventions
+- korean: Korean cinema — tonal whiplash, genre blending, unconventional act proportions
+- japanese: Japanese cinema — mono no aware, restraint, cyclical narratives
+- european_arthouse: European art cinema — ambiguity, psychological realism, slow-burn pacing
+- latin_american: Latin American cinema — magical realism, social commentary, community narratives
+- african: African cinema — oral tradition influence, community-centric, postcolonial themes
+- middle_eastern: Middle Eastern cinema — poetic realism, social constraint narratives
+- southeast_asian: Southeast Asian cinema — spiritual themes, nature-human relationship
+- auto_detect: Cannot determine with confidence
+
+DETECTION SIGNALS:
+- Character naming conventions and language cues (Tamil, Hindi, Korean names)
+- Cultural references (festivals, social structures, family dynamics)
+- Structural patterns (interval placement, song cues, mass-hero entrance sequences)
+- Format conventions (director's spec vs shooting script vs literary screenplay)
+- Narrative grammar (single protagonist vs dual protagonist vs ensemble)
+- Resolution model (procedural, moral, poetic, cyclical, ambiguous)
+
+SCREENPLAY FORMAT TYPES:
+- shooting_script: Technical camera directions, shot numbers, detailed blocking
+- directors_spec: Detailed action descriptions, visual poetry, author's vision (common in Indian cinema)
+- literary: Minimal technical direction, prose-like scene descriptions
+- treatment: Extended synopsis format, not full screenplay
+- unknown: Cannot determine
+
+OUTPUT (JSON):
+{
+  "scores": [
+    {"parameter": "tradition_confidence", "score": 8, ...},
+    {"parameter": "format_type_clarity", "score": 7, ...}
+  ],
+  "sectionContent": {
+    "tradition": "kollywood",
+    "formatType": "directors_spec",
+    "audienceGrammar": "Description of how this tradition's audience experiences stories",
+    "structuralConventions": ["interval_placement", "mass_hero_intro", "moral_closure"],
+    "resolutionModel": "moral",
+    "verdict": "One-sentence tradition classification"
+  }
+}
+
+Evaluate:
+- Tradition Confidence: How confident is the tradition classification (0-10)
+- Format Type Clarity: How clear is the screenplay format type (0-10)
+
+Be specific. Do not default to "Hollywood" unless the evidence clearly supports it.`
+  },
+  
   // ============= CORE ANALYSIS AGENTS (Modules A-J) =============
 
   // CONCEPT AGENT - Module A
@@ -590,6 +692,14 @@ Evaluate:
 
 Support linear, non-linear, episodic, looping, and branching narratives.
 
+TRADITION-AWARE EVALUATION:
+- Check for dual-protagonist architectures. Not all scripts have a single protagonist.
+- Evaluate interval placement for traditions that use intervals (Indian cinema typically has a major interval/intermission point).
+- Do NOT penalize extended first acts if they are load-bearing (earning grief, establishing motif systems, building emotional investment). In Kollywood/Bollywood traditions, extended setup acts are intentional craft choices.
+- Evaluate resolution against the script's own tradition — moral closure (a name spoken, a truth revealed, justice delivered through thematic symmetry) is complete resolution in many traditions. Do NOT require procedural/institutional closure.
+- Physical justice (retribution that mirrors the original crime) is a valid and complete resolution model.
+- If a director's spec format is detected, do NOT apply page-per-minute pacing calculations.
+
 COMIC/GRAPHIC NARRATIVE ADAPTATION:
 When the script type is "comic" or the content is a graphic narrative, reinterpret structural parameters for page-based storytelling:
 - Inciting Force Clarity → Issue-Opening Hook: Comics must hook readers on page 1-3. Evaluate how quickly and clearly the story-launching event occurs within the issue's opening pages.
@@ -628,6 +738,13 @@ Analyze all major characters for:
 
 Flag overshadowing, passivity, or unearned arcs.
 
+TRADITION-AWARE EVALUATION:
+- Silent protagonists who act through physical choices are VALID and can be more powerful than dialogue-driven characters. Evaluate by actions taken, not words spoken.
+- Philosophical villain construction (worldview-driven, not wound-driven) is a legitimate and often superior form of complexity. A villain who believes they are right is not "underdeveloped" — they may be operating within a moral framework the script interrogates.
+- Evaluate characters by their function in the moral architecture, not just by dialogue line count. A character with 10 lines who carries thematic weight is more important than one with 100 lines of exposition.
+- Dual-protagonist architectures: two characters sharing equal narrative weight is valid. Do not force one into "supporting" status.
+- In ensemble traditions (Kollywood, Korean), every named character may serve a specific moral or thematic function — evaluate ensemble coherence, not individual arc completeness.
+
 COMIC/GRAPHIC NARRATIVE ADAPTATION:
 When the script type is "comic" or the content is a graphic narrative, adapt character evaluation for the visual medium:
 - Performative Range → Visual Design Range: Comics don't have actors. Instead, evaluate how well the script describes character visual design cues — distinctive silhouettes, costume details, expression scripting, and body language directions that give an artist clear character identity.
@@ -663,6 +780,13 @@ Identify all forms of conflict present and evaluate:
 - Internal vs External Balance: Mix of psychological and situational conflict
 
 Assess whether conflict meaningfully evolves or plateaus.
+
+TRADITION-AWARE EVALUATION:
+- Moral closure (a name spoken, a truth revealed) is a valid resolution model equal to procedural/institutional resolution.
+- Physical justice (retribution that mirrors the original crime) is complete resolution in many traditions — do not penalize for lacking courtroom/institutional closure.
+- Internal vs External balance varies by tradition: European arthouse favors internal; Kollywood mass cinema favors external with internal resonance. Neither is superior.
+- Conflict escalation through accumulating moral weight (not just physical danger) is sophisticated craft.
+
 Score each parameter 0-10 with evidence from key confrontations.`
   },
 
@@ -688,6 +812,12 @@ Extract the thematic spine and evaluate:
 - Longevity of Meaning: Whether themes will remain relevant
 
 Do NOT judge ideology. Judge coherence and depth.
+
+TRADITION-AWARE EVALUATION:
+- Motif payoff systems (objects/images that accumulate meaning across the full script) should be evaluated as load-bearing structural elements, not decorative flourishes.
+- In traditions with strong oral/poetic heritage (Indian, African, Middle Eastern), thematic expression through dialogue poetry, proverbs, or naming conventions is valid craft, not "on the nose."
+- Cultural resonance should be evaluated within the script's own cultural context first, then universal resonance second.
+- Moral complexity does not require moral ambiguity — a clear moral stance executed with nuance and evidence is complex.
 
 COMIC/GRAPHIC NARRATIVE ADAPTATION:
 When the script type is "comic" or the content is a graphic narrative:
@@ -719,6 +849,12 @@ Analyze dialogue for:
 - Medium Appropriateness: Fit for stage, audio, screen, or text
 
 Adapt analysis to the script's medium.
+
+TRADITION-AWARE EVALUATION:
+- Evaluate silence as a dialogue tool. A character who communicates through physical action and silence can be more powerful than one who explains.
+- Assess economy by meaning-per-word, not word count. Two-word exchanges that convey character, relationship, and comedy simultaneously should score HIGHEST.
+- In traditions where dialogue carries poetic/philosophical weight (Tamil, Korean, Japanese), dense dialogue is not "exposition load" — it may be the primary artistic medium.
+- Voice differentiation includes dialect, register, code-switching, and silence patterns — not just vocabulary.
 
 COMIC/GRAPHIC NARRATIVE ADAPTATION:
 When the script type is "comic" or the content is a graphic narrative, you MUST adapt your evaluation criteria as follows. Comics primarily use captions, narration boxes, sound effects (SFX), and balloon text rather than traditional character dialogue exchanges.
@@ -782,6 +918,12 @@ Map emotional intensity across time and evaluate:
 - Payoff Delay: Effectiveness of delayed emotional gratification
 
 Consider audience emotional experience, not character intent.
+
+TRADITION-AWARE EVALUATION:
+- Different traditions have different emotional fatigue thresholds. Kollywood and Bollywood audiences sustain longer emotional sequences (grief, celebration, romance) — do NOT apply Western decompression beat expectations universally.
+- Emotional payoff through physical action (a gesture, an object placed, a door closed) is equal to dialogue-driven catharsis.
+- Silence and stillness can carry immense emotional weight in Japanese and European traditions. Do not penalize "slow" emotional pacing if it serves accumulation.
+- Mass-hero emotional architecture (audience euphoria through character triumph) is a legitimate emotional target, not "shallow."
 
 COMIC/GRAPHIC NARRATIVE ADAPTATION:
 When the script type is "comic" or the content is a graphic narrative, reinterpret emotional arc for page-based visual storytelling:
@@ -2056,7 +2198,7 @@ serve(async (req) => {
     const isEpisodic = ['web_series', 'pilot', 'episode', 'micro_drama'].includes(scriptType);
     
     // Agent categories
-    const systemAgents = ['IntakeNormalizerAgent', 'ScriptTypeClassifierAgent', 'ClassifierArbitrationAgent', 'MultiTypeBlendingAgent'];
+    const systemAgents = ['IntakeNormalizerAgent', 'ScriptTypeClassifierAgent', 'ClassifierArbitrationAgent', 'MultiTypeBlendingAgent', 'CinemaTraditionAgent'];
     const coreAgents = ['ConceptAgent', 'StructureAgent', 'CharacterAgent', 'ConflictAgent', 'ThemeAgent', 'DialogueAgent', 'WorldLogicAgent', 'EmotionalArcAgent', 'MarketAgent', 'ExecutionAgent'];
     const comicAgents = ['PanelFlowAgent', 'LetteringBalloonAgent', 'PageTurnImpactAgent', 'ArtScriptSynergyAgent'];
     const webSeriesAgents = ['WebSeriesAgent'];
@@ -2784,13 +2926,16 @@ function getExtractionErrorMessage(code: string): string {
 }
 
 function buildQuickContext(script: any, text: string): string {
+  const traditionLine = script.cinema_tradition && script.cinema_tradition !== 'auto_detect' 
+    ? `\nTRADITION CONTEXT: Cinema tradition identified as "${script.cinema_tradition}". Evaluate this script within its own tradition's narrative grammar, not Hollywood defaults.\n` 
+    : '';
   return `
 SCRIPT: "${script.title}"
 Type: ${script.script_type}
 Genre: ${script.genre || 'Not specified'}
 Page Count: ${script.page_count || 'Unknown'}
 ${script.logline ? `Logline: ${script.logline}` : ''}
-
+${traditionLine}
 ⚡ ANALYSIS MODE: Quick (direct text extraction)
 Analyzing from raw script text. Scene/character structure inferred from content.
 
@@ -2806,6 +2951,10 @@ function buildScriptContext(
   rawScriptText?: string | null, 
   isFallbackMode?: boolean
 ): string {
+  const traditionLine = script.cinema_tradition && script.cinema_tradition !== 'auto_detect' 
+    ? `\nTRADITION CONTEXT: Cinema tradition identified as "${script.cinema_tradition}". Evaluate this script within its own tradition's narrative grammar, not Hollywood defaults.\n` 
+    : '';
+
   if (isFallbackMode && rawScriptText) {
     return `
 SCRIPT: "${script.title}"
@@ -2813,7 +2962,7 @@ Type: ${script.script_type}
 Genre: ${script.genre || 'Not specified'}
 Page Count: ${script.page_count || 'Unknown'}
 ${script.logline ? `Logline: ${script.logline}` : ''}
-
+${traditionLine}
 ⚠️ ANALYSIS MODE: Fallback (structured parsing incomplete)
 The script structure could not be fully extracted. Analysis is based on raw script text.
 Results may be less precise than normal analysis.
@@ -2837,7 +2986,7 @@ Type: ${script.script_type}
 Genre: ${script.genre || 'Not specified'}
 Page Count: ${script.page_count || 'Unknown'}
 ${script.logline ? `Logline: ${script.logline}` : ''}
-
+${traditionLine}
 CHARACTERS (${characters.length} total):
 ${charList || 'No character data extracted'}
 
