@@ -912,6 +912,12 @@ Map emotional intensity across time and evaluate:
 
 Consider audience emotional experience, not character intent.
 
+TRADITION-AWARE EVALUATION:
+- Different traditions have different emotional fatigue thresholds. Kollywood and Bollywood audiences sustain longer emotional sequences (grief, celebration, romance) — do NOT apply Western decompression beat expectations universally.
+- Emotional payoff through physical action (a gesture, an object placed, a door closed) is equal to dialogue-driven catharsis.
+- Silence and stillness can carry immense emotional weight in Japanese and European traditions. Do not penalize "slow" emotional pacing if it serves accumulation.
+- Mass-hero emotional architecture (audience euphoria through character triumph) is a legitimate emotional target, not "shallow."
+
 COMIC/GRAPHIC NARRATIVE ADAPTATION:
 When the script type is "comic" or the content is a graphic narrative, reinterpret emotional arc for page-based visual storytelling:
 - Emotional Timing → Page-Based Emotional Beats: Comics deliver emotion through splash pages, wordless sequences, and page-turn reveals. Evaluate whether emotional peaks are placed at page-turn moments (right-hand pages) and whether the script uses full-page or double-page spreads for maximum emotional impact.
