@@ -812,6 +812,12 @@ Extract the thematic spine and evaluate:
 
 Do NOT judge ideology. Judge coherence and depth.
 
+TRADITION-AWARE EVALUATION:
+- Motif payoff systems (objects/images that accumulate meaning across the full script) should be evaluated as load-bearing structural elements, not decorative flourishes.
+- In traditions with strong oral/poetic heritage (Indian, African, Middle Eastern), thematic expression through dialogue poetry, proverbs, or naming conventions is valid craft, not "on the nose."
+- Cultural resonance should be evaluated within the script's own cultural context first, then universal resonance second.
+- Moral complexity does not require moral ambiguity — a clear moral stance executed with nuance and evidence is complex.
+
 COMIC/GRAPHIC NARRATIVE ADAPTATION:
 When the script type is "comic" or the content is a graphic narrative:
 - Symbol/Motif Consistency: Emphasize visual symbols — recurring imagery described in panel directions, color scripting notes, visual motifs (repeated compositions, iconic poses, environmental echoes). Comics convey theme through visual repetition as much as dialogue.
