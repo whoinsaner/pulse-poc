@@ -27,6 +27,7 @@ interface AnalysisTriggerProps {
   scriptType?: ScriptType;
   resumeRunId?: string;
   onAnalysisComplete?: (analysisRunId: string) => void;
+  onCancel?: () => void;
 }
 
 // USAF Agent definitions with modules
