@@ -75,6 +75,25 @@ export default function ProtagonistAnalysis() {
     return Math.round(protagonistParams.reduce((sum, p) => sum + p.score, 0) / protagonistParams.length);
   }, [protagonistParams, reportData.categoryScores, currentScore]);
 
+  // Derive dimension scores from actual parameter data
+  const getParamScore = (keywords: string[]) => {
+    const allParams = reportData.parameterScores || [];
+    const matched = allParams.filter(p => 
+      keywords.some(k => p.parameterName?.toLowerCase().includes(k) || p.displayName?.toLowerCase().includes(k))
+    );
+    return matched.length > 0 
+      ? Math.round(matched.reduce((sum, p) => sum + p.score, 0) / matched.length)
+      : Math.round(sectionScore);
+  };
+
+  const dimensionScores = {
+    empathy: getParamScore(['empathy', 'relatab', 'likab', 'audience']),
+    complexity: getParamScore(['complex', 'depth', 'dimension', 'psychology']),
+    agency: getParamScore(['agency', 'active', 'drive', 'motivation']),
+    growth: getParamScore(['arc', 'growth', 'transform', 'change']),
+  };
+  const avgDimension = Math.round((dimensionScores.empathy + dimensionScores.complexity + dimensionScores.agency + dimensionScores.growth) / 4);
+
   const filteredParams = filterParameters(protagonistParams);
   const filterStats = getFilterStats(protagonistParams);
   const basePath = window.location.pathname.split('/characters')[0];
