@@ -3,7 +3,6 @@ import { useOutletContext } from 'react-router-dom';
 import { ReportData, StakeholderLens } from '@/types/database';
 
 import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { 
   SectionHeader, 
   SubSectionHeader,
@@ -11,9 +10,10 @@ import {
   WeightedParameterList,
   DevelopmentFocus,
   ScoreBadge,
+  ScoreDisplay,
 } from '@/components/report/ui';
 import { InlineMaturity } from '@/components/report/ui/MaturityBadge';
-import { Users, MessageSquare, Film, Star } from 'lucide-react';
+import { Users, MessageSquare, Film, Star, Target, Scale, Layers, Shield } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { extractScore } from '@/lib/scoreUtils';
 
