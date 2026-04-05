@@ -1061,7 +1061,7 @@ function renderSection(
 
   // Agent narrative
   const agentKeys = SECTION_AGENT_MAP[sectionId] || [];
-  y = renderAgentNarrative(doc, y, agentKeys, data.agentContent, pageNum, sectionName);
+  y = renderAgentNarrative(doc, y, agentKeys, data.agentContent, pageNum, sectionName, data.parameterScores, data.categoryScores);
 
   // Parameter cards
   y = renderParameterCards(doc, y, sectionId, data.parameterScores || [], pageNum, sectionName);
@@ -1375,7 +1375,7 @@ export async function generateFullReportPDF(
       if (sec.id === 'story-diagnosis') {
         y = renderSectionTitle(doc, y, sec.title, sec.subtitle);
         y = renderDiagnosisOverview(doc, y, ['Concept & Hook', 'Structure', 'Conflict'], data.categoryScores || {}, pageNum, sec.title);
-        y = renderAgentNarrative(doc, y, SECTION_AGENT_MAP[sec.id] || [], data.agentContent, pageNum, sec.title);
+        y = renderAgentNarrative(doc, y, SECTION_AGENT_MAP[sec.id] || [], data.agentContent, pageNum, sec.title, data.parameterScores, data.categoryScores);
       } else {
         y = renderSection(doc, y, sec.id, sec.title, sec.subtitle, data, pageNum);
       }
@@ -1398,7 +1398,7 @@ export async function generateFullReportPDF(
       if (sec.id === 'character-diagnosis') {
         y = renderSectionTitle(doc, y, sec.title, sec.subtitle);
         y = renderDiagnosisOverview(doc, y, ['Character'], data.categoryScores || {}, pageNum, sec.title);
-        y = renderAgentNarrative(doc, y, SECTION_AGENT_MAP[sec.id] || [], data.agentContent, pageNum, sec.title);
+        y = renderAgentNarrative(doc, y, SECTION_AGENT_MAP[sec.id] || [], data.agentContent, pageNum, sec.title, data.parameterScores, data.categoryScores);
       } else {
         y = renderSection(doc, y, sec.id, sec.title, sec.subtitle, data, pageNum);
       }
@@ -1423,7 +1423,7 @@ export async function generateFullReportPDF(
       if (sec.id === 'craft-diagnosis') {
         y = renderSectionTitle(doc, y, sec.title, sec.subtitle);
         y = renderDiagnosisOverview(doc, y, ['Dialogue', 'Theme', 'World & Logic', 'Emotional Arc'], data.categoryScores || {}, pageNum, sec.title);
-        y = renderAgentNarrative(doc, y, SECTION_AGENT_MAP[sec.id] || [], data.agentContent, pageNum, sec.title);
+        y = renderAgentNarrative(doc, y, SECTION_AGENT_MAP[sec.id] || [], data.agentContent, pageNum, sec.title, data.parameterScores, data.categoryScores);
       } else {
         y = renderSection(doc, y, sec.id, sec.title, sec.subtitle, data, pageNum);
       }
@@ -1508,7 +1508,7 @@ export async function generateFullReportPDF(
 
       // Agent narrative for scene analysis — start on a fresh page if table consumed most of this one
       y = checkBreak(doc, y, 60, pageNum, 'Scene Analysis');
-      y = renderAgentNarrative(doc, y, SECTION_AGENT_MAP['scene-analysis'] || [], data.agentContent, pageNum, 'Scene Analysis');
+      y = renderAgentNarrative(doc, y, SECTION_AGENT_MAP['scene-analysis'] || [], data.agentContent, pageNum, 'Scene Analysis', data.parameterScores, data.categoryScores);
     }
 
     // === PART IV: FORMAT (conditional) ===
@@ -1584,7 +1584,7 @@ export async function generateFullReportPDF(
 
       // Render agent narrative content from SeriesBibleAgent
       const bibleAgentKeys = SECTION_AGENT_MAP['bible'] || [];
-      y = renderAgentNarrative(doc, y, bibleAgentKeys, data.agentContent, pageNum, 'Series Bible');
+      y = renderAgentNarrative(doc, y, bibleAgentKeys, data.agentContent, pageNum, 'Series Bible', data.parameterScores, data.categoryScores);
       y = renderParameterCards(doc, y, 'bible', data.parameterScores || [], pageNum, 'Series Bible');
     }
 
@@ -1606,7 +1606,7 @@ export async function generateFullReportPDF(
       if (sec.id === 'commercial-diagnosis') {
         y = renderSectionTitle(doc, y, sec.title, sec.subtitle);
         y = renderDiagnosisOverview(doc, y, ['Market', 'Execution'], data.categoryScores || {}, pageNum, sec.title);
-        y = renderAgentNarrative(doc, y, SECTION_AGENT_MAP[sec.id] || [], data.agentContent, pageNum, sec.title);
+        y = renderAgentNarrative(doc, y, SECTION_AGENT_MAP[sec.id] || [], data.agentContent, pageNum, sec.title, data.parameterScores, data.categoryScores);
       } else {
         y = renderSection(doc, y, sec.id, sec.title, sec.subtitle, data, pageNum);
       }
