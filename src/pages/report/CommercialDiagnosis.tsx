@@ -9,7 +9,7 @@ import {
   DiagnosisSummary,
 } from '@/components/report/ui';
 import { InlineMaturity } from '@/components/report/ui/MaturityBadge';
-import { TrendingUp, Target, Film, DollarSign, Users } from 'lucide-react';
+import { TrendingUp, Target, Film, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getDiagnosticCategory } from '@/lib/scoreUtils';
 
