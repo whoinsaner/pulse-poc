@@ -92,6 +92,19 @@ export default function StoryDiagnosis() {
         defaultVisibleCount={6}
       />
 
+      {/* Tradition Context */}
+      {reportData.scriptMetadata?.cinemaTradition && reportData.scriptMetadata.cinemaTradition !== 'auto_detect' && (
+        <Card className="p-5 bg-primary/5 border-primary/20">
+          <div className="flex items-center gap-2 mb-2">
+            <BookOpen className="h-4 w-4 text-primary" />
+            <h4 className="font-semibold text-sm">Tradition Context</h4>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            This script was evaluated under <span className="font-medium text-foreground capitalize">{reportData.scriptMetadata.cinemaTradition.replace(/_/g, ' ')}</span> narrative conventions. 
+            Structural expectations, emotional arcs, and pacing benchmarks reflect this tradition's grammar rather than Hollywood defaults.
+          </p>
+        </Card>
+      )}
 
 
       {/* Development Focus */}
