@@ -3920,16 +3920,31 @@ async function runPostAnalysisSynthesis(
   // Use the model config passed from caller
   console.log(`[${agentName}] Using model: ${modelConfig.model}`);
 
-  // Retry logic for empty responses with exponential backoff
+  // Retry logic with separate 429-specific handling
   let content = '';
   let lastStatusCode = 0;
+  const MAX_RATE_LIMIT_RETRIES = 6;
+  const RATE_LIMIT_BACKOFF_CEILING_MS = 30000;
+  let rateLimitRetries = 0;
+  let attempt = 0;
+  const totalMaxAttempts = modelConfig.maxRetries + MAX_RATE_LIMIT_RETRIES + 1;
   
-  for (let attempt = 0; attempt <= modelConfig.maxRetries; attempt++) {
+  while (attempt < totalMaxAttempts) {
     if (attempt > 0) {
-      // Exponential backoff using config's retry delay
-      const delay = modelConfig.retryDelayMs * Math.pow(2, attempt - 1);
-      console.log(`[${agentName}] Retry attempt ${attempt} after ${lastStatusCode === 429 ? 'rate limit' : 'empty response'}, waiting ${delay}ms`);
-      await new Promise(r => setTimeout(r, delay));
+      if (lastStatusCode === 429) {
+        // 429-specific: longer backoff with jitter, capped at ceiling
+        const baseDelay = Math.min(modelConfig.retryDelayMs * Math.pow(2, rateLimitRetries - 1), RATE_LIMIT_BACKOFF_CEILING_MS);
+        const jitter = Math.random() * modelConfig.retryDelayMs;
+        const delay = baseDelay + jitter;
+        console.log(`[${agentName}] Rate limit retry ${rateLimitRetries}/${MAX_RATE_LIMIT_RETRIES}, waiting ${Math.round(delay)}ms`);
+        await new Promise(r => setTimeout(r, delay));
+      } else {
+        // General retry: exponential backoff with jitter
+        const jitter = Math.random() * modelConfig.retryDelayMs;
+        const delay = modelConfig.retryDelayMs * Math.pow(2, attempt - 1) + jitter;
+        console.log(`[${agentName}] Retry attempt ${attempt} after empty response, waiting ${Math.round(delay)}ms`);
+        await new Promise(r => setTimeout(r, delay));
+      }
     }
     
     try {
@@ -3940,7 +3955,7 @@ async function runPostAnalysisSynthesis(
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: modelConfig.model, // Dynamic model from config
+          model: modelConfig.model,
           messages: [
             { role: 'system', content: effectiveSystemPrompt },
             { role: 'user', content: userPrompt }
@@ -3952,10 +3967,12 @@ async function runPostAnalysisSynthesis(
       lastStatusCode = response.status;
       
       if (response.status === 429) {
+        rateLimitRetries++;
         console.log(`[${agentName}] Rate limited (429), will retry`);
-        if (attempt === modelConfig.maxRetries) {
-          throw new Error(`AI API rate limited after ${modelConfig.maxRetries + 1} attempts`);
+        if (rateLimitRetries >= MAX_RATE_LIMIT_RETRIES) {
+          throw new Error(`AI API rate limited after ${rateLimitRetries} rate-limit retries`);
         }
+        attempt++;
         continue;
       }
       
@@ -3967,16 +3984,15 @@ async function runPostAnalysisSynthesis(
       const aiResult = await response.json();
       content = aiResult.choices?.[0]?.message?.content || '';
       
-      // Log content length and first chars for debugging
       console.log(`[${agentName}] AI response length: ${content.length}, starts with: "${content.slice(0, 50).replace(/\n/g, '\\n')}"`);
       
-      // If we got content, break out of retry loop
       if (content && content.trim().length > 0) {
         break;
       }
       
-      if (attempt === modelConfig.maxRetries) {
-        throw new Error(`Empty response from AI after ${modelConfig.maxRetries + 1} attempts`);
+      attempt++;
+      if (attempt >= totalMaxAttempts) {
+        throw new Error(`Empty response from AI after ${attempt} attempts`);
       }
     } catch (fetchErr) {
       console.error(`[${agentName}] Fetch error on attempt ${attempt + 1}:`, fetchErr);
