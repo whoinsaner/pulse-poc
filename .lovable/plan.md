@@ -1,38 +1,31 @@
 
 
-# Plan: Fix Reasoning Flag Not Reaching Edge Function
+# Plan: Fix Reasoning Setting Not Reaching Edge Function
 
-## Problem
-Two bugs prevent the reasoning setting from being sent to the analysis pipeline:
+## Root Cause
+The reasoning setting persists correctly in `localStorage`, but there are two issues:
 
-1. **Resume/retry paths omit reasoning entirely.** `InProgressAnalysis.tsx` (lines 173-180, 215-221) and `ReportLayout.tsx` (line 183-186) invoke `analyze-script` with `resume: true` but never include `reasoningEffort`. This means any resumed or retried analysis always runs with `reasoning: off`.
+1. **Missing code path**: `AnalysisRunHistory.tsx` (the retry-from-history flow) invokes `analyze-script` without `reasoningEffort` at all (line 139-148). This was missed in the previous fix.
 
-2. **Same-tab sync is unreliable.** The `storage` event in `AnalysisTrigger.tsx` only fires for cross-tab changes. When a user toggles reasoning in Settings and navigates back (same tab), the sync relies on the `focus` event, which uses `prev ?? effort` — this won't update if the effort level changed.
+2. **No verification log**: The previous plan included adding a `console.log` at invoke time to show the reasoning value being sent, but it was never implemented. This makes it impossible to confirm whether the client is sending the value.
+
+3. **Origin mismatch risk**: `localStorage` is scoped per browser origin. If the user toggles reasoning on one preview URL and triggers analysis from another (or from the published site), the setting won't be found. Adding a visible indicator on the analysis trigger UI would make this transparent.
 
 ## Changes
 
-### 1. Add `reasoningEffort` to all resume/retry invoke calls
-**File: `src/components/report/InProgressAnalysis.tsx`**
-- In `handleResumeAnalysis` (line ~174) and `handleRetryAgent` (line ~215), read `reasoningEffort` from `localStorage` and include it in the request body:
-  ```
-  reasoningEffort: localStorage.getItem('pulse_reasoning_enabled') === 'true'
-    ? (localStorage.getItem('pulse_reasoning_effort') || 'medium')
-    : null
-  ```
+### 1. Add `reasoningEffort` to AnalysisRunHistory retry path
+**File: `src/components/AnalysisRunHistory.tsx`** (line ~139-148)
+- Read reasoning from `localStorage` and include it in the invoke body, same pattern as the other files.
 
-**File: `src/components/report/ReportLayout.tsx`**
-- Same fix at line ~183 where it invokes `analyze-script` with resume.
+### 2. Add console.log at all invoke sites
+**Files: `AnalysisTrigger.tsx`, `InProgressAnalysis.tsx`, `ReportLayout.tsx`, `AnalysisRunHistory.tsx`**
+- Add `console.log('[analyze-script] Sending reasoningEffort:', reasoningEffort)` just before each invoke call so the browser console confirms what value is being sent.
 
-### 2. Fix same-tab reasoning sync in AnalysisTrigger
+### 3. Show active reasoning state on analysis trigger UI
 **File: `src/components/AnalysisTrigger.tsx`**
-- Change line 115 from `setReasoningEffort(prev => prev ?? effort)` to `setReasoningEffort(effort)` so updated effort levels are always picked up.
-- Read `reasoningEffort` directly from `localStorage` at invoke time (line 401) instead of relying on React state, to guarantee the freshest value. The state is still used for the UI toggle display.
-
-### 3. Add a console log for verification
-Add a log line in `AnalysisTrigger.tsx` at the invoke call showing the reasoning value being sent, so future debugging is easier.
+- Display a small indicator (e.g., a Brain icon + "Reasoning: High") near the analyze button, reading directly from `localStorage` on render. This gives the user immediate visual confirmation that reasoning is active before they click analyze.
 
 ## Technical Details
-- All changes are in 3 frontend files; no edge function or database changes needed
-- The edge function already handles `reasoningEffort` correctly — the bug is purely that the client never sends it in certain code paths
-- The `localStorage` read at invoke time is the safest approach since it eliminates any stale React state issues
+- 4 frontend files changed, no edge function or database changes
+- The `localStorage` reads are already correct; this plan adds the missing code path and diagnostic visibility
 
