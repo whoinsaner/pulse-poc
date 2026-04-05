@@ -3261,7 +3261,7 @@ async function runStandardAnalysis(
     BATCH_SIZE = Math.max(2, BATCH_SIZE - 1);
   }
   
-  console.log(`[analyze-script] Adaptive batching: ${agentCount} agents, batch_size=${BATCH_SIZE}, delay=${BATCH_DELAY_MS}ms`);
+  console.log(`[analyze-script] Adaptive batching: ${agentCount} agents, batch_size=${BATCH_SIZE}, delay=${BATCH_DELAY_MS}ms, stagger=${STAGGER_MS}ms, reasoning=${isReasoning}`);
   
   // Helper to check if an error is retryable
   const isRetryableError = (_error: Error): boolean => {
