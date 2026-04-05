@@ -4049,7 +4049,7 @@ async function updateAgentProgress(
 ) {
   // Optimization 5: Use atomic RPC to eliminate read-then-write race conditions
   try {
-    await supabase.rpc('update_agent_progress', {
+    const { error: rpcError } = await supabase.rpc('update_agent_progress', {
       p_analysis_run_id: analysisRunId,
       p_agent_name: agentName,
       p_status: status,
@@ -4057,6 +4057,7 @@ async function updateAgentProgress(
       p_model: model || null,
       p_section_content: sectionContent ? JSON.parse(JSON.stringify(sectionContent)) : null,
     });
+    if (rpcError) throw rpcError;
   } catch (rpcErr) {
     // Fallback to read-then-write if RPC not available
     console.log(`[updateAgentProgress] RPC fallback for ${agentName}:`, rpcErr);
