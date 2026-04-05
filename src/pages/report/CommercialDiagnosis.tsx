@@ -55,8 +55,6 @@ export default function CommercialDiagnosis() {
     return Math.round(total / commercialParameters.length);
   }, [commercialParameters]);
 
-  // Get development focus items
-
 
 
   // Lens scores for comparison
