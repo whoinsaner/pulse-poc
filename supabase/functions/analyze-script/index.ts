@@ -1059,6 +1059,10 @@ Evaluate commercial and positioning factors:
 
 Do NOT consider budget feasibility (that's ExecutionAgent).
 
+TRADITION-AWARE EVALUATION:
+- When evaluating representation and sensitivity concerns for market risk, distinguish between scripts that endorse stereotypes and scripts that dramatize systems exploiting those stereotypes. A narrative that positions the audience to see a fabrication being constructed is social commentary, not problematic representation.
+- If the script's cinema tradition has been identified, comparable titles should prioritize the script's own tradition first, then cross-tradition comparisons.
+- Director's spec screenplays should NOT be penalized for page count when evaluating platform fit. Page count does NOT equal runtime for this format.
 COMIC/GRAPHIC NARRATIVE ADAPTATION:
 When the script type is "comic" or the content is a graphic narrative, adapt market evaluation for comic-specific distribution and audiences:
 - Platform Fit → Comic Distribution Fit: Evaluate suitability for comic-specific channels: single-issue floppies, trade paperback collections, original graphic novels (OGN), webtoon/vertical scroll, digital-first platforms (ComiXology/GlobalComix), or print-only prestige formats. Do NOT reference theatrical or streaming platforms.
