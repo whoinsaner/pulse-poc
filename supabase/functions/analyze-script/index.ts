@@ -215,6 +215,27 @@ async function getAgentModelConfig(
   return config;
 }
 
+// Apply request-level reasoning override to a model config
+function applyReasoningOverride(
+  config: ModelConfig,
+  agentName: string,
+  reasoningEffort: 'low' | 'medium' | 'high' | null | undefined
+): ModelConfig {
+  // Only apply reasoning to complex agents
+  if (!COMPLEX_AGENTS.has(agentName)) {
+    // Strip any preset reasoning for non-complex agents
+    const { reasoning, ...rest } = config;
+    return rest;
+  }
+  // If reasoning is explicitly provided, override
+  if (reasoningEffort) {
+    return { ...config, reasoning: { effort: reasoningEffort } };
+  }
+  // If null/undefined, strip reasoning entirely
+  const { reasoning, ...rest } = config;
+  return rest;
+}
+
 // ============= AGENT PROMPT CONFIGURATION =============
 
 interface AgentPromptConfig {
