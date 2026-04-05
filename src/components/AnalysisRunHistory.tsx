@@ -314,6 +314,12 @@ export function AnalysisRunHistory({ scriptId, scriptTitle }: AnalysisRunHistory
                               {run.stakeholder_lens.replace('_', ' ')}
                             </Badge>
                           )}
+                          {run.reasoning_effort && (
+                            <Badge variant="outline" className="text-xs gap-1">
+                              <Zap className="h-3 w-3" />
+                              Reasoning: {run.reasoning_effort}
+                            </Badge>
+                          )}
                         </div>
 
                         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
