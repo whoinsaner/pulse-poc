@@ -205,14 +205,14 @@ export default function ReportCover() {
       </Card>
 
       {/* Executive Summary */}
-      {reportData.executiveSummary ? (
+      {report?.executive_summary ? (
         <Card className="p-6">
           <div className="flex items-center gap-2 mb-4">
             <Sparkles className="h-4 w-4 text-primary" />
             <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Executive Summary</h3>
           </div>
           <div className="space-y-3">
-            {reportData.executiveSummary.split('\n\n').filter(Boolean).map((paragraph, i) => (
+            {report.executive_summary.split('\n\n').filter(Boolean).map((paragraph, i) => (
               <p key={i} className="text-sm leading-relaxed text-muted-foreground">{paragraph}</p>
             ))}
           </div>
