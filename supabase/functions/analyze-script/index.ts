@@ -3613,6 +3613,7 @@ async function runChunkedAnalysis(
         category: agentConfig.category || 'analysis',
       };
     }
+    promptConfig = enforceAgentPromptRequirements(agentName, promptConfig);
     
     try {
       await updateAgentProgress(supabase, analysisRunId, agentName, 'running', undefined, modelConfig.model);
