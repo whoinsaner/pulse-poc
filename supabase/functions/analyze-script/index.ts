@@ -3924,7 +3924,7 @@ async function runPostAnalysisSynthesis(
         body: JSON.stringify({
           model: modelConfig.model, // Dynamic model from config
           messages: [
-            { role: 'system', content: config.systemPrompt },
+            { role: 'system', content: effectiveSystemPrompt },
             { role: 'user', content: userPrompt }
           ],
           ...(modelConfig.reasoning ? { reasoning: modelConfig.reasoning } : {}),
