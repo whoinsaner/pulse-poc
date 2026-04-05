@@ -1289,7 +1289,7 @@ export async function generateFullReportPDF(
     console.log('[PDF] Rendering executive summary');
     let y = newPage(doc, pageNum, 'Executive Summary');
     toc.push({ title: 'Executive Summary', page: pageNum.value, level: 1 });
-    y = renderExecutiveSummary(doc, y, data, activeLens, pageNum);
+    y = renderExecutiveSummary(doc, y, data, activeLens, pageNum, executiveSummary);
     
 
     // === PART I: STORY ANALYSIS ===
