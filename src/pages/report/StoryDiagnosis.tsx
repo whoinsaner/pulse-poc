@@ -5,8 +5,6 @@ import { Card } from '@/components/ui/card';
 import { 
   SectionHeader, 
   DiagnosisSummary,
-  WeightedParameterList,
-  DevelopmentFocus,
 } from '@/components/report/ui';
 import { InlineMaturity } from '@/components/report/ui/MaturityBadge';
 import { BookOpen } from 'lucide-react';
@@ -19,16 +17,6 @@ interface ReportContextValue {
 
 // Categories that belong to Story diagnosis
 const STORY_CATEGORIES = ['Concept & Hook', 'Structure', 'Conflict'];
-
-// Navigation sections for the navigator
-const NAV_SECTIONS = [
-  { id: 'cover', label: 'Cover', path: '' },
-  { id: 'story', label: 'Story', path: '/story' },
-  { id: 'characters', label: 'Characters', path: '/characters' },
-  { id: 'craft', label: 'Craft', path: '/craft' },
-  { id: 'commercial', label: 'Commercial', path: '/commercial' },
-  { id: 'development', label: 'Development', path: '/development' },
-];
 
 export default function StoryDiagnosis() {
   const context = useOutletContext<ReportContextValue>();
@@ -62,9 +50,6 @@ export default function StoryDiagnosis() {
 
   const { reportData } = context;
 
-  // Get base path from current location
-  const basePath = window.location.pathname.split('/story')[0];
-
   return (
     <div className="space-y-8">
       {/* Section Header */}
@@ -81,15 +66,7 @@ export default function StoryDiagnosis() {
       <DiagnosisSummary
         parameters={storyParameters}
         categoryName="Story"
-        developmentLink={`${basePath}/development`}
-      />
-
-      {/* Weighted Parameter Breakdown */}
-      <WeightedParameterList
-        parameters={storyParameters}
-        title="Story Parameter Breakdown"
-        initiallyExpanded={false}
-        defaultVisibleCount={6}
+        developmentLink={`${window.location.pathname.split('/story')[0]}/development`}
       />
 
       {/* Tradition Context */}
@@ -105,27 +82,6 @@ export default function StoryDiagnosis() {
           </p>
         </Card>
       )}
-
-
-      {/* Development Focus */}
-      {(() => {
-        const items = storyParameters
-          .filter(p => p.score < 70)
-          .sort((a, b) => a.score - b.score)
-          .map(p => ({ title: p.displayName, description: p.rationale || '' }));
-        return items.length > 0 ? (
-          <DevelopmentFocus
-            sectionName="Story"
-            items={items}
-            developmentPath={`${basePath}/development`}
-            relatedSections={[
-              { label: 'Character Diagnosis', path: `${basePath}/characters` },
-              { label: 'Craft Diagnosis', path: `${basePath}/craft` },
-            ]}
-          />
-        ) : null;
-      })()}
-
     </div>
   );
 }

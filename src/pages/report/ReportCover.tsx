@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
-import { ReportData, StakeholderLens } from '@/types/database';
+import { ReportData, StakeholderLens, Report } from '@/types/database';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Sparkles } from 'lucide-react';
 import { 
   getDecisionSignal, 
   getMaturityStage,
@@ -32,6 +32,7 @@ import {
 } from 'lucide-react';
 
 interface ReportContextValue {
+  report: Report;
   reportData: ReportData;
   activeLens: StakeholderLens;
   currentScore: number;
@@ -52,7 +53,7 @@ export default function ReportCover() {
     return <div className="text-center py-12 text-muted-foreground">Loading report...</div>;
   }
 
-  const { reportData, activeLens, currentScore } = context;
+  const { report, reportData, currentScore } = context;
   const metadata = reportData.scriptMetadata;
   const decision = getDecisionSignal(currentScore);
   const maturity = getMaturityStage(currentScore);
@@ -203,11 +204,25 @@ export default function ReportCover() {
         </p>
       </Card>
 
-      {/* What's Working / What Needs Work */}
-      <div className="grid md:grid-cols-2 gap-4">
-        <ExpandableWorkingCard items={diagnostics.working} />
-        <ExpandableNeedsWorkCard broken={diagnostics.broken} underdeveloped={diagnostics.underdeveloped} />
-      </div>
+      {/* Executive Summary */}
+      {report?.executive_summary ? (
+        <Card className="p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Sparkles className="h-4 w-4 text-primary" />
+            <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Executive Summary</h3>
+          </div>
+          <div className="space-y-3">
+            {report.executive_summary.split('\n\n').filter(Boolean).map((paragraph, i) => (
+              <p key={i} className="text-sm leading-relaxed text-muted-foreground">{paragraph}</p>
+            ))}
+          </div>
+        </Card>
+      ) : (
+        <div className="grid md:grid-cols-2 gap-4">
+          <ExpandableWorkingCard items={diagnostics.working} />
+          <ExpandableNeedsWorkCard broken={diagnostics.broken} underdeveloped={diagnostics.underdeveloped} />
+        </div>
+      )}
 
       {/* Quick Navigation */}
       <div>

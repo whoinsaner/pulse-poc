@@ -1,18 +1,15 @@
 import { useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { ReportData, StakeholderLens, LENS_CONFIG, AgentSectionContent } from '@/types/database';
-import { CommercialNarrativePanel, ProductionNarrativePanel } from '@/components/report/AgentNarrativePanel';
+import { ReportData, StakeholderLens, LENS_CONFIG } from '@/types/database';
+
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { 
   SectionHeader, 
   DiagnosisSummary,
-  WeightedParameterList,
-  DevelopmentFocus,
-  SectionNavigator,
 } from '@/components/report/ui';
 import { InlineMaturity } from '@/components/report/ui/MaturityBadge';
-import { TrendingUp, Target, Film, DollarSign, Users } from 'lucide-react';
+import { TrendingUp, Target, Film, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getDiagnosticCategory } from '@/lib/scoreUtils';
 
@@ -25,15 +22,6 @@ interface ReportContextValue {
 // Categories that belong to Commercial diagnosis
 const COMMERCIAL_CATEGORIES = ['Market', 'Execution'];
 
-// Navigation sections
-const NAV_SECTIONS = [
-  { id: 'cover', label: 'Cover', path: '' },
-  { id: 'story', label: 'Story', path: '/story' },
-  { id: 'characters', label: 'Characters', path: '/characters' },
-  { id: 'craft', label: 'Craft', path: '/craft' },
-  { id: 'commercial', label: 'Commercial', path: '/commercial' },
-  { id: 'development', label: 'Development', path: '/development' },
-];
 
 export default function CommercialDiagnosis() {
   const context = useOutletContext<ReportContextValue>();
@@ -67,20 +55,7 @@ export default function CommercialDiagnosis() {
     return Math.round(total / commercialParameters.length);
   }, [commercialParameters]);
 
-  // Get development focus items
-  const developmentItems = useMemo(() => {
-    return commercialParameters
-      .filter(p => p.score < 70)
-      .sort((a, b) => a.score - b.score)
-      .slice(0, 2)
-      .map(p => ({
-        title: p.displayName,
-        description: p.rationale || '',
-      }));
-  }, [commercialParameters]);
 
-  // Get base path
-  const basePath = window.location.pathname.split('/commercial')[0];
 
   // Lens scores for comparison
   const lensScores = reportData.lensScores || {};
@@ -180,7 +155,7 @@ export default function CommercialDiagnosis() {
       <DiagnosisSummary
         parameters={commercialParameters}
         categoryName="Commercial"
-        developmentLink={`${basePath}/development`}
+        developmentLink={`${window.location.pathname.split('/commercial')[0]}/development`}
       />
 
       {/* Commercial Dimensions */}
@@ -222,26 +197,6 @@ export default function CommercialDiagnosis() {
         })}
       </div>
 
-      {/* Weighted Parameter Breakdown */}
-      <WeightedParameterList
-        parameters={commercialParameters}
-        title="Commercial Parameter Breakdown"
-        initiallyExpanded={false}
-        defaultVisibleCount={6}
-      />
-
-      {/* Development Focus */}
-      {developmentItems.length > 0 && (
-        <DevelopmentFocus
-          sectionName="Commercial"
-          items={developmentItems}
-          developmentPath={`${basePath}/development`}
-          relatedSections={[
-            { label: 'Story Diagnosis', path: `${basePath}/story` },
-            { label: 'Craft Diagnosis', path: `${basePath}/craft` },
-          ]}
-        />
-      )}
 
     </div>
   );

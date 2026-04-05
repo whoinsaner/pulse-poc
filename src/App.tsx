@@ -34,17 +34,12 @@ import Marketability from "./pages/report/Marketability";
 import Production from "./pages/report/Production";
 import AudienceStrategy from "./pages/report/AudienceStrategy";
 import SceneEconomy from "./pages/report/SceneEconomy";
-import ReportAnalysis from "./pages/report/ReportAnalysis";
-import ReportInsights from "./pages/report/ReportInsights";
-import ReportNarrative from "./pages/report/ReportNarrative";
-import ReportCharacters from "./pages/report/ReportCharacters";
 import ReportPlatform from "./pages/report/ReportPlatform";
 import ReportComic from "./pages/report/ReportComic";
 import WebSeriesAnalysis from "./pages/report/WebSeriesAnalysis";
 import RetentionAnalysis from "./pages/report/RetentionAnalysis";
 import HooksAnalysis from "./pages/report/HooksAnalysis";
 import CompleteScorecard from "./pages/report/CompleteScorecard";
-import RewritePriorities from "./pages/report/RewritePriorities";
 import StakeholderReport from "./pages/report/StakeholderReport";
 import SeriesBibleExtract from "./pages/report/SeriesBibleExtract";
 import SampleReportLayout from "./pages/SampleReport";
@@ -179,7 +174,7 @@ const App = () => (
               <Route path="commercial/production" element={<CommercialProduction />} />
               <Route path="commercial/focus" element={<Navigate to="../commercial" replace />} />
               <Route path="development" element={<DevelopmentPriorities />} />
-              <Route path="development/rewrite" element={<RewritePriorities />} />
+              <Route path="development/rewrite" element={<Navigate to="../development" replace />} />
               <Route path="development/scenes" element={<Navigate to="../craft/scenes" replace />} />
               <Route path="scorecard" element={<CompleteScorecard />} />
               <Route path="script" element={<ReportScript />} />
@@ -205,10 +200,10 @@ const App = () => (
               
               {/* Still-active legacy routes */}
               <Route path="bible" element={<SeriesBibleExtract />} />
-              <Route path="analysis" element={<ReportAnalysis />} />
-              <Route path="insights" element={<ReportInsights />} />
-              <Route path="narrative" element={<ReportNarrative />} />
-              <Route path="characters-detail" element={<ReportCharacters />} />
+              <Route path="analysis" element={<Navigate to="../scorecard" replace />} />
+              <Route path="insights" element={<Navigate to="../scorecard" replace />} />
+              <Route path="narrative" element={<Navigate to="../story" replace />} />
+              <Route path="characters-detail" element={<Navigate to="../characters" replace />} />
               <Route path="platform" element={<ReportPlatform />} />
               <Route path="comic" element={<Navigate to="../comic-format" replace />} />
               <Route path="web-series" element={<Navigate to="../format" replace />} />
@@ -238,7 +233,7 @@ const App = () => (
               <Route path="commercial/market" element={<CommercialMarket />} />
               <Route path="commercial/production" element={<CommercialProduction />} />
               <Route path="development" element={<DevelopmentPriorities />} />
-              <Route path="development/rewrite" element={<RewritePriorities />} />
+              <Route path="development/rewrite" element={<Navigate to="../development" replace />} />
               <Route path="development/scenes" element={<Navigate to="../craft/scenes" replace />} />
               
               {/* Legacy routes - redirect to consolidated pages */}
@@ -263,10 +258,10 @@ const App = () => (
               <Route path="scorecard" element={<CompleteScorecard />} />
               <Route path="bible" element={<SeriesBibleExtract />} />
               <Route path="script" element={<SampleScript />} />
-              <Route path="analysis" element={<ReportAnalysis />} />
-              <Route path="insights" element={<ReportInsights />} />
-              <Route path="narrative" element={<ReportNarrative />} />
-              <Route path="characters-detail" element={<ReportCharacters />} />
+              <Route path="analysis" element={<Navigate to="../scorecard" replace />} />
+              <Route path="insights" element={<Navigate to="../scorecard" replace />} />
+              <Route path="narrative" element={<Navigate to="../story" replace />} />
+              <Route path="characters-detail" element={<Navigate to="../characters" replace />} />
               <Route path="platform" element={<ReportPlatform />} />
             </Route>
             <Route path="/sample-script" element={<SampleScript />} />
@@ -297,7 +292,7 @@ const App = () => (
               <Route path="commercial/market" element={<CommercialMarket />} />
               <Route path="commercial/production" element={<CommercialProduction />} />
               <Route path="development" element={<DevelopmentPriorities />} />
-              <Route path="development/rewrite" element={<RewritePriorities />} />
+              <Route path="development/rewrite" element={<Navigate to="../development" replace />} />
               <Route path="development/scenes" element={<Navigate to="../craft/scenes" replace />} />
               
               {/* Legacy routes - redirect to consolidated pages */}
@@ -323,10 +318,10 @@ const App = () => (
               <Route path="scorecard" element={<CompleteScorecard />} />
               <Route path="bible" element={<SeriesBibleExtract />} />
               <Route path="script" element={<SampleComicScript />} />
-              <Route path="analysis" element={<ReportAnalysis />} />
-              <Route path="insights" element={<ReportInsights />} />
-              <Route path="narrative" element={<ReportNarrative />} />
-              <Route path="characters-detail" element={<ReportCharacters />} />
+              <Route path="analysis" element={<Navigate to="../scorecard" replace />} />
+              <Route path="insights" element={<Navigate to="../scorecard" replace />} />
+              <Route path="narrative" element={<Navigate to="../story" replace />} />
+              <Route path="characters-detail" element={<Navigate to="../characters" replace />} />
               <Route path="platform" element={<ReportPlatform />} />
             </Route>
             <Route path="/sample-comic-script" element={<SampleComicScript />} />
@@ -352,7 +347,7 @@ const App = () => (
               <Route path="commercial/market" element={<CommercialMarket />} />
               <Route path="commercial/production" element={<CommercialProduction />} />
               <Route path="development" element={<DevelopmentPriorities />} />
-              <Route path="development/rewrite" element={<RewritePriorities />} />
+              <Route path="development/rewrite" element={<Navigate to="../development" replace />} />
               <Route path="development/scenes" element={<Navigate to="../craft/scenes" replace />} />
               
               {/* Legacy routes - redirect to new consolidated pages */}
@@ -380,9 +375,9 @@ const App = () => (
               <Route path="scorecard" element={<CompleteScorecard />} />
               <Route path="bible" element={<SeriesBibleExtract />} />
               <Route path="script" element={<SampleScript />} />
-              <Route path="analysis" element={<ReportAnalysis />} />
-              <Route path="insights" element={<ReportInsights />} />
-              <Route path="narrative" element={<ReportNarrative />} />
+              <Route path="analysis" element={<Navigate to="../scorecard" replace />} />
+              <Route path="insights" element={<Navigate to="../scorecard" replace />} />
+              <Route path="narrative" element={<Navigate to="../story" replace />} />
             </Route>
             <Route path="/sample-series-script" element={<SampleSeriesScript />} />
             <Route path="/sample-series-report" element={<SampleSeriesReportLayout />}>
@@ -406,16 +401,16 @@ const App = () => (
               <Route path="commercial/market" element={<CommercialMarket />} />
               <Route path="commercial/production" element={<CommercialProduction />} />
               <Route path="development" element={<DevelopmentPriorities />} />
-              <Route path="development/rewrite" element={<RewritePriorities />} />
+              <Route path="development/rewrite" element={<Navigate to="../development" replace />} />
               <Route path="development/scenes" element={<Navigate to="../craft/scenes" replace />} />
               
               {/* Reference pages */}
               <Route path="scorecard" element={<CompleteScorecard />} />
               <Route path="bible" element={<SeriesBibleExtract />} />
               <Route path="script" element={<SampleSeriesScript />} />
-              <Route path="analysis" element={<ReportAnalysis />} />
-              <Route path="insights" element={<ReportInsights />} />
-              <Route path="narrative" element={<ReportNarrative />} />
+              <Route path="analysis" element={<Navigate to="../scorecard" replace />} />
+              <Route path="insights" element={<Navigate to="../scorecard" replace />} />
+              <Route path="narrative" element={<Navigate to="../story" replace />} />
             </Route>
             <Route path="/sample-micro-drama-report" element={<SampleMicroDramaReportLayout />}>
               {/* USAF Consolidated Routes */}
@@ -440,7 +435,7 @@ const App = () => (
               <Route path="commercial/market" element={<CommercialMarket />} />
               <Route path="commercial/production" element={<CommercialProduction />} />
               <Route path="development" element={<DevelopmentPriorities />} />
-              <Route path="development/rewrite" element={<RewritePriorities />} />
+              <Route path="development/rewrite" element={<Navigate to="../development" replace />} />
               <Route path="development/scenes" element={<Navigate to="../craft/scenes" replace />} />
               
               {/* Legacy routes - redirect to USAF equivalents */}
@@ -463,9 +458,9 @@ const App = () => (
               <Route path="scorecard" element={<CompleteScorecard />} />
               <Route path="bible" element={<SeriesBibleExtract />} />
               <Route path="script" element={<SampleScript />} />
-              <Route path="narrative" element={<ReportNarrative />} />
-              <Route path="analysis" element={<ReportAnalysis />} />
-              <Route path="insights" element={<ReportInsights />} />
+              <Route path="narrative" element={<Navigate to="../story" replace />} />
+              <Route path="analysis" element={<Navigate to="../scorecard" replace />} />
+              <Route path="insights" element={<Navigate to="../scorecard" replace />} />
             </Route>
             <Route path="/comic-gallery" element={<ComicGallery />} />
             {/* Legacy redirects */}

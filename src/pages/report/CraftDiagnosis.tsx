@@ -1,14 +1,11 @@
 import { useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { ReportData, StakeholderLens, AgentSectionContent } from '@/types/database';
-import { AgentNarrativePanel } from '@/components/report/AgentNarrativePanel';
+import { ReportData, StakeholderLens } from '@/types/database';
+
 import { Card } from '@/components/ui/card';
 import { 
   SectionHeader, 
   DiagnosisSummary,
-  WeightedParameterList,
-  DevelopmentFocus,
-  SectionNavigator,
 } from '@/components/report/ui';
 import { InlineMaturity } from '@/components/report/ui/MaturityBadge';
 import { Palette, MessageSquare, Heart, Eye, Sparkles } from 'lucide-react';
@@ -24,15 +21,6 @@ interface ReportContextValue {
 // Categories that belong to Craft diagnosis
 const CRAFT_CATEGORIES = ['Dialogue', 'Theme', 'World & Logic', 'Emotional Arc', 'World', 'Emotion'];
 
-// Navigation sections
-const NAV_SECTIONS = [
-  { id: 'cover', label: 'Cover', path: '' },
-  { id: 'story', label: 'Story', path: '/story' },
-  { id: 'characters', label: 'Characters', path: '/characters' },
-  { id: 'craft', label: 'Craft', path: '/craft' },
-  { id: 'commercial', label: 'Commercial', path: '/commercial' },
-  { id: 'development', label: 'Development', path: '/development' },
-];
 
 export default function CraftDiagnosis() {
   const context = useOutletContext<ReportContextValue>();
@@ -66,20 +54,8 @@ export default function CraftDiagnosis() {
     return Math.round(total / craftParameters.length);
   }, [craftParameters]);
 
-  // Get development focus items
-  const developmentItems = useMemo(() => {
-    return craftParameters
-      .filter(p => p.score < 70)
-      .sort((a, b) => a.score - b.score)
-      .slice(0, 2)
-      .map(p => ({
-        title: p.displayName,
-        description: p.rationale || '',
-      }));
-  }, [craftParameters]);
 
-  // Get base path
-  const basePath = window.location.pathname.split('/craft')[0];
+
 
   // Group by craft dimension
   const dimensions = useMemo(() => [
@@ -144,7 +120,7 @@ export default function CraftDiagnosis() {
       <DiagnosisSummary
         parameters={craftParameters}
         categoryName="Craft"
-        developmentLink={`${basePath}/development`}
+        developmentLink={`${window.location.pathname.split('/craft')[0]}/development`}
       />
 
       {/* Craft Dimensions Grid */}
@@ -191,26 +167,6 @@ export default function CraftDiagnosis() {
         })}
       </div>
 
-      {/* Weighted Parameter Breakdown */}
-      <WeightedParameterList
-        parameters={craftParameters}
-        title="Craft Parameter Breakdown"
-        initiallyExpanded={false}
-        defaultVisibleCount={6}
-      />
-
-      {/* Development Focus */}
-      {developmentItems.length > 0 && (
-        <DevelopmentFocus
-          sectionName="Craft"
-          items={developmentItems}
-          developmentPath={`${basePath}/development`}
-          relatedSections={[
-            { label: 'Story Diagnosis', path: `${basePath}/story` },
-            { label: 'Character Diagnosis', path: `${basePath}/characters` },
-          ]}
-        />
-      )}
 
     </div>
   );
