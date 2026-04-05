@@ -1,65 +1,58 @@
 
 
-# Report Duplication Analysis and Quality Improvement Plan
+# Add Dimension Tiles to Protagonist, Supporting Cast & PDF
 
-## Identified Duplication Issues
+## What
+Add score dimension tiles (like the Antagonist's Physical/Psychological/Tactical/Dramatic/Overall grid) to the Protagonist and Supporting Cast pages, powered by real parameter data. Also render these tiles in the PDF export for all three character sub-pages.
 
-### 1. Parameter scores shown 3-4 times per section
-The same parameter data appears repeatedly as users navigate through the report hierarchy:
+## Changes
 
-- **Cover page** (`ReportCover`): Shows "What's Working" and "What Needs Work" lists — these are the same parameters displayed everywhere else.
-- **Diagnosis pages** (Story, Character, Craft, Commercial): Each shows a `DiagnosisSummary` (Working/Broken/Underdeveloped grid) + `WeightedParameterList` + `DevelopmentFocus` — all derived from the same `parameterScores`.
-- **Sub-pages** (Concept, Protagonist, Dialogue, etc.): Show the *same subset* of parameters again via `WeightedParameterList`, often with identical rationale text.
-- **Complete Scorecard**: Shows Top 5 Strengths/Weaknesses + Category Breakdown — again the same scores.
-- **Legacy "Analysis" page** (`/analysis`): Shows `AgentAnalysisGrid` + `CategoryScoreSection` + `FullParameterSection` — a complete dump of all parameter data already spread across the USAF pages.
+### 1. Protagonist — add 5 dimension tiles
+**File**: `src/pages/report/ProtagonistAnalysis.tsx`
 
-**Example**: A dialogue parameter with score 72 and its rationale appears on: Cover (as "working"), Craft Diagnosis (in DiagnosisSummary + WeightedParameterList + DevelopmentFocus), Craft/Dialogue sub-page (WeightedParameterList again), Scorecard (if top 5), and the legacy Analysis page.
+Add a `getParamScore` helper (same pattern as Antagonist) and a 5-tile grid after the DiagnosisSummary:
 
-### 2. Development/Rewrite duplication
-- **DevelopmentFocus** widget appears at the bottom of *every* diagnosis page (Story, Character, Craft, Commercial) showing low-scoring params for that section.
-- **DevelopmentPriorities** page shows *all* low-scoring params across all sections — the exact union of the above.
-- **RewritePriorities** sub-page shows the same data again, tiered differently (using raw score thresholds <4, 4-6, 6-7.5 on a 10-point scale vs. the 0-100 scale used elsewhere — a likely bug).
+| Tile | Keywords matched against parameterScores |
+|------|------------------------------------------|
+| Empathy | `empathy`, `relatab`, `likab`, `audience` |
+| Complexity | `complex`, `depth`, `dimension`, `psychology` |
+| Agency | `agency`, `active`, `drive`, `motivation` |
+| Growth | `arc`, `growth`, `transform`, `change` |
+| Overall | Average of above 4 |
 
-### 3. Score display redundancy
-The overall score and decision signal appear on: sidebar (ScoreRing), Cover page (DecisionSignalBadge + score), Scorecard (SectionHeader score), and DevelopmentPriorities (Decision Context card).
+Icons: Heart, Brain, Target, Zap, User. Uses existing `ScoreDisplay` component, same card layout as Antagonist tiles.
 
-### 4. Still-active legacy routes serve stale views
-`/analysis`, `/narrative`, `/characters-detail`, `/insights` are still routable and show older UI patterns that overlap with the USAF pages.
+### 2. Supporting Cast — add 4 dimension tiles
+**File**: `src/pages/report/SupportingCast.tsx`
 
----
+Replace the current 4 stat cards (Total Characters, Supporting Roles, Supporting Dialogue %, With Arcs) with a **combined row of 5 tiles**: keep the existing stats but add an Overall score tile using `ScoreDisplay`. Alternatively, add a separate row of dimension tiles below the stats:
 
-## Recommended Improvements
+| Tile | Keywords |
+|------|----------|
+| Diversity | `diversity`, `distinct`, `voice`, `variety` |
+| Utility | `function`, `utility`, `purpose`, `role` |
+| Balance | `balance`, `ensemble`, `distribution` |
+| Depth | `depth`, `dimension`, `develop`, `arc` |
+| Overall | Average of above 4 |
 
-### A. Differentiate diagnosis pages from sub-pages (high impact)
-**Problem**: Diagnosis pages and their sub-pages show the same parameters in the same way.
-**Fix**: Remove `WeightedParameterList` from diagnosis overview pages. The overview should show only `DiagnosisSummary` (the 3-column Working/Broken/Underdeveloped grid) and the dimension cards (already present in Craft and Commercial). The detailed parameter breakdown should live exclusively on the sub-pages, where it's accompanied by agent narrative content.
+Icons: Users, Target, Scale, Layers, Shield. Same card + ScoreDisplay layout.
 
-### B. Consolidate Development/Rewrite into one page (medium impact)
-**Problem**: `DevelopmentPriorities` and `RewritePriorities` show the same data differently.
-**Fix**: Remove `RewritePriorities` as a separate route (redirect to `/development`). Merge the tiered view into `DevelopmentPriorities`. Also remove the `DevelopmentFocus` widget from each diagnosis page — it duplicates what the Development page already surfaces, and the "Needs Work" list on the Cover page already flags these.
+### 3. PDF Generator — render dimension tiles as a table
+**File**: `src/lib/fullReportPdfGenerator.ts`
 
-### C. Retire legacy routes (low effort, reduces confusion)
-**Problem**: `/analysis`, `/narrative`, `/characters-detail` still render and overlap with USAF pages.
-**Fix**: Convert these to redirects (like the other legacy routes already are). `/analysis` -> `/scorecard`, `/characters-detail` -> `/characters`, `/narrative` -> `/story`.
+After rendering character profiles in the protagonist and antagonist sections (~lines 588-680), add a small inline table or labeled rows showing the dimension scores. Implementation:
 
-### D. Fix RewritePriorities score scale bug
-`RewritePriorities` filters params with `score < 4` and `score < 6` — this assumes a 1-10 scale, but `parameterScores` use 0-100. This means the "critical" and "high priority" tiers are always empty for real data, making the page appear broken.
+- Extract the same keyword-matched scores from `reportData.parameterScores` in the PDF context
+- Render as a simple 1-row table using `autoTable`: columns = dimension names, cells = scores
+- Apply to protagonist, antagonist, and supporting cast sections
 
-### E. Make the Cover page a true executive summary (medium impact)
-**Problem**: The Cover shows Working/Needs Work lists that are just sorted parameter names without narrative context.
-**Fix**: Replace the expandable parameter lists with the `ExecutiveSummary` component (already exists but unused in USAF flow). Show the agent-generated verdict text instead of raw parameter names. Keep the Quick Navigation cards.
+### 4. Pass parameterScores to PDF renderer
+The PDF generator already receives `reportData` which contains `parameterScores`. The `getParamScore` logic will be extracted into a shared helper (or duplicated inline in the PDF generator since it's a simple 5-line function).
 
----
-
-## Implementation Summary
-
-| Change | Files Modified | Effort |
-|--------|---------------|--------|
-| A. Remove WeightedParameterList from 4 diagnosis pages | StoryDiagnosis, CharacterDiagnosis, CraftDiagnosis, CommercialDiagnosis | Small |
-| B. Remove DevelopmentFocus from 4 diagnosis pages, redirect RewritePriorities | Same 4 + App.tsx + delete/simplify RewritePriorities | Small |
-| C. Redirect legacy routes | App.tsx (3 route changes) | Trivial |
-| D. Fix score scale in RewritePriorities | RewritePriorities.tsx (if kept) | Trivial |
-| E. Use ExecutiveSummary on Cover | ReportCover.tsx | Small |
-
-Total: ~6-8 files changed, no database or edge function changes.
+## Technical Details
+- 2 page files edited (ProtagonistAnalysis.tsx, SupportingCast.tsx)
+- 1 PDF generator file edited (fullReportPdfGenerator.ts)
+- No new components needed — reuses existing `Card`, `ScoreDisplay`, icons
+- All scores derived from real `parameterScores` via keyword matching (same proven pattern as Antagonist)
+- No database or edge function changes
 
