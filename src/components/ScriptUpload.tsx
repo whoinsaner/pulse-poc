@@ -193,9 +193,20 @@ export function ScriptUpload({ onUploadComplete, onClose }: ScriptUploadProps) {
 
       const detectedType = data?.scriptType as ScriptType;
       const confidence = data?.confidence || 0;
+      const detectedTradition = data?.cinemaTradition as string | undefined;
+      const tradConf = data?.traditionConfidence || 0;
 
       setAutoDetectedType(detectedType);
       setClassificationConfidence(confidence);
+
+      if (detectedTradition && tradConf >= 0.4) {
+        setAutoDetectedTradition(detectedTradition);
+        setTraditionConfidence(tradConf);
+        // Pre-select if user hasn't manually changed it
+        if (cinemaTradition === 'auto_detect') {
+          setCinemaTradition(detectedTradition);
+        }
+      }
 
       if (confidence >= 0.6 && detectedType) {
         setScriptType(detectedType);
