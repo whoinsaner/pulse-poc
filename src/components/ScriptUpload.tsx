@@ -304,7 +304,7 @@ export function ScriptUpload({ onUploadComplete, onClose }: ScriptUploadProps) {
           uploaded_by: user.id,
           file_size_bytes: selectedFile.size,
           episode_length_class: isWebSeries ? episodeLengthClass : null,
-          cinema_tradition: cinemaTradition !== 'auto_detect' ? cinemaTradition : null,
+          cinema_tradition: cinemaTradition !== 'auto_detect' ? cinemaTradition : (autoDetectedTradition || null),
         } as any)
         .select()
         .single();
