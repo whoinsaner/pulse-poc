@@ -1,0 +1,1 @@
+ALTER TABLE public.analysis_runs ADD COLUMN reasoning_effort text DEFAULT NULL;

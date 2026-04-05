@@ -369,6 +369,11 @@ export function AnalysisTrigger({
       
       if (!resume || !existingRunId) {
         // Create new analysis run with stakeholder lens and quality mode
+        // Read fresh reasoning value for persisting on the run row
+        const freshReasoningForInsert = localStorage.getItem('pulse_reasoning_enabled') === 'true'
+          ? (localStorage.getItem('pulse_reasoning_effort') as string || 'medium')
+          : null;
+
         const { data: run, error: createError } = await supabase
           .from('analysis_runs')
           .insert({
@@ -377,7 +382,8 @@ export function AnalysisTrigger({
             status: 'pending',
             stakeholder_lens: stakeholderLens || null,
             quality_mode: qualityMode,
-          })
+            reasoning_effort: freshReasoningForInsert,
+          } as any)
           .select()
           .single();
 

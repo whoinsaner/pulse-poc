@@ -37,6 +37,7 @@ interface AnalysisRun {
   status: AnalysisStatus;
   quality_mode: string | null;
   stakeholder_lens: StakeholderLens | null;
+  reasoning_effort: string | null;
   created_at: string;
   started_at: string | null;
   completed_at: string | null;
@@ -78,6 +79,7 @@ export function AnalysisRunHistory({ scriptId, scriptTitle }: AnalysisRunHistory
           status,
           quality_mode,
           stakeholder_lens,
+          reasoning_effort,
           created_at,
           started_at,
           completed_at,
@@ -118,6 +120,10 @@ export function AnalysisRunHistory({ scriptId, scriptTitle }: AnalysisRunHistory
     setRetrying(failedRun.id);
     try {
       // Create a new run linked to the failed one
+      const retryReasoningEffort = localStorage.getItem('pulse_reasoning_enabled') === 'true'
+        ? (localStorage.getItem('pulse_reasoning_effort') as string || 'medium')
+        : null;
+
       const { data: newRun, error: createError } = await supabase
         .from('analysis_runs')
         .insert({
@@ -129,7 +135,8 @@ export function AnalysisRunHistory({ scriptId, scriptTitle }: AnalysisRunHistory
           retry_count: failedRun.retry_count + 1,
           max_retries: failedRun.max_retries,
           parent_run_id: failedRun.parent_run_id || failedRun.id,
-        })
+          reasoning_effort: retryReasoningEffort,
+        } as any)
         .select()
         .single();
 
@@ -305,6 +312,12 @@ export function AnalysisRunHistory({ scriptId, scriptTitle }: AnalysisRunHistory
                           {run.stakeholder_lens && (
                             <Badge variant="secondary" className="text-xs">
                               {run.stakeholder_lens.replace('_', ' ')}
+                            </Badge>
+                          )}
+                          {run.reasoning_effort && (
+                            <Badge variant="outline" className="text-xs gap-1">
+                              <Zap className="h-3 w-3" />
+                              Reasoning: {run.reasoning_effort}
                             </Badge>
                           )}
                         </div>
