@@ -21,15 +21,6 @@ interface ReportContextValue {
 // Categories that belong to Craft diagnosis
 const CRAFT_CATEGORIES = ['Dialogue', 'Theme', 'World & Logic', 'Emotional Arc', 'World', 'Emotion'];
 
-// Navigation sections
-const NAV_SECTIONS = [
-  { id: 'cover', label: 'Cover', path: '' },
-  { id: 'story', label: 'Story', path: '/story' },
-  { id: 'characters', label: 'Characters', path: '/characters' },
-  { id: 'craft', label: 'Craft', path: '/craft' },
-  { id: 'commercial', label: 'Commercial', path: '/commercial' },
-  { id: 'development', label: 'Development', path: '/development' },
-];
 
 export default function CraftDiagnosis() {
   const context = useOutletContext<ReportContextValue>();
