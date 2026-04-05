@@ -32,7 +32,7 @@ export default function ProtagonistAnalysis() {
   const { reportData, currentScore, stakeholderLens } = context;
   const { isFiltered, filterParameters, getFilterStats } = useStakeholderFiltering({ stakeholderLens });
   
-  // Get protagonist from characters (highest dialogue count)
+  // Get protagonist from characters (highest dialogue count) as fallback
   const characters = reportData.characters || [];
   const protagonist = characters.length > 0 
     ? characters.reduce((prev, current) => 
@@ -40,9 +40,11 @@ export default function ProtagonistAnalysis() {
       )
     : null;
 
-  // Get agent content for protagonist
+  // Get agent content for protagonist — support both array (protagonistProfiles) and single (protagonistProfile)
   const agentContent = reportData.agentContent?.CharacterAgent;
-  const protagonistProfile = agentContent?.protagonistProfile;
+  const protagonistProfiles: Array<{ name: string; want: string; need: string; flaw: string; arc: string; strengths?: string[]; weaknesses?: string[]; arcType?: string }> = 
+    agentContent?.protagonistProfiles || 
+    (agentContent?.protagonistProfile ? [agentContent.protagonistProfile] : []);
 
   // Filter protagonist-relevant parameters
   const protagonistParams = useMemo(() => {
