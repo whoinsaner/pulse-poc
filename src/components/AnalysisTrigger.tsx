@@ -293,31 +293,31 @@ export function AnalysisTrigger({
     }
   }, [scriptTitle, onAnalysisComplete, toast]);
 
-  // Subscribe to realtime updates when analysis starts
+  // Poll for progress updates when analysis starts (realtime not enabled on analysis_runs)
   useEffect(() => {
     if (!analysisRunId || !isAnalyzing) return;
 
-    console.log('[AnalysisTrigger] Subscribing to realtime updates for:', analysisRunId);
+    console.log('[AnalysisTrigger] Starting polling for:', analysisRunId);
 
-    const channel = supabase
-      .channel(`analysis-progress-${analysisRunId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'analysis_runs',
-          filter: `id=eq.${analysisRunId}`,
-        },
-        handleRealtimeUpdate
-      )
-      .subscribe((status) => {
-        console.log('[AnalysisTrigger] Subscription status:', status);
-      });
+    const intervalId = setInterval(async () => {
+      try {
+        const { data } = await supabase
+          .from('analysis_runs')
+          .select('id, status, agent_progress, error_message')
+          .eq('id', analysisRunId)
+          .single();
+
+        if (!data) return;
+
+        handleRealtimeUpdate({ new: data });
+      } catch (err) {
+        console.error('[AnalysisTrigger] Polling error:', err);
+      }
+    }, 3000);
 
     return () => {
-      console.log('[AnalysisTrigger] Unsubscribing from realtime updates');
-      supabase.removeChannel(channel);
+      console.log('[AnalysisTrigger] Stopping polling');
+      clearInterval(intervalId);
     };
   }, [analysisRunId, isAnalyzing, handleRealtimeUpdate]);
 
