@@ -56,19 +56,8 @@ export default function CommercialDiagnosis() {
   }, [commercialParameters]);
 
   // Get development focus items
-  const developmentItems = useMemo(() => {
-    return commercialParameters
-      .filter(p => p.score < 70)
-      .sort((a, b) => a.score - b.score)
-      .slice(0, 2)
-      .map(p => ({
-        title: p.displayName,
-        description: p.rationale || '',
-      }));
-  }, [commercialParameters]);
 
-  // Get base path
-  const basePath = window.location.pathname.split('/commercial')[0];
+
 
   // Lens scores for comparison
   const lensScores = reportData.lensScores || {};
