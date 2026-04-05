@@ -398,7 +398,7 @@ export function AnalysisTrigger({
           forceAnalysis,
           resume,
           stakeholderLens: stakeholderLens || null,
-          reasoningEffort: isReasoningEnabled ? reasoningEffort : null,
+          reasoningEffort: localStorage.getItem('pulse_reasoning_enabled') === 'true' ? reasoningEffort : null,
         },
       }).then(({ error: invokeError }) => {
         if (invokeError) {
