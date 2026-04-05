@@ -3,7 +3,7 @@ import { Link, useOutletContext } from 'react-router-dom';
 import { ReportData, StakeholderLens } from '@/types/database';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Sparkles } from 'lucide-react';
 import { 
   getDecisionSignal, 
   getMaturityStage,
