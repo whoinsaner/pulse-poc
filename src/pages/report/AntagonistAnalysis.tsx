@@ -3,6 +3,7 @@ import { useOutletContext } from 'react-router-dom';
 import { ReportData, StakeholderLens } from '@/types/database';
 
 import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { 
   SectionHeader, 
   SubSectionHeader,
@@ -180,12 +181,24 @@ export default function AntagonistAnalysis() {
                   <p className="text-sm leading-relaxed">{antagonistProfile.threat}</p>
                 </div>
               )}
+              {(antagonistProfile as any)?.worldview && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Worldview</p>
+                  <p className="text-sm leading-relaxed">{(antagonistProfile as any).worldview}</p>
+                </div>
+              )}
             </div>
             <div className="space-y-4">
               {antagonistProfile.complexity && (
                 <div>
                   <p className="text-sm text-muted-foreground">Complexity</p>
                   <p className="text-sm leading-relaxed">{antagonistProfile.complexity}</p>
+                </div>
+              )}
+              {(antagonistProfile as any)?.philosophyType && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Philosophy Type</p>
+                  <Badge variant="outline" className="capitalize">{(antagonistProfile as any).philosophyType}</Badge>
                 </div>
               )}
               {(antagonistProfile as any)?.want && (

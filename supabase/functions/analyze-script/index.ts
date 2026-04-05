@@ -425,8 +425,9 @@ interface SectionContent {
     effort: 'easy' | 'moderate' | 'hard';
   }>;
   // Character-specific fields (CharacterAgent)
-  protagonistProfile?: { name: string; want: string; need: string; flaw: string; arc: string; strengths?: string[]; weaknesses?: string[] };
-  antagonistProfile?: { name: string; motivation: string; threat: string; complexity: string };
+  protagonistProfile?: { name: string; want: string; need: string; flaw: string; arc: string; strengths?: string[]; weaknesses?: string[]; arcType?: string };
+  protagonistProfiles?: Array<{ name: string; want: string; need: string; flaw: string; arc: string; strengths?: string[]; weaknesses?: string[]; arcType?: string }>;
+  antagonistProfile?: { name: string; motivation: string; threat: string; complexity: string; worldview?: string; philosophyType?: string };
   supportingCast?: Array<{ name: string; role: string; impact: string }>;
   psychologyInsights?: string;
   // Market-specific fields (MarketAgent)
@@ -443,6 +444,12 @@ interface SectionContent {
   tonalGuardrails?: { genre: string; tone: string; avoid: string[] };
   characterTrajectories?: Array<{ name: string; startState: string; endState: string; arc: string }>;
   seriesEngine?: { reset: string[]; accumulate: string[] };
+  // CinemaTraditionAgent fields
+  tradition?: string;
+  formatType?: string;
+  resolutionModel?: string;
+  audienceGrammar?: string;
+  structuralConventions?: string[];
 }
 
 interface AgentResult {
@@ -744,6 +751,8 @@ Evaluate the foundational concept:
 
 Focus on immediate engagement, mental clarity, and long-term extensibility.
 
+TRADITION-AWARE EVALUATION:
+- When evaluating representation and sensitivity, distinguish between a script that endorses a stereotype and a script that dramatizes a system exploiting that stereotype. If the narrative clearly positions the audience to see a fabrication being constructed in real-time, this is a critique of the system, not a reproduction of the stereotype.
 COMIC/GRAPHIC NARRATIVE ADAPTATION:
 When the script type is "comic" or the content is a graphic narrative:
 - Hook Clarity: Evaluate visual hook potential — does the concept lend itself to a striking cover image, an iconic visual premise, or a visually communicable pitch? Comics sell on visual hooks (cover art, character design, world aesthetic) as much as logline.
@@ -784,6 +793,8 @@ TRADITION-AWARE EVALUATION:
 - Evaluate resolution against the script's own tradition — moral closure (a name spoken, a truth revealed, justice delivered through thematic symmetry) is complete resolution in many traditions. Do NOT require procedural/institutional closure.
 - Physical justice (retribution that mirrors the original crime) is a valid and complete resolution model.
 - If a director's spec format is detected, do NOT apply page-per-minute pacing calculations.
+- When evaluating repeated action/pursuit sequences, assess whether they serve different emotional registers, dramatic purposes, and character perspectives. Mechanically similar plot functions (chase, fight, escape) can be narratively distinct if they operate in different emotional registers (horror vs. tenderness vs. coming-of-age).
+- For crosscutting sequences, distinguish between information-driven crosscutting (where each cut advances plot) and rhythm-driven crosscutting (where the cutting pattern itself creates thematic meaning through juxtaposition). Director's spec screenplays often describe edit-dependent sequences that cannot be fully evaluated on the page. Flag such sequences as "edit-dependent" rather than penalizing them.
 
 COMIC/GRAPHIC NARRATIVE ADAPTATION:
 When the script type is "comic" or the content is a graphic narrative, reinterpret structural parameters for page-based storytelling:
@@ -903,6 +914,7 @@ TRADITION-AWARE EVALUATION:
 - In traditions with strong oral/poetic heritage (Indian, African, Middle Eastern), thematic expression through dialogue poetry, proverbs, or naming conventions is valid craft, not "on the nose."
 - Cultural resonance should be evaluated within the script's own cultural context first, then universal resonance second.
 - Moral complexity does not require moral ambiguity — a clear moral stance executed with nuance and evidence is complex.
+- Track thematic call-and-response patterns: where one character poses a philosophical question or claim, and another character answers it later. This is a valid and often superior form of resolution in non-Hollywood traditions. Surface "Thematic Symmetry" as a finding when detected.
 
 COMIC/GRAPHIC NARRATIVE ADAPTATION:
 When the script type is "comic" or the content is a graphic narrative:
@@ -1009,6 +1021,7 @@ TRADITION-AWARE EVALUATION:
 - Emotional payoff through physical action (a gesture, an object placed, a door closed) is equal to dialogue-driven catharsis.
 - Silence and stillness can carry immense emotional weight in Japanese and European traditions. Do not penalize "slow" emotional pacing if it serves accumulation.
 - Mass-hero emotional architecture (audience euphoria through character triumph) is a legitimate emotional target, not "shallow."
+- Track emotional register shifts within and between action sequences. Two sequences with the same plot function (pursuit) but different emotional registers (horror vs. tenderness vs. coming-of-age) should be evaluated as distinct narrative units, not flagged as repetition.
 
 COMIC/GRAPHIC NARRATIVE ADAPTATION:
 When the script type is "comic" or the content is a graphic narrative, reinterpret emotional arc for page-based visual storytelling:
@@ -1046,6 +1059,10 @@ Evaluate commercial and positioning factors:
 
 Do NOT consider budget feasibility (that's ExecutionAgent).
 
+TRADITION-AWARE EVALUATION:
+- When evaluating representation and sensitivity concerns for market risk, distinguish between scripts that endorse stereotypes and scripts that dramatize systems exploiting those stereotypes. A narrative that positions the audience to see a fabrication being constructed is social commentary, not problematic representation.
+- If the script's cinema tradition has been identified, comparable titles should prioritize the script's own tradition first, then cross-tradition comparisons.
+- Director's spec screenplays should NOT be penalized for page count when evaluating platform fit. Page count does NOT equal runtime for this format.
 COMIC/GRAPHIC NARRATIVE ADAPTATION:
 When the script type is "comic" or the content is a graphic narrative, adapt market evaluation for comic-specific distribution and audiences:
 - Platform Fit → Comic Distribution Fit: Evaluate suitability for comic-specific channels: single-issue floppies, trade paperback collections, original graphic novels (OGN), webtoon/vertical scroll, digital-first platforms (ComiXology/GlobalComix), or print-only prestige formats. Do NOT reference theatrical or streaming platforms.
@@ -3086,6 +3103,16 @@ ${traditionLine}
 CHARACTERS (${characters.length} total):
 ${charList || 'No character data extracted'}
 
+${characters.length > 1 ? `CHARACTER RELATIONSHIP GRAPH (co-occurrence):
+${characters.slice(0, 10).flatMap((c, i) => 
+  characters.slice(i + 1, 10).map(c2 => {
+    const shared = Math.min(c.scene_count || 0, c2.scene_count || 0);
+    if (shared < 2) return null;
+    const rel = (c.relationships || []).find((r: any) => r.character?.toLowerCase() === c2.name?.toLowerCase());
+    return `- ${c.name} ↔ ${c2.name}: ~${shared} shared scenes${rel ? ` (${rel.type})` : ''}`;
+  }).filter(Boolean)
+).join('\n') || 'Insufficient data for relationship graph'}
+` : ''}
 SCENES (${scenes.length} total):
 ${sceneList || 'No scene data extracted'}
 `.trim();
@@ -3371,35 +3398,121 @@ async function runStandardAnalysis(
     return { agent: agentName, success: false, error: errorMessage };
   };
 
-  // Run agents in batches
-  const results: Array<{ agent: string; success: boolean; error?: string }> = [];
+  // ============= TWO-PHASE EXECUTION: System agents first, then core agents =============
+  // Phase 1: Run system agents and wait for completion
+  // Phase 2: Read CinemaTraditionAgent output, build traditionPreamble, run core agents with enriched context
   
-  for (let i = 0; i < agentsToRun.length; i += BATCH_SIZE) {
-    const batch = agentsToRun.slice(i, i + BATCH_SIZE);
-    const batchNum = Math.floor(i / BATCH_SIZE) + 1;
-    const totalBatches = Math.ceil(agentsToRun.length / BATCH_SIZE);
-    const isLastBatch = i + BATCH_SIZE >= agentsToRun.length;
+  const systemAgentRuns = agentsToRun.filter(([name]) => SYSTEM_AGENTS.has(name));
+  const coreAgentRuns = agentsToRun.filter(([name]) => !SYSTEM_AGENTS.has(name));
+  
+  const results: Array<{ agent: string; success: boolean; error?: string }> = [];
+
+  // PHASE 1: Run system agents
+  if (systemAgentRuns.length > 0) {
+    console.log(`[analyze-script] PHASE 1: Running ${systemAgentRuns.length} system agents: ${systemAgentRuns.map(([n]) => n).join(', ')}`);
     
-    console.log(`[analyze-script] Running batch ${batchNum}/${totalBatches}: ${batch.map(([name]) => name).join(', ')}`);
-    
-    // OPTIMIZATION 9: Fire synthesis agents in parallel with the last batch
-    if (isLastBatch && onLastBatchStarted) {
-      console.log(`[analyze-script] Last batch started — triggering synthesis overlap`);
-      onLastBatchStarted();
-    }
-    
-    const batchResults = await Promise.all(
-      batch.map(([agentName, agentConfig], idx) =>
+    const systemResults = await Promise.all(
+      systemAgentRuns.map(([agentName, agentConfig], idx) =>
         new Promise<void>(resolve => setTimeout(resolve, idx * STAGGER_MS))
           .then(() => runSingleAgent([agentName, agentConfig]))
       )
     );
-    results.push(...batchResults);
+    results.push(...systemResults);
     
-    // Wait between batches (except for last batch), skip if delay is 0
-    if (BATCH_DELAY_MS > 0 && !isLastBatch) {
-      console.log(`[analyze-script] Batch ${batchNum} complete, waiting ${BATCH_DELAY_MS}ms before next batch`);
+    // Read CinemaTraditionAgent output and build traditionPreamble
+    try {
+      const { data: postPhase1Run } = await supabase
+        .from('analysis_runs')
+        .select('agent_progress')
+        .eq('id', analysisRunId)
+        .single();
+      
+      const phase1Progress = postPhase1Run?.agent_progress || {};
+      const traditionData = (phase1Progress as any)?.CinemaTraditionAgent?.sectionContent;
+      const intakeData = (phase1Progress as any)?.IntakeNormalizerAgent?.sectionContent;
+      
+      if (traditionData || intakeData) {
+        const tradition = traditionData?.tradition || 'auto_detect';
+        const formatType = traditionData?.formatType || intakeData?.scriptFormat || 'unknown';
+        const resolutionModel = traditionData?.resolutionModel || 'procedural';
+        const audienceGrammar = traditionData?.audienceGrammar || '';
+        const structuralConventions = traditionData?.structuralConventions || [];
+        
+        let traditionPreamble = `\n\n============= TRADITION CONTEXT (from CinemaTraditionAgent) =============\n`;
+        traditionPreamble += `Detected Tradition: ${tradition}\n`;
+        traditionPreamble += `Screenplay Format: ${formatType}\n`;
+        traditionPreamble += `Resolution Model: ${resolutionModel}\n`;
+        
+        if (formatType === 'directors_spec') {
+          traditionPreamble += `\n⚠️ DIRECTOR'S SPEC FORMAT: Page count does NOT correspond to 1:1 runtime. A 245-page director's spec can yield a 140-minute film. Do NOT penalize length based on page count. Do NOT apply page-per-minute pacing calculations.\n`;
+        }
+        
+        if (resolutionModel && resolutionModel !== 'procedural') {
+          traditionPreamble += `\n⚠️ RESOLUTION MODEL (${resolutionModel}): Do NOT penalize for absence of procedural/institutional consequences. Evaluate resolution quality on the tradition's own terms.\n`;
+          if (resolutionModel === 'moral') {
+            traditionPreamble += `Moral resolution: A name spoken, a truth revealed, justice delivered through thematic symmetry IS complete resolution.\n`;
+          } else if (resolutionModel === 'poetic') {
+            traditionPreamble += `Poetic resolution: Cyclical imagery, motif payoff, symbolic closure ARE valid resolution mechanisms.\n`;
+          } else if (resolutionModel === 'cyclical') {
+            traditionPreamble += `Cyclical resolution: Return to opening imagery/state with transformed meaning IS complete resolution.\n`;
+          }
+        }
+        
+        if (audienceGrammar) {
+          traditionPreamble += `\nAudience Grammar: ${audienceGrammar}\n`;
+        }
+        
+        if (structuralConventions.length > 0) {
+          traditionPreamble += `Structural Conventions: ${structuralConventions.join(', ')}\n`;
+        }
+        
+        traditionPreamble += `=============================================================================\n`;
+        
+        // Prepend traditionPreamble to scriptContext for all core agents
+        scriptContext = scriptContext + traditionPreamble;
+        console.log(`[analyze-script] PHASE 1 complete: Tradition="${tradition}", Format="${formatType}", Resolution="${resolutionModel}" — injected into core agent context`);
+      } else {
+        console.log(`[analyze-script] PHASE 1 complete: No tradition data available from system agents`);
+      }
+    } catch (err) {
+      console.log(`[analyze-script] PHASE 1: Could not read tradition data, proceeding without preamble:`, err);
+    }
+    
+    if (BATCH_DELAY_MS > 0 && coreAgentRuns.length > 0) {
       await new Promise(r => setTimeout(r, BATCH_DELAY_MS));
+    }
+  }
+
+  // PHASE 2: Run core agents in batches with tradition-enriched context
+  if (coreAgentRuns.length > 0) {
+    console.log(`[analyze-script] PHASE 2: Running ${coreAgentRuns.length} core agents in batches of ${BATCH_SIZE}`);
+    
+    for (let i = 0; i < coreAgentRuns.length; i += BATCH_SIZE) {
+      const batch = coreAgentRuns.slice(i, i + BATCH_SIZE);
+      const batchNum = Math.floor(i / BATCH_SIZE) + 1;
+      const totalBatches = Math.ceil(coreAgentRuns.length / BATCH_SIZE);
+      const isLastBatch = i + BATCH_SIZE >= coreAgentRuns.length;
+      
+      console.log(`[analyze-script] Running core batch ${batchNum}/${totalBatches}: ${batch.map(([name]) => name).join(', ')}`);
+      
+      // OPTIMIZATION 9: Fire synthesis agents in parallel with the last batch
+      if (isLastBatch && onLastBatchStarted) {
+        console.log(`[analyze-script] Last batch started — triggering synthesis overlap`);
+        onLastBatchStarted();
+      }
+      
+      const batchResults = await Promise.all(
+        batch.map(([agentName, agentConfig], idx) =>
+          new Promise<void>(resolve => setTimeout(resolve, idx * STAGGER_MS))
+            .then(() => runSingleAgent([agentName, agentConfig]))
+        )
+      );
+      results.push(...batchResults);
+      
+      if (BATCH_DELAY_MS > 0 && !isLastBatch) {
+        console.log(`[analyze-script] Core batch ${batchNum} complete, waiting ${BATCH_DELAY_MS}ms before next batch`);
+        await new Promise(r => setTimeout(r, BATCH_DELAY_MS));
+      }
     }
   }
 
@@ -3685,10 +3798,13 @@ IMPORTANT: For "comparableTitles", you MUST provide 3-5 real comparable films/sh
     "keyQuotes": [{"quote": "Revealing character dialogue", "context": "What it reveals"}],
     "deepDive": "2-3 paragraph narrative on character dynamics, arc quality, and ensemble balance",
     "recommendations": [{"title": "Action item", "description": "Detail", "priority": "critical|high|medium", "effort": "easy|moderate|hard"}],
-    "protagonistProfile": {"name": "Character name", "want": "External goal", "need": "Internal need", "flaw": "Core flaw", "arc": "Transformation summary", "strengths": ["Acting strength"], "weaknesses": ["Arc weakness"]},
-    "antagonistProfile": {"name": "Character name", "motivation": "What drives them", "threat": "Nature of opposition", "complexity": "Nuance assessment"},
+    "protagonistProfiles": [{"name": "Character name", "want": "External goal", "need": "Internal need", "flaw": "Core flaw", "arc": "Transformation summary", "arcType": "public|private|silent|action-driven", "strengths": ["Acting strength"], "weaknesses": ["Arc weakness"]}],
+    "antagonistProfile": {"name": "Character name", "motivation": "What drives them", "threat": "Nature of opposition", "complexity": "Nuance assessment", "worldview": "Core belief system or philosophy that drives their opposition", "philosophyType": "psychological|philosophical|systemic|institutional"},
     "supportingCast": [{"name": "Character", "role": "Narrative function", "impact": "Story contribution"}],
-    "psychologyInsights": "1-2 paragraph analysis of psychological depth, subconscious patterns, defense mechanisms"`;
+    "psychologyInsights": "1-2 paragraph analysis of psychological depth, subconscious patterns, defense mechanisms"
+
+IMPORTANT: Use "protagonistProfiles" (ARRAY) to list ALL protagonists. A protagonist is defined by narrative function (driving a story arc toward resolution), NOT by dialogue count. A silent character who drives a parallel justice arc IS a protagonist. In dual-protagonist structures, each protagonist answers the same dramatic question differently. Include an "arcType" for each: "public" (visible, dialogue-driven), "private" (internal journey), "silent" (action-driven, minimal dialogue), "action-driven" (physical choices carry the arc).
+For "antagonistProfile", include "worldview" and "philosophyType". Not all antagonists operate through psychological vulnerability — some operate through conviction, worldview, or systemic power. A villain whose worldview is answered by a child is dramatically complete.`;
     case 'ConflictAgent':
       return `"verdict": "One-sentence conflict diagnosis",
     "whatWorks": ["Conflict strength with evidence"],

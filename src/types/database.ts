@@ -211,8 +211,9 @@ export interface AgentSectionContent {
     effort: 'easy' | 'moderate' | 'hard';
   }>;
   // Character-specific
-  protagonistProfile?: { name: string; want: string; need: string; flaw: string; arc: string; strengths?: string[]; weaknesses?: string[] };
-  antagonistProfile?: { name: string; motivation: string; threat: string; complexity: string };
+  protagonistProfile?: { name: string; want: string; need: string; flaw: string; arc: string; strengths?: string[]; weaknesses?: string[]; arcType?: string };
+  protagonistProfiles?: Array<{ name: string; want: string; need: string; flaw: string; arc: string; strengths?: string[]; weaknesses?: string[]; arcType?: string }>;
+  antagonistProfile?: { name: string; motivation: string; threat: string; complexity: string; worldview?: string; philosophyType?: 'psychological' | 'philosophical' | 'systemic' | 'institutional' };
   supportingCast?: Array<{ name: string; role: string; impact: string }>;
   psychologyInsights?: string;
   // Market-specific
@@ -223,6 +224,12 @@ export interface AgentSectionContent {
   budgetTier?: string;
   productionComplexity?: string;
   talentRequirements?: string;
+  // Tradition-specific
+  tradition?: string;
+  formatType?: string;
+  resolutionModel?: string;
+  audienceGrammar?: string;
+  structuralConventions?: string[];
 }
 
 export interface SceneAnalysisData {
