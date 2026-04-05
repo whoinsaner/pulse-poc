@@ -912,6 +912,7 @@ TRADITION-AWARE EVALUATION:
 - In traditions with strong oral/poetic heritage (Indian, African, Middle Eastern), thematic expression through dialogue poetry, proverbs, or naming conventions is valid craft, not "on the nose."
 - Cultural resonance should be evaluated within the script's own cultural context first, then universal resonance second.
 - Moral complexity does not require moral ambiguity — a clear moral stance executed with nuance and evidence is complex.
+- Track thematic call-and-response patterns: where one character poses a philosophical question or claim, and another character answers it later. This is a valid and often superior form of resolution in non-Hollywood traditions. Surface "Thematic Symmetry" as a finding when detected.
 
 COMIC/GRAPHIC NARRATIVE ADAPTATION:
 When the script type is "comic" or the content is a graphic narrative:
