@@ -16,19 +16,19 @@ export default function RewritePriorities() {
   const insights = reportData.insights || [];
   const params = reportData.parameterScores || [];
   
-  const criticalIssues = params.filter(p => p.score < 4).map(p => ({
+  const criticalIssues = params.filter(p => p.score < 40).map(p => ({
     title: p.displayName || p.parameterName,
     description: p.rationale || 'Requires immediate attention',
     effort: 'moderate' as const
   }));
   
-  const highPriorityIssues = params.filter(p => p.score >= 4 && p.score < 6).slice(0, 5).map(p => ({
+  const highPriorityIssues = params.filter(p => p.score >= 40 && p.score < 60).slice(0, 5).map(p => ({
     title: p.displayName || p.parameterName,
     description: p.rationale || 'Important improvement area',
     effort: 'moderate' as const
   }));
   
-  const polishItems = params.filter(p => p.score >= 6 && p.score < 7.5).slice(0, 5).map(p => ({
+  const polishItems = params.filter(p => p.score >= 60 && p.score < 75).slice(0, 5).map(p => ({
     title: p.displayName || p.parameterName,
     description: p.rationale || 'Polish and refinement opportunity',
     effort: 'easy' as const
