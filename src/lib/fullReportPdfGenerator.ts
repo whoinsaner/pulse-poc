@@ -620,14 +620,35 @@ function renderAgentNarrative(
       };
 
       // Character profiles (protagonist/antagonist sections)
-      if (content.protagonistProfile) {
-        const p = content.protagonistProfile;
+      // Support both single protagonistProfile and multi protagonistProfiles array
+      const allProtagonists: Array<{ name?: string; want?: string; need?: string; flaw?: string; arc?: string; arcType?: string; strengths?: string[]; weaknesses?: string[] }> = [];
+      if (content.protagonistProfiles && Array.isArray(content.protagonistProfiles) && content.protagonistProfiles.length > 0) {
+        allProtagonists.push(...content.protagonistProfiles);
+      } else if (content.protagonistProfile) {
+        allProtagonists.push(content.protagonistProfile);
+      }
+
+      for (const p of allProtagonists) {
         y = checkBreak(doc, y, 30, pageNum, sectionName);
         doc.setFontSize(FONTS.h3);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(...COLORS.text);
-        const protLines = wrapText(doc, `Protagonist: ${p.name || 'Unknown'}`, cw);
+        const protTitle = `Protagonist: ${p.name || 'Unknown'}`;
+        const protLines = wrapText(doc, protTitle, cw - (p.arcType ? 40 : 0));
         for (const line of protLines) { y = checkBreak(doc, y, 6, pageNum, sectionName); doc.text(line, MARGINS.left, y); y += 6; }
+
+        // Arc type badge
+        if (p.arcType) {
+          const badgeX = MARGINS.left + cw - 35;
+          const badgeY = y - 6;
+          doc.setFillColor(224, 231, 255);
+          doc.roundedRect(badgeX, badgeY - 4, 35, 7, 2, 2, 'F');
+          doc.setFontSize(FONTS.tiny);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(...COLORS.primary);
+          doc.text(p.arcType.replace(/[-_]/g, ' ').toUpperCase(), badgeX + 17.5, badgeY, { align: 'center' });
+        }
+
         y += 1;
         doc.setFontSize(FONTS.body);
         const fields = [
@@ -660,8 +681,8 @@ function renderAgentNarrative(
           { name: 'Complexity', score: getParamScoreForPdf(['complex', 'depth', 'dimension', 'psychology'], charFallback) },
           { name: 'Agency', score: getParamScoreForPdf(['agency', 'active', 'drive', 'motivation'], charFallback) },
           { name: 'Growth', score: getParamScoreForPdf(['arc', 'growth', 'transform', 'change'], charFallback) },
-        ], 'Protagonist Dimensions');
-        y += 2;
+        ], `${p.name || 'Protagonist'} Dimensions`);
+        y += 4;
       }
 
       if (content.antagonistProfile) {
@@ -674,9 +695,13 @@ function renderAgentNarrative(
         for (const line of antLines) { y = checkBreak(doc, y, 6, pageNum, sectionName); doc.text(line, MARGINS.left, y); y += 6; }
         y += 1;
         doc.setFontSize(FONTS.body);
-        const fields = [
-          ['Motivation', a.motivation], ['Threat', a.threat], ['Complexity', a.complexity]
+        const fields: [string, string | undefined][] = [
+          ['Motivation', a.motivation], ['Threat', a.threat], ['Complexity', a.complexity],
+          ['Worldview', a.worldview],
         ];
+        if (a.philosophyType) {
+          fields.push(['Philosophy Type', a.philosophyType.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase())]);
+        }
         for (const [label, val] of fields) {
           if (val) {
             y = checkBreak(doc, y, 6, pageNum, sectionName);
