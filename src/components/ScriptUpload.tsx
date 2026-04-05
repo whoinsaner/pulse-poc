@@ -84,6 +84,8 @@ export function ScriptUpload({ onUploadComplete, onClose }: ScriptUploadProps) {
   const [isAutoSelected, setIsAutoSelected] = useState(false);
   const [showMismatchPrompt, setShowMismatchPrompt] = useState(false);
   const [mismatchDetectedType, setMismatchDetectedType] = useState<ScriptType | null>(null);
+  const [autoDetectedTradition, setAutoDetectedTradition] = useState<string | null>(null);
+  const [traditionConfidence, setTraditionConfidence] = useState<number>(0);
   const [autoClassifyEnabled] = useState(() => {
     return localStorage.getItem('pulse_auto_classify') !== 'false';
   });
