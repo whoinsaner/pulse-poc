@@ -697,7 +697,7 @@ function renderAgentNarrative(
         y += 2;
 
         // Antagonist dimension scores
-        const conflictScore = reportData.categoryScores?.['Conflict'] || reportData.categoryScores?.['Character'];
+        const conflictScore = categoryScores?.['Conflict'] || categoryScores?.['Character'];
         const antFallback = typeof conflictScore === 'number' ? conflictScore : (typeof conflictScore === 'object' && conflictScore !== null ? (conflictScore as any).score || 65 : 65);
         renderDimensionTable([
           { name: 'Physical', score: getParamScoreForPdf(['threat', 'stakes', 'danger', 'physical'], antFallback) },
