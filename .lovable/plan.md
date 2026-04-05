@@ -1,44 +1,45 @@
 
 
-# Plan: Make Global Instructions Configurable and Visible
+# Plan: Rate Limit Resilience for Analysis Pipeline
 
-## Current State
-The `GLOBAL_INSTRUCTIONS` prompt is a ~60-line hardcoded string constant in `supabase/functions/analyze-script/index.ts`. It is injected into every agent's system prompt. It is **not** stored in the database, **not** editable through the UI, and **not** visible on any settings page.
+## Problem
+The analysis pipeline fires up to 7 agents simultaneously per batch. When the AI gateway rate-limits (429), all agents retry at the same time with identical backoff timers, creating a "thundering herd" that exhausts all retry attempts without recovery. This is worse when reasoning is enabled because reasoning requests consume more tokens and take longer, increasing the likelihood of hitting rate limits.
 
 ## Changes
 
-### 1. Database — Store Global Instructions
-Create a migration to add a row in `agent_configurations` for the global instructions, using the existing table structure:
-- `agent_name`: `"GlobalInstructions"`
-- `category`: `"system"`
-- `display_name`: `"Global Agent Operating Rules"`
-- `system_prompt`: the current hardcoded text
-- `is_system`: `true`
-- `is_active`: `true`
-- `parameters`: `'{}'` (no parameters — it's a meta-prompt)
+### 1. Reduce Batch Concurrency
+In `supabase/functions/analyze-script/index.ts`, reduce `BATCH_SIZE` for medium/large agent counts:
+- Medium (9-16 agents): `BATCH_SIZE = 4` (was 7), `BATCH_DELAY_MS = 500` (was 200)
+- Large (17+ agents): `BATCH_SIZE = 3` (was 6), `BATCH_DELAY_MS = 1000` (was 500)
+- When reasoning is enabled: further reduce by 1 (e.g., 3 becomes 2) since reasoning requests are heavier
 
-This reuses the existing `agent_configurations` table and its versioning/audit infrastructure rather than creating a new table.
+### 2. Add Jittered Backoff per Agent
+Replace the synchronized exponential backoff with per-agent randomized jitter:
+- Current: `delay = retryDelayMs * 2^attempt` (all agents retry at exact same time)
+- New: `delay = retryDelayMs * 2^attempt + random(0, retryDelayMs)` (agents stagger retries)
+- Apply this in the inner retry loop inside `runAgent` (line ~3920)
 
-### 2. Edge Function — Read Global Instructions from DB
-In `analyze-script/index.ts`:
-- At startup, query `agent_configurations` for `agent_name = 'GlobalInstructions'` (prefer org-specific override, fall back to system default)
-- Use the fetched `system_prompt` as the `GLOBAL_INSTRUCTIONS` value instead of the hardcoded constant
-- Keep the hardcoded version as a fallback if the DB query fails
+### 3. Add Staggered Launch Within Each Batch
+Instead of firing all agents in a batch simultaneously via `Promise.all`, introduce a small stagger (300ms) between each agent launch within a batch. Agents still run concurrently, but their requests hit the gateway at slightly different times:
+```text
+Batch of 4 agents:
+  t=0ms    Agent A starts
+  t=300ms  Agent B starts
+  t=600ms  Agent C starts
+  t=900ms  Agent D starts
+  (all 4 run concurrently, just staggered starts)
+```
 
-### 3. Settings UI — Surface on Agent Prompts Page
-In the Agent Configuration page (`src/pages/AgentConfiguration.tsx`):
-- The `GlobalInstructions` entry will appear naturally in the agent list under the "system" category since it uses the same `agent_configurations` table
-- Admins can view and edit the prompt text, with changes versioned in `agent_prompt_versions` just like any other agent prompt
-- Add a visual indicator (badge or banner) to distinguish it as the "master prompt" that is injected into all agents
+### 4. Increase Max Retries for Rate Limits Specifically
+Currently `maxRetries` (default 3) governs both empty-response retries and 429 retries. Add a separate counter for rate-limit retries with a higher limit (6 attempts) and longer backoff ceiling (30s), so transient rate limits don't permanently kill agents.
 
-### 4. Settings UI — Surface on Parameters Schema Page
-In `src/pages/settings/ParametersSchema.tsx`:
-- Add a read-only "Global Rules" tab or card that displays the current global instructions text
-- This gives non-admin users visibility into the evaluation rules without needing access to the Agent Prompts page
+### 5. Fix the `supabase.rpc(...).catch is not a function` Error
+The edge function logs show `Background analysis error: supabase.rpc(...).catch is not a function`. This is the error that causes the final status update to fail. Fix the `.catch()` call on the RPC invocation (likely needs `await` or `.then().catch()` pattern).
 
 ## Technical Details
-- No new tables needed — reuses `agent_configurations` + `agent_prompt_versions`
-- RLS policies already cover system-level configs (authenticated users can view, admins can edit)
-- The edge function already queries `agent_configurations` for per-agent prompts; extending it to fetch GlobalInstructions follows the same pattern
-- Version history and audit trail come for free through the existing prompt versioning system
+- All changes are in `supabase/functions/analyze-script/index.ts`
+- The stagger-within-batch approach uses a helper that wraps each agent call with a delay: `agents.map((a, i) => new Promise(r => setTimeout(r, i * 300)).then(() => runSingleAgent(a)))`
+- Rate-limit-specific retry counter is separate from the general retry counter so non-429 errors still fail fast
+- Reasoning-aware batch sizing reads the `reasoningEffort` parameter already passed to `runStandardAnalysis`
+- No database changes required
 
