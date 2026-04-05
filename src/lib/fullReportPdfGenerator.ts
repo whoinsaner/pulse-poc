@@ -735,7 +735,7 @@ function renderAgentNarrative(
         }
 
         // Supporting Cast dimension scores
-        const castFallback = typeof reportData.categoryScores?.['Character'] === 'number' ? reportData.categoryScores['Character'] : 65;
+        const castFallback = typeof categoryScores?.['Character'] === 'number' ? categoryScores['Character'] : 65;
         renderDimensionTable([
           { name: 'Diversity', score: getParamScoreForPdf(['diversity', 'distinct', 'voice', 'variety'], castFallback as number) },
           { name: 'Utility', score: getParamScoreForPdf(['function', 'utility', 'purpose', 'role'], castFallback as number) },
