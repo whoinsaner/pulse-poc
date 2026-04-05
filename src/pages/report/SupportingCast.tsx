@@ -88,6 +88,25 @@ export default function SupportingCast() {
     };
   });
 
+  // Derive dimension scores from actual parameter data
+  const getParamScore = (keywords: string[]) => {
+    const allParams = reportData.parameterScores || [];
+    const matched = allParams.filter(p => 
+      keywords.some(k => p.parameterName?.toLowerCase().includes(k) || p.displayName?.toLowerCase().includes(k))
+    );
+    return matched.length > 0 
+      ? Math.round(matched.reduce((sum, p) => sum + p.score, 0) / matched.length)
+      : Math.round(sectionScore);
+  };
+
+  const dimensionScores = {
+    diversity: getParamScore(['diversity', 'distinct', 'voice', 'variety']),
+    utility: getParamScore(['function', 'utility', 'purpose', 'role']),
+    balance: getParamScore(['balance', 'ensemble', 'distribution']),
+    depth: getParamScore(['depth', 'dimension', 'develop', 'arc']),
+  };
+  const avgDimension = Math.round((dimensionScores.diversity + dimensionScores.utility + dimensionScores.balance + dimensionScores.depth) / 4);
+
   const basePath = window.location.pathname.split('/characters')[0];
 
   if (!context) {
