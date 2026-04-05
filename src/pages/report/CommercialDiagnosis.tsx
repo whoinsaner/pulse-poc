@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { ReportData, StakeholderLens, LENS_CONFIG, AgentSectionContent } from '@/types/database';
-import { CommercialNarrativePanel, ProductionNarrativePanel } from '@/components/report/AgentNarrativePanel';
+import { ReportData, StakeholderLens, LENS_CONFIG } from '@/types/database';
+
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { 
