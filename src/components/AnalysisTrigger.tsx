@@ -375,6 +375,7 @@ export function AnalysisTrigger({
           forceAnalysis,
           resume,
           stakeholderLens: stakeholderLens || null,
+          reasoningEffort: isReasoningEnabled ? reasoningEffort : null,
         },
       }).then(({ error: invokeError }) => {
         if (invokeError) {
