@@ -6,9 +6,6 @@ import { Card } from '@/components/ui/card';
 import { 
   SectionHeader, 
   DiagnosisSummary,
-  WeightedParameterList,
-  DevelopmentFocus,
-  SectionNavigator,
 } from '@/components/report/ui';
 import { InlineMaturity } from '@/components/report/ui/MaturityBadge';
 import { Palette, MessageSquare, Heart, Eye, Sparkles } from 'lucide-react';

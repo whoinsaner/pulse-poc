@@ -7,9 +7,6 @@ import { Badge } from '@/components/ui/badge';
 import { 
   SectionHeader, 
   DiagnosisSummary,
-  WeightedParameterList,
-  DevelopmentFocus,
-  SectionNavigator,
 } from '@/components/report/ui';
 import { InlineMaturity } from '@/components/report/ui/MaturityBadge';
 import { TrendingUp, Target, Film, DollarSign, Users } from 'lucide-react';

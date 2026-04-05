@@ -7,8 +7,6 @@ import { Badge } from '@/components/ui/badge';
 import { 
   SectionHeader, 
   DiagnosisSummary,
-  WeightedParameterList,
-  DevelopmentFocus,
 } from '@/components/report/ui';
 import { InlineMaturity } from '@/components/report/ui/MaturityBadge';
 import { Users } from 'lucide-react';
@@ -42,7 +40,7 @@ export default function CharacterDiagnosis() {
         evidence: p.evidence,
         weight: 1.0,
       }));
-  }, [reportData.parameterScores]);
+  }, [reportData?.parameterScores]);
 
   // Calculate section score
   const sectionScore = useMemo(() => {
@@ -54,9 +52,6 @@ export default function CharacterDiagnosis() {
 
   // Get characters from report data
   const characters = reportData?.characters || [];
-
-  // Get base path
-  const basePath = window.location.pathname.split('/characters')[0];
 
   if (!context) {
     return <div className="text-center py-12 text-muted-foreground">Loading...</div>;
@@ -78,7 +73,7 @@ export default function CharacterDiagnosis() {
       <DiagnosisSummary
         parameters={characterParameters}
         categoryName="Character"
-        developmentLink={`${basePath}/development`}
+        developmentLink={`${window.location.pathname.split('/characters')[0]}/development`}
       />
 
       {/* Character Cards */}
@@ -92,34 +87,6 @@ export default function CharacterDiagnosis() {
           </div>
         </div>
       )}
-
-      {/* Weighted Parameter Breakdown */}
-      <WeightedParameterList
-        parameters={characterParameters}
-        title="Character Parameter Breakdown"
-        initiallyExpanded={false}
-        defaultVisibleCount={6}
-      />
-
-      {/* Development Focus */}
-      {(() => {
-        const items = characterParameters
-          .filter(p => p.score < 70)
-          .sort((a, b) => a.score - b.score)
-          .map(p => ({ title: p.displayName, description: p.rationale || '' }));
-        return items.length > 0 ? (
-          <DevelopmentFocus
-            sectionName="Character"
-            items={items}
-            developmentPath={`${basePath}/development`}
-            relatedSections={[
-              { label: 'Story Diagnosis', path: `${basePath}/story` },
-              { label: 'Craft Diagnosis', path: `${basePath}/craft` },
-            ]}
-          />
-        ) : null;
-      })()}
-
     </div>
   );
 }
