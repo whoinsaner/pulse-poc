@@ -695,9 +695,13 @@ function renderAgentNarrative(
         for (const line of antLines) { y = checkBreak(doc, y, 6, pageNum, sectionName); doc.text(line, MARGINS.left, y); y += 6; }
         y += 1;
         doc.setFontSize(FONTS.body);
-        const fields = [
-          ['Motivation', a.motivation], ['Threat', a.threat], ['Complexity', a.complexity]
+        const fields: [string, string | undefined][] = [
+          ['Motivation', a.motivation], ['Threat', a.threat], ['Complexity', a.complexity],
+          ['Worldview', a.worldview],
         ];
+        if (a.philosophyType) {
+          fields.push(['Philosophy Type', a.philosophyType.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase())]);
+        }
         for (const [label, val] of fields) {
           if (val) {
             y = checkBreak(doc, y, 6, pageNum, sectionName);
