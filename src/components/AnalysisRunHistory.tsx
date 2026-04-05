@@ -136,6 +136,11 @@ export function AnalysisRunHistory({ scriptId, scriptTitle }: AnalysisRunHistory
       if (createError) throw createError;
 
       // Trigger analysis
+      const reasoningEffort = localStorage.getItem('pulse_reasoning_enabled') === 'true'
+        ? (localStorage.getItem('pulse_reasoning_effort') || 'medium')
+        : null;
+      console.log('[analyze-script][AnalysisRunHistory] Sending reasoningEffort:', reasoningEffort);
+
       const { error: invokeError } = await supabase.functions.invoke('analyze-script', {
         body: {
           scriptId,
@@ -145,6 +150,7 @@ export function AnalysisRunHistory({ scriptId, scriptTitle }: AnalysisRunHistory
           forceAnalysis: false,
           resume: false,
           stakeholderLens: failedRun.stakeholder_lens || null,
+          reasoningEffort,
         },
       });
 

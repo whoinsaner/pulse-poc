@@ -181,6 +181,7 @@ export default function ReportLayout() {
       const reasoningEffort = localStorage.getItem('pulse_reasoning_enabled') === 'true'
         ? (localStorage.getItem('pulse_reasoning_effort') || 'medium')
         : null;
+      console.log('[analyze-script][ReportLayout:retry] Sending reasoningEffort:', reasoningEffort);
 
       const response = await supabase.functions.invoke('analyze-script', {
         body: {

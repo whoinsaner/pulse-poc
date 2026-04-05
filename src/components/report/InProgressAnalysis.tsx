@@ -173,6 +173,7 @@ export function InProgressAnalysis({ analysis: initialAnalysis, onRetry, onViewP
       const reasoningEffort = localStorage.getItem('pulse_reasoning_enabled') === 'true'
         ? (localStorage.getItem('pulse_reasoning_effort') || 'medium')
         : null;
+      console.log('[analyze-script][InProgressAnalysis:resume] Sending reasoningEffort:', reasoningEffort);
 
       const { error } = await supabase.functions.invoke('analyze-script', {
         body: {
