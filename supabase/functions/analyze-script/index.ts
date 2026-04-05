@@ -3379,7 +3379,12 @@ async function runStandardAnalysis(
       onLastBatchStarted();
     }
     
-    const batchResults = await Promise.all(batch.map(runSingleAgent));
+    const batchResults = await Promise.all(
+      batch.map(([agentName, agentConfig], idx) =>
+        new Promise<void>(resolve => setTimeout(resolve, idx * STAGGER_MS))
+          .then(() => runSingleAgent([agentName, agentConfig]))
+      )
+    );
     results.push(...batchResults);
     
     // Wait between batches (except for last batch), skip if delay is 0
