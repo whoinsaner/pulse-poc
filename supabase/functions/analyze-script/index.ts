@@ -1019,6 +1019,7 @@ TRADITION-AWARE EVALUATION:
 - Emotional payoff through physical action (a gesture, an object placed, a door closed) is equal to dialogue-driven catharsis.
 - Silence and stillness can carry immense emotional weight in Japanese and European traditions. Do not penalize "slow" emotional pacing if it serves accumulation.
 - Mass-hero emotional architecture (audience euphoria through character triumph) is a legitimate emotional target, not "shallow."
+- Track emotional register shifts within and between action sequences. Two sequences with the same plot function (pursuit) but different emotional registers (horror vs. tenderness vs. coming-of-age) should be evaluated as distinct narrative units, not flagged as repetition.
 
 COMIC/GRAPHIC NARRATIVE ADAPTATION:
 When the script type is "comic" or the content is a graphic narrative, reinterpret emotional arc for page-based visual storytelling:
