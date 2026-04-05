@@ -175,6 +175,9 @@ export function generateSampleReportPDF(
     ['Genre', metadata?.genre || 'N/A'],
     ['Type', metadata?.scriptType || 'N/A'],
     ['Pages', metadata?.pageCount?.toString() || 'N/A'],
+    ...(metadata?.cinemaTradition && metadata.cinemaTradition !== 'auto_detect'
+      ? [['Tradition', metadata.cinemaTradition.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())]]
+      : []),
     ['Lens', LENS_CONFIG[activeLens].label],
   ];
   

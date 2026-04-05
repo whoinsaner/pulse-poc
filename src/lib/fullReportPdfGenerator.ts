@@ -346,6 +346,9 @@ function renderCoverPage(doc: jsPDF, data: ReportData, title: string, activeLens
   const meta = data.scriptMetadata;
   const pills: string[] = [];
   if (meta?.genre) pills.push(meta.genre);
+  if (meta?.cinemaTradition && meta.cinemaTradition !== 'auto_detect') {
+    pills.push(meta.cinemaTradition.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()) + ' Tradition');
+  }
   if (meta?.pageCount) pills.push(`${meta.pageCount} pages`);
   if (meta?.characterCount) pills.push(`${meta.characterCount} characters`);
   if (meta?.sceneCount) pills.push(`${meta.sceneCount} scenes`);
