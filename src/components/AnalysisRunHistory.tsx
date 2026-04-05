@@ -37,6 +37,7 @@ interface AnalysisRun {
   status: AnalysisStatus;
   quality_mode: string | null;
   stakeholder_lens: StakeholderLens | null;
+  reasoning_effort: string | null;
   created_at: string;
   started_at: string | null;
   completed_at: string | null;
