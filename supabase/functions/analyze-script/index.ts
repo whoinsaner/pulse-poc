@@ -248,6 +248,63 @@ interface AgentPromptConfig {
 const agentConfigCache: Map<string, { config: AgentPromptConfig; timestamp: number }> = new Map();
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minute cache
 
+// Cache for GlobalInstructions
+let globalInstructionsCache: { text: string; timestamp: number } | null = null;
+
+/**
+ * Fetch GlobalInstructions from the database with fallback to hardcoded constant.
+ * Supports org-specific override → system default → hardcoded fallback.
+ */
+async function fetchGlobalInstructions(
+  supabaseClient: any,
+  organizationId?: string
+): Promise<string> {
+  // Check cache first
+  if (globalInstructionsCache && Date.now() - globalInstructionsCache.timestamp < CACHE_TTL_MS) {
+    console.log('[GlobalInstructions] Using cached version');
+    return globalInstructionsCache.text;
+  }
+
+  try {
+    // Try org-specific override first
+    if (organizationId) {
+      const { data: orgConfig } = await supabaseClient
+        .from('agent_configurations')
+        .select('system_prompt')
+        .eq('agent_name', 'GlobalInstructions')
+        .eq('organization_id', organizationId)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (orgConfig?.system_prompt) {
+        console.log('[GlobalInstructions] Using org-specific override');
+        globalInstructionsCache = { text: orgConfig.system_prompt, timestamp: Date.now() };
+        return orgConfig.system_prompt;
+      }
+    }
+
+    // Fall back to system default
+    const { data: sysConfig } = await supabaseClient
+      .from('agent_configurations')
+      .select('system_prompt')
+      .eq('agent_name', 'GlobalInstructions')
+      .eq('is_system', true)
+      .maybeSingle();
+
+    if (sysConfig?.system_prompt) {
+      console.log('[GlobalInstructions] Using system DB config');
+      globalInstructionsCache = { text: sysConfig.system_prompt, timestamp: Date.now() };
+      return sysConfig.system_prompt;
+    }
+  } catch (err) {
+    console.log('[GlobalInstructions] DB fetch failed, using hardcoded fallback:', err);
+  }
+
+  // Fallback to hardcoded constant
+  console.log('[GlobalInstructions] Using hardcoded fallback');
+  return GLOBAL_INSTRUCTIONS;
+}
+
 /**
  * Get agent prompt configuration - checks database first, falls back to hardcoded AGENTS
  * Supports org-specific custom agents that override system defaults
@@ -3049,6 +3106,9 @@ async function runStandardAnalysis(
     console.log('[analyze-script] Could not hoist organization_id, agents will query individually');
   }
 
+  // ============= Fetch dynamic GlobalInstructions =============
+  const dynamicGlobalInstructions = await fetchGlobalInstructions(supabase, organizationId);
+
   // ============= OPTIMIZATION 2: Batch-load all model configs =============
   const configId = isUUID(qualityMode) 
     ? qualityMode 
@@ -3217,7 +3277,7 @@ async function runStandardAnalysis(
         
         await updateAgentProgress(supabase, analysisRunId, agentName, 'running', undefined, modelConfig.model);
 
-        const result = await runAgent(apiKey, agentName, promptConfig, scriptContext, parameterMap, modelConfig);
+        const result = await runAgent(apiKey, agentName, promptConfig, scriptContext, parameterMap, modelConfig, dynamicGlobalInstructions);
 
         // Delete any existing scores from this agent for this run (prevents duplicates on resume)
         await supabase
@@ -3361,6 +3421,9 @@ async function runChunkedAnalysis(
     console.log('[analyze-script] Could not get organization ID for prompt configs');
   }
 
+  // Fetch dynamic GlobalInstructions for chunked analysis
+  const dynamicGlobalInstructions = await fetchGlobalInstructions(supabase, organizationId);
+
   // For each agent, analyze chunks and aggregate
   const agentPromises = agentsToRun.map(async ([agentName, agentConfig]) => {
     // Get model config for this agent
@@ -3395,7 +3458,7 @@ async function runChunkedAnalysis(
         
         console.log(`[analyze-script] ${agentName} analyzing ${chunkLabel} with ${modelConfig.model}`);
         
-        const result = await runAgent(apiKey, agentName, promptConfig, chunkContext, parameterMap, modelConfig);
+        const result = await runAgent(apiKey, agentName, promptConfig, chunkContext, parameterMap, modelConfig, dynamicGlobalInstructions);
         
         chunkResults.push({
           chunkIndex: i,
@@ -3694,8 +3757,17 @@ async function runAgent(
   config: { parameters: string[]; systemPrompt: string },
   context: string,
   parameterMap: Map<string, any>,
-  modelConfig: ModelConfig
+  modelConfig: ModelConfig,
+  dynamicGlobalInstructions?: string
 ): Promise<AgentResult> {
+  // If dynamic global instructions are provided, replace the hardcoded ones in the system prompt
+  let effectiveSystemPrompt = config.systemPrompt;
+  if (dynamicGlobalInstructions && config.systemPrompt.includes(GLOBAL_INSTRUCTIONS.trim().substring(0, 50))) {
+    effectiveSystemPrompt = config.systemPrompt.replace(GLOBAL_INSTRUCTIONS, '\n' + dynamicGlobalInstructions + '\n');
+  } else if (dynamicGlobalInstructions && !config.systemPrompt.includes('GLOBAL AGENT OPERATING RULES')) {
+    // DB-stored prompt that doesn't embed global instructions — prepend them
+    effectiveSystemPrompt = dynamicGlobalInstructions + '\n\n' + config.systemPrompt;
+  }
   const parametersToScore = config.parameters
     .map(name => parameterMap.get(name))
     .filter(Boolean);
@@ -3855,7 +3927,7 @@ async function runPostAnalysisSynthesis(
         body: JSON.stringify({
           model: modelConfig.model, // Dynamic model from config
           messages: [
-            { role: 'system', content: config.systemPrompt },
+            { role: 'system', content: effectiveSystemPrompt },
             { role: 'user', content: userPrompt }
           ],
           ...(modelConfig.reasoning ? { reasoning: modelConfig.reasoning } : {}),

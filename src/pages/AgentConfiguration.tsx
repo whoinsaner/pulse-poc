@@ -25,7 +25,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -529,6 +528,11 @@ export default function AgentConfiguration() {
                     )}>
                       {CATEGORY_CONFIG[editedAgent.category]?.label || editedAgent.category}
                     </Badge>
+                    {editedAgent.agent_name === 'GlobalInstructions' && (
+                      <Badge variant="default" className="text-[10px] bg-amber-500 hover:bg-amber-600 text-white border-transparent">
+                        Master Prompt
+                      </Badge>
+                    )}
                     <Badge variant="outline" className="text-[10px]">
                       v{editedAgent.version}
                     </Badge>
