@@ -585,6 +585,38 @@ function renderAgentNarrative(
         y += 4;
       }
 
+      // Helper to compute dimension scores from parameterScores
+      const getParamScoreForPdf = (keywords: string[], fallback: number) => {
+        const allParams = reportData.parameterScores || [];
+        const matched = allParams.filter(p => 
+          keywords.some(k => (p.parameterName?.toLowerCase() || '').includes(k) || (p.displayName?.toLowerCase() || '').includes(k))
+        );
+        return matched.length > 0 
+          ? Math.round(matched.reduce((sum, p) => sum + p.score, 0) / matched.length)
+          : Math.round(fallback);
+      };
+
+      const renderDimensionTable = (dimensions: { name: string; score: number }[], title: string) => {
+        y = checkBreak(doc, y, 20, pageNum, sectionName);
+        doc.setFontSize(FONTS.small);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...COLORS.text);
+        doc.text(title, MARGINS.left + 3, y);
+        y += 5;
+        const dtResult = autoTable(doc, {
+          startY: y,
+          head: [dimensions.map(d => d.name)],
+          body: [dimensions.map(d => `${d.score}/100`)],
+          theme: 'grid',
+          styles: { fontSize: 7, cellPadding: 2, halign: 'center' as const },
+          headStyles: { fillColor: [59, 130, 246], textColor: 255, fontStyle: 'bold' as const, fontSize: 7 },
+          margin: { left: MARGINS.left, right: MARGINS.right },
+        });
+        y = (dtResult as any)?.finalY ? (dtResult as any).finalY + 4 : y + 20;
+        doc.setFontSize(FONTS.body);
+        doc.setFont('helvetica', 'normal');
+      };
+
       // Character profiles (protagonist/antagonist sections)
       if (content.protagonistProfile) {
         const p = content.protagonistProfile;
@@ -616,7 +648,18 @@ function renderAgentNarrative(
             }
           }
         }
-        y += 4;
+        y += 2;
+
+        // Protagonist dimension scores
+        const charScore = reportData.categoryScores?.['Character'];
+        const charFallback = typeof charScore === 'number' ? charScore : (typeof charScore === 'object' && charScore !== null ? (charScore as any).score || 65 : 65);
+        renderDimensionTable([
+          { name: 'Empathy', score: getParamScoreForPdf(['empathy', 'relatab', 'likab', 'audience'], charFallback) },
+          { name: 'Complexity', score: getParamScoreForPdf(['complex', 'depth', 'dimension', 'psychology'], charFallback) },
+          { name: 'Agency', score: getParamScoreForPdf(['agency', 'active', 'drive', 'motivation'], charFallback) },
+          { name: 'Growth', score: getParamScoreForPdf(['arc', 'growth', 'transform', 'change'], charFallback) },
+        ], 'Protagonist Dimensions');
+        y += 2;
       }
 
       if (content.antagonistProfile) {
@@ -649,7 +692,18 @@ function renderAgentNarrative(
             }
           }
         }
-        y += 4;
+        y += 2;
+
+        // Antagonist dimension scores
+        const conflictScore = reportData.categoryScores?.['Conflict'] || reportData.categoryScores?.['Character'];
+        const antFallback = typeof conflictScore === 'number' ? conflictScore : (typeof conflictScore === 'object' && conflictScore !== null ? (conflictScore as any).score || 65 : 65);
+        renderDimensionTable([
+          { name: 'Physical', score: getParamScoreForPdf(['threat', 'stakes', 'danger', 'physical'], antFallback) },
+          { name: 'Psychological', score: getParamScoreForPdf(['psychology', 'manipulat', 'depth', 'complex'], antFallback) },
+          { name: 'Tactical', score: getParamScoreForPdf(['tactical', 'strateg', 'intellig', 'plan'], antFallback) },
+          { name: 'Dramatic', score: getParamScoreForPdf(['dramatic', 'tension', 'conflict', 'opposition'], antFallback) },
+        ], 'Antagonist Dimensions');
+        y += 2;
       }
 
       // Supporting Cast
@@ -677,6 +731,15 @@ function renderAgentNarrative(
           }
           y += 3;
         }
+
+        // Supporting Cast dimension scores
+        const castFallback = typeof reportData.categoryScores?.['Character'] === 'number' ? reportData.categoryScores['Character'] : 65;
+        renderDimensionTable([
+          { name: 'Diversity', score: getParamScoreForPdf(['diversity', 'distinct', 'voice', 'variety'], castFallback as number) },
+          { name: 'Utility', score: getParamScoreForPdf(['function', 'utility', 'purpose', 'role'], castFallback as number) },
+          { name: 'Balance', score: getParamScoreForPdf(['balance', 'ensemble', 'distribution'], castFallback as number) },
+          { name: 'Depth', score: getParamScoreForPdf(['depth', 'dimension', 'develop', 'arc'], castFallback as number) },
+        ], 'Supporting Cast Dimensions');
         y += 4;
       }
 
