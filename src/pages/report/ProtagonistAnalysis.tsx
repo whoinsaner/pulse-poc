@@ -131,6 +131,35 @@ export default function ProtagonistAnalysis() {
         stakeholderLens={stakeholderLens}
       />
 
+      {/* Dimension Tiles */}
+      <div className="grid md:grid-cols-5 gap-4">
+        <Card className="p-5 text-center">
+          <Heart className="h-5 w-5 mx-auto mb-2 text-destructive" />
+          <p className="text-sm text-muted-foreground mb-1">Empathy</p>
+          <ScoreDisplay score={dimensionScores.empathy} size="sm" showLabel={false} />
+        </Card>
+        <Card className="p-5 text-center">
+          <Brain className="h-5 w-5 mx-auto mb-2 text-chart-6" />
+          <p className="text-sm text-muted-foreground mb-1">Complexity</p>
+          <ScoreDisplay score={dimensionScores.complexity} size="sm" showLabel={false} />
+        </Card>
+        <Card className="p-5 text-center">
+          <Target className="h-5 w-5 mx-auto mb-2 text-chart-4" />
+          <p className="text-sm text-muted-foreground mb-1">Agency</p>
+          <ScoreDisplay score={dimensionScores.agency} size="sm" showLabel={false} />
+        </Card>
+        <Card className="p-5 text-center">
+          <Zap className="h-5 w-5 mx-auto mb-2 text-chart-2" />
+          <p className="text-sm text-muted-foreground mb-1">Growth</p>
+          <ScoreDisplay score={dimensionScores.growth} size="sm" showLabel={false} />
+        </Card>
+        <Card className="p-5 text-center bg-primary/5 border-primary/20">
+          <User className="h-5 w-5 mx-auto mb-2 text-primary" />
+          <p className="text-sm text-muted-foreground mb-1">Overall</p>
+          <ScoreDisplay score={avgDimension} size="sm" />
+        </Card>
+      </div>
+
       {/* Protagonist Profile from AI or parsed data */}
       {(protagonistProfile || protagonist) && (
         <Card className="p-6">

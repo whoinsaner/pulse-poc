@@ -133,6 +133,35 @@ export default function SupportingCast() {
         stakeholderLens={stakeholderLens}
       />
 
+      {/* Dimension Tiles */}
+      <div className="grid md:grid-cols-5 gap-4">
+        <Card className="p-5 text-center">
+          <Users className="h-5 w-5 mx-auto mb-2 text-destructive" />
+          <p className="text-sm text-muted-foreground mb-1">Diversity</p>
+          <ScoreDisplay score={dimensionScores.diversity} size="sm" showLabel={false} />
+        </Card>
+        <Card className="p-5 text-center">
+          <Target className="h-5 w-5 mx-auto mb-2 text-chart-6" />
+          <p className="text-sm text-muted-foreground mb-1">Utility</p>
+          <ScoreDisplay score={dimensionScores.utility} size="sm" showLabel={false} />
+        </Card>
+        <Card className="p-5 text-center">
+          <Scale className="h-5 w-5 mx-auto mb-2 text-chart-4" />
+          <p className="text-sm text-muted-foreground mb-1">Balance</p>
+          <ScoreDisplay score={dimensionScores.balance} size="sm" showLabel={false} />
+        </Card>
+        <Card className="p-5 text-center">
+          <Layers className="h-5 w-5 mx-auto mb-2 text-chart-2" />
+          <p className="text-sm text-muted-foreground mb-1">Depth</p>
+          <ScoreDisplay score={dimensionScores.depth} size="sm" showLabel={false} />
+        </Card>
+        <Card className="p-5 text-center bg-primary/5 border-primary/20">
+          <Shield className="h-5 w-5 mx-auto mb-2 text-primary" />
+          <p className="text-sm text-muted-foreground mb-1">Overall</p>
+          <ScoreDisplay score={avgDimension} size="sm" />
+        </Card>
+      </div>
+
       {/* Cast Overview Stats */}
       <div className="grid md:grid-cols-4 gap-4">
         <Card className="p-5 text-center">
