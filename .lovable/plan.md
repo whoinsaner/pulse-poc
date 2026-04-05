@@ -1,45 +1,38 @@
 
 
-# Plan: Rate Limit Resilience for Analysis Pipeline
+# Plan: Fix Reasoning Flag Not Reaching Edge Function
 
 ## Problem
-The analysis pipeline fires up to 7 agents simultaneously per batch. When the AI gateway rate-limits (429), all agents retry at the same time with identical backoff timers, creating a "thundering herd" that exhausts all retry attempts without recovery. This is worse when reasoning is enabled because reasoning requests consume more tokens and take longer, increasing the likelihood of hitting rate limits.
+Two bugs prevent the reasoning setting from being sent to the analysis pipeline:
+
+1. **Resume/retry paths omit reasoning entirely.** `InProgressAnalysis.tsx` (lines 173-180, 215-221) and `ReportLayout.tsx` (line 183-186) invoke `analyze-script` with `resume: true` but never include `reasoningEffort`. This means any resumed or retried analysis always runs with `reasoning: off`.
+
+2. **Same-tab sync is unreliable.** The `storage` event in `AnalysisTrigger.tsx` only fires for cross-tab changes. When a user toggles reasoning in Settings and navigates back (same tab), the sync relies on the `focus` event, which uses `prev ?? effort` — this won't update if the effort level changed.
 
 ## Changes
 
-### 1. Reduce Batch Concurrency
-In `supabase/functions/analyze-script/index.ts`, reduce `BATCH_SIZE` for medium/large agent counts:
-- Medium (9-16 agents): `BATCH_SIZE = 4` (was 7), `BATCH_DELAY_MS = 500` (was 200)
-- Large (17+ agents): `BATCH_SIZE = 3` (was 6), `BATCH_DELAY_MS = 1000` (was 500)
-- When reasoning is enabled: further reduce by 1 (e.g., 3 becomes 2) since reasoning requests are heavier
+### 1. Add `reasoningEffort` to all resume/retry invoke calls
+**File: `src/components/report/InProgressAnalysis.tsx`**
+- In `handleResumeAnalysis` (line ~174) and `handleRetryAgent` (line ~215), read `reasoningEffort` from `localStorage` and include it in the request body:
+  ```
+  reasoningEffort: localStorage.getItem('pulse_reasoning_enabled') === 'true'
+    ? (localStorage.getItem('pulse_reasoning_effort') || 'medium')
+    : null
+  ```
 
-### 2. Add Jittered Backoff per Agent
-Replace the synchronized exponential backoff with per-agent randomized jitter:
-- Current: `delay = retryDelayMs * 2^attempt` (all agents retry at exact same time)
-- New: `delay = retryDelayMs * 2^attempt + random(0, retryDelayMs)` (agents stagger retries)
-- Apply this in the inner retry loop inside `runAgent` (line ~3920)
+**File: `src/components/report/ReportLayout.tsx`**
+- Same fix at line ~183 where it invokes `analyze-script` with resume.
 
-### 3. Add Staggered Launch Within Each Batch
-Instead of firing all agents in a batch simultaneously via `Promise.all`, introduce a small stagger (300ms) between each agent launch within a batch. Agents still run concurrently, but their requests hit the gateway at slightly different times:
-```text
-Batch of 4 agents:
-  t=0ms    Agent A starts
-  t=300ms  Agent B starts
-  t=600ms  Agent C starts
-  t=900ms  Agent D starts
-  (all 4 run concurrently, just staggered starts)
-```
+### 2. Fix same-tab reasoning sync in AnalysisTrigger
+**File: `src/components/AnalysisTrigger.tsx`**
+- Change line 115 from `setReasoningEffort(prev => prev ?? effort)` to `setReasoningEffort(effort)` so updated effort levels are always picked up.
+- Read `reasoningEffort` directly from `localStorage` at invoke time (line 401) instead of relying on React state, to guarantee the freshest value. The state is still used for the UI toggle display.
 
-### 4. Increase Max Retries for Rate Limits Specifically
-Currently `maxRetries` (default 3) governs both empty-response retries and 429 retries. Add a separate counter for rate-limit retries with a higher limit (6 attempts) and longer backoff ceiling (30s), so transient rate limits don't permanently kill agents.
-
-### 5. Fix the `supabase.rpc(...).catch is not a function` Error
-The edge function logs show `Background analysis error: supabase.rpc(...).catch is not a function`. This is the error that causes the final status update to fail. Fix the `.catch()` call on the RPC invocation (likely needs `await` or `.then().catch()` pattern).
+### 3. Add a console log for verification
+Add a log line in `AnalysisTrigger.tsx` at the invoke call showing the reasoning value being sent, so future debugging is easier.
 
 ## Technical Details
-- All changes are in `supabase/functions/analyze-script/index.ts`
-- The stagger-within-batch approach uses a helper that wraps each agent call with a delay: `agents.map((a, i) => new Promise(r => setTimeout(r, i * 300)).then(() => runSingleAgent(a)))`
-- Rate-limit-specific retry counter is separate from the general retry counter so non-429 errors still fail fast
-- Reasoning-aware batch sizing reads the `reasoningEffort` parameter already passed to `runStandardAnalysis`
-- No database changes required
+- All changes are in 3 frontend files; no edge function or database changes needed
+- The edge function already handles `reasoningEffort` correctly — the bug is purely that the client never sends it in certain code paths
+- The `localStorage` read at invoke time is the safest approach since it eliminates any stale React state issues
 
