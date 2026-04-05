@@ -77,9 +77,9 @@ const SECTION_AGENT_MAP: Record<string, string[]> = {
   'story-structure': ['StructureAgent'],
   'story-conflict': ['ConflictStakesAgent'],
   'character-diagnosis': ['CharacterDiagnosisAgent'],
-  'character-protagonist': ['ProtagonistAgent'],
-  'character-antagonist': ['AntagonistAgent'],
-  'character-cast': ['SupportingCastAgent'],
+  'character-protagonist': ['CharacterAgent'],
+  'character-antagonist': ['CharacterAgent'],
+  'character-cast': ['CharacterAgent'],
   'craft-diagnosis': ['CraftDiagnosisAgent'],
   'craft-dialogue': ['DialogueAgent'],
   'craft-theme': ['ThemeAgent'],
@@ -733,15 +733,18 @@ function renderAgentNarrative(
         y += 2;
       }
 
-      // Supporting Cast
-      if (content.supportingCast && Array.isArray(content.supportingCast) && content.supportingCast.length > 0) {
+      // Supporting Cast — exclude any characters already listed as protagonists
+      const protagonistNames = new Set(allProtagonists.map(p => p.name?.toLowerCase()).filter(Boolean));
+      const rawCast = content.supportingCast && Array.isArray(content.supportingCast) ? content.supportingCast : [];
+      const dedupedCast = rawCast.filter((c: any) => c && !protagonistNames.has(c.name?.toLowerCase()));
+      if (dedupedCast.length > 0) {
         y = checkBreak(doc, y, 15, pageNum, sectionName);
         doc.setFontSize(FONTS.h3);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(...COLORS.text);
         doc.text('Supporting Cast', MARGINS.left, y);
         y += 7;
-        for (const c of content.supportingCast) {
+        for (const c of dedupedCast) {
           if (!c) continue;
           y = checkBreak(doc, y, 12, pageNum, sectionName);
           doc.setFontSize(FONTS.body);
