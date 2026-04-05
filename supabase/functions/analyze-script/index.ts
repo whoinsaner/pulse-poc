@@ -3421,6 +3421,9 @@ async function runChunkedAnalysis(
     console.log('[analyze-script] Could not get organization ID for prompt configs');
   }
 
+  // Fetch dynamic GlobalInstructions for chunked analysis
+  const dynamicGlobalInstructions = await fetchGlobalInstructions(supabase, organizationId);
+
   // For each agent, analyze chunks and aggregate
   const agentPromises = agentsToRun.map(async ([agentName, agentConfig]) => {
     // Get model config for this agent
