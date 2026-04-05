@@ -3996,7 +3996,8 @@ async function runPostAnalysisSynthesis(
       }
     } catch (fetchErr) {
       console.error(`[${agentName}] Fetch error on attempt ${attempt + 1}:`, fetchErr);
-      if (attempt === modelConfig.maxRetries) {
+      attempt++;
+      if (attempt >= totalMaxAttempts) {
         throw fetchErr;
       }
     }
