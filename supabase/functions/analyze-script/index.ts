@@ -310,10 +310,11 @@ interface AnalyzeRequest {
   scriptId: string;
   analysisRunId: string;
   mode?: 'quick' | 'deep';
-  qualityMode?: QualityMode; // NEW: User-selectable quality mode
+  qualityMode?: QualityMode;
   forceAnalysis?: boolean;
   resume?: boolean;
   stakeholderLens?: string | null;
+  reasoningEffort?: 'low' | 'medium' | 'high' | null;
 }
 
 // USAF Output Contract
