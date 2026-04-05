@@ -2907,14 +2907,16 @@ Return ONLY a valid JSON array with one object per scene:
           
           // Include partialFailures in agent_progress metadata for UI
           if (failedSupplementary.length > 0) {
-            await supabase.rpc('update_agent_progress', {
-              p_analysis_run_id: analysisRunId,
-              p_agent_name: '_meta',
-              p_status: 'info',
-              p_error: null,
-              p_model: null,
-              p_section_content: JSON.stringify({ partialFailures: failedSupplementary.map(f => ({ agent: f.agent, error: f.error })) }),
-            }).catch(() => {/* best effort */});
+            try {
+              await supabase.rpc('update_agent_progress', {
+                p_analysis_run_id: analysisRunId,
+                p_agent_name: '_meta',
+                p_status: 'info',
+                p_error: null,
+                p_model: null,
+                p_section_content: JSON.stringify({ partialFailures: failedSupplementary.map(f => ({ agent: f.agent, error: f.error })) }),
+              });
+            } catch (_) { /* best effort */ }
           }
           
           await supabase
@@ -3235,28 +3237,31 @@ async function runStandardAnalysis(
   
   // ============= OPTIMIZATION 6: Adaptive batch delays based on script size =============
   const agentCount = agentsToRun.length;
+  const isReasoning = !!reasoningEffort;
   let BATCH_SIZE: number;
   let BATCH_DELAY_MS: number;
+  const STAGGER_MS = 300; // Stagger agent launches within each batch
   
   if (agentCount <= 5) {
-    // Very small: run all at once, no delay
     BATCH_SIZE = agentCount;
     BATCH_DELAY_MS = 0;
   } else if (agentCount <= 8) {
-    // Small scripts / micro dramas - run all at once with minimal delay
     BATCH_SIZE = agentCount;
     BATCH_DELAY_MS = 0;
   } else if (agentCount <= 16) {
-    // Medium scripts - aggressive batching for speed
-    BATCH_SIZE = 7; // Increased from 5 to reduce total batches (2 batches for 14 agents)
-    BATCH_DELAY_MS = 200; // Reduced from 500ms
+    BATCH_SIZE = 4;
+    BATCH_DELAY_MS = 500;
   } else {
-    // Large scripts (30+ pages)
-    BATCH_SIZE = 6; // Increased from 4
-    BATCH_DELAY_MS = 500; // Reduced from 1000ms
+    BATCH_SIZE = 3;
+    BATCH_DELAY_MS = 1000;
   }
   
-  console.log(`[analyze-script] Adaptive batching: ${agentCount} agents, batch_size=${BATCH_SIZE}, delay=${BATCH_DELAY_MS}ms`);
+  // Reasoning requests are heavier — reduce concurrency further
+  if (isReasoning && BATCH_SIZE > 2) {
+    BATCH_SIZE = Math.max(2, BATCH_SIZE - 1);
+  }
+  
+  console.log(`[analyze-script] Adaptive batching: ${agentCount} agents, batch_size=${BATCH_SIZE}, delay=${BATCH_DELAY_MS}ms, stagger=${STAGGER_MS}ms, reasoning=${isReasoning}`);
   
   // Helper to check if an error is retryable
   const isRetryableError = (_error: Error): boolean => {
@@ -3273,8 +3278,9 @@ async function runStandardAnalysis(
     for (let attempt = 0; attempt <= modelConfig.maxRetries; attempt++) {
       try {
         if (attempt > 0) {
-          const delay = modelConfig.retryDelayMs * Math.pow(2, attempt - 1);
-          console.log(`[${agentName}] Retry attempt ${attempt}/${modelConfig.maxRetries}, waiting ${delay}ms`);
+          const jitter = Math.random() * modelConfig.retryDelayMs;
+          const delay = modelConfig.retryDelayMs * Math.pow(2, attempt - 1) + jitter;
+          console.log(`[${agentName}] Retry attempt ${attempt}/${modelConfig.maxRetries}, waiting ${Math.round(delay)}ms`);
           await new Promise(r => setTimeout(r, delay));
         }
         
@@ -3375,7 +3381,12 @@ async function runStandardAnalysis(
       onLastBatchStarted();
     }
     
-    const batchResults = await Promise.all(batch.map(runSingleAgent));
+    const batchResults = await Promise.all(
+      batch.map(([agentName, agentConfig], idx) =>
+        new Promise<void>(resolve => setTimeout(resolve, idx * STAGGER_MS))
+          .then(() => runSingleAgent([agentName, agentConfig]))
+      )
+    );
     results.push(...batchResults);
     
     // Wait between batches (except for last batch), skip if delay is 0
@@ -3909,16 +3920,31 @@ async function runPostAnalysisSynthesis(
   // Use the model config passed from caller
   console.log(`[${agentName}] Using model: ${modelConfig.model}`);
 
-  // Retry logic for empty responses with exponential backoff
+  // Retry logic with separate 429-specific handling
   let content = '';
   let lastStatusCode = 0;
+  const MAX_RATE_LIMIT_RETRIES = 6;
+  const RATE_LIMIT_BACKOFF_CEILING_MS = 30000;
+  let rateLimitRetries = 0;
+  let attempt = 0;
+  const totalMaxAttempts = modelConfig.maxRetries + MAX_RATE_LIMIT_RETRIES + 1;
   
-  for (let attempt = 0; attempt <= modelConfig.maxRetries; attempt++) {
+  while (attempt < totalMaxAttempts) {
     if (attempt > 0) {
-      // Exponential backoff using config's retry delay
-      const delay = modelConfig.retryDelayMs * Math.pow(2, attempt - 1);
-      console.log(`[${agentName}] Retry attempt ${attempt} after ${lastStatusCode === 429 ? 'rate limit' : 'empty response'}, waiting ${delay}ms`);
-      await new Promise(r => setTimeout(r, delay));
+      if (lastStatusCode === 429) {
+        // 429-specific: longer backoff with jitter, capped at ceiling
+        const baseDelay = Math.min(modelConfig.retryDelayMs * Math.pow(2, rateLimitRetries - 1), RATE_LIMIT_BACKOFF_CEILING_MS);
+        const jitter = Math.random() * modelConfig.retryDelayMs;
+        const delay = baseDelay + jitter;
+        console.log(`[${agentName}] Rate limit retry ${rateLimitRetries}/${MAX_RATE_LIMIT_RETRIES}, waiting ${Math.round(delay)}ms`);
+        await new Promise(r => setTimeout(r, delay));
+      } else {
+        // General retry: exponential backoff with jitter
+        const jitter = Math.random() * modelConfig.retryDelayMs;
+        const delay = modelConfig.retryDelayMs * Math.pow(2, attempt - 1) + jitter;
+        console.log(`[${agentName}] Retry attempt ${attempt} after empty response, waiting ${Math.round(delay)}ms`);
+        await new Promise(r => setTimeout(r, delay));
+      }
     }
     
     try {
@@ -3929,7 +3955,7 @@ async function runPostAnalysisSynthesis(
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: modelConfig.model, // Dynamic model from config
+          model: modelConfig.model,
           messages: [
             { role: 'system', content: effectiveSystemPrompt },
             { role: 'user', content: userPrompt }
@@ -3941,10 +3967,12 @@ async function runPostAnalysisSynthesis(
       lastStatusCode = response.status;
       
       if (response.status === 429) {
+        rateLimitRetries++;
         console.log(`[${agentName}] Rate limited (429), will retry`);
-        if (attempt === modelConfig.maxRetries) {
-          throw new Error(`AI API rate limited after ${modelConfig.maxRetries + 1} attempts`);
+        if (rateLimitRetries >= MAX_RATE_LIMIT_RETRIES) {
+          throw new Error(`AI API rate limited after ${rateLimitRetries} rate-limit retries`);
         }
+        attempt++;
         continue;
       }
       
@@ -3956,20 +3984,20 @@ async function runPostAnalysisSynthesis(
       const aiResult = await response.json();
       content = aiResult.choices?.[0]?.message?.content || '';
       
-      // Log content length and first chars for debugging
       console.log(`[${agentName}] AI response length: ${content.length}, starts with: "${content.slice(0, 50).replace(/\n/g, '\\n')}"`);
       
-      // If we got content, break out of retry loop
       if (content && content.trim().length > 0) {
         break;
       }
       
-      if (attempt === modelConfig.maxRetries) {
-        throw new Error(`Empty response from AI after ${modelConfig.maxRetries + 1} attempts`);
+      attempt++;
+      if (attempt >= totalMaxAttempts) {
+        throw new Error(`Empty response from AI after ${attempt} attempts`);
       }
     } catch (fetchErr) {
       console.error(`[${agentName}] Fetch error on attempt ${attempt + 1}:`, fetchErr);
-      if (attempt === modelConfig.maxRetries) {
+      attempt++;
+      if (attempt >= totalMaxAttempts) {
         throw fetchErr;
       }
     }
@@ -4021,7 +4049,7 @@ async function updateAgentProgress(
 ) {
   // Optimization 5: Use atomic RPC to eliminate read-then-write race conditions
   try {
-    await supabase.rpc('update_agent_progress', {
+    const { error: rpcError } = await supabase.rpc('update_agent_progress', {
       p_analysis_run_id: analysisRunId,
       p_agent_name: agentName,
       p_status: status,
@@ -4029,6 +4057,7 @@ async function updateAgentProgress(
       p_model: model || null,
       p_section_content: sectionContent ? JSON.parse(JSON.stringify(sectionContent)) : null,
     });
+    if (rpcError) throw rpcError;
   } catch (rpcErr) {
     // Fallback to read-then-write if RPC not available
     console.log(`[updateAgentProgress] RPC fallback for ${agentName}:`, rpcErr);
