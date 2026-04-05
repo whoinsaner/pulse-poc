@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
-import { ReportData, StakeholderLens } from '@/types/database';
+import { ReportData, StakeholderLens, Report } from '@/types/database';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Sparkles } from 'lucide-react';
