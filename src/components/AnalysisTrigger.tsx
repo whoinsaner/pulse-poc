@@ -398,7 +398,9 @@ export function AnalysisTrigger({
           forceAnalysis,
           resume,
           stakeholderLens: stakeholderLens || null,
-          reasoningEffort: localStorage.getItem('pulse_reasoning_enabled') === 'true' ? reasoningEffort : null,
+          reasoningEffort: localStorage.getItem('pulse_reasoning_enabled') === 'true'
+            ? (localStorage.getItem('pulse_reasoning_effort') as string || 'medium')
+            : null,
         },
       }).then(({ error: invokeError }) => {
         if (invokeError) {
