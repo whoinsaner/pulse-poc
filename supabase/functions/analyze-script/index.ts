@@ -3089,6 +3089,7 @@ async function runStandardAnalysis(
   agentsToRun: [string, any][],
   parameterMap: Map<string, any>,
   qualityMode: QualityMode = 'balanced',
+  reasoningEffort: 'low' | 'medium' | 'high' | null = null,
   onLastBatchStarted?: () => void
 ): Promise<Array<{ agent: string; success: boolean; error?: string }>> {
   const MAX_AGENT_RETRIES = 3;
