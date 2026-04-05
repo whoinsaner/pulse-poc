@@ -2907,14 +2907,16 @@ Return ONLY a valid JSON array with one object per scene:
           
           // Include partialFailures in agent_progress metadata for UI
           if (failedSupplementary.length > 0) {
-            await supabase.rpc('update_agent_progress', {
-              p_analysis_run_id: analysisRunId,
-              p_agent_name: '_meta',
-              p_status: 'info',
-              p_error: null,
-              p_model: null,
-              p_section_content: JSON.stringify({ partialFailures: failedSupplementary.map(f => ({ agent: f.agent, error: f.error })) }),
-            }).catch(() => {/* best effort */});
+            try {
+              await supabase.rpc('update_agent_progress', {
+                p_analysis_run_id: analysisRunId,
+                p_agent_name: '_meta',
+                p_status: 'info',
+                p_error: null,
+                p_model: null,
+                p_section_content: JSON.stringify({ partialFailures: failedSupplementary.map(f => ({ agent: f.agent, error: f.error })) }),
+              });
+            } catch (_) { /* best effort */ }
           }
           
           await supabase
