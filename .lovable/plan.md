@@ -1,31 +1,38 @@
 
 
-# Plan: Fix Reasoning Setting Not Reaching Edge Function
+# Plan: Persist `reasoningEffort` in `analysis_runs` Table
 
-## Root Cause
-The reasoning setting persists correctly in `localStorage`, but there are two issues:
-
-1. **Missing code path**: `AnalysisRunHistory.tsx` (the retry-from-history flow) invokes `analyze-script` without `reasoningEffort` at all (line 139-148). This was missed in the previous fix.
-
-2. **No verification log**: The previous plan included adding a `console.log` at invoke time to show the reasoning value being sent, but it was never implemented. This makes it impossible to confirm whether the client is sending the value.
-
-3. **Origin mismatch risk**: `localStorage` is scoped per browser origin. If the user toggles reasoning on one preview URL and triggers analysis from another (or from the published site), the setting won't be found. Adding a visible indicator on the analysis trigger UI would make this transparent.
+## What
+Add a `reasoning_effort` column to the `analysis_runs` table and store the value when creating/updating a run, so any run's reasoning setting can be verified from the database.
 
 ## Changes
 
-### 1. Add `reasoningEffort` to AnalysisRunHistory retry path
-**File: `src/components/AnalysisRunHistory.tsx`** (line ~139-148)
-- Read reasoning from `localStorage` and include it in the invoke body, same pattern as the other files.
+### 1. Database migration — add column
+Add a nullable `text` column `reasoning_effort` to `analysis_runs`, defaulting to `NULL` (meaning reasoning was off).
 
-### 2. Add console.log at all invoke sites
-**Files: `AnalysisTrigger.tsx`, `InProgressAnalysis.tsx`, `ReportLayout.tsx`, `AnalysisRunHistory.tsx`**
-- Add `console.log('[analyze-script] Sending reasoningEffort:', reasoningEffort)` just before each invoke call so the browser console confirms what value is being sent.
+```sql
+ALTER TABLE public.analysis_runs ADD COLUMN reasoning_effort text DEFAULT NULL;
+```
 
-### 3. Show active reasoning state on analysis trigger UI
-**File: `src/components/AnalysisTrigger.tsx`**
-- Display a small indicator (e.g., a Brain icon + "Reasoning: High") near the analyze button, reading directly from `localStorage` on render. This gives the user immediate visual confirmation that reasoning is active before they click analyze.
+### 2. Edge function — store value on run start
+In `supabase/functions/analyze-script/index.ts`, after parsing the request body (around line 2257), update the analysis run to set `reasoning_effort`:
+
+```typescript
+// After parsing reasoningEffort from request body
+await supabase.from('analysis_runs')
+  .update({ reasoning_effort: reasoningEffort || null })
+  .eq('id', analysisRunId);
+```
+
+### 3. Client — pass value when creating runs
+In `AnalysisRunHistory.tsx` (retry path) and `AnalysisTrigger.tsx` (new run creation), include `reasoning_effort` in the `.insert()` call when creating the `analysis_runs` row.
+
+### 4. Display in Analysis Run History UI
+In `AnalysisRunHistory.tsx`, show a badge when `reasoning_effort` is set (e.g., "⚡ Reasoning: Medium") alongside the existing quality mode and stakeholder lens badges.
 
 ## Technical Details
-- 4 frontend files changed, no edge function or database changes
-- The `localStorage` reads are already correct; this plan adds the missing code path and diagnostic visibility
+- 1 migration (add column)
+- 1 edge function edit (store value)
+- 2 frontend files edited (pass on insert + display badge)
+- No RLS changes needed — existing update/insert policies cover this column automatically
 
