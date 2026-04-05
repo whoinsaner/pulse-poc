@@ -589,7 +589,7 @@ function renderAgentNarrative(
 
       // Helper to compute dimension scores from parameterScores
       const getParamScoreForPdf = (keywords: string[], fallback: number) => {
-        const allParams = reportData.parameterScores || [];
+        const allParams = parameterScores || [];
         const matched = allParams.filter(p => 
           keywords.some(k => (p.parameterName?.toLowerCase() || '').includes(k) || (p.displayName?.toLowerCase() || '').includes(k))
         );
