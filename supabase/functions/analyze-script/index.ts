@@ -3364,7 +3364,11 @@ async function runChunkedAnalysis(
   // For each agent, analyze chunks and aggregate
   const agentPromises = agentsToRun.map(async ([agentName, agentConfig]) => {
     // Get model config for this agent
-    const modelConfig = await getAgentModelConfig(supabase, agentName, qualityMode);
+    const modelConfig = applyReasoningOverride(
+      await getAgentModelConfig(supabase, agentName, qualityMode),
+      agentName,
+      reasoningEffort
+    );
     
     // Get prompt config from database (supports org-specific customization)
     let promptConfig: AgentPromptConfig;
