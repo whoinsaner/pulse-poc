@@ -23,6 +23,7 @@ interface ExportDialogProps {
   reportData?: ReportData | null;
   activeLens?: StakeholderLens;
   scriptType?: ScriptType;
+  executiveSummary?: string | null;
 }
 
 type ExportFormat = 'json' | 'summary' | 'pdf';
