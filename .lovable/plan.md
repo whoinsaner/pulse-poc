@@ -1,58 +1,147 @@
 
 
-# Add Dimension Tiles to Protagonist, Supporting Cast & PDF
+# Pipeline Improvement Plan: Feedback-Driven + Graph Enrichment
 
-## What
-Add score dimension tiles (like the Antagonist's Physical/Psychological/Tactical/Dramatic/Overall grid) to the Protagonist and Supporting Cast pages, powered by real parameter data. Also render these tiles in the PDF export for all three character sub-pages.
+## Overview
+Address all 9 concerns from the Kadavul Valthu feedback plus add a relationship graph that powers smarter character analysis. The root fix is a **two-phase execution model** where system agents (especially CinemaTraditionAgent) complete first and their outputs are injected into all downstream agent prompts.
 
-## Changes
+## Architecture Change: Two-Phase Agent Execution
 
-### 1. Protagonist — add 5 dimension tiles
-**File**: `src/pages/report/ProtagonistAnalysis.tsx`
+**Problem discovered**: Currently all agents (system + core) run in parallel batches. CinemaTraditionAgent detects `resolutionModel`, `formatType`, `tradition` but these values are **never passed to downstream agents**. This is the root cause of most feedback issues.
 
-Add a `getParamScore` helper (same pattern as Antagonist) and a 5-tile grid after the DiagnosisSummary:
+**Fix**: Split `runStandardAnalysis` into two phases:
+1. **Phase 1**: Run system agents (5 agents). Wait for completion.
+2. **Phase 2**: Read CinemaTraditionAgent's `sectionContent` from `agent_progress`. Build a `traditionPreamble` string and prepend it to `scriptContext` for all core agents.
 
-| Tile | Keywords matched against parameterScores |
-|------|------------------------------------------|
-| Empathy | `empathy`, `relatab`, `likab`, `audience` |
-| Complexity | `complex`, `depth`, `dimension`, `psychology` |
-| Agency | `agency`, `active`, `drive`, `motivation` |
-| Growth | `arc`, `growth`, `transform`, `change` |
-| Overall | Average of above 4 |
+The `traditionPreamble` would include:
+- Detected tradition + audience grammar
+- Resolution model (moral/poetic/procedural/cyclical)
+- Format type + page-count calibration note for director's spec
+- Structural conventions (interval placement, dual protagonist, etc.)
 
-Icons: Heart, Brain, Target, Zap, User. Uses existing `ScoreDisplay` component, same card layout as Antagonist tiles.
+**File**: `supabase/functions/analyze-script/index.ts` — modify `runStandardAnalysis` and `runChunkedAnalysis`
 
-### 2. Supporting Cast — add 4 dimension tiles
-**File**: `src/pages/report/SupportingCast.tsx`
+---
 
-Replace the current 4 stat cards (Total Characters, Supporting Roles, Supporting Dialogue %, With Arcs) with a **combined row of 5 tiles**: keep the existing stats but add an Overall score tile using `ScoreDisplay`. Alternatively, add a separate row of dimension tiles below the stats:
+## Change 1: Multi-Protagonist Data Model (P0)
 
-| Tile | Keywords |
-|------|----------|
-| Diversity | `diversity`, `distinct`, `voice`, `variety` |
-| Utility | `function`, `utility`, `purpose`, `role` |
-| Balance | `balance`, `ensemble`, `distribution` |
-| Depth | `depth`, `dimension`, `develop`, `arc` |
-| Overall | Average of above 4 |
+**Problem**: `protagonistProfile` is a single object. Palani (the second protagonist) was missed entirely.
 
-Icons: Users, Target, Scale, Layers, Shield. Same card + ScoreDisplay layout.
+### Edge Function
+- Update CharacterAgent's output schema: `protagonistProfile` becomes `protagonistProfiles` (array), with backward compat accepting either shape
+- Add `arcType` field per protagonist: `"public"`, `"private"`, `"silent"`, `"action-driven"`
+- Add prompt instruction: *"Identify ALL protagonists by narrative function, not dialogue count. A silent character driving a parallel justice arc is a protagonist."*
 
-### 3. PDF Generator — render dimension tiles as a table
-**File**: `src/lib/fullReportPdfGenerator.ts`
+### Types
+- `src/types/database.ts`: Add `protagonistProfiles` array type to `AgentSectionContent`, keep `protagonistProfile` for backward compat
 
-After rendering character profiles in the protagonist and antagonist sections (~lines 588-680), add a small inline table or labeled rows showing the dimension scores. Implementation:
+### UI — ProtagonistAnalysis.tsx
+- Detect array vs single object in `agentContent.CharacterAgent`
+- Render multiple protagonist profile cards when array is present
+- Show `arcType` badge on each card
 
-- Extract the same keyword-matched scores from `reportData.parameterScores` in the PDF context
-- Render as a simple 1-row table using `autoTable`: columns = dimension names, cells = scores
-- Apply to protagonist, antagonist, and supporting cast sections
+### PDF Generator
+- Render multiple protagonist profiles in character section
 
-### 4. Pass parameterScores to PDF renderer
-The PDF generator already receives `reportData` which contains `parameterScores`. The `getParamScore` logic will be extracted into a shared helper (or duplicated inline in the PDF generator since it's a simple 5-line function).
+**Files**: `analyze-script/index.ts`, `src/types/database.ts`, `src/pages/report/ProtagonistAnalysis.tsx`, `src/lib/fullReportPdfGenerator.ts`
 
-## Technical Details
-- 2 page files edited (ProtagonistAnalysis.tsx, SupportingCast.tsx)
-- 1 PDF generator file edited (fullReportPdfGenerator.ts)
-- No new components needed — reuses existing `Card`, `ScoreDisplay`, icons
-- All scores derived from real `parameterScores` via keyword matching (same proven pattern as Antagonist)
-- No database or edge function changes
+---
+
+## Change 2: Relationship Graph Enrichment (P0)
+
+**Problem**: Current `buildNarrativeGraph` creates only sequential scene edges and standalone character nodes — no co-occurrence, no relationship edges, no weight.
+
+### Parser Enhancement (`script-parser-stream/index.ts`)
+Enrich `buildNarrativeGraph` to:
+- Build **character co-occurrence edges** from parsed scene data (which characters appear in which scenes)
+- Weight edges by shared scene count
+- Add `relationship` edge type alongside existing `sequence` type
+- Include `weight` and `sharedScenes` on each edge
+
+### Inject Graph Summary into Agent Context
+In `buildScriptContext`, append a "CHARACTER RELATIONSHIP GRAPH" section:
+```
+CHARACTER RELATIONSHIPS (co-occurrence):
+- Aadhan ↔ Palani: 8 shared scenes (strong bond)
+- Aadhan ↔ Sundaram: 5 shared scenes (antagonistic)
+- Palani ↔ George: 3 shared scenes
+```
+
+This gives CharacterAgent structural evidence to identify narrative hubs (characters central to multiple story threads) regardless of dialogue count.
+
+### UI — NarrativeGraphViewer / CharacterNetwork
+Already uses graph data. The enriched edges will automatically appear as weighted connections in the existing visualization.
+
+**Files**: `supabase/functions/script-parser-stream/index.ts`, `supabase/functions/script-parser/index.ts`, `supabase/functions/analyze-script/index.ts` (buildScriptContext)
+
+---
+
+## Change 3: Antagonist Philosophy Model (P1)
+
+**Problem**: Antagonist evaluation assumes Hollywood psychological complexity (wounds, self-justification). Sundaram and Periyavar operate through conviction/worldview.
+
+### Edge Function
+- Expand `antagonistProfile` schema: add `worldview`, `philosophyType` (`psychological` | `philosophical` | `systemic` | `institutional`)
+- Update CharacterAgent prompt: *"Not all antagonists operate through psychological vulnerability. Evaluate antagonist complexity based on whether their opposition is coherent and dramatically effective. A villain whose worldview is answered by a child is dramatically complete."*
+
+### UI — AntagonistAnalysis.tsx
+- Display `worldview` and `philosophyType` fields when present
+
+### Types
+- Update `AgentSectionContent.antagonistProfile` type
+
+**Files**: `analyze-script/index.ts`, `src/types/database.ts`, `src/pages/report/AntagonistAnalysis.tsx`
+
+---
+
+## Change 4: Prompt-Level Fixes for Remaining Concerns (P1-P2)
+
+All in `analyze-script/index.ts` agent prompts:
+
+| Concern | Agent | Prompt Addition |
+|---------|-------|----------------|
+| Page count calibration | Injected via traditionPreamble (Change 0) | "Director's spec: page count ≠ runtime. Do not penalize length." |
+| Emotional register diversity | StructureAgent + EmotionalArcAgent | "Action sequences with different emotional registers are distinct narrative units." |
+| Edit-dependent crosscutting | StructureAgent | "Distinguish information-driven vs rhythm-driven crosscutting. Flag edit-dependent sequences rather than penalizing them." |
+| Systemic critique vs sensitivity | ConceptAgent / MarketAgent | "Distinguish scripts endorsing stereotypes from scripts dramatizing systems that exploit them." |
+| Thematic call-and-response | ThemeAgent | "Track thematic call-and-response: one character's claim answered by another. This is valid resolution." |
+
+---
+
+## Change 5: Resolution Model Display in Report (P1)
+
+### ReportCover.tsx
+- Read `agentContent.CinemaTraditionAgent.resolutionModel` and display as a badge (e.g., "Resolution Model: Moral")
+
+### Story Diagnosis
+- Show detected tradition, format type, and resolution model in StoryDiagnosis header
+
+**Files**: `src/pages/report/ReportCover.tsx`, `src/pages/report/StoryDiagnosis.tsx`
+
+---
+
+## Implementation Priority
+
+| Order | Change | Effort | Impact |
+|-------|--------|--------|--------|
+| 1 | Two-phase execution + traditionPreamble injection | Medium | Unlocks all tradition-aware fixes |
+| 2 | Multi-protagonist model + CharacterAgent prompt | Medium | Fixes the core analysis failure |
+| 3 | Graph enrichment (co-occurrence edges + context injection) | Medium | Gives CharacterAgent structural evidence |
+| 4 | Antagonist philosophy model | Small | Fixes false "flat villain" diagnosis |
+| 5 | Prompt-level fixes (5 agents) | Small | Addresses remaining 5 concerns |
+| 6 | Resolution model display in report UI | Small | Surfaces tradition context to users |
+
+## Files Modified
+
+- `supabase/functions/analyze-script/index.ts` — Two-phase execution, agent prompts, schema updates, buildScriptContext graph summary
+- `supabase/functions/script-parser-stream/index.ts` — Graph enrichment (co-occurrence edges)
+- `supabase/functions/script-parser/index.ts` — Same graph enrichment
+- `src/types/database.ts` — protagonistProfiles array, antagonist worldview fields
+- `src/pages/report/ProtagonistAnalysis.tsx` — Multi-protagonist rendering
+- `src/pages/report/AntagonistAnalysis.tsx` — Worldview/philosophy display
+- `src/pages/report/ReportCover.tsx` — Resolution model badge
+- `src/pages/report/StoryDiagnosis.tsx` — Tradition context display
+- `src/lib/fullReportPdfGenerator.ts` — Multi-protagonist PDF rendering
+
+No database migrations needed — all data flows through existing JSONB columns.
 
