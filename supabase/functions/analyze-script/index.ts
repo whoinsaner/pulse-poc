@@ -215,6 +215,27 @@ async function getAgentModelConfig(
   return config;
 }
 
+// Apply request-level reasoning override to a model config
+function applyReasoningOverride(
+  config: ModelConfig,
+  agentName: string,
+  reasoningEffort: 'low' | 'medium' | 'high' | null | undefined
+): ModelConfig {
+  // Only apply reasoning to complex agents
+  if (!COMPLEX_AGENTS.has(agentName)) {
+    // Strip any preset reasoning for non-complex agents
+    const { reasoning, ...rest } = config;
+    return rest;
+  }
+  // If reasoning is explicitly provided, override
+  if (reasoningEffort) {
+    return { ...config, reasoning: { effort: reasoningEffort } };
+  }
+  // If null/undefined, strip reasoning entirely
+  const { reasoning, ...rest } = config;
+  return rest;
+}
+
 // ============= AGENT PROMPT CONFIGURATION =============
 
 interface AgentPromptConfig {
@@ -310,10 +331,11 @@ interface AnalyzeRequest {
   scriptId: string;
   analysisRunId: string;
   mode?: 'quick' | 'deep';
-  qualityMode?: QualityMode; // NEW: User-selectable quality mode
+  qualityMode?: QualityMode;
   forceAnalysis?: boolean;
   resume?: boolean;
   stakeholderLens?: string | null;
+  reasoningEffort?: 'low' | 'medium' | 'high' | null;
 }
 
 // USAF Output Contract
@@ -2159,7 +2181,7 @@ serve(async (req) => {
       global: { headers: { Authorization: authHeader } }
     });
 
-    let { scriptId, analysisRunId, mode = 'deep', qualityMode = 'balanced', forceAnalysis = false, resume = false, stakeholderLens = null } = await req.json() as AnalyzeRequest;
+    let { scriptId, analysisRunId, mode = 'deep', qualityMode = 'balanced', forceAnalysis = false, resume = false, stakeholderLens = null, reasoningEffort = null } = await req.json() as AnalyzeRequest;
 
     // Verify user has access to the script via RLS
     const { data: scriptAccess, error: accessError } = await supabaseAuth
@@ -2175,7 +2197,7 @@ serve(async (req) => {
       );
     }
     
-    console.log(`[analyze-script] Starting ${mode.toUpperCase()} analysis for script ${scriptId}, run ${analysisRunId}, quality: ${qualityMode}, stakeholder: ${stakeholderLens || 'all'}, resume: ${resume}`);
+    console.log(`[analyze-script] Starting ${mode.toUpperCase()} analysis for script ${scriptId}, run ${analysisRunId}, quality: ${qualityMode}, stakeholder: ${stakeholderLens || 'all'}, reasoning: ${reasoningEffort || 'off'}, resume: ${resume}`);
 
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const lovableApiKey = Deno.env.get('LOVABLE_API_KEY')!;
@@ -3059,16 +3081,20 @@ async function runStandardAnalysis(
   // Helper to get model config from batch-loaded map or fallback to preset
   const getModelConfig = (agentName: string): ModelConfig => {
     const cached = modelConfigMap.get(agentName);
-    if (cached) return cached;
-    
-    // Fallback to presets
-    const presetKey = isUUID(qualityMode) ? 'balanced' : (qualityMode as 'fast' | 'balanced' | 'quality');
-    const preset = QUALITY_MODE_PRESETS[presetKey] || QUALITY_MODE_PRESETS['balanced'];
-    const isSynthesis = SYNTHESIS_AGENTS.has(agentName);
-    const isComplex = COMPLEX_AGENTS.has(agentName);
-    const isSystem = SYSTEM_AGENTS.has(agentName);
-    const config = isSynthesis ? preset.synthesis : (isSystem ? preset.system : (isComplex ? preset.complex : preset.default));
-    return config;
+    let config: ModelConfig;
+    if (cached) {
+      config = cached;
+    } else {
+      // Fallback to presets
+      const presetKey = isUUID(qualityMode) ? 'balanced' : (qualityMode as 'fast' | 'balanced' | 'quality');
+      const preset = QUALITY_MODE_PRESETS[presetKey] || QUALITY_MODE_PRESETS['balanced'];
+      const isSynthesis = SYNTHESIS_AGENTS.has(agentName);
+      const isComplex = COMPLEX_AGENTS.has(agentName);
+      const isSystem = SYSTEM_AGENTS.has(agentName);
+      config = isSynthesis ? preset.synthesis : (isSystem ? preset.system : (isComplex ? preset.complex : preset.default));
+    }
+    // Apply request-level reasoning override
+    return applyReasoningOverride(config, agentName, reasoningEffort);
   };
 
   // ============= OPTIMIZATION 3: Batch-load all prompt configs =============
@@ -3338,7 +3364,11 @@ async function runChunkedAnalysis(
   // For each agent, analyze chunks and aggregate
   const agentPromises = agentsToRun.map(async ([agentName, agentConfig]) => {
     // Get model config for this agent
-    const modelConfig = await getAgentModelConfig(supabase, agentName, qualityMode);
+    const modelConfig = applyReasoningOverride(
+      await getAgentModelConfig(supabase, agentName, qualityMode),
+      agentName,
+      reasoningEffort
+    );
     
     // Get prompt config from database (supports org-specific customization)
     let promptConfig: AgentPromptConfig;

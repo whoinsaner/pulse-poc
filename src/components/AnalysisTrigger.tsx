@@ -95,6 +95,13 @@ export function AnalysisTrigger({
   const [scriptDetails, setScriptDetails] = useState<{ file_url: string; format: string } | null>(null);
   const [isParsing, setIsParsing] = useState(false);
 
+  // Reasoning feature flag from settings
+  const isReasoningEnabled = localStorage.getItem('pulse_reasoning_enabled') === 'true';
+  const defaultReasoningEffort = (localStorage.getItem('pulse_reasoning_effort') as 'low' | 'medium' | 'high') || 'medium';
+  const [reasoningEffort, setReasoningEffort] = useState<'low' | 'medium' | 'high' | null>(
+    isReasoningEnabled ? defaultReasoningEffort : null
+  );
+
   const streamingParser = useStreamingParser({
     onComplete: (result) => {
       setIsParsing(false);
@@ -368,6 +375,7 @@ export function AnalysisTrigger({
           forceAnalysis,
           resume,
           stakeholderLens: stakeholderLens || null,
+          reasoningEffort: isReasoningEnabled ? reasoningEffort : null,
         },
       }).then(({ error: invokeError }) => {
         if (invokeError) {
@@ -569,6 +577,29 @@ export function AnalysisTrigger({
           disabled={false}
           customConfigs={customConfigs}
         />
+
+        {isReasoningEnabled && (
+          <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30">
+            <div className="flex items-center gap-2">
+              <Zap className="h-4 w-4 text-primary" />
+              <span className="text-sm font-medium">Reasoning Effort</span>
+            </div>
+            <div className="flex gap-1">
+              {(['low', 'medium', 'high'] as const).map((level) => (
+                <Button
+                  key={level}
+                  variant={reasoningEffort === level ? 'default' : 'outline'}
+                  size="sm"
+                  className="h-7 px-3 text-xs capitalize"
+                  onClick={() => setReasoningEffort(level)}
+                >
+                  {level}
+                </Button>
+              ))}
+            </div>
+          </div>
+        )}
+
         <Button onClick={() => initiateAnalysis(false, 'deep')} className="w-full" size="lg">
           <Play className="h-4 w-4 mr-2" />
           Analyze Script
