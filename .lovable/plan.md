@@ -1,62 +1,28 @@
 
 
-# Plan: Fix Reasoning Not Applied to Analysis Runs
+# Plan: Surface Cinema Tradition on the Report
 
-## Root Cause
+## Problem
+The cinema tradition is collected at upload and detected by the CinemaTraditionAgent during analysis, but it is never displayed in the report. Users cannot see which tradition was applied or how it shaped the evaluation.
 
-The `isReasoningEnabled` flag in `AnalysisTrigger.tsx` is read from `localStorage` once at component mount time (line 99). It is a plain `const`, not reactive state. If you enable reasoning in Settings and then navigate to the Scripts page (where AnalysisTrigger is already mounted or was mounted before the setting change), the component still holds the stale `false` value. The invoke call on line 378 then sends `reasoningEffort: null`, meaning reasoning is never applied.
+## Changes
 
-Additionally, the reasoning UI selector (lines 580-600) is gated on `isReasoningEnabled`, so it would not have been visible on the analysis screen if the component mounted before the toggle was turned on.
+### 1. Project Snapshot — `src/components/report/ProjectSnapshot.tsx`
+Add a "Cinema Tradition" badge/row to the project metadata section:
+- Read `cinema_tradition` from the script record (already available via the scripts table)
+- Read the CinemaTraditionAgent's output from analysis results for `tradition_confidence` and `format_type_clarity` scores
+- Display: tradition name (formatted), confidence score, and format type
+- If tradition is "auto_detect" or null, show the AI-detected value from the agent output
 
-## Fix
+### 2. Report Cover / Overview — `src/pages/report/ReportCover.tsx` or `ReportOverview.tsx`
+Add a small "Evaluated under: [Tradition Name] tradition" label near the script metadata so it's immediately visible when opening a report.
 
-### 1. Make `isReasoningEnabled` reactive -- `src/components/AnalysisTrigger.tsx`
-
-Move the localStorage reads into state and re-read them when the component becomes visible or when the invoke fires:
-
-- Read `pulse_reasoning_enabled` fresh at **invoke time** (inside the `startAnalysis` function) rather than relying on the mount-time const
-- Also re-read it for the UI selector so the reasoning picker appears/disappears if the user toggled the setting in another tab/page
-- Use a `useSyncExternalStore` or simply re-read localStorage in a `useEffect` with a `storage` event listener, or read it fresh on each render since localStorage reads are synchronous and cheap
-
-The simplest correct fix:
-- Keep `isReasoningEnabled` as state (`useState`) 
-- Add a `useEffect` that listens for the `storage` event and also re-reads on focus/visibility change
-- At invoke time (line 378), do a fresh `localStorage.getItem('pulse_reasoning_enabled') === 'true'` check instead of using the potentially stale const
-
-### 2. No edge function changes needed
-
-The edge function code already correctly handles `reasoningEffort` -- the problem is entirely on the client side not sending it.
+### 3. Story Diagnosis or dedicated section
+Optionally add a brief "Tradition Context" callout card that explains how the detected tradition influenced the analysis (e.g., "This script was evaluated against Kollywood narrative conventions including interval structure, moral closure, and dual-protagonist architecture").
 
 ## Technical Details
-
-**Current (broken)**:
-```typescript
-// Line 99 - read once at mount, never updates
-const isReasoningEnabled = localStorage.getItem('pulse_reasoning_enabled') === 'true';
-```
-
-**Fixed**:
-```typescript
-const [isReasoningEnabled, setIsReasoningEnabled] = useState(
-  () => localStorage.getItem('pulse_reasoning_enabled') === 'true'
-);
-
-useEffect(() => {
-  const sync = () => setIsReasoningEnabled(
-    localStorage.getItem('pulse_reasoning_enabled') === 'true'
-  );
-  window.addEventListener('storage', sync);
-  window.addEventListener('focus', sync);
-  return () => {
-    window.removeEventListener('storage', sync);
-    window.removeEventListener('focus', sync);
-  };
-}, []);
-```
-
-And at invoke time, do a fresh read as a safety net:
-```typescript
-reasoningEffort: localStorage.getItem('pulse_reasoning_enabled') === 'true' 
-  ? reasoningEffort : null,
-```
+- The `CinemaTraditionAgent` output includes `tradition_confidence` and `format_type_clarity` parameters, plus observations with the detected tradition name
+- The script record has `cinema_tradition` column (user-selected or null for auto-detect)
+- Agent results are stored in `analysis_results` table and already fetched by the report pages
+- No database changes needed — just surface existing data
 
