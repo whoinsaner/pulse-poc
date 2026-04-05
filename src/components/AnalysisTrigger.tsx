@@ -112,7 +112,7 @@ export function AnalysisTrigger({
       setIsReasoningEnabled(enabled);
       if (enabled) {
         const effort = (localStorage.getItem('pulse_reasoning_effort') as 'low' | 'medium' | 'high') || 'medium';
-        setReasoningEffort(prev => prev ?? effort);
+        setReasoningEffort(effort);
       } else {
         setReasoningEffort(null);
       }
@@ -398,7 +398,9 @@ export function AnalysisTrigger({
           forceAnalysis,
           resume,
           stakeholderLens: stakeholderLens || null,
-          reasoningEffort: localStorage.getItem('pulse_reasoning_enabled') === 'true' ? reasoningEffort : null,
+          reasoningEffort: localStorage.getItem('pulse_reasoning_enabled') === 'true'
+            ? (localStorage.getItem('pulse_reasoning_effort') as string || 'medium')
+            : null,
         },
       }).then(({ error: invokeError }) => {
         if (invokeError) {

@@ -170,12 +170,17 @@ export function InProgressAnalysis({ analysis: initialAnalysis, onRetry, onViewP
   const handleResumeAnalysis = async () => {
     setIsRetrying(true);
     try {
+      const reasoningEffort = localStorage.getItem('pulse_reasoning_enabled') === 'true'
+        ? (localStorage.getItem('pulse_reasoning_effort') || 'medium')
+        : null;
+
       const { error } = await supabase.functions.invoke('analyze-script', {
         body: {
           scriptId: analysis.script_id,
           analysisRunId: analysis.id,
           mode: 'deep',
           resume: true,
+          reasoningEffort,
         },
       });
       
@@ -212,12 +217,17 @@ export function InProgressAnalysis({ analysis: initialAnalysis, onRetry, onViewP
         .update({ agent_progress: updatedProgress as Json })
         .eq('id', analysis.id);
       
+      const reasoningEffort = localStorage.getItem('pulse_reasoning_enabled') === 'true'
+        ? (localStorage.getItem('pulse_reasoning_effort') || 'medium')
+        : null;
+
       const { error } = await supabase.functions.invoke('analyze-script', {
         body: {
           scriptId: analysis.script_id,
           analysisRunId: analysis.id,
           mode: 'deep',
           resume: true,
+          reasoningEffort,
         },
       });
       

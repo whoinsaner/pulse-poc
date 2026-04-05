@@ -178,12 +178,17 @@ export default function ReportLayout() {
     
     setIsRetrying(true);
     try {
+      const reasoningEffort = localStorage.getItem('pulse_reasoning_enabled') === 'true'
+        ? (localStorage.getItem('pulse_reasoning_effort') || 'medium')
+        : null;
+
       const response = await supabase.functions.invoke('analyze-script', {
         body: {
           runId,
           scriptId: report.script_id,
           resume: true,
-          forceAnalysis: true
+          forceAnalysis: true,
+          reasoningEffort,
         }
       });
 
