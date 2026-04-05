@@ -2640,7 +2640,8 @@ serve(async (req) => {
               chunks,
               agentsToRun,
               parameterMap,
-              qualityMode
+              qualityMode,
+              reasoningEffort
             );
             
             // Run synthesis after chunked analysis (no overlap for chunked path)
