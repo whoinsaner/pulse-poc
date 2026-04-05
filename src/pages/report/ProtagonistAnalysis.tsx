@@ -3,16 +3,16 @@ import { useOutletContext } from 'react-router-dom';
 import { ReportData, StakeholderLens } from '@/types/database';
 
 import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { 
   SectionHeader, 
   SubSectionHeader,
   DiagnosisSummary,
   WeightedParameterList,
   DevelopmentFocus,
+  ScoreDisplay,
 } from '@/components/report/ui';
 import { InlineMaturity } from '@/components/report/ui/MaturityBadge';
-import { User } from 'lucide-react';
+import { User, Heart, Brain, Target, Zap } from 'lucide-react';
 import { extractScore } from '@/lib/scoreUtils';
 import { useStakeholderFiltering } from '@/hooks/useStakeholderFiltering';
 import { StakeholderFilterNotice } from '@/components/report/StakeholderFilterNotice';
@@ -75,6 +75,25 @@ export default function ProtagonistAnalysis() {
     return Math.round(protagonistParams.reduce((sum, p) => sum + p.score, 0) / protagonistParams.length);
   }, [protagonistParams, reportData.categoryScores, currentScore]);
 
+  // Derive dimension scores from actual parameter data
+  const getParamScore = (keywords: string[]) => {
+    const allParams = reportData.parameterScores || [];
+    const matched = allParams.filter(p => 
+      keywords.some(k => p.parameterName?.toLowerCase().includes(k) || p.displayName?.toLowerCase().includes(k))
+    );
+    return matched.length > 0 
+      ? Math.round(matched.reduce((sum, p) => sum + p.score, 0) / matched.length)
+      : Math.round(sectionScore);
+  };
+
+  const dimensionScores = {
+    empathy: getParamScore(['empathy', 'relatab', 'likab', 'audience']),
+    complexity: getParamScore(['complex', 'depth', 'dimension', 'psychology']),
+    agency: getParamScore(['agency', 'active', 'drive', 'motivation']),
+    growth: getParamScore(['arc', 'growth', 'transform', 'change']),
+  };
+  const avgDimension = Math.round((dimensionScores.empathy + dimensionScores.complexity + dimensionScores.agency + dimensionScores.growth) / 4);
+
   const filteredParams = filterParameters(protagonistParams);
   const filterStats = getFilterStats(protagonistParams);
   const basePath = window.location.pathname.split('/characters')[0];
@@ -111,6 +130,35 @@ export default function ProtagonistAnalysis() {
         developmentLink={`${basePath}/development`}
         stakeholderLens={stakeholderLens}
       />
+
+      {/* Dimension Tiles */}
+      <div className="grid md:grid-cols-5 gap-4">
+        <Card className="p-5 text-center">
+          <Heart className="h-5 w-5 mx-auto mb-2 text-destructive" />
+          <p className="text-sm text-muted-foreground mb-1">Empathy</p>
+          <ScoreDisplay score={dimensionScores.empathy} size="sm" showLabel={false} />
+        </Card>
+        <Card className="p-5 text-center">
+          <Brain className="h-5 w-5 mx-auto mb-2 text-chart-6" />
+          <p className="text-sm text-muted-foreground mb-1">Complexity</p>
+          <ScoreDisplay score={dimensionScores.complexity} size="sm" showLabel={false} />
+        </Card>
+        <Card className="p-5 text-center">
+          <Target className="h-5 w-5 mx-auto mb-2 text-chart-4" />
+          <p className="text-sm text-muted-foreground mb-1">Agency</p>
+          <ScoreDisplay score={dimensionScores.agency} size="sm" showLabel={false} />
+        </Card>
+        <Card className="p-5 text-center">
+          <Zap className="h-5 w-5 mx-auto mb-2 text-chart-2" />
+          <p className="text-sm text-muted-foreground mb-1">Growth</p>
+          <ScoreDisplay score={dimensionScores.growth} size="sm" showLabel={false} />
+        </Card>
+        <Card className="p-5 text-center bg-primary/5 border-primary/20">
+          <User className="h-5 w-5 mx-auto mb-2 text-primary" />
+          <p className="text-sm text-muted-foreground mb-1">Overall</p>
+          <ScoreDisplay score={avgDimension} size="sm" />
+        </Card>
+      </div>
 
       {/* Protagonist Profile from AI or parsed data */}
       {(protagonistProfile || protagonist) && (

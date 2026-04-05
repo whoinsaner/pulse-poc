@@ -424,7 +424,9 @@ function renderSectionTitle(doc: jsPDF, y: number, title: string, subtitle?: str
 function renderAgentNarrative(
   doc: jsPDF, y: number, agentKeys: string[],
   agentContent: Record<string, AgentSectionContent> | undefined,
-  pageNum: PageCounter, sectionName: string
+  pageNum: PageCounter, sectionName: string,
+  parameterScores?: ParameterScoreData[],
+  categoryScores?: Record<string, any>
 ): number {
   if (!agentContent) return y;
   const cw = getContentWidth(doc);
@@ -585,6 +587,38 @@ function renderAgentNarrative(
         y += 4;
       }
 
+      // Helper to compute dimension scores from parameterScores
+      const getParamScoreForPdf = (keywords: string[], fallback: number) => {
+        const allParams = parameterScores || [];
+        const matched = allParams.filter(p => 
+          keywords.some(k => (p.parameterName?.toLowerCase() || '').includes(k) || (p.displayName?.toLowerCase() || '').includes(k))
+        );
+        return matched.length > 0 
+          ? Math.round(matched.reduce((sum, p) => sum + p.score, 0) / matched.length)
+          : Math.round(fallback);
+      };
+
+      const renderDimensionTable = (dimensions: { name: string; score: number }[], title: string) => {
+        y = checkBreak(doc, y, 20, pageNum, sectionName);
+        doc.setFontSize(FONTS.small);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...COLORS.text);
+        doc.text(title, MARGINS.left + 3, y);
+        y += 5;
+        const dtResult = autoTable(doc, {
+          startY: y,
+          head: [dimensions.map(d => d.name)],
+          body: [dimensions.map(d => `${d.score}/100`)],
+          theme: 'grid',
+          styles: { fontSize: 7, cellPadding: 2, halign: 'center' as const },
+          headStyles: { fillColor: [59, 130, 246], textColor: 255, fontStyle: 'bold' as const, fontSize: 7 },
+          margin: { left: MARGINS.left, right: MARGINS.right },
+        });
+        y = (dtResult as any)?.finalY ? (dtResult as any).finalY + 4 : y + 20;
+        doc.setFontSize(FONTS.body);
+        doc.setFont('helvetica', 'normal');
+      };
+
       // Character profiles (protagonist/antagonist sections)
       if (content.protagonistProfile) {
         const p = content.protagonistProfile;
@@ -616,7 +650,18 @@ function renderAgentNarrative(
             }
           }
         }
-        y += 4;
+        y += 2;
+
+        // Protagonist dimension scores
+        const charScore = categoryScores?.['Character'];
+        const charFallback = typeof charScore === 'number' ? charScore : (typeof charScore === 'object' && charScore !== null ? (charScore as any).score || 65 : 65);
+        renderDimensionTable([
+          { name: 'Empathy', score: getParamScoreForPdf(['empathy', 'relatab', 'likab', 'audience'], charFallback) },
+          { name: 'Complexity', score: getParamScoreForPdf(['complex', 'depth', 'dimension', 'psychology'], charFallback) },
+          { name: 'Agency', score: getParamScoreForPdf(['agency', 'active', 'drive', 'motivation'], charFallback) },
+          { name: 'Growth', score: getParamScoreForPdf(['arc', 'growth', 'transform', 'change'], charFallback) },
+        ], 'Protagonist Dimensions');
+        y += 2;
       }
 
       if (content.antagonistProfile) {
@@ -649,7 +694,18 @@ function renderAgentNarrative(
             }
           }
         }
-        y += 4;
+        y += 2;
+
+        // Antagonist dimension scores
+        const conflictScore = categoryScores?.['Conflict'] || categoryScores?.['Character'];
+        const antFallback = typeof conflictScore === 'number' ? conflictScore : (typeof conflictScore === 'object' && conflictScore !== null ? (conflictScore as any).score || 65 : 65);
+        renderDimensionTable([
+          { name: 'Physical', score: getParamScoreForPdf(['threat', 'stakes', 'danger', 'physical'], antFallback) },
+          { name: 'Psychological', score: getParamScoreForPdf(['psychology', 'manipulat', 'depth', 'complex'], antFallback) },
+          { name: 'Tactical', score: getParamScoreForPdf(['tactical', 'strateg', 'intellig', 'plan'], antFallback) },
+          { name: 'Dramatic', score: getParamScoreForPdf(['dramatic', 'tension', 'conflict', 'opposition'], antFallback) },
+        ], 'Antagonist Dimensions');
+        y += 2;
       }
 
       // Supporting Cast
@@ -677,6 +733,15 @@ function renderAgentNarrative(
           }
           y += 3;
         }
+
+        // Supporting Cast dimension scores
+        const castFallback = typeof categoryScores?.['Character'] === 'number' ? categoryScores['Character'] : 65;
+        renderDimensionTable([
+          { name: 'Diversity', score: getParamScoreForPdf(['diversity', 'distinct', 'voice', 'variety'], castFallback as number) },
+          { name: 'Utility', score: getParamScoreForPdf(['function', 'utility', 'purpose', 'role'], castFallback as number) },
+          { name: 'Balance', score: getParamScoreForPdf(['balance', 'ensemble', 'distribution'], castFallback as number) },
+          { name: 'Depth', score: getParamScoreForPdf(['depth', 'dimension', 'develop', 'arc'], castFallback as number) },
+        ], 'Supporting Cast Dimensions');
         y += 4;
       }
 
@@ -996,7 +1061,7 @@ function renderSection(
 
   // Agent narrative
   const agentKeys = SECTION_AGENT_MAP[sectionId] || [];
-  y = renderAgentNarrative(doc, y, agentKeys, data.agentContent, pageNum, sectionName);
+  y = renderAgentNarrative(doc, y, agentKeys, data.agentContent, pageNum, sectionName, data.parameterScores, data.categoryScores);
 
   // Parameter cards
   y = renderParameterCards(doc, y, sectionId, data.parameterScores || [], pageNum, sectionName);
@@ -1310,7 +1375,7 @@ export async function generateFullReportPDF(
       if (sec.id === 'story-diagnosis') {
         y = renderSectionTitle(doc, y, sec.title, sec.subtitle);
         y = renderDiagnosisOverview(doc, y, ['Concept & Hook', 'Structure', 'Conflict'], data.categoryScores || {}, pageNum, sec.title);
-        y = renderAgentNarrative(doc, y, SECTION_AGENT_MAP[sec.id] || [], data.agentContent, pageNum, sec.title);
+        y = renderAgentNarrative(doc, y, SECTION_AGENT_MAP[sec.id] || [], data.agentContent, pageNum, sec.title, data.parameterScores, data.categoryScores);
       } else {
         y = renderSection(doc, y, sec.id, sec.title, sec.subtitle, data, pageNum);
       }
@@ -1333,7 +1398,7 @@ export async function generateFullReportPDF(
       if (sec.id === 'character-diagnosis') {
         y = renderSectionTitle(doc, y, sec.title, sec.subtitle);
         y = renderDiagnosisOverview(doc, y, ['Character'], data.categoryScores || {}, pageNum, sec.title);
-        y = renderAgentNarrative(doc, y, SECTION_AGENT_MAP[sec.id] || [], data.agentContent, pageNum, sec.title);
+        y = renderAgentNarrative(doc, y, SECTION_AGENT_MAP[sec.id] || [], data.agentContent, pageNum, sec.title, data.parameterScores, data.categoryScores);
       } else {
         y = renderSection(doc, y, sec.id, sec.title, sec.subtitle, data, pageNum);
       }
@@ -1358,7 +1423,7 @@ export async function generateFullReportPDF(
       if (sec.id === 'craft-diagnosis') {
         y = renderSectionTitle(doc, y, sec.title, sec.subtitle);
         y = renderDiagnosisOverview(doc, y, ['Dialogue', 'Theme', 'World & Logic', 'Emotional Arc'], data.categoryScores || {}, pageNum, sec.title);
-        y = renderAgentNarrative(doc, y, SECTION_AGENT_MAP[sec.id] || [], data.agentContent, pageNum, sec.title);
+        y = renderAgentNarrative(doc, y, SECTION_AGENT_MAP[sec.id] || [], data.agentContent, pageNum, sec.title, data.parameterScores, data.categoryScores);
       } else {
         y = renderSection(doc, y, sec.id, sec.title, sec.subtitle, data, pageNum);
       }
@@ -1443,7 +1508,7 @@ export async function generateFullReportPDF(
 
       // Agent narrative for scene analysis — start on a fresh page if table consumed most of this one
       y = checkBreak(doc, y, 60, pageNum, 'Scene Analysis');
-      y = renderAgentNarrative(doc, y, SECTION_AGENT_MAP['scene-analysis'] || [], data.agentContent, pageNum, 'Scene Analysis');
+      y = renderAgentNarrative(doc, y, SECTION_AGENT_MAP['scene-analysis'] || [], data.agentContent, pageNum, 'Scene Analysis', data.parameterScores, data.categoryScores);
     }
 
     // === PART IV: FORMAT (conditional) ===
@@ -1519,7 +1584,7 @@ export async function generateFullReportPDF(
 
       // Render agent narrative content from SeriesBibleAgent
       const bibleAgentKeys = SECTION_AGENT_MAP['bible'] || [];
-      y = renderAgentNarrative(doc, y, bibleAgentKeys, data.agentContent, pageNum, 'Series Bible');
+      y = renderAgentNarrative(doc, y, bibleAgentKeys, data.agentContent, pageNum, 'Series Bible', data.parameterScores, data.categoryScores);
       y = renderParameterCards(doc, y, 'bible', data.parameterScores || [], pageNum, 'Series Bible');
     }
 
@@ -1541,7 +1606,7 @@ export async function generateFullReportPDF(
       if (sec.id === 'commercial-diagnosis') {
         y = renderSectionTitle(doc, y, sec.title, sec.subtitle);
         y = renderDiagnosisOverview(doc, y, ['Market', 'Execution'], data.categoryScores || {}, pageNum, sec.title);
-        y = renderAgentNarrative(doc, y, SECTION_AGENT_MAP[sec.id] || [], data.agentContent, pageNum, sec.title);
+        y = renderAgentNarrative(doc, y, SECTION_AGENT_MAP[sec.id] || [], data.agentContent, pageNum, sec.title, data.parameterScores, data.categoryScores);
       } else {
         y = renderSection(doc, y, sec.id, sec.title, sec.subtitle, data, pageNum);
       }

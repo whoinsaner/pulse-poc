@@ -3,7 +3,6 @@ import { useOutletContext } from 'react-router-dom';
 import { ReportData, StakeholderLens } from '@/types/database';
 
 import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { 
   SectionHeader, 
   SubSectionHeader,
@@ -11,9 +10,10 @@ import {
   WeightedParameterList,
   DevelopmentFocus,
   ScoreBadge,
+  ScoreDisplay,
 } from '@/components/report/ui';
 import { InlineMaturity } from '@/components/report/ui/MaturityBadge';
-import { Users, MessageSquare, Film, Star } from 'lucide-react';
+import { Users, MessageSquare, Film, Star, Target, Scale, Layers, Shield } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { extractScore } from '@/lib/scoreUtils';
 
@@ -88,6 +88,25 @@ export default function SupportingCast() {
     };
   });
 
+  // Derive dimension scores from actual parameter data
+  const getParamScore = (keywords: string[]) => {
+    const allParams = reportData.parameterScores || [];
+    const matched = allParams.filter(p => 
+      keywords.some(k => p.parameterName?.toLowerCase().includes(k) || p.displayName?.toLowerCase().includes(k))
+    );
+    return matched.length > 0 
+      ? Math.round(matched.reduce((sum, p) => sum + p.score, 0) / matched.length)
+      : Math.round(sectionScore);
+  };
+
+  const dimensionScores = {
+    diversity: getParamScore(['diversity', 'distinct', 'voice', 'variety']),
+    utility: getParamScore(['function', 'utility', 'purpose', 'role']),
+    balance: getParamScore(['balance', 'ensemble', 'distribution']),
+    depth: getParamScore(['depth', 'dimension', 'develop', 'arc']),
+  };
+  const avgDimension = Math.round((dimensionScores.diversity + dimensionScores.utility + dimensionScores.balance + dimensionScores.depth) / 4);
+
   const basePath = window.location.pathname.split('/characters')[0];
 
   if (!context) {
@@ -113,6 +132,35 @@ export default function SupportingCast() {
         developmentLink={`${basePath}/development`}
         stakeholderLens={stakeholderLens}
       />
+
+      {/* Dimension Tiles */}
+      <div className="grid md:grid-cols-5 gap-4">
+        <Card className="p-5 text-center">
+          <Users className="h-5 w-5 mx-auto mb-2 text-destructive" />
+          <p className="text-sm text-muted-foreground mb-1">Diversity</p>
+          <ScoreDisplay score={dimensionScores.diversity} size="sm" showLabel={false} />
+        </Card>
+        <Card className="p-5 text-center">
+          <Target className="h-5 w-5 mx-auto mb-2 text-chart-6" />
+          <p className="text-sm text-muted-foreground mb-1">Utility</p>
+          <ScoreDisplay score={dimensionScores.utility} size="sm" showLabel={false} />
+        </Card>
+        <Card className="p-5 text-center">
+          <Scale className="h-5 w-5 mx-auto mb-2 text-chart-4" />
+          <p className="text-sm text-muted-foreground mb-1">Balance</p>
+          <ScoreDisplay score={dimensionScores.balance} size="sm" showLabel={false} />
+        </Card>
+        <Card className="p-5 text-center">
+          <Layers className="h-5 w-5 mx-auto mb-2 text-chart-2" />
+          <p className="text-sm text-muted-foreground mb-1">Depth</p>
+          <ScoreDisplay score={dimensionScores.depth} size="sm" showLabel={false} />
+        </Card>
+        <Card className="p-5 text-center bg-primary/5 border-primary/20">
+          <Shield className="h-5 w-5 mx-auto mb-2 text-primary" />
+          <p className="text-sm text-muted-foreground mb-1">Overall</p>
+          <ScoreDisplay score={avgDimension} size="sm" />
+        </Card>
+      </div>
 
       {/* Cast Overview Stats */}
       <div className="grid md:grid-cols-4 gap-4">
