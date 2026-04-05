@@ -3276,8 +3276,9 @@ async function runStandardAnalysis(
     for (let attempt = 0; attempt <= modelConfig.maxRetries; attempt++) {
       try {
         if (attempt > 0) {
-          const delay = modelConfig.retryDelayMs * Math.pow(2, attempt - 1);
-          console.log(`[${agentName}] Retry attempt ${attempt}/${modelConfig.maxRetries}, waiting ${delay}ms`);
+          const jitter = Math.random() * modelConfig.retryDelayMs;
+          const delay = modelConfig.retryDelayMs * Math.pow(2, attempt - 1) + jitter;
+          console.log(`[${agentName}] Retry attempt ${attempt}/${modelConfig.maxRetries}, waiting ${Math.round(delay)}ms`);
           await new Promise(r => setTimeout(r, delay));
         }
         
