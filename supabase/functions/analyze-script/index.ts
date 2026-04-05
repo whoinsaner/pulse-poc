@@ -248,6 +248,63 @@ interface AgentPromptConfig {
 const agentConfigCache: Map<string, { config: AgentPromptConfig; timestamp: number }> = new Map();
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minute cache
 
+// Cache for GlobalInstructions
+let globalInstructionsCache: { text: string; timestamp: number } | null = null;
+
+/**
+ * Fetch GlobalInstructions from the database with fallback to hardcoded constant.
+ * Supports org-specific override → system default → hardcoded fallback.
+ */
+async function fetchGlobalInstructions(
+  supabaseClient: any,
+  organizationId?: string
+): Promise<string> {
+  // Check cache first
+  if (globalInstructionsCache && Date.now() - globalInstructionsCache.timestamp < CACHE_TTL_MS) {
+    console.log('[GlobalInstructions] Using cached version');
+    return globalInstructionsCache.text;
+  }
+
+  try {
+    // Try org-specific override first
+    if (organizationId) {
+      const { data: orgConfig } = await supabaseClient
+        .from('agent_configurations')
+        .select('system_prompt')
+        .eq('agent_name', 'GlobalInstructions')
+        .eq('organization_id', organizationId)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (orgConfig?.system_prompt) {
+        console.log('[GlobalInstructions] Using org-specific override');
+        globalInstructionsCache = { text: orgConfig.system_prompt, timestamp: Date.now() };
+        return orgConfig.system_prompt;
+      }
+    }
+
+    // Fall back to system default
+    const { data: sysConfig } = await supabaseClient
+      .from('agent_configurations')
+      .select('system_prompt')
+      .eq('agent_name', 'GlobalInstructions')
+      .eq('is_system', true)
+      .maybeSingle();
+
+    if (sysConfig?.system_prompt) {
+      console.log('[GlobalInstructions] Using system DB config');
+      globalInstructionsCache = { text: sysConfig.system_prompt, timestamp: Date.now() };
+      return sysConfig.system_prompt;
+    }
+  } catch (err) {
+    console.log('[GlobalInstructions] DB fetch failed, using hardcoded fallback:', err);
+  }
+
+  // Fallback to hardcoded constant
+  console.log('[GlobalInstructions] Using hardcoded fallback');
+  return GLOBAL_INSTRUCTIONS;
+}
+
 /**
  * Get agent prompt configuration - checks database first, falls back to hardcoded AGENTS
  * Supports org-specific custom agents that override system defaults
