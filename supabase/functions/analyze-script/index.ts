@@ -3081,16 +3081,20 @@ async function runStandardAnalysis(
   // Helper to get model config from batch-loaded map or fallback to preset
   const getModelConfig = (agentName: string): ModelConfig => {
     const cached = modelConfigMap.get(agentName);
-    if (cached) return cached;
-    
-    // Fallback to presets
-    const presetKey = isUUID(qualityMode) ? 'balanced' : (qualityMode as 'fast' | 'balanced' | 'quality');
-    const preset = QUALITY_MODE_PRESETS[presetKey] || QUALITY_MODE_PRESETS['balanced'];
-    const isSynthesis = SYNTHESIS_AGENTS.has(agentName);
-    const isComplex = COMPLEX_AGENTS.has(agentName);
-    const isSystem = SYSTEM_AGENTS.has(agentName);
-    const config = isSynthesis ? preset.synthesis : (isSystem ? preset.system : (isComplex ? preset.complex : preset.default));
-    return config;
+    let config: ModelConfig;
+    if (cached) {
+      config = cached;
+    } else {
+      // Fallback to presets
+      const presetKey = isUUID(qualityMode) ? 'balanced' : (qualityMode as 'fast' | 'balanced' | 'quality');
+      const preset = QUALITY_MODE_PRESETS[presetKey] || QUALITY_MODE_PRESETS['balanced'];
+      const isSynthesis = SYNTHESIS_AGENTS.has(agentName);
+      const isComplex = COMPLEX_AGENTS.has(agentName);
+      const isSystem = SYSTEM_AGENTS.has(agentName);
+      config = isSynthesis ? preset.synthesis : (isSystem ? preset.system : (isComplex ? preset.complex : preset.default));
+    }
+    // Apply request-level reasoning override
+    return applyReasoningOverride(config, agentName, reasoningEffort);
   };
 
   // ============= OPTIMIZATION 3: Batch-load all prompt configs =============
