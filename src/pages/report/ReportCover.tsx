@@ -32,6 +32,7 @@ import {
 } from 'lucide-react';
 
 interface ReportContextValue {
+  report: Report;
   reportData: ReportData;
   activeLens: StakeholderLens;
   currentScore: number;
