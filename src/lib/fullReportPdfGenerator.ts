@@ -424,7 +424,9 @@ function renderSectionTitle(doc: jsPDF, y: number, title: string, subtitle?: str
 function renderAgentNarrative(
   doc: jsPDF, y: number, agentKeys: string[],
   agentContent: Record<string, AgentSectionContent> | undefined,
-  pageNum: PageCounter, sectionName: string
+  pageNum: PageCounter, sectionName: string,
+  parameterScores?: ParameterScoreData[],
+  categoryScores?: Record<string, any>
 ): number {
   if (!agentContent) return y;
   const cw = getContentWidth(doc);
