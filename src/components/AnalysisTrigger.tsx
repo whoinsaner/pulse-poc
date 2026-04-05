@@ -389,6 +389,11 @@ export function AnalysisTrigger({
       console.log('[AnalysisTrigger] Created analysis run:', runId, 'mode:', mode, 'quality:', qualityMode, 'forceAnalysis:', forceAnalysis, 'resume:', resume, 'stakeholderLens:', stakeholderLens);
 
       // Trigger analysis edge function (non-blocking)
+      const freshReasoningEffort = localStorage.getItem('pulse_reasoning_enabled') === 'true'
+        ? (localStorage.getItem('pulse_reasoning_effort') as string || 'medium')
+        : null;
+      console.log('[analyze-script][AnalysisTrigger] Sending reasoningEffort:', freshReasoningEffort);
+
       supabase.functions.invoke('analyze-script', {
         body: {
           scriptId,
@@ -398,9 +403,7 @@ export function AnalysisTrigger({
           forceAnalysis,
           resume,
           stakeholderLens: stakeholderLens || null,
-          reasoningEffort: localStorage.getItem('pulse_reasoning_enabled') === 'true'
-            ? (localStorage.getItem('pulse_reasoning_effort') as string || 'medium')
-            : null,
+          reasoningEffort: freshReasoningEffort,
         },
       }).then(({ error: invokeError }) => {
         if (invokeError) {
@@ -622,6 +625,16 @@ export function AnalysisTrigger({
                 </Button>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Reasoning indicator */}
+        {localStorage.getItem('pulse_reasoning_enabled') === 'true' && (
+          <div className="flex items-center gap-1.5 text-xs text-primary">
+            <Zap className="h-3.5 w-3.5" />
+            <span className="font-medium">
+              Reasoning: {(localStorage.getItem('pulse_reasoning_effort') || 'medium').charAt(0).toUpperCase() + (localStorage.getItem('pulse_reasoning_effort') || 'medium').slice(1)}
+            </span>
           </div>
         )}
 
