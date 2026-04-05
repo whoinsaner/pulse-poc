@@ -79,9 +79,9 @@ const QUALITY_MODE_PRESETS: Record<'fast' | 'balanced' | 'quality', Record<strin
     system: { model: 'google/gemini-2.5-flash', maxRetries: 3, retryDelayMs: 2000 },
   },
   quality: {
-    default: { model: 'google/gemini-2.5-flash', maxRetries: 3, retryDelayMs: 2000 },
-    complex: { model: 'openai/gpt-5', maxRetries: 3, retryDelayMs: 3000, reasoning: { effort: 'medium' } },
-    synthesis: { model: 'google/gemini-2.5-pro', maxRetries: 3, retryDelayMs: 3000 },
+    default: { model: 'google/gemini-3.1-pro-preview', maxRetries: 3, retryDelayMs: 2000 },
+    complex: { model: 'google/gemini-3.1-pro-preview', maxRetries: 3, retryDelayMs: 3000, reasoning: { effort: 'medium' } },
+    synthesis: { model: 'google/gemini-3.1-pro-preview', maxRetries: 3, retryDelayMs: 3000 },
     system: { model: 'google/gemini-2.5-flash', maxRetries: 3, retryDelayMs: 2000 },
   },
 };
