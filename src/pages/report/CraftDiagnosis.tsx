@@ -120,7 +120,7 @@ export default function CraftDiagnosis() {
       <DiagnosisSummary
         parameters={craftParameters}
         categoryName="Craft"
-        developmentLink={`${basePath}/development`}
+        developmentLink={`${window.location.pathname.split('/craft')[0]}/development`}
       />
 
       {/* Craft Dimensions Grid */}
