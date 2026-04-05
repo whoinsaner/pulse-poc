@@ -3388,35 +3388,121 @@ async function runStandardAnalysis(
     return { agent: agentName, success: false, error: errorMessage };
   };
 
-  // Run agents in batches
-  const results: Array<{ agent: string; success: boolean; error?: string }> = [];
+  // ============= TWO-PHASE EXECUTION: System agents first, then core agents =============
+  // Phase 1: Run system agents and wait for completion
+  // Phase 2: Read CinemaTraditionAgent output, build traditionPreamble, run core agents with enriched context
   
-  for (let i = 0; i < agentsToRun.length; i += BATCH_SIZE) {
-    const batch = agentsToRun.slice(i, i + BATCH_SIZE);
-    const batchNum = Math.floor(i / BATCH_SIZE) + 1;
-    const totalBatches = Math.ceil(agentsToRun.length / BATCH_SIZE);
-    const isLastBatch = i + BATCH_SIZE >= agentsToRun.length;
+  const systemAgentRuns = agentsToRun.filter(([name]) => SYSTEM_AGENTS.has(name));
+  const coreAgentRuns = agentsToRun.filter(([name]) => !SYSTEM_AGENTS.has(name));
+  
+  const results: Array<{ agent: string; success: boolean; error?: string }> = [];
+
+  // PHASE 1: Run system agents
+  if (systemAgentRuns.length > 0) {
+    console.log(`[analyze-script] PHASE 1: Running ${systemAgentRuns.length} system agents: ${systemAgentRuns.map(([n]) => n).join(', ')}`);
     
-    console.log(`[analyze-script] Running batch ${batchNum}/${totalBatches}: ${batch.map(([name]) => name).join(', ')}`);
-    
-    // OPTIMIZATION 9: Fire synthesis agents in parallel with the last batch
-    if (isLastBatch && onLastBatchStarted) {
-      console.log(`[analyze-script] Last batch started — triggering synthesis overlap`);
-      onLastBatchStarted();
-    }
-    
-    const batchResults = await Promise.all(
-      batch.map(([agentName, agentConfig], idx) =>
+    const systemResults = await Promise.all(
+      systemAgentRuns.map(([agentName, agentConfig], idx) =>
         new Promise<void>(resolve => setTimeout(resolve, idx * STAGGER_MS))
           .then(() => runSingleAgent([agentName, agentConfig]))
       )
     );
-    results.push(...batchResults);
+    results.push(...systemResults);
     
-    // Wait between batches (except for last batch), skip if delay is 0
-    if (BATCH_DELAY_MS > 0 && !isLastBatch) {
-      console.log(`[analyze-script] Batch ${batchNum} complete, waiting ${BATCH_DELAY_MS}ms before next batch`);
+    // Read CinemaTraditionAgent output and build traditionPreamble
+    try {
+      const { data: postPhase1Run } = await supabase
+        .from('analysis_runs')
+        .select('agent_progress')
+        .eq('id', analysisRunId)
+        .single();
+      
+      const phase1Progress = postPhase1Run?.agent_progress || {};
+      const traditionData = (phase1Progress as any)?.CinemaTraditionAgent?.sectionContent;
+      const intakeData = (phase1Progress as any)?.IntakeNormalizerAgent?.sectionContent;
+      
+      if (traditionData || intakeData) {
+        const tradition = traditionData?.tradition || 'auto_detect';
+        const formatType = traditionData?.formatType || intakeData?.scriptFormat || 'unknown';
+        const resolutionModel = traditionData?.resolutionModel || 'procedural';
+        const audienceGrammar = traditionData?.audienceGrammar || '';
+        const structuralConventions = traditionData?.structuralConventions || [];
+        
+        let traditionPreamble = `\n\n============= TRADITION CONTEXT (from CinemaTraditionAgent) =============\n`;
+        traditionPreamble += `Detected Tradition: ${tradition}\n`;
+        traditionPreamble += `Screenplay Format: ${formatType}\n`;
+        traditionPreamble += `Resolution Model: ${resolutionModel}\n`;
+        
+        if (formatType === 'directors_spec') {
+          traditionPreamble += `\n⚠️ DIRECTOR'S SPEC FORMAT: Page count does NOT correspond to 1:1 runtime. A 245-page director's spec can yield a 140-minute film. Do NOT penalize length based on page count. Do NOT apply page-per-minute pacing calculations.\n`;
+        }
+        
+        if (resolutionModel && resolutionModel !== 'procedural') {
+          traditionPreamble += `\n⚠️ RESOLUTION MODEL (${resolutionModel}): Do NOT penalize for absence of procedural/institutional consequences. Evaluate resolution quality on the tradition's own terms.\n`;
+          if (resolutionModel === 'moral') {
+            traditionPreamble += `Moral resolution: A name spoken, a truth revealed, justice delivered through thematic symmetry IS complete resolution.\n`;
+          } else if (resolutionModel === 'poetic') {
+            traditionPreamble += `Poetic resolution: Cyclical imagery, motif payoff, symbolic closure ARE valid resolution mechanisms.\n`;
+          } else if (resolutionModel === 'cyclical') {
+            traditionPreamble += `Cyclical resolution: Return to opening imagery/state with transformed meaning IS complete resolution.\n`;
+          }
+        }
+        
+        if (audienceGrammar) {
+          traditionPreamble += `\nAudience Grammar: ${audienceGrammar}\n`;
+        }
+        
+        if (structuralConventions.length > 0) {
+          traditionPreamble += `Structural Conventions: ${structuralConventions.join(', ')}\n`;
+        }
+        
+        traditionPreamble += `=============================================================================\n`;
+        
+        // Prepend traditionPreamble to scriptContext for all core agents
+        scriptContext = scriptContext + traditionPreamble;
+        console.log(`[analyze-script] PHASE 1 complete: Tradition="${tradition}", Format="${formatType}", Resolution="${resolutionModel}" — injected into core agent context`);
+      } else {
+        console.log(`[analyze-script] PHASE 1 complete: No tradition data available from system agents`);
+      }
+    } catch (err) {
+      console.log(`[analyze-script] PHASE 1: Could not read tradition data, proceeding without preamble:`, err);
+    }
+    
+    if (BATCH_DELAY_MS > 0 && coreAgentRuns.length > 0) {
       await new Promise(r => setTimeout(r, BATCH_DELAY_MS));
+    }
+  }
+
+  // PHASE 2: Run core agents in batches with tradition-enriched context
+  if (coreAgentRuns.length > 0) {
+    console.log(`[analyze-script] PHASE 2: Running ${coreAgentRuns.length} core agents in batches of ${BATCH_SIZE}`);
+    
+    for (let i = 0; i < coreAgentRuns.length; i += BATCH_SIZE) {
+      const batch = coreAgentRuns.slice(i, i + BATCH_SIZE);
+      const batchNum = Math.floor(i / BATCH_SIZE) + 1;
+      const totalBatches = Math.ceil(coreAgentRuns.length / BATCH_SIZE);
+      const isLastBatch = i + BATCH_SIZE >= coreAgentRuns.length;
+      
+      console.log(`[analyze-script] Running core batch ${batchNum}/${totalBatches}: ${batch.map(([name]) => name).join(', ')}`);
+      
+      // OPTIMIZATION 9: Fire synthesis agents in parallel with the last batch
+      if (isLastBatch && onLastBatchStarted) {
+        console.log(`[analyze-script] Last batch started — triggering synthesis overlap`);
+        onLastBatchStarted();
+      }
+      
+      const batchResults = await Promise.all(
+        batch.map(([agentName, agentConfig], idx) =>
+          new Promise<void>(resolve => setTimeout(resolve, idx * STAGGER_MS))
+            .then(() => runSingleAgent([agentName, agentConfig]))
+        )
+      );
+      results.push(...batchResults);
+      
+      if (BATCH_DELAY_MS > 0 && !isLastBatch) {
+        console.log(`[analyze-script] Core batch ${batchNum} complete, waiting ${BATCH_DELAY_MS}ms before next batch`);
+        await new Promise(r => setTimeout(r, BATCH_DELAY_MS));
+      }
     }
   }
 
