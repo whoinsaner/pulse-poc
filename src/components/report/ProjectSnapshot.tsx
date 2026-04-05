@@ -1,6 +1,6 @@
 import { ScoreRing } from '@/components/ScoreRing';
 import { ReportData, StakeholderLens, LENS_CONFIG } from '@/types/database';
-import { User, Film, FileText, Calendar, MapPin, Palette, Target } from 'lucide-react';
+import { User, Film, FileText, Calendar, Palette, Target } from 'lucide-react';
 
 interface ProjectSnapshotProps {
   reportData: ReportData;
