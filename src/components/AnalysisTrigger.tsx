@@ -628,6 +628,16 @@ export function AnalysisTrigger({
           </div>
         )}
 
+        {/* Reasoning indicator */}
+        {localStorage.getItem('pulse_reasoning_enabled') === 'true' && (
+          <div className="flex items-center gap-1.5 text-xs text-primary">
+            <Zap className="h-3.5 w-3.5" />
+            <span className="font-medium">
+              Reasoning: {(localStorage.getItem('pulse_reasoning_effort') || 'medium').charAt(0).toUpperCase() + (localStorage.getItem('pulse_reasoning_effort') || 'medium').slice(1)}
+            </span>
+          </div>
+        )}
+
         <Button onClick={() => initiateAnalysis(false, 'deep')} className="w-full" size="lg">
           <Play className="h-4 w-4 mr-2" />
           Analyze Script
