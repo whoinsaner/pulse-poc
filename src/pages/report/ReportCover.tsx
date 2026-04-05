@@ -53,7 +53,7 @@ export default function ReportCover() {
     return <div className="text-center py-12 text-muted-foreground">Loading report...</div>;
   }
 
-  const { reportData, activeLens, currentScore } = context;
+  const { report, reportData, currentScore } = context;
   const metadata = reportData.scriptMetadata;
   const decision = getDecisionSignal(currentScore);
   const maturity = getMaturityStage(currentScore);
