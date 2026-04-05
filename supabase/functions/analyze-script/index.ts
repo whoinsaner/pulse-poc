@@ -3458,7 +3458,7 @@ async function runChunkedAnalysis(
         
         console.log(`[analyze-script] ${agentName} analyzing ${chunkLabel} with ${modelConfig.model}`);
         
-        const result = await runAgent(apiKey, agentName, promptConfig, chunkContext, parameterMap, modelConfig);
+        const result = await runAgent(apiKey, agentName, promptConfig, chunkContext, parameterMap, modelConfig, dynamicGlobalInstructions);
         
         chunkResults.push({
           chunkIndex: i,
