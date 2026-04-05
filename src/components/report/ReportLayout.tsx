@@ -230,7 +230,7 @@ export default function ReportLayout() {
         <div className="text-center">
           <h2 className="text-2xl font-display font-semibold mb-2">Report Not Found</h2>
           <p className="text-muted-foreground mb-4">The report you are looking for does not exist.</p>
-          <Button onClick={() => navigate('/scripts')}>Back to Scripts</Button>
+          <Button onClick={() => navigate('/reports')}>Back to Reports</Button>
         </div>
       </div>
     );
