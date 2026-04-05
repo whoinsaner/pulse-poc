@@ -112,7 +112,7 @@ export function AnalysisTrigger({
       setIsReasoningEnabled(enabled);
       if (enabled) {
         const effort = (localStorage.getItem('pulse_reasoning_effort') as 'low' | 'medium' | 'high') || 'medium';
-        setReasoningEffort(prev => prev ?? effort);
+        setReasoningEffort(effort);
       } else {
         setReasoningEffort(null);
       }
