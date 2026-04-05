@@ -238,6 +238,8 @@ export function ScriptUpload({ onUploadComplete, onClose }: ScriptUploadProps) {
     setIsAutoSelected(false);
     setClassificationConfidence(0);
     setShowMismatchPrompt(false);
+    setAutoDetectedTradition(null);
+    setTraditionConfidence(0);
 
     // Trigger auto-classification
     classifyScript(file, format);
