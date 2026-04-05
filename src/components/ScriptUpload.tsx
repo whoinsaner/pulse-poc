@@ -578,6 +578,15 @@ export function ScriptUpload({ onUploadComplete, onClose }: ScriptUploadProps) {
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <label className="text-sm font-medium">Cinema Tradition</label>
+              {autoDetectedTradition && traditionConfidence >= 0.4 && (
+                <Badge variant="secondary" className="text-xs gap-1">
+                  <Sparkles className="h-3 w-3" />
+                  AI: {autoDetectedTradition.replace(/_/g, ' ')} ({Math.round(traditionConfidence * 100)}%)
+                </Badge>
+              )}
+              {classifying && (
+                <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+              )}
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Info className="h-4 w-4 text-muted-foreground cursor-help" />
