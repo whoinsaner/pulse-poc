@@ -3,16 +3,16 @@ import { useOutletContext } from 'react-router-dom';
 import { ReportData, StakeholderLens } from '@/types/database';
 
 import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { 
   SectionHeader, 
   SubSectionHeader,
   DiagnosisSummary,
   WeightedParameterList,
   DevelopmentFocus,
+  ScoreDisplay,
 } from '@/components/report/ui';
 import { InlineMaturity } from '@/components/report/ui/MaturityBadge';
-import { User } from 'lucide-react';
+import { User, Heart, Brain, Target, Zap } from 'lucide-react';
 import { extractScore } from '@/lib/scoreUtils';
 import { useStakeholderFiltering } from '@/hooks/useStakeholderFiltering';
 import { StakeholderFilterNotice } from '@/components/report/StakeholderFilterNotice';
