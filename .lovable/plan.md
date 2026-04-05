@@ -1,54 +1,62 @@
 
 
-# Plan: Reasoning as a Feature Configuration
+# Plan: Fix Reasoning Not Applied to Analysis Runs
 
-## Summary
-Add a "Reasoning" feature flag to the Features Settings page with two sub-settings: an on/off toggle and a default effort level (low/medium/high). On the analysis start screen, show a reasoning effort selector only when the feature is enabled. Pass the reasoning preference through to the edge function.
+## Root Cause
 
-## Changes
+The `isReasoningEnabled` flag in `AnalysisTrigger.tsx` is read from `localStorage` once at component mount time (line 99). It is a plain `const`, not reactive state. If you enable reasoning in Settings and then navigate to the Scripts page (where AnalysisTrigger is already mounted or was mounted before the setting change), the component still holds the stale `false` value. The invoke call on line 378 then sends `reasoningEffort: null`, meaning reasoning is never applied.
 
-### 1. Features Settings Page — `src/pages/settings/FeaturesSettings.tsx`
-Add a new feature card below the existing auto-classify toggle:
-- **Reasoning toggle** (`pulse_reasoning_enabled`): on/off switch stored in localStorage
-- **Default effort selector** (`pulse_reasoning_effort`): a radio group or select with options `low`, `medium`, `high` — only visible when reasoning is toggled on
-- Both values persist in localStorage for simplicity (no DB migration needed since this is a client-side preference)
+Additionally, the reasoning UI selector (lines 580-600) is gated on `isReasoningEnabled`, so it would not have been visible on the analysis screen if the component mounted before the toggle was turned on.
 
-### 2. Analysis Start Screen — `src/components/AnalysisTrigger.tsx`
-Before the "Analyze Script" button (lines 564-577), conditionally render a reasoning effort picker:
-- Read `pulse_reasoning_enabled` from localStorage
-- If enabled, show a small inline selector (low/medium/high) defaulting to the value from `pulse_reasoning_effort`
-- Store the selected effort in component state (e.g. `reasoningEffort`)
-- If disabled, `reasoningEffort` is `null` (no reasoning)
-- Pass `reasoningEffort` into the `startAnalysis` call body alongside `qualityMode`
+## Fix
 
-### 3. Edge Function — `supabase/functions/analyze-script/index.ts`
-- Accept an optional `reasoningEffort` field from the request body (`'low' | 'medium' | 'high' | null`)
-- When `reasoningEffort` is provided, override the preset's reasoning config for complex agents: `{ reasoning: { effort: reasoningEffort } }`
-- When `reasoningEffort` is `null` or absent, strip the `reasoning` field entirely from the API call (no reasoning used)
-- This replaces the current hardcoded `effort: 'medium'` in the quality preset — reasoning is now user-controlled
+### 1. Make `isReasoningEnabled` reactive -- `src/components/AnalysisTrigger.tsx`
 
-### 4. No database changes required
-All configuration is stored in localStorage. The edge function receives reasoning preferences per-request.
+Move the localStorage reads into state and re-read them when the component becomes visible or when the invoke fires:
+
+- Read `pulse_reasoning_enabled` fresh at **invoke time** (inside the `startAnalysis` function) rather than relying on the mount-time const
+- Also re-read it for the UI selector so the reasoning picker appears/disappears if the user toggled the setting in another tab/page
+- Use a `useSyncExternalStore` or simply re-read localStorage in a `useEffect` with a `storage` event listener, or read it fresh on each render since localStorage reads are synchronous and cheap
+
+The simplest correct fix:
+- Keep `isReasoningEnabled` as state (`useState`) 
+- Add a `useEffect` that listens for the `storage` event and also re-reads on focus/visibility change
+- At invoke time (line 378), do a fresh `localStorage.getItem('pulse_reasoning_enabled') === 'true'` check instead of using the potentially stale const
+
+### 2. No edge function changes needed
+
+The edge function code already correctly handles `reasoningEffort` -- the problem is entirely on the client side not sending it.
 
 ## Technical Details
 
-**localStorage keys:**
-- `pulse_reasoning_enabled` → `'true'` | `'false'` (default: `'false'`)
-- `pulse_reasoning_effort` → `'low'` | `'medium'` | `'high'` (default: `'medium'`)
-
-**Edge function request body addition:**
+**Current (broken)**:
 ```typescript
-reasoningEffort?: 'low' | 'medium' | 'high' | null
+// Line 99 - read once at mount, never updates
+const isReasoningEnabled = localStorage.getItem('pulse_reasoning_enabled') === 'true';
 ```
 
-**Model call logic change:**
+**Fixed**:
 ```typescript
-// Before: hardcoded from preset
-...(modelConfig.reasoning ? { reasoning: modelConfig.reasoning } : {}),
+const [isReasoningEnabled, setIsReasoningEnabled] = useState(
+  () => localStorage.getItem('pulse_reasoning_enabled') === 'true'
+);
 
-// After: use request-level override
-...(reasoningConfig ? { reasoning: reasoningConfig } : {}),
+useEffect(() => {
+  const sync = () => setIsReasoningEnabled(
+    localStorage.getItem('pulse_reasoning_enabled') === 'true'
+  );
+  window.addEventListener('storage', sync);
+  window.addEventListener('focus', sync);
+  return () => {
+    window.removeEventListener('storage', sync);
+    window.removeEventListener('focus', sync);
+  };
+}, []);
 ```
 
-Where `reasoningConfig` is derived from the request's `reasoningEffort` field when present, falling back to the preset's value otherwise.
+And at invoke time, do a fresh read as a safety net:
+```typescript
+reasoningEffort: localStorage.getItem('pulse_reasoning_enabled') === 'true' 
+  ? reasoningEffort : null,
+```
 
