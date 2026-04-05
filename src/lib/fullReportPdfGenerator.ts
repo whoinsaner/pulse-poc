@@ -653,7 +653,7 @@ function renderAgentNarrative(
         y += 2;
 
         // Protagonist dimension scores
-        const charScore = reportData.categoryScores?.['Character'];
+        const charScore = categoryScores?.['Character'];
         const charFallback = typeof charScore === 'number' ? charScore : (typeof charScore === 'object' && charScore !== null ? (charScore as any).score || 65 : 65);
         renderDimensionTable([
           { name: 'Empathy', score: getParamScoreForPdf(['empathy', 'relatab', 'likab', 'audience'], charFallback) },
