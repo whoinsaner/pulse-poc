@@ -28,7 +28,7 @@ interface ExportDialogProps {
 
 type ExportFormat = 'json' | 'summary' | 'pdf';
 
-export function ExportDialog({ reportId, reportTitle, reportData, activeLens = 'studio_executive', scriptType = 'feature' }: ExportDialogProps) {
+export function ExportDialog({ reportId, reportTitle, reportData, activeLens = 'studio_executive', scriptType = 'feature', executiveSummary }: ExportDialogProps) {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [exporting, setExporting] = useState<ExportFormat | null>(null);
