@@ -2197,7 +2197,7 @@ serve(async (req) => {
       );
     }
     
-    console.log(`[analyze-script] Starting ${mode.toUpperCase()} analysis for script ${scriptId}, run ${analysisRunId}, quality: ${qualityMode}, stakeholder: ${stakeholderLens || 'all'}, resume: ${resume}`);
+    console.log(`[analyze-script] Starting ${mode.toUpperCase()} analysis for script ${scriptId}, run ${analysisRunId}, quality: ${qualityMode}, stakeholder: ${stakeholderLens || 'all'}, reasoning: ${reasoningEffort || 'off'}, resume: ${resume}`);
 
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const lovableApiKey = Deno.env.get('LOVABLE_API_KEY')!;
