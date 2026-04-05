@@ -3692,10 +3692,13 @@ IMPORTANT: For "comparableTitles", you MUST provide 3-5 real comparable films/sh
     "keyQuotes": [{"quote": "Revealing character dialogue", "context": "What it reveals"}],
     "deepDive": "2-3 paragraph narrative on character dynamics, arc quality, and ensemble balance",
     "recommendations": [{"title": "Action item", "description": "Detail", "priority": "critical|high|medium", "effort": "easy|moderate|hard"}],
-    "protagonistProfile": {"name": "Character name", "want": "External goal", "need": "Internal need", "flaw": "Core flaw", "arc": "Transformation summary", "strengths": ["Acting strength"], "weaknesses": ["Arc weakness"]},
-    "antagonistProfile": {"name": "Character name", "motivation": "What drives them", "threat": "Nature of opposition", "complexity": "Nuance assessment"},
+    "protagonistProfiles": [{"name": "Character name", "want": "External goal", "need": "Internal need", "flaw": "Core flaw", "arc": "Transformation summary", "arcType": "public|private|silent|action-driven", "strengths": ["Acting strength"], "weaknesses": ["Arc weakness"]}],
+    "antagonistProfile": {"name": "Character name", "motivation": "What drives them", "threat": "Nature of opposition", "complexity": "Nuance assessment", "worldview": "Core belief system or philosophy that drives their opposition", "philosophyType": "psychological|philosophical|systemic|institutional"},
     "supportingCast": [{"name": "Character", "role": "Narrative function", "impact": "Story contribution"}],
-    "psychologyInsights": "1-2 paragraph analysis of psychological depth, subconscious patterns, defense mechanisms"`;
+    "psychologyInsights": "1-2 paragraph analysis of psychological depth, subconscious patterns, defense mechanisms"
+
+IMPORTANT: Use "protagonistProfiles" (ARRAY) to list ALL protagonists. A protagonist is defined by narrative function (driving a story arc toward resolution), NOT by dialogue count. A silent character who drives a parallel justice arc IS a protagonist. In dual-protagonist structures, each protagonist answers the same dramatic question differently. Include an "arcType" for each: "public" (visible, dialogue-driven), "private" (internal journey), "silent" (action-driven, minimal dialogue), "action-driven" (physical choices carry the arc).
+For "antagonistProfile", include "worldview" and "philosophyType". Not all antagonists operate through psychological vulnerability — some operate through conviction, worldview, or systemic power. A villain whose worldview is answered by a child is dramatically complete.`;
     case 'ConflictAgent':
       return `"verdict": "One-sentence conflict diagnosis",
     "whatWorks": ["Conflict strength with evidence"],
