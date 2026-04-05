@@ -2256,6 +2256,13 @@ serve(async (req) => {
     
     console.log(`[analyze-script] Starting ${mode.toUpperCase()} analysis for script ${scriptId}, run ${analysisRunId}, quality: ${qualityMode}, stakeholder: ${stakeholderLens || 'all'}, reasoning: ${reasoningEffort || 'off'}, resume: ${resume}`);
 
+    // Persist reasoning_effort on the analysis run row
+    if (reasoningEffort) {
+      const supabaseServiceKeyEarly = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      const earlyClient = createClient(supabaseUrl, supabaseServiceKeyEarly);
+      await earlyClient.from('analysis_runs').update({ reasoning_effort: reasoningEffort }).eq('id', analysisRunId);
+    }
+
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const lovableApiKey = Deno.env.get('LOVABLE_API_KEY')!;
     
