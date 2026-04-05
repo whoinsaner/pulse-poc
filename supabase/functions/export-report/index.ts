@@ -214,6 +214,7 @@ ${data.scriptMetadata?.logline ? `*${data.scriptMetadata.logline}*\n` : ''}
 - **Genre**: ${data.scriptMetadata?.genre || 'Not specified'}
 - **Type**: ${data.scriptMetadata?.scriptType || 'Feature'}
 - **Page Count**: ${data.scriptMetadata?.pageCount || 'Unknown'}
+${data.scriptMetadata?.cinemaTradition && data.scriptMetadata.cinemaTradition !== 'auto_detect' ? `- **Cinema Tradition**: ${data.scriptMetadata.cinemaTradition.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())}` : ''}
 
 ### Stakeholder Perspective Scores
 ${lensScores}
@@ -314,6 +315,7 @@ ${data.scriptMetadata?.logline ? `*${data.scriptMetadata.logline}*\n` : ''}
 | Genre | ${data.scriptMetadata?.genre || 'Not specified'} |
 | Type | ${data.scriptMetadata?.scriptType || 'Feature'} |
 | Page Count | ${data.scriptMetadata?.pageCount || 'Unknown'} |
+${data.scriptMetadata?.cinemaTradition && data.scriptMetadata.cinemaTradition !== 'auto_detect' ? `| Cinema Tradition | ${data.scriptMetadata.cinemaTradition.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())} |` : ''}
 ${isWebSeries && episodeLengthLabel ? `| Episode Length | ${episodeLengthLabel} |` : ''}
 
 ---
