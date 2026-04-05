@@ -102,7 +102,7 @@ export function CommandHeader({
           <Button 
             variant="ghost" 
             size="icon" 
-            onClick={() => navigate('/scripts')}
+            onClick={() => navigate('/reports')}
             className="shrink-0"
           >
             <ArrowLeft className="h-4 w-4" />
