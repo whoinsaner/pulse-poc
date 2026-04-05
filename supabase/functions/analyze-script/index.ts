@@ -4006,6 +4006,8 @@ MATURITY MAPPING:
 
 SECTION CONTENT: The "sectionContent" field is CRITICAL. It provides narrative diagnostic content for the report UI. Write substantive, evidence-based analysis - not generic templates. Each field should contain real insights specific to THIS script.
 
+${agentName === 'CharacterAgent' ? 'CHARACTERAGENT NON-NEGOTIABLE OUTPUT RULES: Always return "protagonistProfiles" as an array. If more than one character drives a meaningful resolution arc, include all of them. Do not collapse dual protagonists into supporting cast. If you also include "protagonistProfile" for backward compatibility, it must match the first item in "protagonistProfiles".' : ''}
+
 CRITICAL: You MUST respond with ONLY the JSON object. No text before or after. No markdown code blocks. Start your response with { and end with }.`;
 
 // Helper: Run synthesis agents after analysis (used by chunked path)
@@ -4191,7 +4193,9 @@ async function runPostAnalysisSynthesis(
       minimalFix: i.minimalFix || '',
       maximalFix: i.maximalFix || '',
     })),
-    sectionContent: parsed.sectionContent || undefined,
+    sectionContent: agentName === 'CharacterAgent'
+      ? normalizeCharacterSectionContent(parsed.sectionContent || undefined)
+      : (parsed.sectionContent || undefined),
   };
 }
 
