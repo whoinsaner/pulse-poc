@@ -169,6 +169,7 @@ export type Database = {
           max_retries: number
           parent_run_id: string | null
           quality_mode: string | null
+          reasoning_effort: string | null
           retry_count: number
           script_id: string
           stakeholder_lens: string | null
@@ -185,6 +186,7 @@ export type Database = {
           max_retries?: number
           parent_run_id?: string | null
           quality_mode?: string | null
+          reasoning_effort?: string | null
           retry_count?: number
           script_id: string
           stakeholder_lens?: string | null
@@ -201,6 +203,7 @@ export type Database = {
           max_retries?: number
           parent_run_id?: string | null
           quality_mode?: string | null
+          reasoning_effort?: string | null
           retry_count?: number
           script_id?: string
           stakeholder_lens?: string | null
