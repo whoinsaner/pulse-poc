@@ -84,6 +84,8 @@ export function ScriptUpload({ onUploadComplete, onClose }: ScriptUploadProps) {
   const [isAutoSelected, setIsAutoSelected] = useState(false);
   const [showMismatchPrompt, setShowMismatchPrompt] = useState(false);
   const [mismatchDetectedType, setMismatchDetectedType] = useState<ScriptType | null>(null);
+  const [autoDetectedTradition, setAutoDetectedTradition] = useState<string | null>(null);
+  const [traditionConfidence, setTraditionConfidence] = useState<number>(0);
   const [autoClassifyEnabled] = useState(() => {
     return localStorage.getItem('pulse_auto_classify') !== 'false';
   });
@@ -191,9 +193,20 @@ export function ScriptUpload({ onUploadComplete, onClose }: ScriptUploadProps) {
 
       const detectedType = data?.scriptType as ScriptType;
       const confidence = data?.confidence || 0;
+      const detectedTradition = data?.cinemaTradition as string | undefined;
+      const tradConf = data?.traditionConfidence || 0;
 
       setAutoDetectedType(detectedType);
       setClassificationConfidence(confidence);
+
+      if (detectedTradition && tradConf >= 0.4) {
+        setAutoDetectedTradition(detectedTradition);
+        setTraditionConfidence(tradConf);
+        // Pre-select if user hasn't manually changed it
+        if (cinemaTradition === 'auto_detect') {
+          setCinemaTradition(detectedTradition);
+        }
+      }
 
       if (confidence >= 0.6 && detectedType) {
         setScriptType(detectedType);
@@ -225,6 +238,8 @@ export function ScriptUpload({ onUploadComplete, onClose }: ScriptUploadProps) {
     setIsAutoSelected(false);
     setClassificationConfidence(0);
     setShowMismatchPrompt(false);
+    setAutoDetectedTradition(null);
+    setTraditionConfidence(0);
 
     // Trigger auto-classification
     classifyScript(file, format);
@@ -289,7 +304,7 @@ export function ScriptUpload({ onUploadComplete, onClose }: ScriptUploadProps) {
           uploaded_by: user.id,
           file_size_bytes: selectedFile.size,
           episode_length_class: isWebSeries ? episodeLengthClass : null,
-          cinema_tradition: cinemaTradition !== 'auto_detect' ? cinemaTradition : null,
+          cinema_tradition: cinemaTradition !== 'auto_detect' ? cinemaTradition : (autoDetectedTradition || null),
         } as any)
         .select()
         .single();
@@ -563,6 +578,15 @@ export function ScriptUpload({ onUploadComplete, onClose }: ScriptUploadProps) {
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <label className="text-sm font-medium">Cinema Tradition</label>
+              {autoDetectedTradition && traditionConfidence >= 0.4 && (
+                <Badge variant="secondary" className="text-xs gap-1">
+                  <Sparkles className="h-3 w-3" />
+                  AI: {autoDetectedTradition.replace(/_/g, ' ')} ({Math.round(traditionConfidence * 100)}%)
+                </Badge>
+              )}
+              {classifying && (
+                <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+              )}
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Info className="h-4 w-4 text-muted-foreground cursor-help" />
