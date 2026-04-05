@@ -3235,25 +3235,28 @@ async function runStandardAnalysis(
   
   // ============= OPTIMIZATION 6: Adaptive batch delays based on script size =============
   const agentCount = agentsToRun.length;
+  const isReasoning = !!reasoningEffort;
   let BATCH_SIZE: number;
   let BATCH_DELAY_MS: number;
+  const STAGGER_MS = 300; // Stagger agent launches within each batch
   
   if (agentCount <= 5) {
-    // Very small: run all at once, no delay
     BATCH_SIZE = agentCount;
     BATCH_DELAY_MS = 0;
   } else if (agentCount <= 8) {
-    // Small scripts / micro dramas - run all at once with minimal delay
     BATCH_SIZE = agentCount;
     BATCH_DELAY_MS = 0;
   } else if (agentCount <= 16) {
-    // Medium scripts - aggressive batching for speed
-    BATCH_SIZE = 7; // Increased from 5 to reduce total batches (2 batches for 14 agents)
-    BATCH_DELAY_MS = 200; // Reduced from 500ms
+    BATCH_SIZE = 4;
+    BATCH_DELAY_MS = 500;
   } else {
-    // Large scripts (30+ pages)
-    BATCH_SIZE = 6; // Increased from 4
-    BATCH_DELAY_MS = 500; // Reduced from 1000ms
+    BATCH_SIZE = 3;
+    BATCH_DELAY_MS = 1000;
+  }
+  
+  // Reasoning requests are heavier — reduce concurrency further
+  if (isReasoning && BATCH_SIZE > 2) {
+    BATCH_SIZE = Math.max(2, BATCH_SIZE - 1);
   }
   
   console.log(`[analyze-script] Adaptive batching: ${agentCount} agents, batch_size=${BATCH_SIZE}, delay=${BATCH_DELAY_MS}ms`);
