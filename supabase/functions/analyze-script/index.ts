@@ -2640,7 +2640,8 @@ serve(async (req) => {
               chunks,
               agentsToRun,
               parameterMap,
-              qualityMode
+              qualityMode,
+              reasoningEffort
             );
             
             // Run synthesis after chunked analysis (no overlap for chunked path)
@@ -3393,7 +3394,8 @@ async function runChunkedAnalysis(
   chunks: string[],
   agentsToRun: [string, any][],
   parameterMap: Map<string, any>,
-  qualityMode: QualityMode = 'balanced'
+  qualityMode: QualityMode = 'balanced',
+  reasoningEffort: 'low' | 'medium' | 'high' | null = null
 ): Promise<Array<{ agent: string; success: boolean; error?: string }>> {
   console.log(`[analyze-script] Running chunked analysis with ${chunks.length} chunks, quality: ${qualityMode}`);
 
