@@ -79,6 +79,7 @@ export function AnalysisRunHistory({ scriptId, scriptTitle }: AnalysisRunHistory
           status,
           quality_mode,
           stakeholder_lens,
+          reasoning_effort,
           created_at,
           started_at,
           completed_at,
