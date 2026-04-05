@@ -3118,6 +3118,39 @@ ${sceneList || 'No scene data extracted'}
 `.trim();
 }
 
+function enforceAgentPromptRequirements(
+  agentName: string,
+  promptConfig: AgentPromptConfig
+): AgentPromptConfig {
+  if (agentName !== 'CharacterAgent') return promptConfig;
+
+  const needsUpgrade =
+    !promptConfig.systemPrompt.includes('Dual-protagonist architectures') ||
+    !promptConfig.systemPrompt.includes('protagonistProfiles');
+
+  if (!needsUpgrade) return promptConfig;
+
+  return {
+    systemPrompt: AGENTS.CharacterAgent.systemPrompt,
+    parameters: Array.from(new Set([...(promptConfig.parameters || []), ...AGENTS.CharacterAgent.parameters])),
+    category: promptConfig.category || AGENTS.CharacterAgent.category || 'analysis',
+  };
+}
+
+function normalizeCharacterSectionContent(sectionContent?: SectionContent): SectionContent | undefined {
+  if (!sectionContent) return sectionContent;
+
+  if (sectionContent.protagonistProfile && (!sectionContent.protagonistProfiles || sectionContent.protagonistProfiles.length === 0)) {
+    sectionContent.protagonistProfiles = [sectionContent.protagonistProfile];
+  }
+
+  if (sectionContent.protagonistProfiles?.length && !sectionContent.protagonistProfile) {
+    sectionContent.protagonistProfile = sectionContent.protagonistProfiles[0];
+  }
+
+  return sectionContent;
+}
+
 async function runStandardAnalysis(
   supabase: any,
   apiKey: string,
@@ -3250,23 +3283,23 @@ async function runStandardAnalysis(
   // Helper to get prompt config from batch-loaded map or fallback
   const getPromptConfig = (agentName: string, agentConfig: any): AgentPromptConfig => {
     const cached = promptConfigMap.get(agentName);
-    if (cached) return cached;
+    if (cached) return enforceAgentPromptRequirements(agentName, cached);
     
     // Fallback to hardcoded AGENTS
     const hardcoded = AGENTS[agentName];
     if (hardcoded) {
-      return {
+      return enforceAgentPromptRequirements(agentName, {
         systemPrompt: hardcoded.systemPrompt,
         parameters: hardcoded.parameters,
         category: hardcoded.category || 'analysis',
-      };
+      });
     }
     
-    return {
+    return enforceAgentPromptRequirements(agentName, {
       systemPrompt: agentConfig.systemPrompt,
       parameters: agentConfig.parameters,
       category: agentConfig.category || 'analysis',
-    };
+    });
   };
   
   // ============= OPTIMIZATION 6: Adaptive batch delays based on script size =============
@@ -3580,6 +3613,7 @@ async function runChunkedAnalysis(
         category: agentConfig.category || 'analysis',
       };
     }
+    promptConfig = enforceAgentPromptRequirements(agentName, promptConfig);
     
     try {
       await updateAgentProgress(supabase, analysisRunId, agentName, 'running', undefined, modelConfig.model);
@@ -3972,6 +4006,8 @@ MATURITY MAPPING:
 
 SECTION CONTENT: The "sectionContent" field is CRITICAL. It provides narrative diagnostic content for the report UI. Write substantive, evidence-based analysis - not generic templates. Each field should contain real insights specific to THIS script.
 
+${agentName === 'CharacterAgent' ? 'CHARACTERAGENT NON-NEGOTIABLE OUTPUT RULES: Always return "protagonistProfiles" as an array. If more than one character drives a meaningful resolution arc, include all of them. Do not collapse dual protagonists into supporting cast. If you also include "protagonistProfile" for backward compatibility, it must match the first item in "protagonistProfiles".' : ''}
+
 CRITICAL: You MUST respond with ONLY the JSON object. No text before or after. No markdown code blocks. Start your response with { and end with }.`;
 
 // Helper: Run synthesis agents after analysis (used by chunked path)
@@ -4157,7 +4193,9 @@ async function runPostAnalysisSynthesis(
       minimalFix: i.minimalFix || '',
       maximalFix: i.maximalFix || '',
     })),
-    sectionContent: parsed.sectionContent || undefined,
+    sectionContent: agentName === 'CharacterAgent'
+      ? normalizeCharacterSectionContent(parsed.sectionContent || undefined)
+      : (parsed.sectionContent || undefined),
   };
 }
 
