@@ -1240,7 +1240,8 @@ export async function generateFullReportPDF(
   data: ReportData,
   title: string,
   activeLens: StakeholderLens,
-  scriptType: ScriptType
+  scriptType: ScriptType,
+  executiveSummary?: string | null
 ): Promise<Blob> {
   console.log('[PDF] Starting generation for:', title);
   
