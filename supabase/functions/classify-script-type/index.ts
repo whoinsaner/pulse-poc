@@ -199,10 +199,17 @@ serve(async (req) => {
 
     // Try pattern-based classification first (instant, no AI cost)
     const patternResult = patternClassify(sample);
+    const patternTradition = patternDetectTradition(sample, fileName);
+    
     if (patternResult && patternResult.confidence >= 0.7) {
       console.log(`[classify-script-type] Pattern match: ${patternResult.scriptType} (${patternResult.confidence})`);
+      const result: any = { ...patternResult };
+      if (patternTradition) {
+        result.cinemaTradition = patternTradition.tradition;
+        result.traditionConfidence = patternTradition.confidence;
+      }
       return new Response(
-        JSON.stringify(patternResult),
+        JSON.stringify(result),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -211,7 +218,11 @@ serve(async (req) => {
     const apiKey = Deno.env.get('LOVABLE_API_KEY');
     if (!apiKey) {
       // No API key — return pattern result if any, or default
-      const fallback = patternResult || { scriptType: 'feature', confidence: 0.2 };
+      const fallback: any = patternResult || { scriptType: 'feature', confidence: 0.2 };
+      if (patternTradition) {
+        fallback.cinemaTradition = patternTradition.tradition;
+        fallback.traditionConfidence = patternTradition.confidence;
+      }
       return new Response(
         JSON.stringify(fallback),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -219,11 +230,15 @@ serve(async (req) => {
     }
 
     const aiResult = await aiClassify(apiKey, sample, fileName);
-    console.log(`[classify-script-type] AI result: ${aiResult.scriptType} (${aiResult.confidence})`);
+    console.log(`[classify-script-type] AI result: ${aiResult.scriptType} (${aiResult.confidence}), tradition: ${aiResult.cinemaTradition} (${aiResult.traditionConfidence})`);
 
     // If pattern result exists, merge confidence
     if (patternResult && patternResult.scriptType === aiResult.scriptType) {
       aiResult.confidence = Math.min(0.98, aiResult.confidence + 0.1);
+    }
+    // Merge tradition confidence from pattern
+    if (patternTradition && aiResult.cinemaTradition === patternTradition.tradition) {
+      aiResult.traditionConfidence = Math.min(0.98, (aiResult.traditionConfidence || 0) + 0.1);
     }
 
     return new Response(
