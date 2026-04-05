@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { ReportData, StakeholderLens, AgentSectionContent } from '@/types/database';
-import { AgentNarrativePanel } from '@/components/report/AgentNarrativePanel';
+import { ReportData, StakeholderLens } from '@/types/database';
+
 import { Card } from '@/components/ui/card';
 import { 
   SectionHeader, 
