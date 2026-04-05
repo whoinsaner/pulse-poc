@@ -347,7 +347,7 @@ export default function ReportLayout() {
 
         {/* Export Dialog - positioned in bottom-right for accessibility */}
         <div className="fixed bottom-4 right-4 z-50 lg:hidden">
-          <ExportDialog reportId={report.id} reportTitle={report.title} reportData={reportData} activeLens={activeLens} scriptType={scriptType} />
+          <ExportDialog reportId={report.id} reportTitle={report.title} reportData={reportData} activeLens={activeLens} scriptType={scriptType} executiveSummary={report.executive_summary} />
         </div>
 
         {/* Share Dialog */}

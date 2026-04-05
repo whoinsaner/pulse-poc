@@ -880,12 +880,30 @@ function renderDiagnosisOverview(
 
 function renderExecutiveSummary(
   doc: jsPDF, y: number, data: ReportData, activeLens: StakeholderLens,
-  pageNum: PageCounter
+  pageNum: PageCounter, executiveSummary?: string | null
 ): number {
   const sectionName = 'Executive Summary';
   const cw = getContentWidth(doc);
 
   y = renderSectionTitle(doc, y, 'Executive Summary', 'AI-generated overview of script analysis');
+
+  // Render the actual executive summary text if available
+  if (executiveSummary) {
+    const paragraphs = executiveSummary.split('\n\n').filter(Boolean);
+    for (const paragraph of paragraphs) {
+      doc.setFontSize(FONTS.body);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...COLORS.text);
+      const lines = wrapText(doc, sanitizeText(paragraph), cw - 4);
+      for (const line of lines) {
+        y = checkBreak(doc, y, 5, pageNum, sectionName);
+        doc.text(line, MARGINS.left + 2, y);
+        y += 5;
+      }
+      y += 3;
+    }
+    y += 4;
+  }
 
   // Overall assessment
   const score = data.lensScores?.[activeLens] ?? data.overallScore ?? 0;
@@ -1240,7 +1258,8 @@ export async function generateFullReportPDF(
   data: ReportData,
   title: string,
   activeLens: StakeholderLens,
-  scriptType: ScriptType
+  scriptType: ScriptType,
+  executiveSummary?: string | null
 ): Promise<Blob> {
   console.log('[PDF] Starting generation for:', title);
   
@@ -1270,7 +1289,7 @@ export async function generateFullReportPDF(
     console.log('[PDF] Rendering executive summary');
     let y = newPage(doc, pageNum, 'Executive Summary');
     toc.push({ title: 'Executive Summary', page: pageNum.value, level: 1 });
-    y = renderExecutiveSummary(doc, y, data, activeLens, pageNum);
+    y = renderExecutiveSummary(doc, y, data, activeLens, pageNum, executiveSummary);
     
 
     // === PART I: STORY ANALYSIS ===
