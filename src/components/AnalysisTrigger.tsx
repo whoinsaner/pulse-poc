@@ -577,6 +577,29 @@ export function AnalysisTrigger({
           disabled={false}
           customConfigs={customConfigs}
         />
+
+        {isReasoningEnabled && (
+          <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30">
+            <div className="flex items-center gap-2">
+              <Zap className="h-4 w-4 text-primary" />
+              <span className="text-sm font-medium">Reasoning Effort</span>
+            </div>
+            <div className="flex gap-1">
+              {(['low', 'medium', 'high'] as const).map((level) => (
+                <Button
+                  key={level}
+                  variant={reasoningEffort === level ? 'default' : 'outline'}
+                  size="sm"
+                  className="h-7 px-3 text-xs capitalize"
+                  onClick={() => setReasoningEffort(level)}
+                >
+                  {level}
+                </Button>
+              ))}
+            </div>
+          </div>
+        )}
+
         <Button onClick={() => initiateAnalysis(false, 'deep')} className="w-full" size="lg">
           <Play className="h-4 w-4 mr-2" />
           Analyze Script

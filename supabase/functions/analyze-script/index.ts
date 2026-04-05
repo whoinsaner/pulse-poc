@@ -2160,7 +2160,7 @@ serve(async (req) => {
       global: { headers: { Authorization: authHeader } }
     });
 
-    let { scriptId, analysisRunId, mode = 'deep', qualityMode = 'balanced', forceAnalysis = false, resume = false, stakeholderLens = null } = await req.json() as AnalyzeRequest;
+    let { scriptId, analysisRunId, mode = 'deep', qualityMode = 'balanced', forceAnalysis = false, resume = false, stakeholderLens = null, reasoningEffort = null } = await req.json() as AnalyzeRequest;
 
     // Verify user has access to the script via RLS
     const { data: scriptAccess, error: accessError } = await supabaseAuth
