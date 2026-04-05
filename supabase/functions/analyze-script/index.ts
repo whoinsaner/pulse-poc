@@ -2714,6 +2714,7 @@ serve(async (req) => {
               agentsToRun,
               parameterMap,
               qualityMode,
+              reasoningEffort,
               startSynthesisOverlap // Callback fires when last batch starts
             );
 
