@@ -162,61 +162,99 @@ export default function ProtagonistAnalysis() {
         </Card>
       </div>
 
-      {/* Protagonist Profile from AI or parsed data */}
-      {(protagonistProfile || protagonist) && (
+      {/* Protagonist Profiles from AI — supports multiple protagonists */}
+      {protagonistProfiles.length > 0 ? (
+        protagonistProfiles.map((profile, idx) => (
+          <Card key={idx} className="p-6">
+            <SubSectionHeader title={`${profile.name} — ${profile.arcType ? profile.arcType.charAt(0).toUpperCase() + profile.arcType.slice(1) + ' ' : ''}Protagonist`} />
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Character Name</p>
+                  <p className="font-display font-semibold text-lg">{profile.name}</p>
+                </div>
+                {profile.arcType && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Arc Type</p>
+                    <Badge variant="outline" className="capitalize">{profile.arcType.replace(/-/g, ' ')}</Badge>
+                  </div>
+                )}
+                {profile.want && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Want</p>
+                    <p className="text-sm leading-relaxed">{profile.want}</p>
+                  </div>
+                )}
+                {profile.need && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Need</p>
+                    <p className="text-sm leading-relaxed">{profile.need}</p>
+                  </div>
+                )}
+                {profile.flaw && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Fatal Flaw</p>
+                    <p className="text-sm leading-relaxed">{profile.flaw}</p>
+                  </div>
+                )}
+              </div>
+              <div className="space-y-4">
+                {profile.arc && (
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-2">Character Arc</p>
+                    <p className="text-sm leading-relaxed">{profile.arc}</p>
+                  </div>
+                )}
+                {profile.strengths && profile.strengths.length > 0 && (
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">Strengths</p>
+                    <ul className="text-sm space-y-1">{profile.strengths.map((s, i) => <li key={i}>• {s}</li>)}</ul>
+                  </div>
+                )}
+                {profile.weaknesses && profile.weaknesses.length > 0 && (
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">Weaknesses</p>
+                    <ul className="text-sm space-y-1">{profile.weaknesses.map((w, i) => <li key={i}>• {w}</li>)}</ul>
+                  </div>
+                )}
+              </div>
+            </div>
+          </Card>
+        ))
+      ) : protagonist ? (
         <Card className="p-6">
-          <SubSectionHeader title={`${protagonistProfile?.name || protagonist?.name || 'Protagonist'} — Character Profile`} />
+          <SubSectionHeader title={`${protagonist.name} — Character Profile`} />
           <div className="grid md:grid-cols-2 gap-6">
             <div className="space-y-4">
               <div>
                 <p className="text-sm text-muted-foreground">Character Name</p>
-                <p className="font-display font-semibold text-lg">{protagonistProfile?.name || protagonist?.name}</p>
+                <p className="font-display font-semibold text-lg">{protagonist.name}</p>
               </div>
-              {protagonistProfile?.want && (
-                <div>
-                  <p className="text-sm text-muted-foreground">Want</p>
-                  <p className="text-sm leading-relaxed">{protagonistProfile.want}</p>
-                </div>
-              )}
-              {protagonistProfile?.need && (
-                <div>
-                  <p className="text-sm text-muted-foreground">Need</p>
-                  <p className="text-sm leading-relaxed">{protagonistProfile.need}</p>
-                </div>
-              )}
-              {protagonistProfile?.flaw && (
-                <div>
-                  <p className="text-sm text-muted-foreground">Fatal Flaw</p>
-                  <p className="text-sm leading-relaxed">{protagonistProfile.flaw}</p>
-                </div>
-              )}
-              {!protagonistProfile && protagonist?.description && (
+              {protagonist.description && (
                 <div>
                   <p className="text-sm text-muted-foreground">Description</p>
                   <p className="text-sm">{protagonist.description}</p>
                 </div>
               )}
-              {protagonist && (
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Dialogue Lines</p>
-                    <p className="font-mono font-semibold">{protagonist.dialogueCount}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Scene Appearances</p>
-                    <p className="font-mono font-semibold">{protagonist.sceneCount}</p>
-                  </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Dialogue Lines</p>
+                  <p className="font-mono font-semibold">{protagonist.dialogueCount}</p>
                 </div>
-              )}
+                <div>
+                  <p className="text-sm text-muted-foreground">Scene Appearances</p>
+                  <p className="font-mono font-semibold">{protagonist.sceneCount}</p>
+                </div>
+              </div>
             </div>
             <div className="space-y-4">
-              {(protagonistProfile?.arc || protagonist?.arcSummary) && (
+              {protagonist.arcSummary && (
                 <div>
                   <p className="text-sm text-muted-foreground mb-2">Character Arc</p>
-                  <p className="text-sm leading-relaxed">{protagonistProfile?.arc || protagonist?.arcSummary}</p>
+                  <p className="text-sm leading-relaxed">{protagonist.arcSummary}</p>
                 </div>
               )}
-              {protagonist?.relationships && protagonist.relationships.length > 0 && (
+              {protagonist.relationships && protagonist.relationships.length > 0 && (
                 <div>
                   <p className="text-sm text-muted-foreground mb-2">Key Relationships</p>
                   <div className="space-y-2">
@@ -232,7 +270,7 @@ export default function ProtagonistAnalysis() {
             </div>
           </div>
         </Card>
-      )}
+      ) : null}
 
       {/* Weighted Parameter Breakdown */}
       <WeightedParameterList

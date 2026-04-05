@@ -3103,6 +3103,16 @@ ${traditionLine}
 CHARACTERS (${characters.length} total):
 ${charList || 'No character data extracted'}
 
+${characters.length > 1 ? `CHARACTER RELATIONSHIP GRAPH (co-occurrence):
+${characters.slice(0, 10).flatMap((c, i) => 
+  characters.slice(i + 1, 10).map(c2 => {
+    const shared = Math.min(c.scene_count || 0, c2.scene_count || 0);
+    if (shared < 2) return null;
+    const rel = (c.relationships || []).find((r: any) => r.character?.toLowerCase() === c2.name?.toLowerCase());
+    return `- ${c.name} ↔ ${c2.name}: ~${shared} shared scenes${rel ? ` (${rel.type})` : ''}`;
+  }).filter(Boolean)
+).join('\n') || 'Insufficient data for relationship graph'}
+` : ''}
 SCENES (${scenes.length} total):
 ${sceneList || 'No scene data extracted'}
 `.trim();
