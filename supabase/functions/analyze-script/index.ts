@@ -34,6 +34,12 @@ const MODEL_REGISTRY = {
     description: 'Next-gen pro model. Cutting-edge reasoning.',
     supportsTemperature: true,
   },
+  'google/gemini-3.1-pro-preview': {
+    tier: 'pro',
+    costTier: 4,
+    description: 'Latest next-gen reasoning model. Best for deep analysis.',
+    supportsTemperature: true,
+  },
   // OpenAI Models
   'openai/gpt-5-nano': {
     tier: 'lite',
