@@ -3754,8 +3754,17 @@ async function runAgent(
   config: { parameters: string[]; systemPrompt: string },
   context: string,
   parameterMap: Map<string, any>,
-  modelConfig: ModelConfig
+  modelConfig: ModelConfig,
+  dynamicGlobalInstructions?: string
 ): Promise<AgentResult> {
+  // If dynamic global instructions are provided, replace the hardcoded ones in the system prompt
+  let effectiveSystemPrompt = config.systemPrompt;
+  if (dynamicGlobalInstructions && config.systemPrompt.includes(GLOBAL_INSTRUCTIONS.trim().substring(0, 50))) {
+    effectiveSystemPrompt = config.systemPrompt.replace(GLOBAL_INSTRUCTIONS, '\n' + dynamicGlobalInstructions + '\n');
+  } else if (dynamicGlobalInstructions && !config.systemPrompt.includes('GLOBAL AGENT OPERATING RULES')) {
+    // DB-stored prompt that doesn't embed global instructions — prepend them
+    effectiveSystemPrompt = dynamicGlobalInstructions + '\n\n' + config.systemPrompt;
+  }
   const parametersToScore = config.parameters
     .map(name => parameterMap.get(name))
     .filter(Boolean);
