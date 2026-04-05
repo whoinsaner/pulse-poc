@@ -203,11 +203,25 @@ export default function ReportCover() {
         </p>
       </Card>
 
-      {/* What's Working / What Needs Work */}
-      <div className="grid md:grid-cols-2 gap-4">
-        <ExpandableWorkingCard items={diagnostics.working} />
-        <ExpandableNeedsWorkCard broken={diagnostics.broken} underdeveloped={diagnostics.underdeveloped} />
-      </div>
+      {/* Executive Summary */}
+      {reportData.executiveSummary ? (
+        <Card className="p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Sparkles className="h-4 w-4 text-primary" />
+            <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Executive Summary</h3>
+          </div>
+          <div className="space-y-3">
+            {reportData.executiveSummary.split('\n\n').filter(Boolean).map((paragraph, i) => (
+              <p key={i} className="text-sm leading-relaxed text-muted-foreground">{paragraph}</p>
+            ))}
+          </div>
+        </Card>
+      ) : (
+        <div className="grid md:grid-cols-2 gap-4">
+          <ExpandableWorkingCard items={diagnostics.working} />
+          <ExpandableNeedsWorkCard broken={diagnostics.broken} underdeveloped={diagnostics.underdeveloped} />
+        </div>
+      )}
 
       {/* Quick Navigation */}
       <div>
