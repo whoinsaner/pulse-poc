@@ -179,26 +179,6 @@ export default function CraftDiagnosis() {
         })}
       </div>
 
-      {/* Weighted Parameter Breakdown */}
-      <WeightedParameterList
-        parameters={craftParameters}
-        title="Craft Parameter Breakdown"
-        initiallyExpanded={false}
-        defaultVisibleCount={6}
-      />
-
-      {/* Development Focus */}
-      {developmentItems.length > 0 && (
-        <DevelopmentFocus
-          sectionName="Craft"
-          items={developmentItems}
-          developmentPath={`${basePath}/development`}
-          relatedSections={[
-            { label: 'Story Diagnosis', path: `${basePath}/story` },
-            { label: 'Character Diagnosis', path: `${basePath}/characters` },
-          ]}
-        />
-      )}
 
     </div>
   );

@@ -199,26 +199,6 @@ export default function CommercialDiagnosis() {
         })}
       </div>
 
-      {/* Weighted Parameter Breakdown */}
-      <WeightedParameterList
-        parameters={commercialParameters}
-        title="Commercial Parameter Breakdown"
-        initiallyExpanded={false}
-        defaultVisibleCount={6}
-      />
-
-      {/* Development Focus */}
-      {developmentItems.length > 0 && (
-        <DevelopmentFocus
-          sectionName="Commercial"
-          items={developmentItems}
-          developmentPath={`${basePath}/development`}
-          relatedSections={[
-            { label: 'Story Diagnosis', path: `${basePath}/story` },
-            { label: 'Craft Diagnosis', path: `${basePath}/craft` },
-          ]}
-        />
-      )}
 
     </div>
   );
