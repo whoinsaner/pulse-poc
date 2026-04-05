@@ -751,6 +751,8 @@ Evaluate the foundational concept:
 
 Focus on immediate engagement, mental clarity, and long-term extensibility.
 
+TRADITION-AWARE EVALUATION:
+- When evaluating representation and sensitivity, distinguish between a script that endorses a stereotype and a script that dramatizes a system exploiting that stereotype. If the narrative clearly positions the audience to see a fabrication being constructed in real-time, this is a critique of the system, not a reproduction of the stereotype.
 COMIC/GRAPHIC NARRATIVE ADAPTATION:
 When the script type is "comic" or the content is a graphic narrative:
 - Hook Clarity: Evaluate visual hook potential — does the concept lend itself to a striking cover image, an iconic visual premise, or a visually communicable pitch? Comics sell on visual hooks (cover art, character design, world aesthetic) as much as logline.
