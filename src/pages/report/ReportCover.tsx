@@ -162,6 +162,11 @@ export default function ReportCover() {
             {metadata?.theme && (
               <Badge variant="secondary">{metadata.theme}</Badge>
             )}
+            {metadata?.cinemaTradition && metadata.cinemaTradition !== 'auto_detect' && (
+              <Badge variant="outline" className="border-primary/30 text-primary capitalize">
+                {metadata.cinemaTradition.replace(/_/g, ' ')} Tradition
+              </Badge>
+            )}
           </div>
         </div>
 

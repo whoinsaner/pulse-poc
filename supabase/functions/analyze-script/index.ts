@@ -4529,6 +4529,7 @@ async function generateReport(
       pageCount: script.page_count,
       sceneCount: scenesResult.data?.length || 0,
       characterCount: charsResult.data?.length || 0,
+      cinemaTradition: script.cinema_tradition || null,
     },
     overallScore,
     lensScores,

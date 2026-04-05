@@ -250,6 +250,7 @@ export interface ReportData {
     sceneCount?: number;
     characterCount?: number;
     episodeLengthClass?: EpisodeLengthClass;
+    cinemaTradition?: string;
   };
   overallScore: number;
   lensScores: Record<StakeholderLens, number>;

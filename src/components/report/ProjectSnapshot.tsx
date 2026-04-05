@@ -20,11 +20,17 @@ export function ProjectSnapshot({ reportData, reportTitle, currentScore, activeL
     return 'Early Development Stage';
   };
 
+  const traditionLabel = metadata?.cinemaTradition && metadata.cinemaTradition !== 'auto_detect'
+    ? metadata.cinemaTradition.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+    : null;
+
   const details = [
     { label: 'Genre', value: metadata?.genre || 'Not specified', icon: Film },
     { label: 'Format', value: metadata?.scriptType ? metadata.scriptType.charAt(0).toUpperCase() + metadata.scriptType.slice(1) : 'Feature Film', icon: FileText },
     { label: 'Pages', value: metadata?.pageCount ? `${metadata.pageCount} pages` : 'N/A', icon: Calendar },
-    { label: 'Status', value: 'Analysis Complete', icon: User },
+    ...(traditionLabel
+      ? [{ label: 'Tradition', value: traditionLabel, icon: Palette }]
+      : [{ label: 'Status', value: 'Analysis Complete', icon: User }]),
   ];
 
   return (
