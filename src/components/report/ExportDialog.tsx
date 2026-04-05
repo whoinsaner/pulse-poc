@@ -68,7 +68,7 @@ export function ExportDialog({ reportId, reportTitle, reportData, activeLens = '
     try {
       // PDF: generate client-side if we have reportData
       if (format === 'pdf' && reportData) {
-        const blob = await generateFullReportPDF(reportData, reportTitle, activeLens, scriptType);
+        const blob = await generateFullReportPDF(reportData, reportTitle, activeLens, scriptType, executiveSummary);
         downloadBlob(blob, getFilename('pdf'));
         toast({
           title: 'Export Complete',
