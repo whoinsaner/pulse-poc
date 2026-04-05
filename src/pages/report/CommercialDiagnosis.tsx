@@ -155,7 +155,7 @@ export default function CommercialDiagnosis() {
       <DiagnosisSummary
         parameters={commercialParameters}
         categoryName="Commercial"
-        developmentLink={`${basePath}/development`}
+        developmentLink={`${window.location.pathname.split('/commercial')[0]}/development`}
       />
 
       {/* Commercial Dimensions */}

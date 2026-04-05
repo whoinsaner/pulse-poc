@@ -54,20 +54,8 @@ export default function CraftDiagnosis() {
     return Math.round(total / craftParameters.length);
   }, [craftParameters]);
 
-  // Get development focus items
-  const developmentItems = useMemo(() => {
-    return craftParameters
-      .filter(p => p.score < 70)
-      .sort((a, b) => a.score - b.score)
-      .slice(0, 2)
-      .map(p => ({
-        title: p.displayName,
-        description: p.rationale || '',
-      }));
-  }, [craftParameters]);
 
-  // Get base path
-  const basePath = window.location.pathname.split('/craft')[0];
+
 
   // Group by craft dimension
   const dimensions = useMemo(() => [
