@@ -3277,7 +3277,7 @@ async function runStandardAnalysis(
         
         await updateAgentProgress(supabase, analysisRunId, agentName, 'running', undefined, modelConfig.model);
 
-        const result = await runAgent(apiKey, agentName, promptConfig, scriptContext, parameterMap, modelConfig);
+        const result = await runAgent(apiKey, agentName, promptConfig, scriptContext, parameterMap, modelConfig, dynamicGlobalInstructions);
 
         // Delete any existing scores from this agent for this run (prevents duplicates on resume)
         await supabase
