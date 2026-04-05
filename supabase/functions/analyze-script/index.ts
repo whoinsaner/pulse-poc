@@ -3106,6 +3106,9 @@ async function runStandardAnalysis(
     console.log('[analyze-script] Could not hoist organization_id, agents will query individually');
   }
 
+  // ============= Fetch dynamic GlobalInstructions =============
+  const dynamicGlobalInstructions = await fetchGlobalInstructions(supabase, organizationId);
+
   // ============= OPTIMIZATION 2: Batch-load all model configs =============
   const configId = isUUID(qualityMode) 
     ? qualityMode 
