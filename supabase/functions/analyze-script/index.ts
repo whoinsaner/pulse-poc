@@ -579,7 +579,9 @@ When identifying issues, classify them explicitly as:
 - Trade-off (intentional choice with pros/cons)
 - Misalignment (execution not matching intent)
 - Personal bias risk (flag if your critique may be framework-imposed)
+- Intentional discomfort (audience is MEANT to feel uncomfortable — this is a device, not a flaw)
 Do NOT conflate trade-offs with flaws.
+When something appears problematic, ask: "Is the audience meant to feel discomfort here?" If yes, classify as intentional device.
 
 6. FINAL SELF-CHECK (MANDATORY)
 Before concluding, verify:
