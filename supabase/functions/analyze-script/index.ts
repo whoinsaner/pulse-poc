@@ -3993,7 +3993,8 @@ IMPORTANT: For "comparableTitles", you MUST provide 3-5 real comparable films/sh
     "protagonistSystemModel": {"type": "single|dual|multi|distributed", "rationale": "Why this classification"},
     "antagonistProfile": {"name": "Character name", "motivation": "What drives them", "threat": "Nature of opposition", "complexity": "Nuance assessment", "worldview": "Core belief system or philosophy that drives their opposition", "philosophyType": "psychological|philosophical|systemic|institutional"},
     "supportingCast": [{"name": "Character", "role": "Narrative function", "impact": "Story contribution"}],
-    "psychologyInsights": "1-2 paragraph analysis of psychological depth, subconscious patterns, defense mechanisms"
+    "psychologyInsights": "1-2 paragraph analysis of psychological depth, subconscious patterns, defense mechanisms",
+    "misinterpretationRisks": ["Where analysts may go wrong about character classification or role assignment in this script"]
 
 IMPORTANT — PROTAGONIST IDENTIFICATION (removal test):
 Do NOT classify protagonists based on screen time, dialogue volume, or narrative focus alone.
