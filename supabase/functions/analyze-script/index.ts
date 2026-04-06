@@ -3521,11 +3521,32 @@ async function runStandardAnalysis(
         const resolutionModel = traditionData?.resolutionModel || 'procedural';
         const audienceGrammar = traditionData?.audienceGrammar || '';
         const structuralConventions = traditionData?.structuralConventions || [];
+        const narrativeGrammar = traditionData?.narrativeGrammar || '';
+        const grammarRules = traditionData?.grammarRules || '';
+        const intendedExperience = traditionData?.intendedExperience || '';
+        const realismSpectrum = traditionData?.realismSpectrum || '';
+        const stakesModel = traditionData?.stakesModel || '';
         
-        let traditionPreamble = `\n\n============= TRADITION CONTEXT (from CinemaTraditionAgent) =============\n`;
+        let traditionPreamble = `\n\n============= TRADITION & NARRATIVE GRAMMAR CONTEXT (from CinemaTraditionAgent) =============\n`;
         traditionPreamble += `Detected Tradition: ${tradition}\n`;
         traditionPreamble += `Screenplay Format: ${formatType}\n`;
         traditionPreamble += `Resolution Model: ${resolutionModel}\n`;
+        
+        if (narrativeGrammar) {
+          traditionPreamble += `Narrative Grammar: ${narrativeGrammar}\n`;
+        }
+        if (grammarRules) {
+          traditionPreamble += `Grammar Rules: ${grammarRules}\n`;
+        }
+        if (intendedExperience) {
+          traditionPreamble += `Intended Experience: ${intendedExperience}\n`;
+        }
+        if (realismSpectrum) {
+          traditionPreamble += `Realism Spectrum: ${realismSpectrum}\n`;
+        }
+        if (stakesModel) {
+          traditionPreamble += `Stakes Model: ${stakesModel}\n`;
+        }
         
         if (formatType === 'directors_spec') {
           traditionPreamble += `\n⚠️ DIRECTOR'S SPEC FORMAT: Page count does NOT correspond to 1:1 runtime. A 245-page director's spec can yield a 140-minute film. Do NOT penalize length based on page count. Do NOT apply page-per-minute pacing calculations.\n`;
@@ -3539,6 +3560,10 @@ async function runStandardAnalysis(
             traditionPreamble += `Poetic resolution: Cyclical imagery, motif payoff, symbolic closure ARE valid resolution mechanisms.\n`;
           } else if (resolutionModel === 'cyclical') {
             traditionPreamble += `Cyclical resolution: Return to opening imagery/state with transformed meaning IS complete resolution.\n`;
+          } else if (resolutionModel === 'emotional') {
+            traditionPreamble += `Emotional resolution: Full delivery of the intended emotional journey IS complete resolution, even without plot closure.\n`;
+          } else if (resolutionModel === 'ambiguous') {
+            traditionPreamble += `Ambiguous resolution: Open-ended closure that invites reflection IS intentional and valid.\n`;
           }
         }
         
