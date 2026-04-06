@@ -18,7 +18,8 @@ interface ReportContextValue {
 
 export default function ReportNarrative() {
   const { reportData } = useOutletContext<ReportContextValue>();
-  const { report } = useReport();
+  const { report, shareToken } = useReport();
+  const client = shareToken ? createShareAwareClient(shareToken) : supabase;
   const [narrativeGraph, setNarrativeGraph] = useState<NarrativeGraphData | undefined>(
     reportData.narrativeGraph
   );
