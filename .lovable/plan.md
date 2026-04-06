@@ -1,83 +1,61 @@
 
 
-# Integrate Universal Narrative Grammar Framework into Analysis Pipeline
+# Fix Character Role Inconsistencies Across Report
 
-## What This Does
+## Problem
 
-Upgrades the analysis pipeline from a tradition-specific bias-prevention system to a universal **narrative grammar detection and evaluation** framework. Instead of listing specific traditions and their rules, the system will first identify the script's governing storytelling grammar, then evaluate entirely within that system.
+Six different pages and components use six different heuristics to identify character roles, while the AI pipeline already provides authoritative data via `agentContent.CharacterAgent.protagonistProfiles[]` and `antagonistProfile`. This causes characters to appear in wrong roles across pages.
 
-## Current State
+## All Inconsistencies Found
 
-The pipeline already has strong tradition-aware foundations:
-- `GLOBAL_INSTRUCTIONS` contains an anti-bias framework listing specific traditions (Kollywood, Bollywood, Korean, etc.)
-- `CinemaTraditionAgent` detects tradition and injects a `traditionPreamble` into core agents
-- Individual agents (Structure, Character, Conflict, Theme) have tradition-aware evaluation blocks
-- `enforceAgentPromptRequirements` ensures CharacterAgent always supports multi-protagonist
+| File | Method Used | Problem |
+|------|-------------|---------|
+| **CharacterDiagnosis.tsx** (line 85) | Array index: `index === 0` → Protagonist | Depends on arbitrary array order |
+| **ProtagonistAnalysis.tsx** (line 38-41) | `reduce` by highest `dialogueCount` as fallback | Dialogue count ≠ protagonist role |
+| **AntagonistAnalysis.tsx** (line 40-41) | 2nd highest `dialogueCount` → antagonist | Completely wrong — 2nd most talkative is not necessarily the antagonist |
+| **CharacterPsychology.tsx** (line 28-31) | `reduce` by highest `dialogueCount` | Same dialogue-count fallback issue |
+| **SupportingCast.tsx** (line 34-35) | `slice(2, 12)` after sort by dialogue | Skips top 2 by dialogue instead of filtering out actual protagonists/antagonists |
+| **FullCharactersSection.tsx** (line 43-46) | `slice(0, 3)` = "main", `slice(3, 9)` = "supporting" | Arbitrary grouping by dialogue count |
+| **CharactersSection.tsx** (line 15-16) | `slice(0, 6)` = "main" | Same arbitrary grouping |
+| **BudgetEstimator.tsx** (line 129-131) | `slice(0, 3)` = leads, `slice(3, 10)` = supporting | Affects budget calculations |
+| **budgetEngine.ts** (line 155-157) | Same `slice(0, 3)` / `slice(3, 10)` | Same issue in budget logic |
 
-**Gap**: The current approach is *enumerative* (listing known traditions) rather than *generative* (detecting any narrative grammar and deriving evaluation rules from it). The user's framework is more universal and self-correcting.
+## Solution
 
-## Changes
+### 1. Create shared utility: `src/lib/characterRoles.ts`
 
-### 1. Upgrade `GLOBAL_INSTRUCTIONS` (hardcoded fallback)
+Single source of truth that reads from `agentContent.CharacterAgent`:
 
-Replace the current "ANTI-BIAS FRAMEWORK" section (§2) with the user's universal framework, restructured as:
+- `getProtagonistNames(agentContent)` → extracts names from `protagonistProfiles[]`
+- `getAntagonistName(agentContent)` → extracts name from `antagonistProfile`
+- `getCharacterRole(name, agentContent)` → returns `'Protagonist' | 'Antagonist' | 'Supporting'`
+- `getSupportingCast(characters, agentContent)` → filters out identified protagonists and antagonists, returns the rest sorted by dialogue count
+- `getLeadCharacters(characters, agentContent)` → returns protagonist + antagonist characters for budget/display purposes
 
-- **§2 GRAMMAR IDENTIFICATION**: Before evaluating, identify the governing narrative grammar (realist, mythic, mass cinema, satire, hybrid, etc.) and its rules. This replaces the current enumerated tradition list.
-- **§3 INTENT RECONSTRUCTION**: Infer filmmaker's intended experience and design goal.
-- **§4 INTERNAL LOGIC OVER EXTERNAL STANDARDS**: Evaluate consistency with the script's own rules. Add the self-check: "Is this breaking the film's own rules — or just my expectations?"
-- **§5 CRITIQUE DISCIPLINE**: Classify all issues as true flaw / trade-off / misalignment / personal bias risk.
-- **§6 FINAL SELF-CHECK**: Mandatory verification before concluding.
+All name matching is case-insensitive and trimmed.
 
-Keep existing sections on Universal Script Types (§3→§7), Output Contract (§4→§8), Evidence Rules (§5→§9), Agent Boundaries (§6→§10), and Cinema Tradition Context (§7→§11).
+### 2. Update report pages (6 files)
 
-### 2. Upgrade `CinemaTraditionAgent` prompt
+- **CharacterDiagnosis.tsx**: Replace `index === 0 ? 'Protagonist'` with `getCharacterRole(character.name, reportData.agentContent)`
+- **ProtagonistAnalysis.tsx**: Keep `protagonistProfiles` from agentContent (already correct for AI profiles). Fix the fallback `protagonist` variable to use `getProtagonistNames` instead of dialogue count
+- **AntagonistAnalysis.tsx**: Replace `sortedByPresence[1]` fallback with lookup by `getAntagonistName`, falling back to the character whose name matches `antagonistProfile.name`
+- **CharacterPsychology.tsx**: Replace dialogue-count `reduce` with `getProtagonistNames` lookup
+- **SupportingCast.tsx**: Replace `slice(2, 12)` with `getSupportingCast(characters, reportData.agentContent)`
+- **FullCharactersSection.tsx**: Use `getCharacterRole` to group characters into lead/supporting/minor instead of arbitrary slicing
 
-Expand its output schema to include new fields from the universal framework:
-- `narrativeGrammar`: The detected storytelling system (not just industry origin)
-- `grammarRules`: What this grammar prioritizes (emotional realism vs heightened drama, subtext vs explicit, etc.)
-- `intendedExperience`: What experience the script is designing (catharsis, discomfort, reflection, etc.)
-- `realismSpectrum`: Where on the realism←→stylization scale the script sits
-- `stakesModel`: How the story defines stakes (personal, social, existential)
+### 3. Update budget components (2 files)
 
-Keep existing fields (`tradition`, `formatType`, `resolutionModel`, `audienceGrammar`, `structuralConventions`).
+- **BudgetEstimator.tsx** and **budgetEngine.ts**: Use `getLeadCharacters` for lead identification. This is lower priority since dialogue count is a reasonable proxy for budget (more lines = more screen time = higher casting cost), but should still be consistent.
 
-### 3. Expand `traditionPreamble` injection
+### 4. Leave unchanged
 
-After Phase 1 system agents complete, inject the new fields into the context passed to core agents:
-- Add `Narrative Grammar` and `Grammar Rules` lines
-- Add `Intended Experience` line
-- Add `Realism Spectrum` positioning
-- Add `Stakes Model` line
-- Add a new warning: "⚠️ CRITIQUE DISCIPLINE: Classify issues as true flaw / trade-off / misalignment / bias risk"
-
-### 4. Upgrade core agent TRADITION-AWARE blocks
-
-For each core agent (Concept, Structure, Character, Conflict, Theme, Dialogue, WorldLogic, EmotionalArc, Market, Execution), add to their tradition-aware evaluation section:
-
-- **Universal self-check**: "Before flagging an issue, verify: Is this breaking the script's own grammar, or my external expectations?"
-- **Sequence interpretation** (StructureAgent): Only flag redundancy when two sequences serve the same emotional + structural function
-- **Character evaluation** (CharacterAgent): Identify functional roles (emotional anchor, thematic carrier, narrative driver, symbolic presence) — already partially there, reinforce
-- **Resolution model** (ConflictAgent, StructureAgent): Already supports moral/poetic/cyclical — add emotional resolution and open-ended ambiguity as explicit models
-- **Conflict stakes** (ConflictAgent): Add explicit stakes model evaluation (personal → social → existential alignment check)
-
-### 5. Update PDF report to surface new metadata
-
-In `src/lib/fullReportPdfGenerator.ts`, when rendering the tradition context section:
-- Add "Narrative Grammar" and "Intended Experience" to the tradition metadata tile
-- Add "Stakes Model" and "Realism Spectrum" if available in the CinemaTraditionAgent output
-
-### 6. Update report UI for new fields
-
-In `src/pages/report/StoryDiagnosis.tsx` or the tradition context callout:
-- Display `narrativeGrammar`, `intendedExperience`, `realismSpectrum`, and `stakesModel` if present in the tradition data
-
----
+- **DialogueAnalysis.tsx**, **CharacterArcVisualization.tsx**, **DialogueSubtext.tsx**: These sort by dialogue count for display ranking (top talkers), not role assignment — this is correct behavior.
+- **CharactersSection.tsx**: Legacy component, appears unused in current routes.
 
 ## Technical Details
 
-- **Primary file**: `supabase/functions/analyze-script/index.ts` — GLOBAL_INSTRUCTIONS constant, CinemaTraditionAgent prompt, traditionPreamble builder, and core agent prompts
-- **Secondary files**: `src/lib/fullReportPdfGenerator.ts` (PDF metadata), report UI components (tradition display)
-- **No schema changes needed**: New fields are stored within existing `sectionContent` JSONB in `agent_results`
-- **Backward compatible**: Existing tradition detection still works; new fields are additive
-- **DB-stored GlobalInstructions**: The hardcoded fallback updates here; organizations using DB-stored global instructions will need to update via the admin UI
+- New file: `src/lib/characterRoles.ts` (~50 lines)
+- Modified: 6 report page files + 2 budget files
+- No database or pipeline changes needed — all data already exists in `agentContent`
+- Backward compatible: Falls back gracefully when `protagonistProfiles` or `antagonistProfile` is missing (uses dialogue count as last resort)
 
