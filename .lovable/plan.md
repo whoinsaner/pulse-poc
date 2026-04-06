@@ -1,96 +1,95 @@
 
 
-# Integrate Narrative System Analysis Framework into Pipeline
+# Integrate Critical Structure Detection Layer into Pipeline
 
-## Context
+## What Already Exists vs What's New
 
-The user's framework is a comprehensive "reverse-engineering a narrative system" methodology. Much of it **already exists** in `GLOBAL_INSTRUCTIONS` and agent-specific prompts — Grammar Identification, Intent Reconstruction, Internal Logic validation, Critique Discipline, and the Final Self-Check are all present. The character removal test and protagonist system model were added recently.
+The user's full framework (Sections 1-10 + Final Self-Correction) is **already implemented** across `GLOBAL_INSTRUCTIONS`, `CharacterAgent`, `ConflictAgent`, and `StructureAgent`. The new content is the **Critical Structure Detection Layer** — 8 additional validation checks that agents must perform before finalizing output.
 
-What's **genuinely new** and needs integration:
-
-| New Concept | Where It Goes |
-|---|---|
-| Story Engine Decomposition (5 systems: Character, Conflict, Resolution, Thematic, Structural) | GLOBAL_INSTRUCTIONS — new section |
-| Resolution System with ownership mapping | ConflictAgent + CharacterAgent prompts |
-| "Distributed protagonist system" model | CharacterAgent prompt + schema |
-| Sequence function analysis (emotion + purpose, not surface similarity) | StructureAgent prompt |
-| Misinterpretation Risks output | Section content templates |
-| Final Self-Correction Loop (extended) | GLOBAL_INSTRUCTIONS section 6 |
+| New Concept | Where It Goes | Conflict Risk |
+|---|---|---|
+| Load-Bearing Elements detection | GLOBAL_INSTRUCTIONS — new section 6.5 | None — extends existing motif/load-bearing mentions |
+| Question → Answer Tracking | ThemeAgent + StructureAgent prompts | None — new analytical dimension |
+| Motif Lifecycle Tracking (intro → transform → payoff) | ThemeAgent prompt | Complements existing motif evaluation |
+| Resolution Ownership (enforced) | Already in ConflictAgent — just needs GLOBAL reinforcement | None — already present, just elevate |
+| Sequence Differentiation Check | Already in StructureAgent — reinforce in GLOBAL | None — already present |
+| Character Complexity Types (trauma/philosophy/ideology/power/symbolic) | CharacterAgent prompt | Complements existing philosophical villain logic |
+| Intentional Discomfort vs Error | GLOBAL_INSTRUCTIONS critique discipline | Extends existing flaw classification |
+| Medium Awareness | GLOBAL_INSTRUCTIONS | New — prevents over-penalizing edit-dependent elements |
 
 ## Changes
 
-### 1. Enhance `GLOBAL_INSTRUCTIONS` (~4 additions, no removals)
+### 1. Extend GLOBAL_INSTRUCTIONS — Add "CRITICAL STRUCTURE DETECTION LAYER"
 
-**Add section 1.5: "NARRATIVE SYSTEM REVERSE-ENGINEERING"** between Core Philosophy and Grammar Identification:
+Insert after section 6 (Final Self-Check), before section 7 (Universal Script Types). Add a new section 6.5:
 
-- Frame the agent's role: "You are reverse-engineering a narrative system, not imposing standards."
-- Add Story Engine Decomposition: agents should understand how Character, Conflict, Resolution, Thematic, and Structural systems interact — even though each agent focuses on one module.
+**Load-Bearing Elements:** Before finalizing, identify all elements without which the story collapses — key characters, symbols, lines, events, images. For each, state what breaks if removed. Elements that resolve theme, complete arcs, or deliver final meaning are load-bearing and must be surfaced.
 
-**Extend section 2 (Grammar Identification):**
-- Add "Operating Rules" sub-bullet: what does this system prioritize?
-- Add "Reality Model": realistic / heightened / mythic / symbolic / absurd
-- Add "Audience Contract": what is the audience expected to accept as truth?
-- These complement the existing grammar fields without duplicating them.
+**Question → Answer Tracking:** Identify what questions the story explicitly or implicitly asks, and where each is answered. If a question exists without a tracked answer, re-evaluate before concluding.
 
-**Extend section 6 (Final Self-Check):**
-- Add: "Did I confuse prominence with importance?"
-- Add: "Did I evaluate the system or judge the style?"
-- Add: "Did I correctly map resolution ownership?"
+**Intentional Discomfort vs Error:** When something appears problematic, ask "Is the audience meant to feel discomfort here?" If yes, classify as intentional device, not flaw. Add to existing critique discipline (section 5).
 
-### 2. Enhance CharacterAgent prompt
+**Medium Awareness:** Identify elements that depend on editing, performance, sound, or visual contrast. Do not over-evaluate these purely from script form. Flag as "performance-dependent" or "edit-dependent" rather than penalizing.
 
-**Add "distributed" to protagonist system models.** Currently supports single/dual/multi — add "distributed" for ensemble narratives where no single character dominates but the collective drives resolution.
+**Expanded Final Validation:** Add to section 6:
+- Have I identified all load-bearing elements?
+- Have I mapped every major question to an answer?
+- Have I tracked motif completion?
+- Have I mistaken absence of evidence for absence of meaning?
 
-**Add step-by-step classification order** to the existing tradition-aware evaluation:
-- Step 1: Identify narrative function (driver, reactor, observer, disruptor, executor)
-- Step 2: Map thematic role (belief, counter-belief, transformation, witness)  
-- Step 3: Classify AFTER mapping — not before
+### 2. Enhance ThemeAgent prompt
 
-This reinforces the existing removal test with a clearer methodology.
+Add **Motif Lifecycle Tracking** instruction:
+- For each major symbol/motif: track introduction, transformation, and final payoff
+- If payoff is missing in analysis, re-evaluate before concluding
+- This complements existing "motif payoff systems" mention with explicit lifecycle tracking
 
-### 3. Enhance ConflictAgent prompt
+Add **Question → Answer Tracking** to ThemeAgent:
+- Identify narrative questions (thematic, philosophical) the story asks
+- Map each to its answer location in the script
 
-**Add Resolution System awareness:**
-- Determine resolution type: Physical / Emotional / Thematic / Symbolic / Ambiguous
-- Map resolution ownership: which character delivers which part
-- Evaluate completeness within the story's own model
+### 3. Enhance CharacterAgent prompt
+
+Add **Character Complexity Types** to the existing 3-step classification:
+- After Step 2 (Map Thematic Role), add: "Identify what drives this character: trauma (wound), philosophy (belief system), ideology, power instinct, or symbolic role. Evaluate within that type — do not assume one model of depth."
+- This complements the existing philosophical villain instruction and extends it to all characters.
 
 ### 4. Enhance StructureAgent prompt
 
-**Add Sequence Function analysis:**
-- Analyze sequences by emotional function + narrative purpose + character transformation
-- Do NOT group by surface similarity
-- Only flag redundancy when function + emotion + outcome are all duplicated
+Add **Sequence Differentiation Check** reinforcement (extends existing instruction):
+- For sequences that appear similar, explicitly evaluate differences in: emotional register, power dynamics, character POV, narrative function
+- Do NOT group unless ALL match
+- This is mostly present already but the explicit 4-dimension checklist is new
 
-### 5. Update section content templates
+### 5. Update SectionContent interface and templates
 
-**CharacterAgent template:** Add `"distributed"` as valid type in `protagonistSystemModel`.
+Add optional fields to `SectionContent`:
+- `loadBearingElements?: Array<{ element: string; type: 'character' | 'symbol' | 'line' | 'event' | 'image'; removalImpact: string }>`
+- `narrativeQuestions?: Array<{ question: string; answerLocation: string; answered: boolean }>`
+- `motifLifecycle?: Array<{ motif: string; introduction: string; transformation: string; payoff: string }>`
 
-**All agent templates:** Add optional `"misinterpretationRisks"` field:
-```
-"misinterpretationRisks": ["Where analysts may go wrong about this aspect"]
-```
+Add these to CharacterAgent, ThemeAgent, and StructureAgent section content templates respectively.
 
 ### 6. Update `enforceAgentPromptRequirements`
 
-Add `'distributed'` check alongside existing `'removal test'` check so DB-stored prompts without the new distributed model get overridden.
+Extend to also check StructureAgent and ThemeAgent prompts for the new instructions, ensuring DB-stored prompts get upgraded.
 
-### 7. Update Protagonist Analysis UI
+### 7. Update TypeScript types
 
-- Add "Distributed" as a valid badge type in the Protagonist System Model card
-- Display `misinterpretationRisks` if present in any agent content
+Add the 3 new optional fields to `AgentSectionContent` in `src/types/database.ts`.
 
 ## What Does NOT Change
 
-- CinemaTraditionAgent already handles Grammar, Intent, Realism Spectrum, and Stakes Model — no changes needed there
-- ThemeAgent already evaluates thematic spine, show-vs-tell, and moral complexity
-- The removal test and protagonist profiles schema stay as-is
-- No database migrations needed — all new fields are optional within existing JSONB
+- ConflictAgent resolution ownership — already implemented
+- Existing removal test and protagonist system model — already complete
+- CinemaTraditionAgent — no changes needed
+- No database migrations — all new fields are optional JSONB
+- No UI changes in this phase (data must be generated first before building display components)
 
 ## Technical Details
 
-- **Files modified**: `supabase/functions/analyze-script/index.ts` (GLOBAL_INSTRUCTIONS, 3 agent prompts, section content templates, enforceAgentPromptRequirements), `src/pages/report/ProtagonistAnalysis.tsx` (distributed badge)
-- **Prompt token impact**: ~300 additional tokens in GLOBAL_INSTRUCTIONS, ~100 per affected agent — negligible
-- **Backward compatible**: All new fields are optional; existing reports render without them
-- **No conflicts**: Every addition extends existing logic rather than replacing it
+- **Files modified**: `supabase/functions/analyze-script/index.ts` (GLOBAL_INSTRUCTIONS, 3 agent prompts, section content templates, enforceAgentPromptRequirements), `src/types/database.ts` (3 new optional fields)
+- **Prompt token impact**: ~250 additional tokens in GLOBAL_INSTRUCTIONS, ~50-80 per affected agent
+- **Backward compatible**: All new fields are optional; existing reports unaffected
+- **Zero conflicts**: Every addition extends existing logic — nothing is replaced or contradicted
 
