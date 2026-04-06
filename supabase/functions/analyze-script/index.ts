@@ -4282,7 +4282,8 @@ ${agentName === 'CharacterAgent' ? `CHARACTERAGENT NON-NEGOTIABLE OUTPUT RULES:
 2. Include "resolutionRole" and "removalImpact" for each protagonist profile.
 3. Include "protagonistSystemModel" with type (single/dual/multi/distributed) and rationale.
 4. Do not collapse dual/multi protagonists into supporting cast.
-5. If you also include "protagonistProfile" for backward compatibility, it must match the first item in "protagonistProfiles".` : ''}
+5. If you also include "protagonistProfile" for backward compatibility, it must match the first item in "protagonistProfiles".
+6. SILENT PROTAGONIST CHECK: Before finalizing protagonistProfiles, verify that no character with 5+ scenes and low dialogue has been classified as "supporting" without explicitly confirming their removal does NOT break the story's resolution. If uncertain, default to protagonist-tier and explain in misinterpretationRisks.` : ''}
 
 CRITICAL: You MUST respond with ONLY the JSON object. No text before or after. No markdown code blocks. Start your response with { and end with }.`;
 
