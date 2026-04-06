@@ -261,6 +261,7 @@ export default function ReportLayout() {
     isComic,
     stakeholderLens,
     scriptType,
+    shareToken,
   };
 
   return (
