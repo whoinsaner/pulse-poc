@@ -23,6 +23,7 @@ interface FullCharactersSectionProps {
   characters: CharacterData[];
   scriptId?: string;
   onCharactersUpdate?: (characters: CharacterData[]) => void;
+  agentContent?: any;
 }
 
 export function FullCharactersSection({ characters, scriptId, onCharactersUpdate }: FullCharactersSectionProps) {
