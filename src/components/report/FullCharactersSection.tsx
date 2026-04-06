@@ -6,6 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Users, MessageSquare, Film, ArrowRight, Star, TrendingUp, Award, Edit2, Plus, Trash2, X, Check } from 'lucide-react';
+import { getCharacterRole, getLeadCharacters, getSupportingCast } from '@/lib/characterRoles';
 import { CharacterEditDialog } from './CharacterEditDialog';
 import {
   AlertDialog,
