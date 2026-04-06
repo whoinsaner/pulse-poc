@@ -211,8 +211,9 @@ export interface AgentSectionContent {
     effort: 'easy' | 'moderate' | 'hard';
   }>;
   // Character-specific
-  protagonistProfile?: { name: string; want: string; need: string; flaw: string; arc: string; strengths?: string[]; weaknesses?: string[]; arcType?: string };
-  protagonistProfiles?: Array<{ name: string; want: string; need: string; flaw: string; arc: string; strengths?: string[]; weaknesses?: string[]; arcType?: string }>;
+  protagonistProfile?: { name: string; want: string; need: string; flaw: string; arc: string; strengths?: string[]; weaknesses?: string[]; arcType?: string; resolutionRole?: string; removalImpact?: string };
+  protagonistProfiles?: Array<{ name: string; want: string; need: string; flaw: string; arc: string; strengths?: string[]; weaknesses?: string[]; arcType?: string; resolutionRole?: string; removalImpact?: string }>;
+  protagonistSystemModel?: { type: 'single' | 'dual' | 'multi'; rationale: string };
   antagonistProfile?: { name: string; motivation: string; threat: string; complexity: string; worldview?: string; philosophyType?: 'psychological' | 'philosophical' | 'systemic' | 'institutional' };
   supportingCast?: Array<{ name: string; role: string; impact: string }>;
   psychologyInsights?: string;

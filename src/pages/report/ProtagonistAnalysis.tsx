@@ -13,7 +13,7 @@ import {
   ScoreDisplay,
 } from '@/components/report/ui';
 import { InlineMaturity } from '@/components/report/ui/MaturityBadge';
-import { User, Heart, Brain, Target, Zap } from 'lucide-react';
+import { User, Heart, Brain, Target, Zap, Users } from 'lucide-react';
 import { extractScore } from '@/lib/scoreUtils';
 import { findProtagonistCharacters } from '@/lib/characterRoles';
 import { useStakeholderFiltering } from '@/hooks/useStakeholderFiltering';
@@ -41,9 +41,10 @@ export default function ProtagonistAnalysis() {
 
   // Get agent content for protagonist — support both array (protagonistProfiles) and single (protagonistProfile)
   const agentContent = reportData.agentContent?.CharacterAgent;
-  const protagonistProfiles: Array<{ name: string; want: string; need: string; flaw: string; arc: string; strengths?: string[]; weaknesses?: string[]; arcType?: string }> = 
+  const protagonistProfiles: Array<{ name: string; want: string; need: string; flaw: string; arc: string; strengths?: string[]; weaknesses?: string[]; arcType?: string; resolutionRole?: string; removalImpact?: string }> = 
     agentContent?.protagonistProfiles || 
     (agentContent?.protagonistProfile ? [agentContent.protagonistProfile] : []);
+  const protagonistSystemModel: { type?: string; rationale?: string } | undefined = agentContent?.protagonistSystemModel;
 
   // Filter protagonist-relevant parameters
   const protagonistParams = useMemo(() => {
@@ -114,6 +115,22 @@ export default function ProtagonistAnalysis() {
       >
         <InlineMaturity score={sectionScore} />
       </SectionHeader>
+
+      {/* Protagonist System Model Badge */}
+      {protagonistSystemModel?.type && (
+        <Card className="p-5 flex items-start gap-4 border-primary/20 bg-primary/5">
+          <Users className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="font-display font-semibold text-sm">Protagonist System Model:</span>
+              <Badge variant="default" className="capitalize">{protagonistSystemModel.type}-Protagonist</Badge>
+            </div>
+            {protagonistSystemModel.rationale && (
+              <p className="text-sm text-muted-foreground leading-relaxed">{protagonistSystemModel.rationale}</p>
+            )}
+          </div>
+        </Card>
+      )}
 
       {/* Stakeholder Filter Notice */}
       {isFiltered && stakeholderLens && (
@@ -202,6 +219,18 @@ export default function ProtagonistAnalysis() {
                   <div>
                     <p className="text-sm text-muted-foreground mb-2">Character Arc</p>
                     <p className="text-sm leading-relaxed">{profile.arc}</p>
+                  </div>
+                )}
+                {profile.resolutionRole && (
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">Resolution Role</p>
+                    <p className="text-sm leading-relaxed">{profile.resolutionRole}</p>
+                  </div>
+                )}
+                {profile.removalImpact && (
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">Removal Impact</p>
+                    <p className="text-sm leading-relaxed italic text-destructive/80">{profile.removalImpact}</p>
                   </div>
                 )}
                 {profile.strengths && profile.strengths.length > 0 && (
