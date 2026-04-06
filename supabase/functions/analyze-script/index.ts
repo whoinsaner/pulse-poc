@@ -4005,7 +4005,7 @@ Determine: (1) Which characters deliver irreplaceable resolution outcomes? (2) W
 If multiple characters resolve different dimensions of the story and cannot be removed without collapsing the narrative outcome, classify them as co-protagonists regardless of narrative prominence.
 
 Use "protagonistProfiles" (ARRAY) to list ALL protagonists identified via the removal test. Include "resolutionRole" (what irreplaceable outcome they deliver) and "removalImpact" (what breaks without them) for each.
-Include "protagonistSystemModel" with type ("single", "dual", or "multi") and rationale explaining the classification.
+Include "protagonistSystemModel" with type ("single", "dual", "multi", or "distributed") and rationale explaining the classification. Use "distributed" for ensemble narratives where no single character dominates but the collective drives resolution.
 Include an "arcType" for each: "public" (visible, dialogue-driven), "private" (internal journey), "silent" (action-driven, minimal dialogue), "action-driven" (physical choices carry the arc).
 For "antagonistProfile", include "worldview" and "philosophyType". Not all antagonists operate through psychological vulnerability — some operate through conviction, worldview, or systemic power. A villain whose worldview is answered by a child is dramatically complete.`;
     case 'ConflictAgent':
