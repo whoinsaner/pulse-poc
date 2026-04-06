@@ -6,7 +6,8 @@ import {
   SectionHeader, 
   WeightedParameterList,
 } from '@/components/report/ui';
-import { Zap } from 'lucide-react';
+import { Card } from '@/components/ui/card';
+import { Zap, AlertTriangle } from 'lucide-react';
 
 interface ReportContextValue {
   reportData: ReportData;
@@ -45,6 +46,8 @@ export default function StoryConflictStakes() {
   }
 
   const { reportData } = context;
+  const agentContent = reportData.agentContent?.ConflictStakesAgent || reportData.agentContent?.ConflictAgent;
+  const misinterpretationRisks: string[] = agentContent?.misinterpretationRisks || [];
 
   return (
     <div className="space-y-8">
@@ -55,8 +58,26 @@ export default function StoryConflictStakes() {
         score={sectionScore}
       />
 
-      {reportData.agentContent?.ConflictAgent && (
+      {reportData.agentContent?.ConflictStakesAgent && (
+        <AgentNarrativePanel agentName="ConflictStakesAgent" content={reportData.agentContent.ConflictStakesAgent} />
+      )}
+      {!reportData.agentContent?.ConflictStakesAgent && reportData.agentContent?.ConflictAgent && (
         <AgentNarrativePanel agentName="ConflictAgent" content={reportData.agentContent.ConflictAgent} />
+      )}
+
+      {/* Misinterpretation Risks */}
+      {misinterpretationRisks.length > 0 && (
+        <Card className="p-5 flex items-start gap-4 border-warning/20 bg-warning/5">
+          <AlertTriangle className="h-5 w-5 text-warning mt-0.5 shrink-0" />
+          <div>
+            <p className="font-display font-semibold text-sm mb-2">Analyst Guidance — Misinterpretation Risks</p>
+            <ul className="text-sm text-muted-foreground space-y-1">
+              {misinterpretationRisks.map((risk, i) => (
+                <li key={i}>• {risk}</li>
+              ))}
+            </ul>
+          </div>
+        </Card>
       )}
 
       <WeightedParameterList

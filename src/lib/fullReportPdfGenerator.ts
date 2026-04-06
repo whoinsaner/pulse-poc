@@ -619,9 +619,144 @@ function renderAgentNarrative(
         doc.setFont('helvetica', 'normal');
       };
 
+      // Protagonist System Model
+      if (content.protagonistSystemModel?.type) {
+        y = checkBreak(doc, y, 15, pageNum, sectionName);
+        doc.setFontSize(FONTS.h3);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...COLORS.primary);
+        doc.text(`Protagonist System: ${content.protagonistSystemModel.type.charAt(0).toUpperCase() + content.protagonistSystemModel.type.slice(1)}-Protagonist`, MARGINS.left, y);
+        y += 6;
+        if (content.protagonistSystemModel.rationale) {
+          doc.setFontSize(FONTS.small);
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(...COLORS.textLight);
+          const ratLines = wrapText(doc, content.protagonistSystemModel.rationale, cw);
+          for (const line of ratLines) { y = checkBreak(doc, y, 5, pageNum, sectionName); doc.text(line, MARGINS.left, y); y += 5; }
+        }
+        y += 4;
+        resetFontStyle(doc);
+      }
+
+      // Misinterpretation Risks (Analyst Guidance)
+      if (content.misinterpretationRisks && Array.isArray(content.misinterpretationRisks) && content.misinterpretationRisks.length > 0) {
+        y = checkBreak(doc, y, 20, pageNum, sectionName);
+        // Callout box background
+        const riskBoxHeight = 8 + content.misinterpretationRisks.length * 6;
+        doc.setFillColor(255, 247, 237); // warm warning bg
+        doc.roundedRect(MARGINS.left, y - 3, cw, Math.min(riskBoxHeight, 60), 2, 2, 'F');
+        doc.setDrawColor(...COLORS.warning);
+        doc.setLineWidth(0.5);
+        doc.roundedRect(MARGINS.left, y - 3, cw, Math.min(riskBoxHeight, 60), 2, 2, 'S');
+        doc.setFontSize(FONTS.small);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...COLORS.warning);
+        doc.text('Analyst Guidance — Misinterpretation Risks', MARGINS.left + 4, y + 3);
+        y += 8;
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(...COLORS.text);
+        doc.setFontSize(FONTS.small);
+        for (const risk of content.misinterpretationRisks) {
+          y = checkBreak(doc, y, 5, pageNum, sectionName);
+          const rLines = wrapText(doc, `• ${risk}`, cw - 10);
+          for (const line of rLines) { doc.text(line, MARGINS.left + 6, y); y += 4.5; }
+          y += 1;
+        }
+        y += 4;
+        resetFontStyle(doc);
+      }
+
+      // Load-Bearing Elements (from StructureAgent)
+      if (content.loadBearingElements && Array.isArray(content.loadBearingElements) && content.loadBearingElements.length > 0) {
+        y = checkBreak(doc, y, 20, pageNum, sectionName);
+        doc.setFontSize(FONTS.h3);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...COLORS.text);
+        doc.text('Load-Bearing Elements', MARGINS.left, y);
+        y += 7;
+        const lbeBody = content.loadBearingElements.map((el: any) => [
+          el.element || '-',
+          (el.type || '-').charAt(0).toUpperCase() + (el.type || '-').slice(1),
+          el.removalImpact || '-',
+        ]);
+        let lbeFirstPage = true;
+        const lbeResult = autoTable(doc, {
+          startY: y,
+          head: [['Element', 'Type', 'If Removed']],
+          body: lbeBody,
+          margin: { left: MARGINS.left, right: MARGINS.right },
+          styles: { fontSize: FONTS.small, cellPadding: 2, textColor: COLORS.text },
+          headStyles: { fillColor: COLORS.primary, textColor: [255, 255, 255] as any, fontStyle: 'bold' },
+          columnStyles: { 0: { cellWidth: 40, fontStyle: 'bold' }, 1: { cellWidth: 20, halign: 'center' as const } },
+          didDrawPage: () => { if (!lbeFirstPage) { addRunningHeader(doc, sectionName, { value: doc.getNumberOfPages() }); addRunningFooter(doc); } lbeFirstPage = false; },
+        });
+        pageNum.value = doc.getNumberOfPages();
+        y = getTableFinalY(doc, lbeResult, y + 30) + 6;
+        resetFontStyle(doc);
+      }
+
+      // Narrative Questions (from ThemeAgent)
+      if (content.narrativeQuestions && Array.isArray(content.narrativeQuestions) && content.narrativeQuestions.length > 0) {
+        y = checkBreak(doc, y, 20, pageNum, sectionName);
+        doc.setFontSize(FONTS.h3);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...COLORS.text);
+        doc.text('Narrative Questions', MARGINS.left, y);
+        y += 7;
+        const nqBody = content.narrativeQuestions.map((q: any) => [
+          q.question || '-',
+          q.answerLocation || '-',
+          q.answered ? 'Answered' : 'Unanswered',
+        ]);
+        let nqFirstPage = true;
+        const nqResult = autoTable(doc, {
+          startY: y,
+          head: [['Question', 'Answer Location', 'Status']],
+          body: nqBody,
+          margin: { left: MARGINS.left, right: MARGINS.right },
+          styles: { fontSize: FONTS.small, cellPadding: 2, textColor: COLORS.text },
+          headStyles: { fillColor: COLORS.primary, textColor: [255, 255, 255] as any, fontStyle: 'bold' },
+          columnStyles: { 2: { cellWidth: 22, halign: 'center' as const } },
+          didDrawPage: () => { if (!nqFirstPage) { addRunningHeader(doc, sectionName, { value: doc.getNumberOfPages() }); addRunningFooter(doc); } nqFirstPage = false; },
+        });
+        pageNum.value = doc.getNumberOfPages();
+        y = getTableFinalY(doc, nqResult, y + 30) + 6;
+        resetFontStyle(doc);
+      }
+
+      // Motif Lifecycle (from ThemeAgent)
+      if (content.motifLifecycle && Array.isArray(content.motifLifecycle) && content.motifLifecycle.length > 0) {
+        y = checkBreak(doc, y, 20, pageNum, sectionName);
+        doc.setFontSize(FONTS.h3);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...COLORS.text);
+        doc.text('Motif Lifecycle', MARGINS.left, y);
+        y += 7;
+        const mlBody = content.motifLifecycle.map((m: any) => [
+          m.motif || '-',
+          m.introduction || '-',
+          m.transformation || '-',
+          m.payoff || '-',
+        ]);
+        let mlFirstPage = true;
+        const mlResult = autoTable(doc, {
+          startY: y,
+          head: [['Motif', 'Introduction', 'Transformation', 'Payoff']],
+          body: mlBody,
+          margin: { left: MARGINS.left, right: MARGINS.right },
+          styles: { fontSize: FONTS.small, cellPadding: 2, textColor: COLORS.text },
+          headStyles: { fillColor: COLORS.primary, textColor: [255, 255, 255] as any, fontStyle: 'bold' },
+          columnStyles: { 0: { cellWidth: 30, fontStyle: 'bold' } },
+          didDrawPage: () => { if (!mlFirstPage) { addRunningHeader(doc, sectionName, { value: doc.getNumberOfPages() }); addRunningFooter(doc); } mlFirstPage = false; },
+        });
+        pageNum.value = doc.getNumberOfPages();
+        y = getTableFinalY(doc, mlResult, y + 30) + 6;
+        resetFontStyle(doc);
+      }
+
       // Character profiles (protagonist/antagonist sections)
       // Support both single protagonistProfile and multi protagonistProfiles array
-      const allProtagonists: Array<{ name?: string; want?: string; need?: string; flaw?: string; arc?: string; arcType?: string; strengths?: string[]; weaknesses?: string[] }> = [];
+      const allProtagonists: Array<{ name?: string; want?: string; need?: string; flaw?: string; arc?: string; arcType?: string; strengths?: string[]; weaknesses?: string[]; resolutionRole?: string; removalImpact?: string }> = [];
       if (content.protagonistProfiles && Array.isArray(content.protagonistProfiles) && content.protagonistProfiles.length > 0) {
         allProtagonists.push(...content.protagonistProfiles);
       } else if (content.protagonistProfile) {
@@ -651,8 +786,9 @@ function renderAgentNarrative(
 
         y += 1;
         doc.setFontSize(FONTS.body);
-        const fields = [
-          ['Want', p.want], ['Need', p.need], ['Flaw', p.flaw], ['Arc', p.arc]
+        const fields: [string, string | undefined][] = [
+          ['Want', p.want], ['Need', p.need], ['Flaw', p.flaw], ['Arc', p.arc],
+          ['Resolution Role', p.resolutionRole],
         ];
         for (const [label, val] of fields) {
           if (val) {
@@ -670,6 +806,16 @@ function renderAgentNarrative(
               y += 5;
             }
           }
+        }
+
+        // Removal Impact in italic red
+        if (p.removalImpact) {
+          y = checkBreak(doc, y, 6, pageNum, sectionName);
+          doc.setFont('helvetica', 'italic');
+          doc.setTextColor(...COLORS.danger);
+          const riLines = wrapText(doc, `Removal Impact: ${p.removalImpact}`, cw - 8);
+          for (const line of riLines) { y = checkBreak(doc, y, 5, pageNum, sectionName); doc.text(line, MARGINS.left + 3, y); y += 5; }
+          resetFontStyle(doc);
         }
         y += 2;
 
