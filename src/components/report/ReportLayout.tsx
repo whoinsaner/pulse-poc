@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation, useSearchParams, Outlet } from 'react-router-dom';
 import { useAuth } from '@/lib/auth';
 import { supabase } from '@/integrations/supabase/client';
+import { createShareAwareClient } from '@/lib/shareClient';
 import { Report, StakeholderLens, ReportData, LENS_CONFIG } from '@/types/database';
 import { CommandHeader } from '@/components/report/CommandHeader';
 import { ReportSidebar } from '@/components/report/ReportSidebar';
@@ -38,6 +39,7 @@ interface ReportContextValue {
   isComic: boolean;
   stakeholderLens: StakeholderLens | null;
   scriptType: import('@/types/database').ScriptType;
+  shareToken: string | null;
 }
 
 import { createContext, useContext } from 'react';
@@ -97,17 +99,23 @@ export default function ReportLayout() {
 
       setLoading(true);
 
+      // Use a share-aware client when a share token is present so the
+      // x-share-token header reaches the SECURITY DEFINER functions in RLS
+      const client = hasShareToken
+        ? createShareAwareClient(shareToken!)
+        : supabase;
+
       let reportResult;
 
       if (hasShareToken) {
         // When a share token is present, don't filter by org — let RLS validate via token
-        reportResult = await supabase
+        reportResult = await client
           .from('reports')
           .select('*')
           .eq('analysis_run_id', runId)
           .single();
       } else {
-        let reportQuery = supabase
+        let reportQuery = client
           .from('reports')
           .select('*')
           .eq('analysis_run_id', runId);
@@ -119,7 +127,7 @@ export default function ReportLayout() {
         reportResult = await reportQuery.single();
       }
 
-      const analysisResult = await supabase
+      const analysisResult = await client
         .from('analysis_runs')
         .select('agent_progress, status, stakeholder_lens')
         .eq('id', runId)
@@ -140,7 +148,7 @@ export default function ReportLayout() {
 
       // Fetch share link expiration when accessed via share token
       if (shareToken && reportResult.data?.id) {
-        const { data: shareData } = await supabase
+        const { data: shareData } = await client
           .from('report_shares')
           .select('expires_at')
           .eq('report_id', reportResult.data.id)
@@ -253,6 +261,7 @@ export default function ReportLayout() {
     isComic,
     stakeholderLens,
     scriptType,
+    shareToken,
   };
 
   return (

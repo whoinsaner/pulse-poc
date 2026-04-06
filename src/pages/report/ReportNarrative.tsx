@@ -7,6 +7,7 @@ import { PacingAnalysis } from '@/components/report/PacingAnalysis';
 import { SceneComplexityAnalyzer } from '@/components/report/SceneComplexityAnalyzer';
 import { NarrativeGraphViewer } from '@/components/report/NarrativeGraphViewer';
 import { supabase } from '@/integrations/supabase/client';
+import { createShareAwareClient } from '@/lib/shareClient';
 import { useReport } from '@/components/report/ReportLayout';
 
 interface ReportContextValue {
@@ -17,7 +18,8 @@ interface ReportContextValue {
 
 export default function ReportNarrative() {
   const { reportData } = useOutletContext<ReportContextValue>();
-  const { report } = useReport();
+  const { report, shareToken } = useReport();
+  const client = shareToken ? createShareAwareClient(shareToken) : supabase;
   const [narrativeGraph, setNarrativeGraph] = useState<NarrativeGraphData | undefined>(
     reportData.narrativeGraph
   );
@@ -28,7 +30,7 @@ export default function ReportNarrative() {
     if (!report?.script_id) return;
 
     async function fetchGraph() {
-      const { data, error } = await supabase
+      const { data, error } = await client
         .from('narrative_graphs')
         .select('nodes, edges')
         .eq('script_id', report!.script_id)

@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useReport } from '@/components/report/ReportLayout';
 import { supabase } from '@/integrations/supabase/client';
+import { createShareAwareClient } from '@/lib/shareClient';
 import { useAuth } from '@/lib/auth';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -68,7 +69,8 @@ interface BreakdownTag {
 }
 
 export default function ScriptBreakdown() {
-  const { report, reportData } = useReport();
+  const { report, reportData, shareToken } = useReport();
+  const client = shareToken ? createShareAwareClient(shareToken) : supabase;
   const { user } = useAuth();
   const [scenes, setScenes] = useState<Scene[]>([]);
   const [tags, setTags] = useState<BreakdownTag[]>([]);
@@ -91,12 +93,12 @@ export default function ScriptBreakdown() {
     const fetchData = async () => {
       setLoading(true);
       const [scenesRes, tagsRes] = await Promise.all([
-        supabase
+        client
           .from('scenes')
           .select('*')
           .eq('script_id', scriptId)
           .order('scene_number'),
-        supabase
+        client
           .from('breakdown_tags')
           .select('*')
           .eq('script_id', scriptId),

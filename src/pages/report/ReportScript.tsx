@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useReport } from '@/components/report/ReportLayout';
 import { supabase } from '@/integrations/supabase/client';
+import { createShareAwareClient } from '@/lib/shareClient';
 import { ScriptContentViewer } from '@/components/ScriptContentViewer';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
@@ -15,7 +16,8 @@ interface ScriptMetadata {
 }
 
 export default function ReportScript() {
-  const { report } = useReport();
+  const { report, shareToken } = useReport();
+  const client = shareToken ? createShareAwareClient(shareToken) : supabase;
   const [script, setScript] = useState<ScriptMetadata | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -26,7 +28,7 @@ export default function ReportScript() {
         return;
       }
 
-      const { data, error } = await supabase
+      const { data, error } = await client
         .from('scripts')
         .select('title, genre, page_count, script_type, logline')
         .eq('id', report.script_id)
