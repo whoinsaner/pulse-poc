@@ -889,6 +889,8 @@ Analyze all major characters for:
 Flag overshadowing, passivity, or unearned arcs.
 
 TRADITION-AWARE EVALUATION:
+- UNIVERSAL SELF-CHECK: Before flagging any character issue, verify: "Is this breaking the script's own grammar, or my external expectations?"
+- Identify functional roles for each character: emotional anchor, thematic carrier, narrative driver, symbolic presence. Characters can serve multiple roles.
 - Silent protagonists who act through physical choices are VALID and can be more powerful than dialogue-driven characters. Evaluate by actions taken, not words spoken.
 - Philosophical villain construction (worldview-driven, not wound-driven) is a legitimate and often superior form of complexity. A villain who believes they are right is not "underdeveloped" — they may be operating within a moral framework the script interrogates.
 - Evaluate characters by their function in the moral architecture, not just by dialogue line count. A character with 10 lines who carries thematic weight is more important than one with 100 lines of exposition.
