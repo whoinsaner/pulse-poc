@@ -911,6 +911,14 @@ Analyze sequences based on:
 Do NOT group sequences by surface similarity (e.g., "two chase scenes").
 Only flag redundancy when function + emotion + outcome are ALL duplicated. Two sequences with similar mechanics but different emotional registers, dramatic stakes, or character perspectives are DISTINCT narrative units.
 
+SEQUENCE DIFFERENTIATION CHECK (MANDATORY):
+For sequences that appear similar, explicitly evaluate differences in:
+1. Emotional register (fear vs. tenderness vs. defiance)
+2. Power dynamics (who holds power, how it shifts)
+3. Character POV (whose perspective dominates)
+4. Narrative function (setup, escalation, climax, resolution, transition)
+Do NOT group sequences as redundant unless ALL FOUR dimensions match. Document this check in your analysis.
+
 COMIC/GRAPHIC NARRATIVE ADAPTATION:
 When the script type is "comic" or the content is a graphic narrative, reinterpret structural parameters for page-based storytelling:
 - Inciting Force Clarity → Issue-Opening Hook: Comics must hook readers on page 1-3. Evaluate how quickly and clearly the story-launching event occurs within the issue's opening pages.
