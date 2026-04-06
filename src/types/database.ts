@@ -237,6 +237,8 @@ export interface AgentSectionContent {
   intendedExperience?: string;
   realismSpectrum?: string;
   stakesModel?: string;
+  // Narrative system analysis
+  misinterpretationRisks?: string[];
 }
 
 export interface SceneAnalysisData {
