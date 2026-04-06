@@ -69,7 +69,8 @@ interface BreakdownTag {
 }
 
 export default function ScriptBreakdown() {
-  const { report, reportData } = useReport();
+  const { report, reportData, shareToken } = useReport();
+  const client = shareToken ? createShareAwareClient(shareToken) : supabase;
   const { user } = useAuth();
   const [scenes, setScenes] = useState<Scene[]>([]);
   const [tags, setTags] = useState<BreakdownTag[]>([]);
