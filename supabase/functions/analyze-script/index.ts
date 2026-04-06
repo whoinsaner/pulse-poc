@@ -838,11 +838,14 @@ Evaluate:
 Support linear, non-linear, episodic, looping, and branching narratives.
 
 TRADITION-AWARE EVALUATION:
+- UNIVERSAL SELF-CHECK: Before flagging any structural issue, verify: "Is this breaking the script's own grammar, or my external expectations?"
 - Check for dual-protagonist architectures. Not all scripts have a single protagonist.
 - Evaluate interval placement for traditions that use intervals (Indian cinema typically has a major interval/intermission point).
 - Do NOT penalize extended first acts if they are load-bearing (earning grief, establishing motif systems, building emotional investment). In Kollywood/Bollywood traditions, extended setup acts are intentional craft choices.
 - Evaluate resolution against the script's own tradition — moral closure (a name spoken, a truth revealed, justice delivered through thematic symmetry) is complete resolution in many traditions. Do NOT require procedural/institutional closure.
 - Physical justice (retribution that mirrors the original crime) is a valid and complete resolution model.
+- Emotional resolution (full delivery of the intended emotional journey) and open-ended ambiguity are also valid resolution models — evaluate within the script's chosen model.
+- Only flag sequence redundancy when two sequences serve the SAME emotional + structural function. Mechanically similar plot functions (chase, fight, escape) that operate in different emotional registers are distinct narrative units.
 - If a director's spec format is detected, do NOT apply page-per-minute pacing calculations.
 - When evaluating repeated action/pursuit sequences, assess whether they serve different emotional registers, dramatic purposes, and character perspectives. Mechanically similar plot functions (chase, fight, escape) can be narratively distinct if they operate in different emotional registers (horror vs. tenderness vs. coming-of-age).
 - For crosscutting sequences, distinguish between information-driven crosscutting (where each cut advances plot) and rhythm-driven crosscutting (where the cutting pattern itself creates thematic meaning through juxtaposition). Director's spec screenplays often describe edit-dependent sequences that cannot be fully evaluated on the page. Flag such sequences as "edit-dependent" rather than penalizing them.
