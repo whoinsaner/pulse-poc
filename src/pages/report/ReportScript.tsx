@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useReport } from '@/components/report/ReportLayout';
 import { supabase } from '@/integrations/supabase/client';
+import { createShareAwareClient } from '@/lib/shareClient';
 import { ScriptContentViewer } from '@/components/ScriptContentViewer';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
