@@ -3301,21 +3301,52 @@ function enforceAgentPromptRequirements(
   agentName: string,
   promptConfig: AgentPromptConfig
 ): AgentPromptConfig {
-  if (agentName !== 'CharacterAgent') return promptConfig;
+  // CharacterAgent enforcement
+  if (agentName === 'CharacterAgent') {
+    const needsUpgrade =
+      !promptConfig.systemPrompt.includes('Dual-protagonist architectures') ||
+      !promptConfig.systemPrompt.includes('protagonistProfiles') ||
+      !promptConfig.systemPrompt.includes('removal test') ||
+      !promptConfig.systemPrompt.includes('distributed') ||
+      !promptConfig.systemPrompt.includes('COMPLEXITY TYPE');
+    if (needsUpgrade) {
+      return {
+        systemPrompt: AGENTS.CharacterAgent.systemPrompt,
+        parameters: Array.from(new Set([...(promptConfig.parameters || []), ...AGENTS.CharacterAgent.parameters])),
+        category: promptConfig.category || AGENTS.CharacterAgent.category || 'analysis',
+      };
+    }
+  }
 
-  const needsUpgrade =
-    !promptConfig.systemPrompt.includes('Dual-protagonist architectures') ||
-    !promptConfig.systemPrompt.includes('protagonistProfiles') ||
-    !promptConfig.systemPrompt.includes('removal test') ||
-    !promptConfig.systemPrompt.includes('distributed');
+  // StructureAgent enforcement
+  if (agentName === 'StructureAgent') {
+    const needsUpgrade =
+      !promptConfig.systemPrompt.includes('SEQUENCE DIFFERENTIATION CHECK') ||
+      !promptConfig.systemPrompt.includes('loadBearingElements');
+    if (needsUpgrade) {
+      return {
+        systemPrompt: AGENTS.StructureAgent.systemPrompt,
+        parameters: Array.from(new Set([...(promptConfig.parameters || []), ...AGENTS.StructureAgent.parameters])),
+        category: promptConfig.category || AGENTS.StructureAgent.category || 'analysis',
+      };
+    }
+  }
 
-  if (!needsUpgrade) return promptConfig;
+  // ThemeAgent enforcement
+  if (agentName === 'ThemeAgent') {
+    const needsUpgrade =
+      !promptConfig.systemPrompt.includes('MOTIF LIFECYCLE TRACKING') ||
+      !promptConfig.systemPrompt.includes('motifLifecycle');
+    if (needsUpgrade) {
+      return {
+        systemPrompt: AGENTS.ThemeAgent.systemPrompt,
+        parameters: Array.from(new Set([...(promptConfig.parameters || []), ...AGENTS.ThemeAgent.parameters])),
+        category: promptConfig.category || AGENTS.ThemeAgent.category || 'analysis',
+      };
+    }
+  }
 
-  return {
-    systemPrompt: AGENTS.CharacterAgent.systemPrompt,
-    parameters: Array.from(new Set([...(promptConfig.parameters || []), ...AGENTS.CharacterAgent.parameters])),
-    category: promptConfig.category || AGENTS.CharacterAgent.category || 'analysis',
-  };
+  return promptConfig;
 }
 
 function normalizeCharacterSectionContent(sectionContent?: SectionContent): SectionContent | undefined {
