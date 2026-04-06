@@ -4081,7 +4081,12 @@ For "antagonistProfile", include "worldview" and "philosophyType". Not all antag
     "whatsUnderdeveloped": ["Thematic gap"],
     "keyQuotes": [{"quote": "Line that embodies/undermines theme", "context": "Thematic significance"}],
     "deepDive": "2-3 paragraph narrative identifying the thematic spine, tracking motifs, assessing moral complexity, and evaluating show-vs-tell ratio",
-    "recommendations": [{"title": "Action item", "description": "Detail", "priority": "critical|high|medium", "effort": "easy|moderate|hard"}]`;
+    "recommendations": [{"title": "Action item", "description": "Detail", "priority": "critical|high|medium", "effort": "easy|moderate|hard"}],
+    "misinterpretationRisks": ["Where analysts may misjudge thematic intent, motif purpose, or moral stance in this script"],
+    "motifLifecycle": [{"motif": "Symbol/motif name", "introduction": "Where and how introduced", "transformation": "How it evolves", "payoff": "Where it delivers final meaning"}],
+    "narrativeQuestions": [{"question": "Question the story asks", "answerLocation": "Where in the script it is answered", "answered": true}]
+
+IMPORTANT: You MUST populate "motifLifecycle" for every major symbol/motif with introduction, transformation, and payoff. You MUST populate "narrativeQuestions" for every thematic/philosophical question the story poses, mapping each to its answer location.`;
     case 'WorldLogicAgent':
       return `"verdict": "One-sentence world/visual diagnosis",
     "whatWorks": ["World-building strength"],
