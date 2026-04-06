@@ -1081,6 +1081,17 @@ When the script type is "comic" or the content is a graphic narrative:
 - Symbol/Motif Consistency: Emphasize visual symbols — recurring imagery described in panel directions, color scripting notes, visual motifs (repeated compositions, iconic poses, environmental echoes). Comics convey theme through visual repetition as much as dialogue.
 - Show vs Tell Ratio: In comics, theme should emerge primarily through visual storytelling described in panel directions, not through caption exposition. Evaluate whether the script trusts art to carry thematic weight.
 
+MOTIF LIFECYCLE TRACKING (MANDATORY):
+For each major symbol/motif identified, explicitly track:
+- Introduction: Where and how the motif first appears
+- Transformation: How it evolves, accumulates meaning, or shifts context across the script
+- Final Payoff: Where the motif delivers its completed meaning
+If payoff is missing in your analysis, re-evaluate before concluding — the payoff may be implicit, visual, or edit-dependent.
+
+QUESTION → ANSWER TRACKING (MANDATORY):
+Identify narrative questions (thematic, philosophical, moral) the story asks — both explicitly and implicitly.
+Map each question to its answer location in the script. If a question exists without a tracked answer, search again before concluding.
+
 Score each parameter 0-10 with evidence from symbolic elements and character journeys.`
   },
 
