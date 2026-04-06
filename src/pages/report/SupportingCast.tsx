@@ -16,6 +16,7 @@ import { InlineMaturity } from '@/components/report/ui/MaturityBadge';
 import { Users, MessageSquare, Film, Star, Target, Scale, Layers, Shield } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { extractScore } from '@/lib/scoreUtils';
+import { getSupportingCast as getSupportingCastFromRoles } from '@/lib/characterRoles';
 
 interface ReportContextValue {
   reportData: ReportData;
