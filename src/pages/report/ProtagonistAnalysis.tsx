@@ -13,7 +13,7 @@ import {
   ScoreDisplay,
 } from '@/components/report/ui';
 import { InlineMaturity } from '@/components/report/ui/MaturityBadge';
-import { User, Heart, Brain, Target, Zap } from 'lucide-react';
+import { User, Heart, Brain, Target, Zap, Users, Shield } from 'lucide-react';
 import { extractScore } from '@/lib/scoreUtils';
 import { findProtagonistCharacters } from '@/lib/characterRoles';
 import { useStakeholderFiltering } from '@/hooks/useStakeholderFiltering';
