@@ -124,7 +124,7 @@ export default function ProtagonistAnalysis() {
           <div>
             <div className="flex items-center gap-2 mb-1">
               <span className="font-display font-semibold text-sm">Protagonist System Model:</span>
-              <Badge variant="default" className="capitalize">{protagonistSystemModel.type}-Protagonist</Badge>
+              <Badge variant="default" className="capitalize">{protagonistSystemModel.type === 'distributed' ? 'Distributed' : protagonistSystemModel.type}-Protagonist</Badge>
             </div>
             {protagonistSystemModel.rationale && (
               <p className="text-sm text-muted-foreground leading-relaxed">{protagonistSystemModel.rationale}</p>
