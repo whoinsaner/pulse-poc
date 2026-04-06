@@ -1407,8 +1407,8 @@ export async function generateFullReportPDF(
         const traditionContent = data.agentContent?.CinemaTraditionAgent;
         if (traditionContent?.narrativeGrammar || traditionContent?.intendedExperience) {
           const pw = getPageWidth(doc);
-          const boxX = MARGIN;
-          const boxW = pw - MARGIN * 2;
+          const boxX = MARGINS.left;
+          const boxW = pw - MARGINS.left - MARGINS.right;
           
           // Draw background
           doc.setFillColor(245, 247, 250);
