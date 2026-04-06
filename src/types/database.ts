@@ -213,7 +213,7 @@ export interface AgentSectionContent {
   // Character-specific
   protagonistProfile?: { name: string; want: string; need: string; flaw: string; arc: string; strengths?: string[]; weaknesses?: string[]; arcType?: string; resolutionRole?: string; removalImpact?: string };
   protagonistProfiles?: Array<{ name: string; want: string; need: string; flaw: string; arc: string; strengths?: string[]; weaknesses?: string[]; arcType?: string; resolutionRole?: string; removalImpact?: string }>;
-  protagonistSystemModel?: { type: 'single' | 'dual' | 'multi'; rationale: string };
+  protagonistSystemModel?: { type: 'single' | 'dual' | 'multi' | 'distributed'; rationale: string };
   antagonistProfile?: { name: string; motivation: string; threat: string; complexity: string; worldview?: string; philosophyType?: 'psychological' | 'philosophical' | 'systemic' | 'institutional' };
   supportingCast?: Array<{ name: string; role: string; impact: string }>;
   psychologyInsights?: string;
@@ -237,6 +237,8 @@ export interface AgentSectionContent {
   intendedExperience?: string;
   realismSpectrum?: string;
   stakesModel?: string;
+  // Narrative system analysis
+  misinterpretationRisks?: string[];
 }
 
 export interface SceneAnalysisData {

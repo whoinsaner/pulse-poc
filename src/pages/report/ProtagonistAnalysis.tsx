@@ -13,7 +13,7 @@ import {
   ScoreDisplay,
 } from '@/components/report/ui';
 import { InlineMaturity } from '@/components/report/ui/MaturityBadge';
-import { User, Heart, Brain, Target, Zap, Users } from 'lucide-react';
+import { User, Heart, Brain, Target, Zap, Users, AlertTriangle } from 'lucide-react';
 import { extractScore } from '@/lib/scoreUtils';
 import { findProtagonistCharacters } from '@/lib/characterRoles';
 import { useStakeholderFiltering } from '@/hooks/useStakeholderFiltering';
@@ -45,6 +45,7 @@ export default function ProtagonistAnalysis() {
     agentContent?.protagonistProfiles || 
     (agentContent?.protagonistProfile ? [agentContent.protagonistProfile] : []);
   const protagonistSystemModel: { type?: string; rationale?: string } | undefined = agentContent?.protagonistSystemModel;
+  const misinterpretationRisks: string[] = agentContent?.misinterpretationRisks || [];
 
   // Filter protagonist-relevant parameters
   const protagonistParams = useMemo(() => {
@@ -123,11 +124,26 @@ export default function ProtagonistAnalysis() {
           <div>
             <div className="flex items-center gap-2 mb-1">
               <span className="font-display font-semibold text-sm">Protagonist System Model:</span>
-              <Badge variant="default" className="capitalize">{protagonistSystemModel.type}-Protagonist</Badge>
+              <Badge variant="default" className="capitalize">{protagonistSystemModel.type === 'distributed' ? 'Distributed' : protagonistSystemModel.type}-Protagonist</Badge>
             </div>
             {protagonistSystemModel.rationale && (
               <p className="text-sm text-muted-foreground leading-relaxed">{protagonistSystemModel.rationale}</p>
             )}
+          </div>
+        </Card>
+      )}
+
+      {/* Misinterpretation Risks */}
+      {misinterpretationRisks.length > 0 && (
+        <Card className="p-5 flex items-start gap-4 border-warning/20 bg-warning/5">
+          <AlertTriangle className="h-5 w-5 text-warning mt-0.5 shrink-0" />
+          <div>
+            <p className="font-display font-semibold text-sm mb-2">Analyst Guidance — Misinterpretation Risks</p>
+            <ul className="text-sm text-muted-foreground space-y-1">
+              {misinterpretationRisks.map((risk, i) => (
+                <li key={i}>• {risk}</li>
+              ))}
+            </ul>
           </div>
         </Card>
       )}

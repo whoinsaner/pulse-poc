@@ -427,7 +427,8 @@ interface SectionContent {
   // Character-specific fields (CharacterAgent)
   protagonistProfile?: { name: string; want: string; need: string; flaw: string; arc: string; strengths?: string[]; weaknesses?: string[]; arcType?: string; resolutionRole?: string; removalImpact?: string };
   protagonistProfiles?: Array<{ name: string; want: string; need: string; flaw: string; arc: string; strengths?: string[]; weaknesses?: string[]; arcType?: string; resolutionRole?: string; removalImpact?: string }>;
-  protagonistSystemModel?: { type: 'single' | 'dual' | 'multi'; rationale: string };
+  protagonistSystemModel?: { type: 'single' | 'dual' | 'multi' | 'distributed'; rationale: string };
+  misinterpretationRisks?: string[];
   antagonistProfile?: { name: string; motivation: string; threat: string; complexity: string; worldview?: string; philosophyType?: string };
   supportingCast?: Array<{ name: string; role: string; impact: string }>;
   psychologyInsights?: string;
@@ -514,14 +515,35 @@ GLOBAL AGENT OPERATING RULES (MANDATORY):
 - You must be script-type agnostic.
 - You must produce evidence-based outputs.
 
+1.5. NARRATIVE SYSTEM REVERSE-ENGINEERING (MANDATORY MINDSET)
+You are NOT evaluating a screenplay against external standards.
+You are REVERSE-ENGINEERING A NARRATIVE SYSTEM.
+Your goal is to:
+1. Identify how the story is designed to work
+2. Understand the rules it operates under
+3. Evaluate how effectively it executes within its own system
+
+STORY ENGINE DECOMPOSITION:
+Every narrative is composed of five interacting systems:
+- Character System: Who drives the story, their functions, and transformations
+- Conflict System: What forces oppose, how they escalate, what types exist
+- Resolution System: How outcomes are delivered, who owns each resolution outcome
+- Thematic System: What meaning is expressed, through what mechanisms (dialogue, action, symbol, structure)
+- Structural System: How the narrative is sequenced, paced, and proportioned
+
+Even though each agent focuses on one module, understand how YOUR module interacts with the others. Do NOT evaluate your module in isolation.
+
 2. GRAMMAR IDENTIFICATION (MANDATORY FIRST STEP)
 Before any evaluation, explicitly determine:
 - What narrative grammar is this script operating in? (e.g., realist drama, mythic storytelling, mass cinema, satire, absurdism, genre hybrid, arthouse, oral tradition, etc.)
 - What are the governing rules of this grammar?
 - What does this tradition prioritize: emotional realism vs heightened drama, internal psychology vs external action, subtext vs explicit articulation, moral ambiguity vs moral clarity?
+- OPERATING RULES: What does this system prioritize? (emotion, spectacle, realism, philosophy, ambiguity, etc.)
+- REALITY MODEL: Where does this sit? (realistic / heightened / mythic / symbolic / absurd)
+- AUDIENCE CONTRACT: What is the audience expected to accept as "truth" within this system?
 You MUST evaluate the script within its own narrative grammar, not against external or default frameworks.
 - A director's spec screenplay CANNOT be measured by page-per-minute. Explicitly check for format type before applying page count assessments.
-- Dual-protagonist and ensemble-protagonist architectures are VALID. Do not assume a single-protagonist model.
+- Dual-protagonist, multi-protagonist, and distributed-protagonist architectures are VALID. Do not assume a single-protagonist model.
 - Resolution satisfaction must be evaluated against the tradition's resolution grammar, not against procedural/institutional closure.
 - Villain complexity can manifest as philosophical conviction, not only psychological vulnerability or wounded backstory.
 - Silence, physical action, and visual motif payoff are valid resolution mechanisms equal to dialogue and institutional consequence.
@@ -532,6 +554,7 @@ Infer the filmmaker's intent:
 - What experience is the script trying to create?
 - What is the intended emotional journey?
 - What kind of audience response is being designed? (catharsis, discomfort, reflection, thrill, ambiguity, etc.)
+- What kind of payoff is being designed? (physical, emotional, thematic, symbolic, ambiguous)
 Evaluate the script against its OWN design goal, not against an externally imposed standard.
 
 4. INTERNAL LOGIC OVER EXTERNAL STANDARDS
@@ -544,6 +567,11 @@ NOT based on:
 ❌ Hollywood/Western narrative conventions (unless that is the detected grammar)
 ❌ Personal preference for storytelling style
 Before flagging an issue, ask: "Is this breaking the film's own rules — or just my expectations?"
+Before calling anything a flaw, classify it as:
+- True flaw (breaks the story's own system)
+- Trade-off (intentional choice with pros/cons)
+- Misalignment (execution not matching intent)
+- External bias risk (your critique may be framework-imposed)
 
 5. CRITIQUE DISCIPLINE
 When identifying issues, classify them explicitly as:
@@ -559,6 +587,9 @@ Before concluding, verify:
 - Am I imposing an external storytelling standard?
 - Am I suggesting fixes for something that is actually intentional?
 - Have I correctly identified the film's definition of justice and resolution?
+- Did I confuse prominence with importance? (A character with fewer lines can be more important than one who dominates screen time.)
+- Did I evaluate the system or judge the style? (I should measure how powerfully the story executes within its own system, not whether I prefer this style.)
+- Did I correctly map resolution ownership? (Which character delivers which part of the resolution?)
 If uncertain, default to deeper interpretation over premature criticism.
 
 7. UNIVERSAL SCRIPT TYPES
@@ -851,6 +882,14 @@ TRADITION-AWARE EVALUATION:
 - When evaluating repeated action/pursuit sequences, assess whether they serve different emotional registers, dramatic purposes, and character perspectives. Mechanically similar plot functions (chase, fight, escape) can be narratively distinct if they operate in different emotional registers (horror vs. tenderness vs. coming-of-age).
 - For crosscutting sequences, distinguish between information-driven crosscutting (where each cut advances plot) and rhythm-driven crosscutting (where the cutting pattern itself creates thematic meaning through juxtaposition). Director's spec screenplays often describe edit-dependent sequences that cannot be fully evaluated on the page. Flag such sequences as "edit-dependent" rather than penalizing them.
 
+SEQUENCE FUNCTION ANALYSIS (MANDATORY):
+Analyze sequences based on:
+- Emotional function: What does this sequence make the audience feel?
+- Narrative purpose: What story question does it advance or answer?
+- Character transformation: How does this sequence change the characters within it?
+Do NOT group sequences by surface similarity (e.g., "two chase scenes").
+Only flag redundancy when function + emotion + outcome are ALL duplicated. Two sequences with similar mechanics but different emotional registers, dramatic stakes, or character perspectives are DISTINCT narrative units.
+
 COMIC/GRAPHIC NARRATIVE ADAPTATION:
 When the script type is "comic" or the content is a graphic narrative, reinterpret structural parameters for page-based storytelling:
 - Inciting Force Clarity → Issue-Opening Hook: Comics must hook readers on page 1-3. Evaluate how quickly and clearly the story-launching event occurs within the issue's opening pages.
@@ -898,6 +937,29 @@ TRADITION-AWARE EVALUATION:
 - Dual-protagonist architectures: two characters sharing equal narrative weight is valid. Do not force one into "supporting" status.
 - In ensemble traditions (Kollywood, Korean), every named character may serve a specific moral or thematic function — evaluate ensemble coherence, not individual arc completeness.
 
+CHARACTER SYSTEM MODELING (CRITICAL — 3-STEP PROCESS):
+Do NOT classify characters prematurely. Follow this exact sequence:
+
+STEP 1 — IDENTIFY NARRATIVE FUNCTION:
+For each major character (3+ scenes), determine:
+- Narrative function: driver, reactor, observer, disruptor, executor
+- What outcome does this character uniquely deliver?
+- What part of the story breaks if they are removed?
+
+STEP 2 — MAP THEMATIC ROLE:
+For each major character, determine:
+- Thematic role: belief, counter-belief, transformation, witness
+- Do they represent a distinct and necessary axis of the story's meaning?
+
+STEP 3 — CLASSIFY AFTER MAPPING (NOT BEFORE):
+Only after completing Steps 1 and 2, determine the protagonist system model:
+- Single protagonist: One character drives resolution
+- Dual protagonist: Two characters share equal narrative weight and deliver distinct resolution outcomes
+- Multi-protagonist: Three+ characters each deliver irreplaceable resolution outcomes
+- Distributed protagonist system: Ensemble narrative where no single character dominates but the collective drives resolution; removing any member weakens but doesn't collapse the story
+
+A character is PROTAGONIST-TIER if they deliver irreplaceable resolution OR represent a distinct and necessary axis of the story's meaning. This overrides screen time, dialogue count, and traditional hierarchy.
+
 COMIC/GRAPHIC NARRATIVE ADAPTATION:
 When the script type is "comic" or the content is a graphic narrative, adapt character evaluation for the visual medium:
 - Performative Range → Visual Design Range: Comics don't have actors. Instead, evaluate how well the script describes character visual design cues — distinctive silhouettes, costume details, expression scripting, and body language directions that give an artist clear character identity.
@@ -942,6 +1004,14 @@ TRADITION-AWARE EVALUATION:
 - Internal vs External balance varies by tradition: European arthouse favors internal; Kollywood mass cinema favors external with internal resonance. Neither is superior.
 - Conflict escalation through accumulating moral weight (not just physical danger) is sophisticated craft.
 - Evaluate stakes model alignment: personal (family, identity) → social (community, class) → existential (meaning, survival). Check if escalation aligns with the script's chosen stakes model.
+
+RESOLUTION SYSTEM ANALYSIS (MANDATORY):
+For this script, determine:
+- What kind of resolution is being designed: Physical / Emotional / Thematic / Symbolic / Ambiguous
+- Map resolution ownership: Which character delivers which part of the resolution?
+- Is the resolution complete within the story's own model?
+- Is resolution distributed across multiple characters? If so, what does each character resolve?
+Evaluate resolution completeness against the story's own rules, not external expectations.
 
 Score each parameter 0-10 with evidence from key confrontations.`
   },
@@ -3187,7 +3257,8 @@ function enforceAgentPromptRequirements(
   const needsUpgrade =
     !promptConfig.systemPrompt.includes('Dual-protagonist architectures') ||
     !promptConfig.systemPrompt.includes('protagonistProfiles') ||
-    !promptConfig.systemPrompt.includes('removal test');
+    !promptConfig.systemPrompt.includes('removal test') ||
+    !promptConfig.systemPrompt.includes('distributed');
 
   if (!needsUpgrade) return promptConfig;
 
@@ -3910,7 +3981,8 @@ IMPORTANT: For "comparableTitles", you MUST provide 3-5 real comparable films/sh
     "whatsUnderdeveloped": ["Structural gap"],
     "keyQuotes": [{"quote": "Key structural moment", "context": "Why it matters"}],
     "deepDive": "2-3 paragraph narrative on act breakdown, pacing diagnosis, turning points, structural pattern (3-act, 5-act, non-linear). Include specific page/scene references.",
-    "recommendations": [{"title": "Action item", "description": "Detail", "priority": "critical|high|medium", "effort": "easy|moderate|hard"}]`;
+    "recommendations": [{"title": "Action item", "description": "Detail", "priority": "critical|high|medium", "effort": "easy|moderate|hard"}],
+    "misinterpretationRisks": ["Where analysts may misjudge structural choices or pacing in this script"]`;
     case 'CharacterAgent':
       return `"verdict": "One-sentence character diagnosis",
     "whatWorks": ["Character strength with evidence"],
@@ -3920,10 +3992,11 @@ IMPORTANT: For "comparableTitles", you MUST provide 3-5 real comparable films/sh
     "deepDive": "2-3 paragraph narrative on character dynamics, arc quality, and ensemble balance",
     "recommendations": [{"title": "Action item", "description": "Detail", "priority": "critical|high|medium", "effort": "easy|moderate|hard"}],
     "protagonistProfiles": [{"name": "Character name", "want": "External goal", "need": "Internal need", "flaw": "Core flaw", "arc": "Transformation summary", "arcType": "public|private|silent|action-driven", "strengths": ["Acting strength"], "weaknesses": ["Arc weakness"], "resolutionRole": "What irreplaceable resolution outcome this character delivers", "removalImpact": "What collapses if this character is removed"}],
-    "protagonistSystemModel": {"type": "single|dual|multi", "rationale": "Why this classification"},
+    "protagonistSystemModel": {"type": "single|dual|multi|distributed", "rationale": "Why this classification"},
     "antagonistProfile": {"name": "Character name", "motivation": "What drives them", "threat": "Nature of opposition", "complexity": "Nuance assessment", "worldview": "Core belief system or philosophy that drives their opposition", "philosophyType": "psychological|philosophical|systemic|institutional"},
     "supportingCast": [{"name": "Character", "role": "Narrative function", "impact": "Story contribution"}],
-    "psychologyInsights": "1-2 paragraph analysis of psychological depth, subconscious patterns, defense mechanisms"
+    "psychologyInsights": "1-2 paragraph analysis of psychological depth, subconscious patterns, defense mechanisms",
+    "misinterpretationRisks": ["Where analysts may go wrong about character classification or role assignment in this script"]
 
 IMPORTANT — PROTAGONIST IDENTIFICATION (removal test):
 Do NOT classify protagonists based on screen time, dialogue volume, or narrative focus alone.
@@ -3932,7 +4005,7 @@ Determine: (1) Which characters deliver irreplaceable resolution outcomes? (2) W
 If multiple characters resolve different dimensions of the story and cannot be removed without collapsing the narrative outcome, classify them as co-protagonists regardless of narrative prominence.
 
 Use "protagonistProfiles" (ARRAY) to list ALL protagonists identified via the removal test. Include "resolutionRole" (what irreplaceable outcome they deliver) and "removalImpact" (what breaks without them) for each.
-Include "protagonistSystemModel" with type ("single", "dual", or "multi") and rationale explaining the classification.
+Include "protagonistSystemModel" with type ("single", "dual", "multi", or "distributed") and rationale explaining the classification. Use "distributed" for ensemble narratives where no single character dominates but the collective drives resolution.
 Include an "arcType" for each: "public" (visible, dialogue-driven), "private" (internal journey), "silent" (action-driven, minimal dialogue), "action-driven" (physical choices carry the arc).
 For "antagonistProfile", include "worldview" and "philosophyType". Not all antagonists operate through psychological vulnerability — some operate through conviction, worldview, or systemic power. A villain whose worldview is answered by a child is dramatically complete.`;
     case 'ConflictAgent':
@@ -3942,7 +4015,8 @@ For "antagonistProfile", include "worldview" and "philosophyType". Not all antag
     "whatsUnderdeveloped": ["Conflict gap"],
     "keyQuotes": [{"quote": "Key confrontation line", "context": "Stakes it reveals"}],
     "deepDive": "2-3 paragraph narrative on stakes escalation, conflict diversity, tension curve, and cost of failure",
-    "recommendations": [{"title": "Action item", "description": "Detail", "priority": "critical|high|medium", "effort": "easy|moderate|hard"}]`;
+    "recommendations": [{"title": "Action item", "description": "Detail", "priority": "critical|high|medium", "effort": "easy|moderate|hard"}],
+    "misinterpretationRisks": ["Where analysts may misjudge conflict mechanics or resolution models in this script"]`;
     case 'DialogueAgent':
       return `"verdict": "One-sentence dialogue diagnosis",
     "whatWorks": ["Dialogue strength with specific example"],
@@ -4105,7 +4179,7 @@ SECTION CONTENT: The "sectionContent" field is CRITICAL. It provides narrative d
 ${agentName === 'CharacterAgent' ? `CHARACTERAGENT NON-NEGOTIABLE OUTPUT RULES:
 1. Always return "protagonistProfiles" as an array. Apply the removal test to every character with 3+ scenes. If removal breaks the story's resolution, classify as protagonist regardless of dialogue count or screen time.
 2. Include "resolutionRole" and "removalImpact" for each protagonist profile.
-3. Include "protagonistSystemModel" with type (single/dual/multi) and rationale.
+3. Include "protagonistSystemModel" with type (single/dual/multi/distributed) and rationale.
 4. Do not collapse dual/multi protagonists into supporting cast.
 5. If you also include "protagonistProfile" for backward compatibility, it must match the first item in "protagonistProfiles".` : ''}
 
