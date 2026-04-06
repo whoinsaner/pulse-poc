@@ -1065,6 +1065,8 @@ For this script, determine:
 - Is resolution distributed across multiple characters? If so, what does each character resolve?
 Evaluate resolution completeness against the story's own rules, not external expectations.
 
+CLOSING SYMMETRY CHECK: Identify the last spoken line of the script. Determine if it answers an earlier challenge, question, or statement made by another character. If so, map the symmetry: who posed the challenge, who answers it, and what type of closure it provides (thematic, personal, philosophical). A child answering a villain's worldview in the final line is dramatically complete — do not require additional institutional resolution.
+
 Score each parameter 0-10 with evidence from key confrontations.`
   },
 
