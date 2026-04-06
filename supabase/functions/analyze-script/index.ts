@@ -458,6 +458,10 @@ interface SectionContent {
   intendedExperience?: string;
   realismSpectrum?: string;
   stakesModel?: string;
+  // Critical Structure Detection Layer fields
+  loadBearingElements?: Array<{ element: string; type: 'character' | 'symbol' | 'line' | 'event' | 'image'; removalImpact: string }>;
+  narrativeQuestions?: Array<{ question: string; answerLocation: string; answered: boolean }>;
+  motifLifecycle?: Array<{ motif: string; introduction: string; transformation: string; payoff: string }>;
 }
 
 interface AgentResult {

@@ -239,6 +239,10 @@ export interface AgentSectionContent {
   stakesModel?: string;
   // Narrative system analysis
   misinterpretationRisks?: string[];
+  // Critical Structure Detection Layer
+  loadBearingElements?: Array<{ element: string; type: 'character' | 'symbol' | 'line' | 'event' | 'image'; removalImpact: string }>;
+  narrativeQuestions?: Array<{ question: string; answerLocation: string; answered: boolean }>;
+  motifLifecycle?: Array<{ motif: string; introduction: string; transformation: string; payoff: string }>;
 }
 
 export interface SceneAnalysisData {
