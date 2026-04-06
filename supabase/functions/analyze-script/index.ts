@@ -4013,7 +4013,8 @@ For "antagonistProfile", include "worldview" and "philosophyType". Not all antag
     "whatsUnderdeveloped": ["Conflict gap"],
     "keyQuotes": [{"quote": "Key confrontation line", "context": "Stakes it reveals"}],
     "deepDive": "2-3 paragraph narrative on stakes escalation, conflict diversity, tension curve, and cost of failure",
-    "recommendations": [{"title": "Action item", "description": "Detail", "priority": "critical|high|medium", "effort": "easy|moderate|hard"}]`;
+    "recommendations": [{"title": "Action item", "description": "Detail", "priority": "critical|high|medium", "effort": "easy|moderate|hard"}],
+    "misinterpretationRisks": ["Where analysts may misjudge conflict mechanics or resolution models in this script"]`;
     case 'DialogueAgent':
       return `"verdict": "One-sentence dialogue diagnosis",
     "whatWorks": ["Dialogue strength with specific example"],
