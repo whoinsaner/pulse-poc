@@ -3980,7 +3980,8 @@ IMPORTANT: For "comparableTitles", you MUST provide 3-5 real comparable films/sh
     "whatsUnderdeveloped": ["Structural gap"],
     "keyQuotes": [{"quote": "Key structural moment", "context": "Why it matters"}],
     "deepDive": "2-3 paragraph narrative on act breakdown, pacing diagnosis, turning points, structural pattern (3-act, 5-act, non-linear). Include specific page/scene references.",
-    "recommendations": [{"title": "Action item", "description": "Detail", "priority": "critical|high|medium", "effort": "easy|moderate|hard"}]`;
+    "recommendations": [{"title": "Action item", "description": "Detail", "priority": "critical|high|medium", "effort": "easy|moderate|hard"}],
+    "misinterpretationRisks": ["Where analysts may misjudge structural choices or pacing in this script"]`;
     case 'CharacterAgent':
       return `"verdict": "One-sentence character diagnosis",
     "whatWorks": ["Character strength with evidence"],
