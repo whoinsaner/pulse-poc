@@ -125,10 +125,11 @@ function estimateBudget(scenes: SceneData[], characters: CharacterData[], pageCo
   const vfxMajorScenes = sceneAnalysis.filter(s => s.vfxLevel === 'major').length;
   const vfxHeavyScenes = sceneAnalysis.filter(s => s.vfxLevel === 'heavy').length;
 
-  // Categorize characters using AI-identified roles
-  const leadChars = getLeadCharacters(characters, agentContent);
-  const supportingChars = getSupportingCast(characters, agentContent).slice(0, 7);
-  const dayPlayers = characters.filter(c => !leadChars.includes(c) && !supportingChars.includes(c));
+  // Categorize characters by dialogue presence (reasonable proxy for budget without agent context)
+  const sortedChars = [...characters].sort((a, b) => b.dialogueCount - a.dialogueCount);
+  const leadChars = sortedChars.slice(0, 3);
+  const supportingChars = sortedChars.slice(3, 10);
+  const dayPlayers = sortedChars.slice(10);
 
   // Estimate shooting days (1 page = ~1 minute = ~5 pages per day)
   const shootingDays = Math.ceil(pageCount / 5);

@@ -152,9 +152,10 @@ export function estimateBudget(
   const vfxMajorScenes = sceneAnalyses.filter(s => s.vfxLevel === 'major').length;
   const vfxHeavyScenes = sceneAnalyses.filter(s => s.vfxLevel === 'heavy').length;
 
-  const leadChars = getLeadCharacters(characters, agentContent);
-  const supportingChars = getSupportingCast(characters, agentContent).slice(0, 7);
-  const dayPlayers = characters.filter(c => !leadChars.includes(c) && !supportingChars.includes(c));
+  const sortedChars = [...characters].sort((a, b) => b.dialogueCount - a.dialogueCount);
+  const leadChars = sortedChars.slice(0, 3);
+  const supportingChars = sortedChars.slice(3, 10);
+  const dayPlayers = sortedChars.slice(10);
   const shootingDays = Math.ceil(pageCount / 5);
 
   const uniqueLocations = new Set(scenes.map(s => s.location).filter(Boolean));
