@@ -30,7 +30,7 @@ export default function ReportNarrative() {
     if (!report?.script_id) return;
 
     async function fetchGraph() {
-      const { data, error } = await supabase
+      const { data, error } = await client
         .from('narrative_graphs')
         .select('nodes, edges')
         .eq('script_id', report!.script_id)

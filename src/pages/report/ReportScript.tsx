@@ -28,7 +28,7 @@ export default function ReportScript() {
         return;
       }
 
-      const { data, error } = await supabase
+      const { data, error } = await client
         .from('scripts')
         .select('title, genre, page_count, script_type, logline')
         .eq('id', report.script_id)
