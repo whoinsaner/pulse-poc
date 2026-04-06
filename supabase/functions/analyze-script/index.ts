@@ -972,8 +972,17 @@ For each major character, determine:
 - Thematic role: belief, counter-belief, transformation, witness
 - Do they represent a distinct and necessary axis of the story's meaning?
 
+STEP 2.5 — IDENTIFY COMPLEXITY TYPE:
+For each major character, identify what drives them:
+- Trauma (wound-driven behavior)
+- Philosophy (belief system that governs choices)
+- Ideology (political/social conviction)
+- Power instinct (drive for control/dominance)
+- Symbolic role (represents an idea, force, or archetype)
+Evaluate depth WITHIN that type — do not assume one model of complexity. A philosophy-driven character is not "less deep" than a trauma-driven one.
+
 STEP 3 — CLASSIFY AFTER MAPPING (NOT BEFORE):
-Only after completing Steps 1 and 2, determine the protagonist system model:
+Only after completing Steps 1, 2, and 2.5, determine the protagonist system model:
 - Single protagonist: One character drives resolution
 - Dual protagonist: Two characters share equal narrative weight and deliver distinct resolution outcomes
 - Multi-protagonist: Three+ characters each deliver irreplaceable resolution outcomes
