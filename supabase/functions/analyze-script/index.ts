@@ -4102,7 +4102,12 @@ MATURITY MAPPING:
 
 SECTION CONTENT: The "sectionContent" field is CRITICAL. It provides narrative diagnostic content for the report UI. Write substantive, evidence-based analysis - not generic templates. Each field should contain real insights specific to THIS script.
 
-${agentName === 'CharacterAgent' ? 'CHARACTERAGENT NON-NEGOTIABLE OUTPUT RULES: Always return "protagonistProfiles" as an array. If more than one character drives a meaningful resolution arc, include all of them. Do not collapse dual protagonists into supporting cast. If you also include "protagonistProfile" for backward compatibility, it must match the first item in "protagonistProfiles".' : ''}
+${agentName === 'CharacterAgent' ? `CHARACTERAGENT NON-NEGOTIABLE OUTPUT RULES:
+1. Always return "protagonistProfiles" as an array. Apply the removal test to every character with 3+ scenes. If removal breaks the story's resolution, classify as protagonist regardless of dialogue count or screen time.
+2. Include "resolutionRole" and "removalImpact" for each protagonist profile.
+3. Include "protagonistSystemModel" with type (single/dual/multi) and rationale.
+4. Do not collapse dual/multi protagonists into supporting cast.
+5. If you also include "protagonistProfile" for backward compatibility, it must match the first item in "protagonistProfiles".` : ''}
 
 CRITICAL: You MUST respond with ONLY the JSON object. No text before or after. No markdown code blocks. Start your response with { and end with }.`;
 
