@@ -116,6 +116,22 @@ export default function ProtagonistAnalysis() {
         <InlineMaturity score={sectionScore} />
       </SectionHeader>
 
+      {/* Protagonist System Model Badge */}
+      {protagonistSystemModel?.type && (
+        <Card className="p-5 flex items-start gap-4 border-primary/20 bg-primary/5">
+          <Users className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="font-display font-semibold text-sm">Protagonist System Model:</span>
+              <Badge variant="default" className="capitalize">{protagonistSystemModel.type}-Protagonist</Badge>
+            </div>
+            {protagonistSystemModel.rationale && (
+              <p className="text-sm text-muted-foreground leading-relaxed">{protagonistSystemModel.rationale}</p>
+            )}
+          </div>
+        </Card>
+      )}
+
       {/* Stakeholder Filter Notice */}
       {isFiltered && stakeholderLens && (
         <StakeholderFilterNotice 
