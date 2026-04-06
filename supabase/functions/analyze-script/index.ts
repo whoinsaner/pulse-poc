@@ -4179,7 +4179,7 @@ SECTION CONTENT: The "sectionContent" field is CRITICAL. It provides narrative d
 ${agentName === 'CharacterAgent' ? `CHARACTERAGENT NON-NEGOTIABLE OUTPUT RULES:
 1. Always return "protagonistProfiles" as an array. Apply the removal test to every character with 3+ scenes. If removal breaks the story's resolution, classify as protagonist regardless of dialogue count or screen time.
 2. Include "resolutionRole" and "removalImpact" for each protagonist profile.
-3. Include "protagonistSystemModel" with type (single/dual/multi) and rationale.
+3. Include "protagonistSystemModel" with type (single/dual/multi/distributed) and rationale.
 4. Do not collapse dual/multi protagonists into supporting cast.
 5. If you also include "protagonistProfile" for backward compatibility, it must match the first item in "protagonistProfiles".` : ''}
 
