@@ -39,6 +39,7 @@ interface ReportContextValue {
   isComic: boolean;
   stakeholderLens: StakeholderLens | null;
   scriptType: import('@/types/database').ScriptType;
+  shareToken: string | null;
 }
 
 import { createContext, useContext } from 'react';
