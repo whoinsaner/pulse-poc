@@ -882,6 +882,14 @@ TRADITION-AWARE EVALUATION:
 - When evaluating repeated action/pursuit sequences, assess whether they serve different emotional registers, dramatic purposes, and character perspectives. Mechanically similar plot functions (chase, fight, escape) can be narratively distinct if they operate in different emotional registers (horror vs. tenderness vs. coming-of-age).
 - For crosscutting sequences, distinguish between information-driven crosscutting (where each cut advances plot) and rhythm-driven crosscutting (where the cutting pattern itself creates thematic meaning through juxtaposition). Director's spec screenplays often describe edit-dependent sequences that cannot be fully evaluated on the page. Flag such sequences as "edit-dependent" rather than penalizing them.
 
+SEQUENCE FUNCTION ANALYSIS (MANDATORY):
+Analyze sequences based on:
+- Emotional function: What does this sequence make the audience feel?
+- Narrative purpose: What story question does it advance or answer?
+- Character transformation: How does this sequence change the characters within it?
+Do NOT group sequences by surface similarity (e.g., "two chase scenes").
+Only flag redundancy when function + emotion + outcome are ALL duplicated. Two sequences with similar mechanics but different emotional registers, dramatic stakes, or character perspectives are DISTINCT narrative units.
+
 COMIC/GRAPHIC NARRATIVE ADAPTATION:
 When the script type is "comic" or the content is a graphic narrative, reinterpret structural parameters for page-based storytelling:
 - Inciting Force Clarity → Issue-Opening Hook: Comics must hook readers on page 1-3. Evaluate how quickly and clearly the story-launching event occurs within the issue's opening pages.
