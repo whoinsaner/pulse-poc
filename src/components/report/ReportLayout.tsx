@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation, useSearchParams, Outlet } from 'react-router-dom';
 import { useAuth } from '@/lib/auth';
 import { supabase } from '@/integrations/supabase/client';
+import { createShareAwareClient } from '@/lib/shareClient';
 import { Report, StakeholderLens, ReportData, LENS_CONFIG } from '@/types/database';
 import { CommandHeader } from '@/components/report/CommandHeader';
 import { ReportSidebar } from '@/components/report/ReportSidebar';
