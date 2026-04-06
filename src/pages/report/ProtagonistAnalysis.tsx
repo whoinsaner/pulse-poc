@@ -33,13 +33,10 @@ export default function ProtagonistAnalysis() {
   const { reportData, currentScore, stakeholderLens } = context;
   const { isFiltered, filterParameters, getFilterStats } = useStakeholderFiltering({ stakeholderLens });
   
-  // Get protagonist from characters (highest dialogue count) as fallback
+  // Get protagonist from AI agent content, fallback to highest dialogue count
   const characters = reportData.characters || [];
-  const protagonist = characters.length > 0 
-    ? characters.reduce((prev, current) => 
-        (current.dialogueCount > prev.dialogueCount) ? current : prev
-      )
-    : null;
+  const protagonistChars = findProtagonistCharacters(characters, reportData.agentContent);
+  const protagonist = protagonistChars[0] || null;
 
   // Get agent content for protagonist — support both array (protagonistProfiles) and single (protagonistProfile)
   const agentContent = reportData.agentContent?.CharacterAgent;
