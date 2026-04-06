@@ -4031,7 +4031,11 @@ IMPORTANT: For "comparableTitles", you MUST provide 3-5 real comparable films/sh
     "keyQuotes": [{"quote": "Key structural moment", "context": "Why it matters"}],
     "deepDive": "2-3 paragraph narrative on act breakdown, pacing diagnosis, turning points, structural pattern (3-act, 5-act, non-linear). Include specific page/scene references.",
     "recommendations": [{"title": "Action item", "description": "Detail", "priority": "critical|high|medium", "effort": "easy|moderate|hard"}],
-    "misinterpretationRisks": ["Where analysts may misjudge structural choices or pacing in this script"]`;
+    "misinterpretationRisks": ["Where analysts may misjudge structural choices or pacing in this script"],
+    "loadBearingElements": [{"element": "Element name", "type": "character|symbol|line|event|image", "removalImpact": "What breaks if removed"}],
+    "narrativeQuestions": [{"question": "Question the story asks", "answerLocation": "Where answered", "answered": true}]
+
+IMPORTANT: You MUST populate "loadBearingElements" with all elements without which the story collapses. You MUST populate "narrativeQuestions" mapping story questions to their answer locations.`;
     case 'CharacterAgent':
       return `"verdict": "One-sentence character diagnosis",
     "whatWorks": ["Character strength with evidence"],
