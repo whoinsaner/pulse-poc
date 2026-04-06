@@ -133,6 +133,21 @@ export default function ProtagonistAnalysis() {
         </Card>
       )}
 
+      {/* Misinterpretation Risks */}
+      {misinterpretationRisks.length > 0 && (
+        <Card className="p-5 flex items-start gap-4 border-warning/20 bg-warning/5">
+          <AlertTriangle className="h-5 w-5 text-warning mt-0.5 shrink-0" />
+          <div>
+            <p className="font-display font-semibold text-sm mb-2">Analyst Guidance — Misinterpretation Risks</p>
+            <ul className="text-sm text-muted-foreground space-y-1">
+              {misinterpretationRisks.map((risk, i) => (
+                <li key={i}>• {risk}</li>
+              ))}
+            </ul>
+          </div>
+        </Card>
+      )}
+
       {/* Stakeholder Filter Notice */}
       {isFiltered && stakeholderLens && (
         <StakeholderFilterNotice 
