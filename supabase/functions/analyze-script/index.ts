@@ -929,6 +929,29 @@ TRADITION-AWARE EVALUATION:
 - Dual-protagonist architectures: two characters sharing equal narrative weight is valid. Do not force one into "supporting" status.
 - In ensemble traditions (Kollywood, Korean), every named character may serve a specific moral or thematic function — evaluate ensemble coherence, not individual arc completeness.
 
+CHARACTER SYSTEM MODELING (CRITICAL — 3-STEP PROCESS):
+Do NOT classify characters prematurely. Follow this exact sequence:
+
+STEP 1 — IDENTIFY NARRATIVE FUNCTION:
+For each major character (3+ scenes), determine:
+- Narrative function: driver, reactor, observer, disruptor, executor
+- What outcome does this character uniquely deliver?
+- What part of the story breaks if they are removed?
+
+STEP 2 — MAP THEMATIC ROLE:
+For each major character, determine:
+- Thematic role: belief, counter-belief, transformation, witness
+- Do they represent a distinct and necessary axis of the story's meaning?
+
+STEP 3 — CLASSIFY AFTER MAPPING (NOT BEFORE):
+Only after completing Steps 1 and 2, determine the protagonist system model:
+- Single protagonist: One character drives resolution
+- Dual protagonist: Two characters share equal narrative weight and deliver distinct resolution outcomes
+- Multi-protagonist: Three+ characters each deliver irreplaceable resolution outcomes
+- Distributed protagonist system: Ensemble narrative where no single character dominates but the collective drives resolution; removing any member weakens but doesn't collapse the story
+
+A character is PROTAGONIST-TIER if they deliver irreplaceable resolution OR represent a distinct and necessary axis of the story's meaning. This overrides screen time, dialogue count, and traditional hierarchy.
+
 COMIC/GRAPHIC NARRATIVE ADAPTATION:
 When the script type is "comic" or the content is a graphic narrative, adapt character evaluation for the visual medium:
 - Performative Range → Visual Design Range: Comics don't have actors. Instead, evaluate how well the script describes character visual design cues — distinctive silhouettes, costume details, expression scripting, and body language directions that give an artist clear character identity.
