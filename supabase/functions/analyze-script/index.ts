@@ -3990,7 +3990,7 @@ IMPORTANT: For "comparableTitles", you MUST provide 3-5 real comparable films/sh
     "deepDive": "2-3 paragraph narrative on character dynamics, arc quality, and ensemble balance",
     "recommendations": [{"title": "Action item", "description": "Detail", "priority": "critical|high|medium", "effort": "easy|moderate|hard"}],
     "protagonistProfiles": [{"name": "Character name", "want": "External goal", "need": "Internal need", "flaw": "Core flaw", "arc": "Transformation summary", "arcType": "public|private|silent|action-driven", "strengths": ["Acting strength"], "weaknesses": ["Arc weakness"], "resolutionRole": "What irreplaceable resolution outcome this character delivers", "removalImpact": "What collapses if this character is removed"}],
-    "protagonistSystemModel": {"type": "single|dual|multi", "rationale": "Why this classification"},
+    "protagonistSystemModel": {"type": "single|dual|multi|distributed", "rationale": "Why this classification"},
     "antagonistProfile": {"name": "Character name", "motivation": "What drives them", "threat": "Nature of opposition", "complexity": "Nuance assessment", "worldview": "Core belief system or philosophy that drives their opposition", "philosophyType": "psychological|philosophical|systemic|institutional"},
     "supportingCast": [{"name": "Character", "role": "Narrative function", "impact": "Story contribution"}],
     "psychologyInsights": "1-2 paragraph analysis of psychological depth, subconscious patterns, defense mechanisms"
