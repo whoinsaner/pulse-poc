@@ -3575,6 +3575,7 @@ async function runStandardAnalysis(
           traditionPreamble += `Structural Conventions: ${structuralConventions.join(', ')}\n`;
         }
         
+        traditionPreamble += `\n⚠️ CRITIQUE DISCIPLINE: When flagging issues, classify each as: true flaw (breaks internal logic) | trade-off (intentional choice) | misalignment (execution vs intent) | bias risk (your external framework imposed). Before flagging, verify: "Is this breaking the script's own grammar, or my external expectations?"\n`;
         traditionPreamble += `=============================================================================\n`;
         
         // Prepend traditionPreamble to scriptContext for all core agents
