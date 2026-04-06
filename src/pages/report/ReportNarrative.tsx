@@ -7,6 +7,7 @@ import { PacingAnalysis } from '@/components/report/PacingAnalysis';
 import { SceneComplexityAnalyzer } from '@/components/report/SceneComplexityAnalyzer';
 import { NarrativeGraphViewer } from '@/components/report/NarrativeGraphViewer';
 import { supabase } from '@/integrations/supabase/client';
+import { createShareAwareClient } from '@/lib/shareClient';
 import { useReport } from '@/components/report/ReportLayout';
 
 interface ReportContextValue {
