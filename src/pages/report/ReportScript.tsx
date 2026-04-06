@@ -16,7 +16,8 @@ interface ScriptMetadata {
 }
 
 export default function ReportScript() {
-  const { report } = useReport();
+  const { report, shareToken } = useReport();
+  const client = shareToken ? createShareAwareClient(shareToken) : supabase;
   const [script, setScript] = useState<ScriptMetadata | null>(null);
   const [loading, setLoading] = useState(true);
 
