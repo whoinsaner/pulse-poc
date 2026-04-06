@@ -147,7 +147,7 @@ export default function ReportLayout() {
 
       // Fetch share link expiration when accessed via share token
       if (shareToken && reportResult.data?.id) {
-        const { data: shareData } = await supabase
+        const { data: shareData } = await client
           .from('report_shares')
           .select('expires_at')
           .eq('report_id', reportResult.data.id)
