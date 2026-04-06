@@ -14,6 +14,7 @@ import {
 } from '@/components/report/ui';
 import { Brain, Heart, Target, Zap, Eye, Shield } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { findProtagonistCharacters } from '@/lib/characterRoles';
 
 interface ReportContextValue {
   reportData: ReportData;
