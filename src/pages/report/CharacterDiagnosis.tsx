@@ -10,6 +10,7 @@ import {
 } from '@/components/report/ui';
 import { InlineMaturity } from '@/components/report/ui/MaturityBadge';
 import { Users } from 'lucide-react';
+import { getCharacterRole } from '@/lib/characterRoles';
 
 
 interface ReportContextValue {
