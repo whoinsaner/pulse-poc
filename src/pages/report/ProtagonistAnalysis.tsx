@@ -45,6 +45,7 @@ export default function ProtagonistAnalysis() {
     agentContent?.protagonistProfiles || 
     (agentContent?.protagonistProfile ? [agentContent.protagonistProfile] : []);
   const protagonistSystemModel: { type?: string; rationale?: string } | undefined = agentContent?.protagonistSystemModel;
+  const misinterpretationRisks: string[] = agentContent?.misinterpretationRisks || [];
 
   // Filter protagonist-relevant parameters
   const protagonistParams = useMemo(() => {
