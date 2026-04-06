@@ -3186,7 +3186,8 @@ function enforceAgentPromptRequirements(
 
   const needsUpgrade =
     !promptConfig.systemPrompt.includes('Dual-protagonist architectures') ||
-    !promptConfig.systemPrompt.includes('protagonistProfiles');
+    !promptConfig.systemPrompt.includes('protagonistProfiles') ||
+    !promptConfig.systemPrompt.includes('removal test');
 
   if (!needsUpgrade) return promptConfig;
 
