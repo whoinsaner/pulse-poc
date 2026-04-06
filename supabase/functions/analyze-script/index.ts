@@ -4114,6 +4114,7 @@ For "antagonistProfile", include "worldview" and "philosophyType". Not all antag
     "keyQuotes": [{"quote": "Key confrontation line", "context": "Stakes it reveals"}],
     "deepDive": "2-3 paragraph narrative on stakes escalation, conflict diversity, tension curve, and cost of failure",
     "recommendations": [{"title": "Action item", "description": "Detail", "priority": "critical|high|medium", "effort": "easy|moderate|hard"}],
+    "closingSymmetry": {"finalLine": "Last spoken line of the script", "answersChallenge": "What earlier challenge/statement this line responds to", "deliveredBy": "Character name", "symmetryType": "thematic|personal|philosophical"},
     "misinterpretationRisks": ["Where analysts may misjudge conflict mechanics or resolution models in this script"]`;
     case 'DialogueAgent':
       return `"verdict": "One-sentence dialogue diagnosis",
