@@ -590,7 +590,26 @@ Before concluding, verify:
 - Did I confuse prominence with importance? (A character with fewer lines can be more important than one who dominates screen time.)
 - Did I evaluate the system or judge the style? (I should measure how powerfully the story executes within its own system, not whether I prefer this style.)
 - Did I correctly map resolution ownership? (Which character delivers which part of the resolution?)
+- Have I identified all load-bearing elements? (Characters, symbols, lines, events, images without which the story collapses.)
+- Have I mapped every major question to an answer? (If a narrative question exists without a tracked answer, re-evaluate.)
+- Have I tracked motif completion? (Introduction → transformation → payoff for each major motif.)
+- Have I mistaken absence of evidence for absence of meaning? (Elements dependent on editing, performance, or sound may not be fully evaluable from script form.)
 If uncertain, default to deeper interpretation over premature criticism.
+
+6.5. CRITICAL STRUCTURE DETECTION LAYER (MANDATORY)
+Before finalizing your output, you MUST perform these validation checks:
+
+LOAD-BEARING ELEMENTS: Identify all elements without which the story collapses — key characters, symbols, lines, events, images. For each, state what breaks if removed. Elements that resolve theme, complete arcs, or deliver final meaning are load-bearing and MUST be surfaced.
+
+QUESTION → ANSWER TRACKING: Identify what questions the story explicitly or implicitly asks, and where each is answered. If a question exists without a tracked answer, search again before concluding.
+
+INTENTIONAL DISCOMFORT vs ERROR: When something appears problematic, ask: "Is the audience meant to feel discomfort here?" If YES → classify as intentional device, NOT flaw. This extends the Critique Discipline (section 5).
+
+MEDIUM AWARENESS: Identify elements that depend on editing, performance, sound, or visual contrast. Do NOT over-evaluate these purely from script form. Flag as "performance-dependent" or "edit-dependent" rather than penalizing.
+
+RESOLUTION OWNERSHIP (ENFORCED): For each part of the resolution, determine who delivers it and whether it is replaceable. If multiple characters deliver distinct resolution parts, consider multi-protagonist or distributed classification.
+
+SEQUENCE DIFFERENTIATION: For sequences that appear similar, explicitly evaluate differences in emotional register, power dynamics, character POV, and narrative function. Do NOT group unless ALL four dimensions match.
 
 7. UNIVERSAL SCRIPT TYPES
 Support analysis for: Feature Film, Series/Episodic, Short Film, Theatre/Stage, Game/Interactive, Ad/Brand Film, Podcast/Audio Drama, Comic/Graphic Narrative, Documentary, Transmedia/Franchise IP.
