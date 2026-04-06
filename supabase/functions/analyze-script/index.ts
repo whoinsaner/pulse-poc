@@ -934,10 +934,13 @@ Identify all forms of conflict present and evaluate:
 Assess whether conflict meaningfully evolves or plateaus.
 
 TRADITION-AWARE EVALUATION:
+- UNIVERSAL SELF-CHECK: Before flagging any conflict issue, verify: "Is this breaking the script's own grammar, or my external expectations?"
 - Moral closure (a name spoken, a truth revealed) is a valid resolution model equal to procedural/institutional resolution.
 - Physical justice (retribution that mirrors the original crime) is complete resolution in many traditions — do not penalize for lacking courtroom/institutional closure.
+- Emotional resolution and open-ended ambiguity are also valid resolution models — evaluate within the script's chosen model.
 - Internal vs External balance varies by tradition: European arthouse favors internal; Kollywood mass cinema favors external with internal resonance. Neither is superior.
 - Conflict escalation through accumulating moral weight (not just physical danger) is sophisticated craft.
+- Evaluate stakes model alignment: personal (family, identity) → social (community, class) → existential (meaning, survival). Check if escalation aligns with the script's chosen stakes model.
 
 Score each parameter 0-10 with evidence from key confrontations.`
   },
