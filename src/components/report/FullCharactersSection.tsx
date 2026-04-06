@@ -6,6 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Users, MessageSquare, Film, ArrowRight, Star, TrendingUp, Award, Edit2, Plus, Trash2, X, Check } from 'lucide-react';
+import { getCharacterRole, getLeadCharacters, getSupportingCast } from '@/lib/characterRoles';
 import { CharacterEditDialog } from './CharacterEditDialog';
 import {
   AlertDialog,
@@ -22,9 +23,10 @@ interface FullCharactersSectionProps {
   characters: CharacterData[];
   scriptId?: string;
   onCharactersUpdate?: (characters: CharacterData[]) => void;
+  agentContent?: any;
 }
 
-export function FullCharactersSection({ characters, scriptId, onCharactersUpdate }: FullCharactersSectionProps) {
+export function FullCharactersSection({ characters, scriptId, onCharactersUpdate, agentContent }: FullCharactersSectionProps) {
   const { userRole } = useAuth();
   const { toast } = useToast();
   const [isEditMode, setIsEditMode] = useState(false);
@@ -39,11 +41,11 @@ export function FullCharactersSection({ characters, scriptId, onCharactersUpdate
 
   const canEdit = userRole === 'admin' || userRole === 'analyst';
 
-  // Sort by dialogue count to highlight main characters
-  const sortedCharacters = [...characters].sort((a, b) => b.dialogueCount - a.dialogueCount);
-  const mainCharacters = sortedCharacters.slice(0, 3);
-  const supportingCharacters = sortedCharacters.slice(3, 9);
-  const minorCharacters = sortedCharacters.slice(9);
+  // Group characters by AI-identified roles
+  const mainCharacters = getLeadCharacters(characters, agentContent);
+  const supportingCharacters = getSupportingCast(characters, agentContent).slice(0, 6);
+  const mainAndSupportingNames = new Set([...mainCharacters, ...supportingCharacters].map(c => c.name));
+  const minorCharacters = characters.filter(c => !mainAndSupportingNames.has(c.name));
 
   const totalDialogue = characters.reduce((sum, c) => sum + c.dialogueCount, 0);
   const avgSceneCount = characters.reduce((sum, c) => sum + c.sceneCount, 0) / characters.length;

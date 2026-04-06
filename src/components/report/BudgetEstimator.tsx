@@ -125,7 +125,7 @@ function estimateBudget(scenes: SceneData[], characters: CharacterData[], pageCo
   const vfxMajorScenes = sceneAnalysis.filter(s => s.vfxLevel === 'major').length;
   const vfxHeavyScenes = sceneAnalysis.filter(s => s.vfxLevel === 'heavy').length;
 
-  // Categorize characters
+  // Categorize characters by dialogue presence (reasonable proxy for budget without agent context)
   const sortedChars = [...characters].sort((a, b) => b.dialogueCount - a.dialogueCount);
   const leadChars = sortedChars.slice(0, 3);
   const supportingChars = sortedChars.slice(3, 10);

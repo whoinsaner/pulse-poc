@@ -37,7 +37,7 @@ export default function ReportCharacters() {
             Detailed analysis of each character in your script
           </p>
         </div>
-        <FullCharactersSection characters={reportData.characters || []} />
+        <FullCharactersSection characters={reportData.characters || []} agentContent={reportData.agentContent} />
       </section>
 
       {/* Character Arc Visualization */}

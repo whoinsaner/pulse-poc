@@ -10,6 +10,7 @@ import {
 } from '@/components/report/ui';
 import { InlineMaturity } from '@/components/report/ui/MaturityBadge';
 import { Users } from 'lucide-react';
+import { getCharacterRole } from '@/lib/characterRoles';
 
 
 interface ReportContextValue {
@@ -82,7 +83,7 @@ export default function CharacterDiagnosis() {
           <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Key Characters</h3>
           <div className="grid md:grid-cols-2 gap-4">
             {characters.slice(0, 4).map((character, index) => (
-              <CharacterCard key={character.name} character={character} role={index === 0 ? 'Protagonist' : index === 1 ? 'Supporting' : undefined} />
+              <CharacterCard key={character.name} character={character} role={getCharacterRole(character.name, reportData.agentContent)} />
             ))}
           </div>
         </div>

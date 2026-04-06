@@ -15,6 +15,7 @@ import {
 import { InlineMaturity } from '@/components/report/ui/MaturityBadge';
 import { User, Heart, Brain, Target, Zap } from 'lucide-react';
 import { extractScore } from '@/lib/scoreUtils';
+import { findProtagonistCharacters } from '@/lib/characterRoles';
 import { useStakeholderFiltering } from '@/hooks/useStakeholderFiltering';
 import { StakeholderFilterNotice } from '@/components/report/StakeholderFilterNotice';
 
@@ -33,13 +34,10 @@ export default function ProtagonistAnalysis() {
   const { reportData, currentScore, stakeholderLens } = context;
   const { isFiltered, filterParameters, getFilterStats } = useStakeholderFiltering({ stakeholderLens });
   
-  // Get protagonist from characters (highest dialogue count) as fallback
+  // Get protagonist from AI agent content, fallback to highest dialogue count
   const characters = reportData.characters || [];
-  const protagonist = characters.length > 0 
-    ? characters.reduce((prev, current) => 
-        (current.dialogueCount > prev.dialogueCount) ? current : prev
-      )
-    : null;
+  const protagonistChars = findProtagonistCharacters(characters, reportData.agentContent);
+  const protagonist = protagonistChars[0] || null;
 
   // Get agent content for protagonist — support both array (protagonistProfiles) and single (protagonistProfile)
   const agentContent = reportData.agentContent?.CharacterAgent;
