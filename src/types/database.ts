@@ -243,6 +243,8 @@ export interface AgentSectionContent {
   loadBearingElements?: Array<{ element: string; type: 'character' | 'symbol' | 'line' | 'event' | 'image'; removalImpact: string }>;
   narrativeQuestions?: Array<{ question: string; answerLocation: string; answered: boolean }>;
   motifLifecycle?: Array<{ motif: string; introduction: string; transformation: string; payoff: string }>;
+  // Closing Symmetry (ConflictAgent)
+  closingSymmetry?: { finalLine: string; answersChallenge: string; deliveredBy: string; symmetryType: 'thematic' | 'personal' | 'philosophical' };
 }
 
 export interface SceneAnalysisData {

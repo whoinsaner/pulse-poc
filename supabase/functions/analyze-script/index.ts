@@ -902,6 +902,8 @@ TRADITION-AWARE EVALUATION:
 - Evaluate resolution against the script's own tradition — moral closure (a name spoken, a truth revealed, justice delivered through thematic symmetry) is complete resolution in many traditions. Do NOT require procedural/institutional closure.
 - Physical justice (retribution that mirrors the original crime) is a valid and complete resolution model.
 - Emotional resolution (full delivery of the intended emotional journey) and open-ended ambiguity are also valid resolution models — evaluate within the script's chosen model.
+- Naming resolution: The act of speaking a name, identifying a person, or declaring truth publicly IS a valid and complete resolution in traditions where institutional justice is absent or irrelevant. Do not require arrests, warrants, or visible institutional consequences when the story's resolution grammar is moral or symbolic.
+- Object/symbol return: A symbol completing its journey (returning to origin, passing through hands, arriving at its final destination) can deliver thematic closure equal to any plot-level resolution.
 - Only flag sequence redundancy when two sequences serve the SAME emotional + structural function. Mechanically similar plot functions (chase, fight, escape) that operate in different emotional registers are distinct narrative units.
 - If a director's spec format is detected, do NOT apply page-per-minute pacing calculations.
 - When evaluating repeated action/pursuit sequences, assess whether they serve different emotional registers, dramatic purposes, and character perspectives. Mechanically similar plot functions (chase, fight, escape) can be narratively distinct if they operate in different emotional registers (horror vs. tenderness vs. coming-of-age).
@@ -979,6 +981,14 @@ For each major character (3+ scenes), determine:
 - What outcome does this character uniquely deliver?
 - What part of the story breaks if they are removed?
 
+STEP 1.5 — SILENT/ACTION PROTAGONIST CHECK (MANDATORY):
+For each character with low dialogue (<60 lines) but 5+ scene appearances:
+- Does this character execute actions that deliver justice, resolution, or irreversible consequences?
+- Does this character operate in a parallel narrative track to the primary protagonist?
+- Does this character's removal collapse a distinct dimension of the story's resolution?
+If ANY answer is YES → this character MUST proceed to Step 3 classification as potential protagonist.
+Do NOT dismiss characters based on dialogue volume. A character who acts in silence and darkness can carry an entire resolution axis.
+
 STEP 2 — MAP THEMATIC ROLE:
 For each major character, determine:
 - Thematic role: belief, counter-belief, transformation, witness
@@ -1054,6 +1064,8 @@ For this script, determine:
 - Is the resolution complete within the story's own model?
 - Is resolution distributed across multiple characters? If so, what does each character resolve?
 Evaluate resolution completeness against the story's own rules, not external expectations.
+
+CLOSING SYMMETRY CHECK: Identify the last spoken line of the script. Determine if it answers an earlier challenge, question, or statement made by another character. If so, map the symmetry: who posed the challenge, who answers it, and what type of closure it provides (thematic, personal, philosophical). A child answering a villain's worldview in the final line is dramatically complete — do not require additional institutional resolution.
 
 Score each parameter 0-10 with evidence from key confrontations.`
   },
@@ -4104,6 +4116,7 @@ For "antagonistProfile", include "worldview" and "philosophyType". Not all antag
     "keyQuotes": [{"quote": "Key confrontation line", "context": "Stakes it reveals"}],
     "deepDive": "2-3 paragraph narrative on stakes escalation, conflict diversity, tension curve, and cost of failure",
     "recommendations": [{"title": "Action item", "description": "Detail", "priority": "critical|high|medium", "effort": "easy|moderate|hard"}],
+    "closingSymmetry": {"finalLine": "Last spoken line of the script", "answersChallenge": "What earlier challenge/statement this line responds to", "deliveredBy": "Character name", "symmetryType": "thematic|personal|philosophical"},
     "misinterpretationRisks": ["Where analysts may misjudge conflict mechanics or resolution models in this script"]`;
     case 'DialogueAgent':
       return `"verdict": "One-sentence dialogue diagnosis",
@@ -4274,7 +4287,8 @@ ${agentName === 'CharacterAgent' ? `CHARACTERAGENT NON-NEGOTIABLE OUTPUT RULES:
 2. Include "resolutionRole" and "removalImpact" for each protagonist profile.
 3. Include "protagonistSystemModel" with type (single/dual/multi/distributed) and rationale.
 4. Do not collapse dual/multi protagonists into supporting cast.
-5. If you also include "protagonistProfile" for backward compatibility, it must match the first item in "protagonistProfiles".` : ''}
+5. If you also include "protagonistProfile" for backward compatibility, it must match the first item in "protagonistProfiles".
+6. SILENT PROTAGONIST CHECK: Before finalizing protagonistProfiles, verify that no character with 5+ scenes and low dialogue has been classified as "supporting" without explicitly confirming their removal does NOT break the story's resolution. If uncertain, default to protagonist-tier and explain in misinterpretationRisks.` : ''}
 
 CRITICAL: You MUST respond with ONLY the JSON object. No text before or after. No markdown code blocks. Start your response with { and end with }.`;
 
