@@ -979,6 +979,14 @@ For each major character (3+ scenes), determine:
 - What outcome does this character uniquely deliver?
 - What part of the story breaks if they are removed?
 
+STEP 1.5 — SILENT/ACTION PROTAGONIST CHECK (MANDATORY):
+For each character with low dialogue (<60 lines) but 5+ scene appearances:
+- Does this character execute actions that deliver justice, resolution, or irreversible consequences?
+- Does this character operate in a parallel narrative track to the primary protagonist?
+- Does this character's removal collapse a distinct dimension of the story's resolution?
+If ANY answer is YES → this character MUST proceed to Step 3 classification as potential protagonist.
+Do NOT dismiss characters based on dialogue volume. A character who acts in silence and darkness can carry an entire resolution axis.
+
 STEP 2 — MAP THEMATIC ROLE:
 For each major character, determine:
 - Thematic role: belief, counter-belief, transformation, witness
