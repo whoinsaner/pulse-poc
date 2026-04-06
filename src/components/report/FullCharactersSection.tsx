@@ -26,7 +26,7 @@ interface FullCharactersSectionProps {
   agentContent?: any;
 }
 
-export function FullCharactersSection({ characters, scriptId, onCharactersUpdate }: FullCharactersSectionProps) {
+export function FullCharactersSection({ characters, scriptId, onCharactersUpdate, agentContent }: FullCharactersSectionProps) {
   const { userRole } = useAuth();
   const { toast } = useToast();
   const [isEditMode, setIsEditMode] = useState(false);
