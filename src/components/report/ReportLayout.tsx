@@ -98,17 +98,23 @@ export default function ReportLayout() {
 
       setLoading(true);
 
+      // Use a share-aware client when a share token is present so the
+      // x-share-token header reaches the SECURITY DEFINER functions in RLS
+      const client = hasShareToken
+        ? createShareAwareClient(shareToken!)
+        : supabase;
+
       let reportResult;
 
       if (hasShareToken) {
         // When a share token is present, don't filter by org — let RLS validate via token
-        reportResult = await supabase
+        reportResult = await client
           .from('reports')
           .select('*')
           .eq('analysis_run_id', runId)
           .single();
       } else {
-        let reportQuery = supabase
+        let reportQuery = client
           .from('reports')
           .select('*')
           .eq('analysis_run_id', runId);
@@ -120,7 +126,7 @@ export default function ReportLayout() {
         reportResult = await reportQuery.single();
       }
 
-      const analysisResult = await supabase
+      const analysisResult = await client
         .from('analysis_runs')
         .select('agent_progress, status, stakeholder_lens')
         .eq('id', runId)
