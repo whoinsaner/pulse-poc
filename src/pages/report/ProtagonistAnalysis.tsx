@@ -221,6 +221,18 @@ export default function ProtagonistAnalysis() {
                     <p className="text-sm leading-relaxed">{profile.arc}</p>
                   </div>
                 )}
+                {profile.resolutionRole && (
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">Resolution Role</p>
+                    <p className="text-sm leading-relaxed">{profile.resolutionRole}</p>
+                  </div>
+                )}
+                {profile.removalImpact && (
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">Removal Impact</p>
+                    <p className="text-sm leading-relaxed italic text-destructive/80">{profile.removalImpact}</p>
+                  </div>
+                )}
                 {profile.strengths && profile.strengths.length > 0 && (
                   <div>
                     <p className="text-sm text-muted-foreground mb-1">Strengths</p>
