@@ -997,6 +997,14 @@ TRADITION-AWARE EVALUATION:
 - Conflict escalation through accumulating moral weight (not just physical danger) is sophisticated craft.
 - Evaluate stakes model alignment: personal (family, identity) → social (community, class) → existential (meaning, survival). Check if escalation aligns with the script's chosen stakes model.
 
+RESOLUTION SYSTEM ANALYSIS (MANDATORY):
+For this script, determine:
+- What kind of resolution is being designed: Physical / Emotional / Thematic / Symbolic / Ambiguous
+- Map resolution ownership: Which character delivers which part of the resolution?
+- Is the resolution complete within the story's own model?
+- Is resolution distributed across multiple characters? If so, what does each character resolve?
+Evaluate resolution completeness against the story's own rules, not external expectations.
+
 Score each parameter 0-10 with evidence from key confrontations.`
   },
 
