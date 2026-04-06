@@ -1,61 +1,49 @@
 
 
-# Fix Character Role Inconsistencies Across Report
+# Enhance Protagonist Identification with Narrative-Function Validation
 
-## Problem
+## What This Does
 
-Six different pages and components use six different heuristics to identify character roles, while the AI pipeline already provides authoritative data via `agentContent.CharacterAgent.protagonistProfiles[]` and `antagonistProfile`. This causes characters to appear in wrong roles across pages.
+Upgrades the CharacterAgent's protagonist identification from a basic "who drives an arc" check to a rigorous **narrative-function validation** system. The AI will apply a removal test ("does the story still resolve without this character?"), explicitly classify the protagonist system model (Single/Dual/Multi), and output each protagonist's resolution role. This ensures characters like Palani are not misclassified as supporting cast when they deliver irreplaceable resolution outcomes.
 
-## All Inconsistencies Found
+## Changes
 
-| File | Method Used | Problem |
-|------|-------------|---------|
-| **CharacterDiagnosis.tsx** (line 85) | Array index: `index === 0` → Protagonist | Depends on arbitrary array order |
-| **ProtagonistAnalysis.tsx** (line 38-41) | `reduce` by highest `dialogueCount` as fallback | Dialogue count ≠ protagonist role |
-| **AntagonistAnalysis.tsx** (line 40-41) | 2nd highest `dialogueCount` → antagonist | Completely wrong — 2nd most talkative is not necessarily the antagonist |
-| **CharacterPsychology.tsx** (line 28-31) | `reduce` by highest `dialogueCount` | Same dialogue-count fallback issue |
-| **SupportingCast.tsx** (line 34-35) | `slice(2, 12)` after sort by dialogue | Skips top 2 by dialogue instead of filtering out actual protagonists/antagonists |
-| **FullCharactersSection.tsx** (line 43-46) | `slice(0, 3)` = "main", `slice(3, 9)` = "supporting" | Arbitrary grouping by dialogue count |
-| **CharactersSection.tsx** (line 15-16) | `slice(0, 6)` = "main" | Same arbitrary grouping |
-| **BudgetEstimator.tsx** (line 129-131) | `slice(0, 3)` = leads, `slice(3, 10)` = supporting | Affects budget calculations |
-| **budgetEngine.ts** (line 155-157) | Same `slice(0, 3)` / `slice(3, 10)` | Same issue in budget logic |
+### 1. Update CharacterAgent prompt and schema (`supabase/functions/analyze-script/index.ts`)
 
-## Solution
+**Prompt enhancement** — Add the advanced protagonist identification instructions to the CharacterAgent's system prompt (around line 3925) and the `enforceAgentPromptRequirements` fallback:
 
-### 1. Create shared utility: `src/lib/characterRoles.ts`
+- Add the **removal test** instruction: "For each major character, ask: if removed, does the story still resolve fully? If NO, protagonist-tier."
+- Add classification criteria: resolution-driven identification over screen time / dialogue volume / narrative focus alone
+- Require explicit **Protagonist System Model** output
 
-Single source of truth that reads from `agentContent.CharacterAgent`:
+**Schema expansion** — Extend the `protagonistProfiles` array schema and TypeScript interface (line 428-429) to include new fields:
+- `resolutionRole`: string — What irreplaceable resolution outcome this character delivers
+- `removalImpact`: string — What collapses if this character is removed
 
-- `getProtagonistNames(agentContent)` → extracts names from `protagonistProfiles[]`
-- `getAntagonistName(agentContent)` → extracts name from `antagonistProfile`
-- `getCharacterRole(name, agentContent)` → returns `'Protagonist' | 'Antagonist' | 'Supporting'`
-- `getSupportingCast(characters, agentContent)` → filters out identified protagonists and antagonists, returns the rest sorted by dialogue count
-- `getLeadCharacters(characters, agentContent)` → returns protagonist + antagonist characters for budget/display purposes
+Add a new top-level field to `SectionContent`:
+- `protagonistSystemModel`: `{ type: 'single' | 'dual' | 'multi', rationale: string }`
 
-All name matching is case-insensitive and trimmed.
+**Section content template** (line 3920) — Add the new fields to the JSON schema example so the AI knows to output them.
 
-### 2. Update report pages (6 files)
+**NON-NEGOTIABLE rules** (line 4094) — Strengthen the existing CharacterAgent override to include: "Apply the removal test to every character with 3+ scenes. If removal breaks the story's resolution, classify as protagonist regardless of dialogue count or screen time."
 
-- **CharacterDiagnosis.tsx**: Replace `index === 0 ? 'Protagonist'` with `getCharacterRole(character.name, reportData.agentContent)`
-- **ProtagonistAnalysis.tsx**: Keep `protagonistProfiles` from agentContent (already correct for AI profiles). Fix the fallback `protagonist` variable to use `getProtagonistNames` instead of dialogue count
-- **AntagonistAnalysis.tsx**: Replace `sortedByPresence[1]` fallback with lookup by `getAntagonistName`, falling back to the character whose name matches `antagonistProfile.name`
-- **CharacterPsychology.tsx**: Replace dialogue-count `reduce` with `getProtagonistNames` lookup
-- **SupportingCast.tsx**: Replace `slice(2, 12)` with `getSupportingCast(characters, reportData.agentContent)`
-- **FullCharactersSection.tsx**: Use `getCharacterRole` to group characters into lead/supporting/minor instead of arbitrary slicing
+### 2. Update `enforceAgentPromptRequirements` (line 3180-3197)
 
-### 3. Update budget components (2 files)
+Add a check for the new instructions (e.g., `'removal test'`) to the `needsUpgrade` condition, so DB-stored prompts that lack the new logic get overridden with the updated hardcoded prompt.
 
-- **BudgetEstimator.tsx** and **budgetEngine.ts**: Use `getLeadCharacters` for lead identification. This is lower priority since dialogue count is a reasonable proxy for budget (more lines = more screen time = higher casting cost), but should still be consistent.
+### 3. Update Protagonist Analysis UI (`src/pages/report/ProtagonistAnalysis.tsx`)
 
-### 4. Leave unchanged
+- Display `resolutionRole` and `removalImpact` for each protagonist profile card
+- Add a **Protagonist System Model** badge/card at the top showing Single/Dual/Multi classification with rationale
 
-- **DialogueAnalysis.tsx**, **CharacterArcVisualization.tsx**, **DialogueSubtext.tsx**: These sort by dialogue count for display ranking (top talkers), not role assignment — this is correct behavior.
-- **CharactersSection.tsx**: Legacy component, appears unused in current routes.
+### 4. Update characterRoles utility (`src/lib/characterRoles.ts`)
+
+No structural changes needed — the utility already reads from `protagonistProfiles[]`. The fix is upstream: ensuring the AI correctly populates that array with all true protagonists.
 
 ## Technical Details
 
-- New file: `src/lib/characterRoles.ts` (~50 lines)
-- Modified: 6 report page files + 2 budget files
-- No database or pipeline changes needed — all data already exists in `agentContent`
-- Backward compatible: Falls back gracefully when `protagonistProfiles` or `antagonistProfile` is missing (uses dialogue count as last resort)
+- **Files modified**: `supabase/functions/analyze-script/index.ts` (prompt + schema), `src/pages/report/ProtagonistAnalysis.tsx` (UI)
+- **No database migration needed** — new fields are stored within the existing `sectionContent` JSONB
+- **Backward compatible** — new fields are optional; existing reports render without them
+- **Cost impact**: Zero additional API calls. The prompt additions are ~200 tokens, negligible within the existing CharacterAgent call
 
