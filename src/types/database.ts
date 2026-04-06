@@ -230,6 +230,12 @@ export interface AgentSectionContent {
   resolutionModel?: string;
   audienceGrammar?: string;
   structuralConventions?: string[];
+  // Universal Narrative Grammar fields (CinemaTraditionAgent v2)
+  narrativeGrammar?: string;
+  grammarRules?: string;
+  intendedExperience?: string;
+  realismSpectrum?: string;
+  stakesModel?: string;
 }
 
 export interface SceneAnalysisData {

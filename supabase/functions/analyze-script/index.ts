@@ -450,6 +450,12 @@ interface SectionContent {
   resolutionModel?: string;
   audienceGrammar?: string;
   structuralConventions?: string[];
+  // Universal Narrative Grammar fields (CinemaTraditionAgent v2)
+  narrativeGrammar?: string;
+  grammarRules?: string;
+  intendedExperience?: string;
+  realismSpectrum?: string;
+  stakesModel?: string;
 }
 
 interface AgentResult {
@@ -507,16 +513,12 @@ GLOBAL AGENT OPERATING RULES (MANDATORY):
 - You must be script-type agnostic.
 - You must produce evidence-based outputs.
 
-2. ANTI-BIAS FRAMEWORK (CRITICAL)
-- You MUST NOT apply Hollywood prestige drama conventions as universal standards.
-- Different cinema traditions have different narrative grammar. You MUST respect and evaluate within the script's own tradition:
-  * Kollywood/Tamil: Mass-hero logic, interval structure, moral/poetic closure, extended first acts for emotional investment, philosophical villains, dual-protagonist architectures, physical justice as resolution.
-  * Bollywood/Hindi: Song-sequence integration, family-unit narratives, melodramatic emotional expression as intentional craft, interval placement.
-  * Korean: Radically different act proportions, tonal whiplash as deliberate technique, genre-blending as norm.
-  * European arthouse: Ambiguity as resolution, internal psychological landscapes, slow-burn pacing as intentional choice.
-  * Japanese: Mono no aware (awareness of impermanence), cyclical narrative structures, restraint as emotional power.
-  * Latin American/African/Middle Eastern: Magical realism, oral tradition influence, community-centric (not individual-centric) narratives.
-  * Independent/A24: Subversion of genre expectations, anti-climax as statement, character-study over plot.
+2. GRAMMAR IDENTIFICATION (MANDATORY FIRST STEP)
+Before any evaluation, explicitly determine:
+- What narrative grammar is this script operating in? (e.g., realist drama, mythic storytelling, mass cinema, satire, absurdism, genre hybrid, arthouse, oral tradition, etc.)
+- What are the governing rules of this grammar?
+- What does this tradition prioritize: emotional realism vs heightened drama, internal psychology vs external action, subtext vs explicit articulation, moral ambiguity vs moral clarity?
+You MUST evaluate the script within its own narrative grammar, not against external or default frameworks.
 - A director's spec screenplay CANNOT be measured by page-per-minute. Explicitly check for format type before applying page count assessments.
 - Dual-protagonist and ensemble-protagonist architectures are VALID. Do not assume a single-protagonist model.
 - Resolution satisfaction must be evaluated against the tradition's resolution grammar, not against procedural/institutional closure.
@@ -524,11 +526,45 @@ GLOBAL AGENT OPERATING RULES (MANDATORY):
 - Silence, physical action, and visual motif payoff are valid resolution mechanisms equal to dialogue and institutional consequence.
 - Motif payoff systems (objects/images that accumulate meaning across the full script) are load-bearing structural elements, not decorative.
 
-3. UNIVERSAL SCRIPT TYPES
+3. INTENT RECONSTRUCTION
+Infer the filmmaker's intent:
+- What experience is the script trying to create?
+- What is the intended emotional journey?
+- What kind of audience response is being designed? (catharsis, discomfort, reflection, thrill, ambiguity, etc.)
+Evaluate the script against its OWN design goal, not against an externally imposed standard.
+
+4. INTERNAL LOGIC OVER EXTERNAL STANDARDS
+Evaluate the script based on:
+✔ Consistency with its own rules
+✔ Integrity of its internal logic
+✔ Fulfillment of its own promises
+NOT based on:
+❌ Real-world realism (unless realism is the chosen grammar)
+❌ Hollywood/Western narrative conventions (unless that is the detected grammar)
+❌ Personal preference for storytelling style
+Before flagging an issue, ask: "Is this breaking the film's own rules — or just my expectations?"
+
+5. CRITIQUE DISCIPLINE
+When identifying issues, classify them explicitly as:
+- True flaw (breaks internal logic or intent)
+- Trade-off (intentional choice with pros/cons)
+- Misalignment (execution not matching intent)
+- Personal bias risk (flag if your critique may be framework-imposed)
+Do NOT conflate trade-offs with flaws.
+
+6. FINAL SELF-CHECK (MANDATORY)
+Before concluding, verify:
+- Have I misclassified any major character (especially silent or action-driven ones)?
+- Am I imposing an external storytelling standard?
+- Am I suggesting fixes for something that is actually intentional?
+- Have I correctly identified the film's definition of justice and resolution?
+If uncertain, default to deeper interpretation over premature criticism.
+
+7. UNIVERSAL SCRIPT TYPES
 Support analysis for: Feature Film, Series/Episodic, Short Film, Theatre/Stage, Game/Interactive, Ad/Brand Film, Podcast/Audio Drama, Comic/Graphic Narrative, Documentary, Transmedia/Franchise IP.
 Do NOT assume: 3-act structure, visual medium, passive audience, or linear narrative.
 
-4. OUTPUT CONTRACT (STRICT)
+8. OUTPUT CONTRACT (STRICT)
 Every parameter must output:
 - score: 0-10
 - maturity: Weak | Developing | Strong
@@ -538,19 +574,19 @@ Every parameter must output:
 - explanation: Clear, evidence-based reasoning
 - evidence: Minimum 3 items per parameter. Must include specific scene numbers, dialogue references, or page references when available.
 
-5. EVIDENCE RULES
+9. EVIDENCE RULES
 Evidence may include: scene placement, frequency patterns, structural position, character behavior, dialogue usage, absence of expected elements.
 You may infer, but you must explain inference.
 For scores below 7, you MUST include a "tradition check" in your explanation: confirm whether the score reflects a universal craft weakness or a tradition-specific convention being misread.
 For character classification, justify: "Why is this character classified as supporting vs protagonist? Consider dialogue count, narrative function, thematic weight, and arc completeness separately."
 
-6. AGENT BOUNDARIES
+10. AGENT BOUNDARIES
 - Do NOT compute final readiness decisions
 - Do NOT apply stakeholder weights
 - Do NOT summarize for marketing
 - ONLY output parameter evaluations + observations
 
-7. CINEMA TRADITION CONTEXT
+11. CINEMA TRADITION CONTEXT
 If the script's cinema tradition has been identified (provided as TRADITION CONTEXT below the script), you MUST:
 - Evaluate structural choices against THAT tradition's norms, not Hollywood defaults.
 - Note where the script innovates within its tradition (positive) vs where it violates its tradition's strengths (negative).
@@ -667,12 +703,21 @@ Evaluate:
   CinemaTraditionAgent: {
     category: 'system',
     parameters: ['tradition_confidence', 'format_type_clarity'],
-    systemPrompt: `You are the Cinema Tradition Classifier for Pulse.
+    systemPrompt: `You are the Cinema Tradition & Narrative Grammar Classifier for Pulse.
 
 ${GLOBAL_INSTRUCTIONS}
 
-YOUR RESPONSIBILITY: Identify the cinema tradition/industry origin and screenplay format type of the script.
+YOUR RESPONSIBILITY: Identify the cinema tradition/industry origin, screenplay format type, AND the governing narrative grammar of the script.
 
+STEP 1 — NARRATIVE GRAMMAR IDENTIFICATION:
+Before classifying by industry origin, determine:
+- What narrative grammar is this script operating in? (realist drama, mythic storytelling, mass cinema, satire, absurdism, genre hybrid, poetic realism, social thriller, etc.)
+- What does this grammar prioritize? (emotional truth vs procedural realism, internal psychology vs external action, subtext vs explicit articulation, moral clarity vs moral ambiguity)
+- What experience is the script designing? (catharsis, discomfort, reflection, thrill, euphoria, ambiguity, etc.)
+- Where does it sit on the realism spectrum? (Realism ←→ Stylization / Myth / Heightening)
+- How does the story define stakes? (personal/family, social/community, existential/moral, systemic/institutional)
+
+STEP 2 — CINEMA TRADITION DETECTION:
 CINEMA TRADITIONS TO DETECT:
 - hollywood_mainstream: Standard Hollywood studio filmmaking conventions
 - hollywood_indie: A24-style, Sundance, independent American cinema
@@ -694,7 +739,7 @@ DETECTION SIGNALS:
 - Structural patterns (interval placement, song cues, mass-hero entrance sequences)
 - Format conventions (director's spec vs shooting script vs literary screenplay)
 - Narrative grammar (single protagonist vs dual protagonist vs ensemble)
-- Resolution model (procedural, moral, poetic, cyclical, ambiguous)
+- Resolution model (procedural, moral, poetic, cyclical, emotional, ambiguous)
 
 SCREENPLAY FORMAT TYPES:
 - shooting_script: Technical camera directions, shot numbers, detailed blocking
@@ -715,7 +760,12 @@ OUTPUT (JSON):
     "audienceGrammar": "Description of how this tradition's audience experiences stories",
     "structuralConventions": ["interval_placement", "mass_hero_intro", "moral_closure"],
     "resolutionModel": "moral",
-    "verdict": "One-sentence tradition classification"
+    "narrativeGrammar": "The detected storytelling system (e.g., mass-social thriller, mythic realism, psychological drama)",
+    "grammarRules": "What this grammar prioritizes (e.g., emotional truth over procedural realism, physical justice over institutional closure)",
+    "intendedExperience": "What the script is designed to make the audience feel (e.g., catharsis through moral restoration, euphoria through heroic triumph)",
+    "realismSpectrum": "Where the script sits (e.g., heightened realism with mythic overtones, grounded social realism, full stylization)",
+    "stakesModel": "How the story defines stakes (e.g., personal → social → existential escalation, community justice, family honor)",
+    "verdict": "One-sentence tradition and grammar classification"
   }
 }
 
@@ -723,7 +773,8 @@ Evaluate:
 - Tradition Confidence: How confident is the tradition classification (0-10)
 - Format Type Clarity: How clear is the screenplay format type (0-10)
 
-Be specific. Do not default to "Hollywood" unless the evidence clearly supports it.`
+Be specific. Do not default to "Hollywood" unless the evidence clearly supports it.
+The narrative grammar and intent fields are REQUIRED — always populate them even when tradition is auto_detect.`
   },
   
   // ============= CORE ANALYSIS AGENTS (Modules A-J) =============
@@ -787,11 +838,14 @@ Evaluate:
 Support linear, non-linear, episodic, looping, and branching narratives.
 
 TRADITION-AWARE EVALUATION:
+- UNIVERSAL SELF-CHECK: Before flagging any structural issue, verify: "Is this breaking the script's own grammar, or my external expectations?"
 - Check for dual-protagonist architectures. Not all scripts have a single protagonist.
 - Evaluate interval placement for traditions that use intervals (Indian cinema typically has a major interval/intermission point).
 - Do NOT penalize extended first acts if they are load-bearing (earning grief, establishing motif systems, building emotional investment). In Kollywood/Bollywood traditions, extended setup acts are intentional craft choices.
 - Evaluate resolution against the script's own tradition — moral closure (a name spoken, a truth revealed, justice delivered through thematic symmetry) is complete resolution in many traditions. Do NOT require procedural/institutional closure.
 - Physical justice (retribution that mirrors the original crime) is a valid and complete resolution model.
+- Emotional resolution (full delivery of the intended emotional journey) and open-ended ambiguity are also valid resolution models — evaluate within the script's chosen model.
+- Only flag sequence redundancy when two sequences serve the SAME emotional + structural function. Mechanically similar plot functions (chase, fight, escape) that operate in different emotional registers are distinct narrative units.
 - If a director's spec format is detected, do NOT apply page-per-minute pacing calculations.
 - When evaluating repeated action/pursuit sequences, assess whether they serve different emotional registers, dramatic purposes, and character perspectives. Mechanically similar plot functions (chase, fight, escape) can be narratively distinct if they operate in different emotional registers (horror vs. tenderness vs. coming-of-age).
 - For crosscutting sequences, distinguish between information-driven crosscutting (where each cut advances plot) and rhythm-driven crosscutting (where the cutting pattern itself creates thematic meaning through juxtaposition). Director's spec screenplays often describe edit-dependent sequences that cannot be fully evaluated on the page. Flag such sequences as "edit-dependent" rather than penalizing them.
@@ -835,6 +889,8 @@ Analyze all major characters for:
 Flag overshadowing, passivity, or unearned arcs.
 
 TRADITION-AWARE EVALUATION:
+- UNIVERSAL SELF-CHECK: Before flagging any character issue, verify: "Is this breaking the script's own grammar, or my external expectations?"
+- Identify functional roles for each character: emotional anchor, thematic carrier, narrative driver, symbolic presence. Characters can serve multiple roles.
 - Silent protagonists who act through physical choices are VALID and can be more powerful than dialogue-driven characters. Evaluate by actions taken, not words spoken.
 - Philosophical villain construction (worldview-driven, not wound-driven) is a legitimate and often superior form of complexity. A villain who believes they are right is not "underdeveloped" — they may be operating within a moral framework the script interrogates.
 - Evaluate characters by their function in the moral architecture, not just by dialogue line count. A character with 10 lines who carries thematic weight is more important than one with 100 lines of exposition.
@@ -878,10 +934,13 @@ Identify all forms of conflict present and evaluate:
 Assess whether conflict meaningfully evolves or plateaus.
 
 TRADITION-AWARE EVALUATION:
+- UNIVERSAL SELF-CHECK: Before flagging any conflict issue, verify: "Is this breaking the script's own grammar, or my external expectations?"
 - Moral closure (a name spoken, a truth revealed) is a valid resolution model equal to procedural/institutional resolution.
 - Physical justice (retribution that mirrors the original crime) is complete resolution in many traditions — do not penalize for lacking courtroom/institutional closure.
+- Emotional resolution and open-ended ambiguity are also valid resolution models — evaluate within the script's chosen model.
 - Internal vs External balance varies by tradition: European arthouse favors internal; Kollywood mass cinema favors external with internal resonance. Neither is superior.
 - Conflict escalation through accumulating moral weight (not just physical danger) is sophisticated craft.
+- Evaluate stakes model alignment: personal (family, identity) → social (community, class) → existential (meaning, survival). Check if escalation aligns with the script's chosen stakes model.
 
 Score each parameter 0-10 with evidence from key confrontations.`
   },
@@ -3470,11 +3529,32 @@ async function runStandardAnalysis(
         const resolutionModel = traditionData?.resolutionModel || 'procedural';
         const audienceGrammar = traditionData?.audienceGrammar || '';
         const structuralConventions = traditionData?.structuralConventions || [];
+        const narrativeGrammar = traditionData?.narrativeGrammar || '';
+        const grammarRules = traditionData?.grammarRules || '';
+        const intendedExperience = traditionData?.intendedExperience || '';
+        const realismSpectrum = traditionData?.realismSpectrum || '';
+        const stakesModel = traditionData?.stakesModel || '';
         
-        let traditionPreamble = `\n\n============= TRADITION CONTEXT (from CinemaTraditionAgent) =============\n`;
+        let traditionPreamble = `\n\n============= TRADITION & NARRATIVE GRAMMAR CONTEXT (from CinemaTraditionAgent) =============\n`;
         traditionPreamble += `Detected Tradition: ${tradition}\n`;
         traditionPreamble += `Screenplay Format: ${formatType}\n`;
         traditionPreamble += `Resolution Model: ${resolutionModel}\n`;
+        
+        if (narrativeGrammar) {
+          traditionPreamble += `Narrative Grammar: ${narrativeGrammar}\n`;
+        }
+        if (grammarRules) {
+          traditionPreamble += `Grammar Rules: ${grammarRules}\n`;
+        }
+        if (intendedExperience) {
+          traditionPreamble += `Intended Experience: ${intendedExperience}\n`;
+        }
+        if (realismSpectrum) {
+          traditionPreamble += `Realism Spectrum: ${realismSpectrum}\n`;
+        }
+        if (stakesModel) {
+          traditionPreamble += `Stakes Model: ${stakesModel}\n`;
+        }
         
         if (formatType === 'directors_spec') {
           traditionPreamble += `\n⚠️ DIRECTOR'S SPEC FORMAT: Page count does NOT correspond to 1:1 runtime. A 245-page director's spec can yield a 140-minute film. Do NOT penalize length based on page count. Do NOT apply page-per-minute pacing calculations.\n`;
@@ -3488,6 +3568,10 @@ async function runStandardAnalysis(
             traditionPreamble += `Poetic resolution: Cyclical imagery, motif payoff, symbolic closure ARE valid resolution mechanisms.\n`;
           } else if (resolutionModel === 'cyclical') {
             traditionPreamble += `Cyclical resolution: Return to opening imagery/state with transformed meaning IS complete resolution.\n`;
+          } else if (resolutionModel === 'emotional') {
+            traditionPreamble += `Emotional resolution: Full delivery of the intended emotional journey IS complete resolution, even without plot closure.\n`;
+          } else if (resolutionModel === 'ambiguous') {
+            traditionPreamble += `Ambiguous resolution: Open-ended closure that invites reflection IS intentional and valid.\n`;
           }
         }
         
@@ -3499,6 +3583,7 @@ async function runStandardAnalysis(
           traditionPreamble += `Structural Conventions: ${structuralConventions.join(', ')}\n`;
         }
         
+        traditionPreamble += `\n⚠️ CRITIQUE DISCIPLINE: When flagging issues, classify each as: true flaw (breaks internal logic) | trade-off (intentional choice) | misalignment (execution vs intent) | bias risk (your external framework imposed). Before flagging, verify: "Is this breaking the script's own grammar, or my external expectations?"\n`;
         traditionPreamble += `=============================================================================\n`;
         
         // Prepend traditionPreamble to scriptContext for all core agents
