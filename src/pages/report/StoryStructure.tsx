@@ -49,13 +49,11 @@ export default function StoryStructure() {
     return Math.round(total / structureParameters.length);
   }, [structureParameters]);
 
-  if (!context) {
-    return <div className="text-center py-12 text-muted-foreground">Loading...</div>;
-  }
-
-  const { reportData } = context;
-  const agentContent = reportData.agentContent?.StructureAgent;
-  const loadBearingElements: Array<{ element: string; type: 'character' | 'symbol' | 'line' | 'event' | 'image'; removalImpact: string }> = agentContent?.loadBearingElements || [];
+  const agentContent = context?.reportData?.agentContent?.StructureAgent;
+  const loadBearingElements: Array<{ element: string; type: 'character' | 'symbol' | 'line' | 'event' | 'image'; removalImpact: string }> = useMemo(
+    () => agentContent?.loadBearingElements || [],
+    [agentContent]
+  );
   const misinterpretationRisks: string[] = agentContent?.misinterpretationRisks || [];
 
   // Group load-bearing elements by type
@@ -67,6 +65,12 @@ export default function StoryStructure() {
     }
     return groups;
   }, [loadBearingElements]);
+
+  if (!context) {
+    return <div className="text-center py-12 text-muted-foreground">Loading...</div>;
+  }
+
+  const { reportData } = context;
 
   return (
     <div className="space-y-8">
