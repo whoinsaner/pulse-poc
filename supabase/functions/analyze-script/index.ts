@@ -458,6 +458,10 @@ interface SectionContent {
   intendedExperience?: string;
   realismSpectrum?: string;
   stakesModel?: string;
+  // Critical Structure Detection Layer fields
+  loadBearingElements?: Array<{ element: string; type: 'character' | 'symbol' | 'line' | 'event' | 'image'; removalImpact: string }>;
+  narrativeQuestions?: Array<{ question: string; answerLocation: string; answered: boolean }>;
+  motifLifecycle?: Array<{ motif: string; introduction: string; transformation: string; payoff: string }>;
 }
 
 interface AgentResult {
@@ -579,7 +583,9 @@ When identifying issues, classify them explicitly as:
 - Trade-off (intentional choice with pros/cons)
 - Misalignment (execution not matching intent)
 - Personal bias risk (flag if your critique may be framework-imposed)
+- Intentional discomfort (audience is MEANT to feel uncomfortable — this is a device, not a flaw)
 Do NOT conflate trade-offs with flaws.
+When something appears problematic, ask: "Is the audience meant to feel discomfort here?" If yes, classify as intentional device.
 
 6. FINAL SELF-CHECK (MANDATORY)
 Before concluding, verify:
@@ -590,7 +596,26 @@ Before concluding, verify:
 - Did I confuse prominence with importance? (A character with fewer lines can be more important than one who dominates screen time.)
 - Did I evaluate the system or judge the style? (I should measure how powerfully the story executes within its own system, not whether I prefer this style.)
 - Did I correctly map resolution ownership? (Which character delivers which part of the resolution?)
+- Have I identified all load-bearing elements? (Characters, symbols, lines, events, images without which the story collapses.)
+- Have I mapped every major question to an answer? (If a narrative question exists without a tracked answer, re-evaluate.)
+- Have I tracked motif completion? (Introduction → transformation → payoff for each major motif.)
+- Have I mistaken absence of evidence for absence of meaning? (Elements dependent on editing, performance, or sound may not be fully evaluable from script form.)
 If uncertain, default to deeper interpretation over premature criticism.
+
+6.5. CRITICAL STRUCTURE DETECTION LAYER (MANDATORY)
+Before finalizing your output, you MUST perform these validation checks:
+
+LOAD-BEARING ELEMENTS: Identify all elements without which the story collapses — key characters, symbols, lines, events, images. For each, state what breaks if removed. Elements that resolve theme, complete arcs, or deliver final meaning are load-bearing and MUST be surfaced.
+
+QUESTION → ANSWER TRACKING: Identify what questions the story explicitly or implicitly asks, and where each is answered. If a question exists without a tracked answer, search again before concluding.
+
+INTENTIONAL DISCOMFORT vs ERROR: When something appears problematic, ask: "Is the audience meant to feel discomfort here?" If YES → classify as intentional device, NOT flaw. This extends the Critique Discipline (section 5).
+
+MEDIUM AWARENESS: Identify elements that depend on editing, performance, sound, or visual contrast. Do NOT over-evaluate these purely from script form. Flag as "performance-dependent" or "edit-dependent" rather than penalizing.
+
+RESOLUTION OWNERSHIP (ENFORCED): For each part of the resolution, determine who delivers it and whether it is replaceable. If multiple characters deliver distinct resolution parts, consider multi-protagonist or distributed classification.
+
+SEQUENCE DIFFERENTIATION: For sequences that appear similar, explicitly evaluate differences in emotional register, power dynamics, character POV, and narrative function. Do NOT group unless ALL four dimensions match.
 
 7. UNIVERSAL SCRIPT TYPES
 Support analysis for: Feature Film, Series/Episodic, Short Film, Theatre/Stage, Game/Interactive, Ad/Brand Film, Podcast/Audio Drama, Comic/Graphic Narrative, Documentary, Transmedia/Franchise IP.
@@ -890,6 +915,14 @@ Analyze sequences based on:
 Do NOT group sequences by surface similarity (e.g., "two chase scenes").
 Only flag redundancy when function + emotion + outcome are ALL duplicated. Two sequences with similar mechanics but different emotional registers, dramatic stakes, or character perspectives are DISTINCT narrative units.
 
+SEQUENCE DIFFERENTIATION CHECK (MANDATORY):
+For sequences that appear similar, explicitly evaluate differences in:
+1. Emotional register (fear vs. tenderness vs. defiance)
+2. Power dynamics (who holds power, how it shifts)
+3. Character POV (whose perspective dominates)
+4. Narrative function (setup, escalation, climax, resolution, transition)
+Do NOT group sequences as redundant unless ALL FOUR dimensions match. Document this check in your analysis.
+
 COMIC/GRAPHIC NARRATIVE ADAPTATION:
 When the script type is "comic" or the content is a graphic narrative, reinterpret structural parameters for page-based storytelling:
 - Inciting Force Clarity → Issue-Opening Hook: Comics must hook readers on page 1-3. Evaluate how quickly and clearly the story-launching event occurs within the issue's opening pages.
@@ -951,8 +984,17 @@ For each major character, determine:
 - Thematic role: belief, counter-belief, transformation, witness
 - Do they represent a distinct and necessary axis of the story's meaning?
 
+STEP 2.5 — IDENTIFY COMPLEXITY TYPE:
+For each major character, identify what drives them:
+- Trauma (wound-driven behavior)
+- Philosophy (belief system that governs choices)
+- Ideology (political/social conviction)
+- Power instinct (drive for control/dominance)
+- Symbolic role (represents an idea, force, or archetype)
+Evaluate depth WITHIN that type — do not assume one model of complexity. A philosophy-driven character is not "less deep" than a trauma-driven one.
+
 STEP 3 — CLASSIFY AFTER MAPPING (NOT BEFORE):
-Only after completing Steps 1 and 2, determine the protagonist system model:
+Only after completing Steps 1, 2, and 2.5, determine the protagonist system model:
 - Single protagonist: One character drives resolution
 - Dual protagonist: Two characters share equal narrative weight and deliver distinct resolution outcomes
 - Multi-protagonist: Three+ characters each deliver irreplaceable resolution outcomes
@@ -1050,6 +1092,17 @@ COMIC/GRAPHIC NARRATIVE ADAPTATION:
 When the script type is "comic" or the content is a graphic narrative:
 - Symbol/Motif Consistency: Emphasize visual symbols — recurring imagery described in panel directions, color scripting notes, visual motifs (repeated compositions, iconic poses, environmental echoes). Comics convey theme through visual repetition as much as dialogue.
 - Show vs Tell Ratio: In comics, theme should emerge primarily through visual storytelling described in panel directions, not through caption exposition. Evaluate whether the script trusts art to carry thematic weight.
+
+MOTIF LIFECYCLE TRACKING (MANDATORY):
+For each major symbol/motif identified, explicitly track:
+- Introduction: Where and how the motif first appears
+- Transformation: How it evolves, accumulates meaning, or shifts context across the script
+- Final Payoff: Where the motif delivers its completed meaning
+If payoff is missing in your analysis, re-evaluate before concluding — the payoff may be implicit, visual, or edit-dependent.
+
+QUESTION → ANSWER TRACKING (MANDATORY):
+Identify narrative questions (thematic, philosophical, moral) the story asks — both explicitly and implicitly.
+Map each question to its answer location in the script. If a question exists without a tracked answer, search again before concluding.
 
 Score each parameter 0-10 with evidence from symbolic elements and character journeys.`
   },
@@ -3252,21 +3305,52 @@ function enforceAgentPromptRequirements(
   agentName: string,
   promptConfig: AgentPromptConfig
 ): AgentPromptConfig {
-  if (agentName !== 'CharacterAgent') return promptConfig;
+  // CharacterAgent enforcement
+  if (agentName === 'CharacterAgent') {
+    const needsUpgrade =
+      !promptConfig.systemPrompt.includes('Dual-protagonist architectures') ||
+      !promptConfig.systemPrompt.includes('protagonistProfiles') ||
+      !promptConfig.systemPrompt.includes('removal test') ||
+      !promptConfig.systemPrompt.includes('distributed') ||
+      !promptConfig.systemPrompt.includes('COMPLEXITY TYPE');
+    if (needsUpgrade) {
+      return {
+        systemPrompt: AGENTS.CharacterAgent.systemPrompt,
+        parameters: Array.from(new Set([...(promptConfig.parameters || []), ...AGENTS.CharacterAgent.parameters])),
+        category: promptConfig.category || AGENTS.CharacterAgent.category || 'analysis',
+      };
+    }
+  }
 
-  const needsUpgrade =
-    !promptConfig.systemPrompt.includes('Dual-protagonist architectures') ||
-    !promptConfig.systemPrompt.includes('protagonistProfiles') ||
-    !promptConfig.systemPrompt.includes('removal test') ||
-    !promptConfig.systemPrompt.includes('distributed');
+  // StructureAgent enforcement
+  if (agentName === 'StructureAgent') {
+    const needsUpgrade =
+      !promptConfig.systemPrompt.includes('SEQUENCE DIFFERENTIATION CHECK') ||
+      !promptConfig.systemPrompt.includes('loadBearingElements');
+    if (needsUpgrade) {
+      return {
+        systemPrompt: AGENTS.StructureAgent.systemPrompt,
+        parameters: Array.from(new Set([...(promptConfig.parameters || []), ...AGENTS.StructureAgent.parameters])),
+        category: promptConfig.category || AGENTS.StructureAgent.category || 'analysis',
+      };
+    }
+  }
 
-  if (!needsUpgrade) return promptConfig;
+  // ThemeAgent enforcement
+  if (agentName === 'ThemeAgent') {
+    const needsUpgrade =
+      !promptConfig.systemPrompt.includes('MOTIF LIFECYCLE TRACKING') ||
+      !promptConfig.systemPrompt.includes('motifLifecycle');
+    if (needsUpgrade) {
+      return {
+        systemPrompt: AGENTS.ThemeAgent.systemPrompt,
+        parameters: Array.from(new Set([...(promptConfig.parameters || []), ...AGENTS.ThemeAgent.parameters])),
+        category: promptConfig.category || AGENTS.ThemeAgent.category || 'analysis',
+      };
+    }
+  }
 
-  return {
-    systemPrompt: AGENTS.CharacterAgent.systemPrompt,
-    parameters: Array.from(new Set([...(promptConfig.parameters || []), ...AGENTS.CharacterAgent.parameters])),
-    category: promptConfig.category || AGENTS.CharacterAgent.category || 'analysis',
-  };
+  return promptConfig;
 }
 
 function normalizeCharacterSectionContent(sectionContent?: SectionContent): SectionContent | undefined {
@@ -3982,7 +4066,11 @@ IMPORTANT: For "comparableTitles", you MUST provide 3-5 real comparable films/sh
     "keyQuotes": [{"quote": "Key structural moment", "context": "Why it matters"}],
     "deepDive": "2-3 paragraph narrative on act breakdown, pacing diagnosis, turning points, structural pattern (3-act, 5-act, non-linear). Include specific page/scene references.",
     "recommendations": [{"title": "Action item", "description": "Detail", "priority": "critical|high|medium", "effort": "easy|moderate|hard"}],
-    "misinterpretationRisks": ["Where analysts may misjudge structural choices or pacing in this script"]`;
+    "misinterpretationRisks": ["Where analysts may misjudge structural choices or pacing in this script"],
+    "loadBearingElements": [{"element": "Element name", "type": "character|symbol|line|event|image", "removalImpact": "What breaks if removed"}],
+    "narrativeQuestions": [{"question": "Question the story asks", "answerLocation": "Where answered", "answered": true}]
+
+IMPORTANT: You MUST populate "loadBearingElements" with all elements without which the story collapses. You MUST populate "narrativeQuestions" mapping story questions to their answer locations.`;
     case 'CharacterAgent':
       return `"verdict": "One-sentence character diagnosis",
     "whatWorks": ["Character strength with evidence"],
@@ -4032,7 +4120,12 @@ For "antagonistProfile", include "worldview" and "philosophyType". Not all antag
     "whatsUnderdeveloped": ["Thematic gap"],
     "keyQuotes": [{"quote": "Line that embodies/undermines theme", "context": "Thematic significance"}],
     "deepDive": "2-3 paragraph narrative identifying the thematic spine, tracking motifs, assessing moral complexity, and evaluating show-vs-tell ratio",
-    "recommendations": [{"title": "Action item", "description": "Detail", "priority": "critical|high|medium", "effort": "easy|moderate|hard"}]`;
+    "recommendations": [{"title": "Action item", "description": "Detail", "priority": "critical|high|medium", "effort": "easy|moderate|hard"}],
+    "misinterpretationRisks": ["Where analysts may misjudge thematic intent, motif purpose, or moral stance in this script"],
+    "motifLifecycle": [{"motif": "Symbol/motif name", "introduction": "Where and how introduced", "transformation": "How it evolves", "payoff": "Where it delivers final meaning"}],
+    "narrativeQuestions": [{"question": "Question the story asks", "answerLocation": "Where in the script it is answered", "answered": true}]
+
+IMPORTANT: You MUST populate "motifLifecycle" for every major symbol/motif with introduction, transformation, and payoff. You MUST populate "narrativeQuestions" for every thematic/philosophical question the story poses, mapping each to its answer location.`;
     case 'WorldLogicAgent':
       return `"verdict": "One-sentence world/visual diagnosis",
     "whatWorks": ["World-building strength"],
