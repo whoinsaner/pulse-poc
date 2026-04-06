@@ -3919,12 +3919,21 @@ IMPORTANT: For "comparableTitles", you MUST provide 3-5 real comparable films/sh
     "keyQuotes": [{"quote": "Revealing character dialogue", "context": "What it reveals"}],
     "deepDive": "2-3 paragraph narrative on character dynamics, arc quality, and ensemble balance",
     "recommendations": [{"title": "Action item", "description": "Detail", "priority": "critical|high|medium", "effort": "easy|moderate|hard"}],
-    "protagonistProfiles": [{"name": "Character name", "want": "External goal", "need": "Internal need", "flaw": "Core flaw", "arc": "Transformation summary", "arcType": "public|private|silent|action-driven", "strengths": ["Acting strength"], "weaknesses": ["Arc weakness"]}],
+    "protagonistProfiles": [{"name": "Character name", "want": "External goal", "need": "Internal need", "flaw": "Core flaw", "arc": "Transformation summary", "arcType": "public|private|silent|action-driven", "strengths": ["Acting strength"], "weaknesses": ["Arc weakness"], "resolutionRole": "What irreplaceable resolution outcome this character delivers", "removalImpact": "What collapses if this character is removed"}],
+    "protagonistSystemModel": {"type": "single|dual|multi", "rationale": "Why this classification"},
     "antagonistProfile": {"name": "Character name", "motivation": "What drives them", "threat": "Nature of opposition", "complexity": "Nuance assessment", "worldview": "Core belief system or philosophy that drives their opposition", "philosophyType": "psychological|philosophical|systemic|institutional"},
     "supportingCast": [{"name": "Character", "role": "Narrative function", "impact": "Story contribution"}],
     "psychologyInsights": "1-2 paragraph analysis of psychological depth, subconscious patterns, defense mechanisms"
 
-IMPORTANT: Use "protagonistProfiles" (ARRAY) to list ALL protagonists. A protagonist is defined by narrative function (driving a story arc toward resolution), NOT by dialogue count. A silent character who drives a parallel justice arc IS a protagonist. In dual-protagonist structures, each protagonist answers the same dramatic question differently. Include an "arcType" for each: "public" (visible, dialogue-driven), "private" (internal journey), "silent" (action-driven, minimal dialogue), "action-driven" (physical choices carry the arc).
+IMPORTANT — PROTAGONIST IDENTIFICATION (removal test):
+Do NOT classify protagonists based on screen time, dialogue volume, or narrative focus alone.
+For each major character (3+ scenes), apply the removal test: "If this character is removed, does the story still resolve fully?" If NO → protagonist-tier.
+Determine: (1) Which characters deliver irreplaceable resolution outcomes? (2) Which arcs are independent and complete (not derivative)? (3) Which characters embody distinct modes of justice, truth, or transformation?
+If multiple characters resolve different dimensions of the story and cannot be removed without collapsing the narrative outcome, classify them as co-protagonists regardless of narrative prominence.
+
+Use "protagonistProfiles" (ARRAY) to list ALL protagonists identified via the removal test. Include "resolutionRole" (what irreplaceable outcome they deliver) and "removalImpact" (what breaks without them) for each.
+Include "protagonistSystemModel" with type ("single", "dual", or "multi") and rationale explaining the classification.
+Include an "arcType" for each: "public" (visible, dialogue-driven), "private" (internal journey), "silent" (action-driven, minimal dialogue), "action-driven" (physical choices carry the arc).
 For "antagonistProfile", include "worldview" and "philosophyType". Not all antagonists operate through psychological vulnerability — some operate through conviction, worldview, or systemic power. A villain whose worldview is answered by a child is dramatically complete.`;
     case 'ConflictAgent':
       return `"verdict": "One-sentence conflict diagnosis",
