@@ -41,11 +41,11 @@ export function FullCharactersSection({ characters, scriptId, onCharactersUpdate
 
   const canEdit = userRole === 'admin' || userRole === 'analyst';
 
-  // Sort by dialogue count to highlight main characters
-  const sortedCharacters = [...characters].sort((a, b) => b.dialogueCount - a.dialogueCount);
-  const mainCharacters = sortedCharacters.slice(0, 3);
-  const supportingCharacters = sortedCharacters.slice(3, 9);
-  const minorCharacters = sortedCharacters.slice(9);
+  // Group characters by AI-identified roles
+  const mainCharacters = getLeadCharacters(characters, agentContent);
+  const supportingCharacters = getSupportingCast(characters, agentContent).slice(0, 6);
+  const mainAndSupportingNames = new Set([...mainCharacters, ...supportingCharacters].map(c => c.name));
+  const minorCharacters = characters.filter(c => !mainAndSupportingNames.has(c.name));
 
   const totalDialogue = characters.reduce((sum, c) => sum + c.dialogueCount, 0);
   const avgSceneCount = characters.reduce((sum, c) => sum + c.sceneCount, 0) / characters.length;

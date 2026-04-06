@@ -26,11 +26,8 @@ export default function CharacterPsychology() {
   const { reportData, currentScore } = useOutletContext<ReportContextValue>();
   
   const characters = reportData.characters || [];
-  const protagonist = characters.length > 0 
-    ? characters.reduce((prev, current) => 
-        (current.dialogueCount > prev.dialogueCount) ? current : prev
-      )
-    : null;
+  const protagonistChars = findProtagonistCharacters(characters, reportData.agentContent);
+  const protagonist = protagonistChars[0] || null;
 
   // Get psychology-related parameters
   const psychParams = reportData.parameterScores?.filter(p => 

@@ -36,10 +36,9 @@ export default function AntagonistAnalysis() {
   const agentContent = reportData.agentContent?.CharacterAgent;
   const antagonistProfile = agentContent?.antagonistProfile;
 
-  // Find antagonist character from characters list as fallback
+  // Find antagonist character using AI agent content
   const characters = reportData.characters || [];
-  const sortedByPresence = [...characters].sort((a, b) => b.dialogueCount - a.dialogueCount);
-  const antagonistCharacter = sortedByPresence[1] || null;
+  const antagonistCharacter = findAntagonistCharacter(characters, reportData.agentContent);
 
   // Filter antagonist/conflict-relevant parameters
   const antagonistParams = useMemo(() => {

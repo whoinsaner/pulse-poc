@@ -32,8 +32,7 @@ export default function SupportingCast() {
   const { reportData, currentScore, stakeholderLens } = context;
   
   const characters = reportData.characters || [];
-  const sortedCharacters = [...characters].sort((a, b) => b.dialogueCount - a.dialogueCount);
-  const supportingCast = sortedCharacters.slice(2, 12);
+  const supportingCast = getSupportingCastFromRoles(characters, reportData.agentContent).slice(0, 10);
 
   const totalDialogue = characters.reduce((sum, c) => sum + c.dialogueCount, 0);
   const supportingDialogue = supportingCast.reduce((sum, c) => sum + c.dialogueCount, 0);
