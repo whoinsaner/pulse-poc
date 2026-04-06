@@ -7,7 +7,6 @@ import {
   WeightedParameterList,
 } from '@/components/report/ui';
 import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Building, AlertTriangle, Anchor } from 'lucide-react';
 
 interface ReportContextValue {
