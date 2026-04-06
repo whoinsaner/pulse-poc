@@ -15,6 +15,7 @@ import {
 import { InlineMaturity } from '@/components/report/ui/MaturityBadge';
 import { UserX, Shield, Brain, Zap, Target, Sword } from 'lucide-react';
 import { extractScore } from '@/lib/scoreUtils';
+import { findAntagonistCharacter } from '@/lib/characterRoles';
 import { useStakeholderFiltering } from '@/hooks/useStakeholderFiltering';
 import { StakeholderFilterNotice } from '@/components/report/StakeholderFilterNotice';
 
