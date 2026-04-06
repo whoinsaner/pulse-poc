@@ -41,9 +41,10 @@ export default function ProtagonistAnalysis() {
 
   // Get agent content for protagonist — support both array (protagonistProfiles) and single (protagonistProfile)
   const agentContent = reportData.agentContent?.CharacterAgent;
-  const protagonistProfiles: Array<{ name: string; want: string; need: string; flaw: string; arc: string; strengths?: string[]; weaknesses?: string[]; arcType?: string }> = 
+  const protagonistProfiles: Array<{ name: string; want: string; need: string; flaw: string; arc: string; strengths?: string[]; weaknesses?: string[]; arcType?: string; resolutionRole?: string; removalImpact?: string }> = 
     agentContent?.protagonistProfiles || 
     (agentContent?.protagonistProfile ? [agentContent.protagonistProfile] : []);
+  const protagonistSystemModel: { type?: string; rationale?: string } | undefined = agentContent?.protagonistSystemModel;
 
   // Filter protagonist-relevant parameters
   const protagonistParams = useMemo(() => {
