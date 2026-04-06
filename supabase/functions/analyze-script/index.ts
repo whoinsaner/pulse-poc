@@ -902,6 +902,8 @@ TRADITION-AWARE EVALUATION:
 - Evaluate resolution against the script's own tradition — moral closure (a name spoken, a truth revealed, justice delivered through thematic symmetry) is complete resolution in many traditions. Do NOT require procedural/institutional closure.
 - Physical justice (retribution that mirrors the original crime) is a valid and complete resolution model.
 - Emotional resolution (full delivery of the intended emotional journey) and open-ended ambiguity are also valid resolution models — evaluate within the script's chosen model.
+- Naming resolution: The act of speaking a name, identifying a person, or declaring truth publicly IS a valid and complete resolution in traditions where institutional justice is absent or irrelevant. Do not require arrests, warrants, or visible institutional consequences when the story's resolution grammar is moral or symbolic.
+- Object/symbol return: A symbol completing its journey (returning to origin, passing through hands, arriving at its final destination) can deliver thematic closure equal to any plot-level resolution.
 - Only flag sequence redundancy when two sequences serve the SAME emotional + structural function. Mechanically similar plot functions (chase, fight, escape) that operate in different emotional registers are distinct narrative units.
 - If a director's spec format is detected, do NOT apply page-per-minute pacing calculations.
 - When evaluating repeated action/pursuit sequences, assess whether they serve different emotional registers, dramatic purposes, and character perspectives. Mechanically similar plot functions (chase, fight, escape) can be narratively distinct if they operate in different emotional registers (horror vs. tenderness vs. coming-of-age).
