@@ -1402,6 +1402,64 @@ export async function generateFullReportPDF(
       toc.push({ title: sec.title, page: pageNum.value, level: 1 });
       if (sec.id === 'story-diagnosis') {
         y = renderSectionTitle(doc, y, sec.title, sec.subtitle);
+        
+        // Render Narrative Grammar metadata tile if available
+        const traditionContent = data.agentContent?.CinemaTraditionAgent;
+        if (traditionContent?.narrativeGrammar || traditionContent?.intendedExperience) {
+          const pw = getPageWidth(doc);
+          const boxX = MARGIN;
+          const boxW = pw - MARGIN * 2;
+          
+          // Draw background
+          doc.setFillColor(245, 247, 250);
+          doc.roundedRect(boxX, y, boxW, 0, 3, 3, 'F'); // placeholder height, will adjust
+          
+          let boxY = y + 8;
+          doc.setFontSize(FONTS.tiny);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(...COLORS.primary);
+          doc.text('NARRATIVE GRAMMAR CONTEXT', boxX + 8, boxY);
+          boxY += 10;
+          
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(...COLORS.text);
+          doc.setFontSize(FONTS.tiny);
+          
+          const grammarItems: string[] = [];
+          if (traditionContent.narrativeGrammar) grammarItems.push(`Grammar: ${traditionContent.narrativeGrammar}`);
+          if (traditionContent.intendedExperience) grammarItems.push(`Intent: ${traditionContent.intendedExperience}`);
+          if (traditionContent.realismSpectrum) grammarItems.push(`Realism: ${traditionContent.realismSpectrum}`);
+          if (traditionContent.stakesModel) grammarItems.push(`Stakes: ${traditionContent.stakesModel}`);
+          
+          for (const item of grammarItems) {
+            const lines = doc.splitTextToSize(item, boxW - 16);
+            doc.text(lines, boxX + 8, boxY);
+            boxY += lines.length * 8;
+          }
+          
+          // Redraw box with correct height
+          const boxH = boxY - y + 4;
+          doc.setFillColor(245, 247, 250);
+          doc.roundedRect(boxX, y, boxW, boxH, 3, 3, 'F');
+          
+          // Re-render text on top of filled box
+          boxY = y + 8;
+          doc.setFontSize(FONTS.tiny);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(...COLORS.primary);
+          doc.text('NARRATIVE GRAMMAR CONTEXT', boxX + 8, boxY);
+          boxY += 10;
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(...COLORS.text);
+          for (const item of grammarItems) {
+            const lines = doc.splitTextToSize(item, boxW - 16);
+            doc.text(lines, boxX + 8, boxY);
+            boxY += lines.length * 8;
+          }
+          
+          y = boxY + 8;
+        }
+        
         y = renderDiagnosisOverview(doc, y, ['Concept & Hook', 'Structure', 'Conflict'], data.categoryScores || {}, pageNum, sec.title);
         y = renderAgentNarrative(doc, y, SECTION_AGENT_MAP[sec.id] || [], data.agentContent, pageNum, sec.title, data.parameterScores, data.categoryScores);
       } else {
