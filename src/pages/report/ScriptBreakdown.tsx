@@ -93,12 +93,12 @@ export default function ScriptBreakdown() {
     const fetchData = async () => {
       setLoading(true);
       const [scenesRes, tagsRes] = await Promise.all([
-        supabase
+        client
           .from('scenes')
           .select('*')
           .eq('script_id', scriptId)
           .order('scene_number'),
-        supabase
+        client
           .from('breakdown_tags')
           .select('*')
           .eq('script_id', scriptId),
