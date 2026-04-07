@@ -2586,10 +2586,33 @@ serve(async (req) => {
       
       existingProgress = (existingRun?.agent_progress as typeof existingProgress) || {};
       
-      // Filter to only failed, pending, or running (interrupted) agents — skip completed ones
+      // Query parameter_scores to detect "ghost completed" agents (marked completed but scores not persisted)
+      const { data: persistedScores } = await supabase
+        .from('parameter_scores')
+        .select('agent_name')
+        .eq('analysis_run_id', analysisRunId);
+      
+      const agentsWithPersistedScores = new Set(
+        (persistedScores || []).map((s: any) => s.agent_name)
+      );
+      console.log(`[analyze-script] Agents with persisted scores: ${[...agentsWithPersistedScores].join(', ') || 'none'}`);
+      
+      // Filter to retry: failed/pending/running agents OR "ghost completed" (completed but no persisted scores)
       const agentsToRetry = agentsToRun.filter(([agentName]) => {
         const progress = existingProgress[agentName];
-        return !progress || progress.status === 'failed' || progress.status === 'pending' || progress.status === 'running';
+        if (!progress || progress.status === 'failed' || progress.status === 'pending' || progress.status === 'running') {
+          return true;
+        }
+        // Ghost-completed: agent says completed but has no scores in DB
+        if (progress.status === 'completed' && !agentsWithPersistedScores.has(agentName)) {
+          // Skip synthesis agents that don't produce parameter_scores
+          const synthesisAgents = ['InsightSynthesisAgent', 'StakeholderLensAgent', 'GlobalInstructions'];
+          if (!synthesisAgents.includes(agentName)) {
+            console.log(`[analyze-script] Ghost-completed detected: ${agentName} (completed but no persisted scores)`);
+            return true;
+          }
+        }
+        return false;
       });
       
       console.log(`[analyze-script] Resume mode: retrying ${agentsToRetry.length} of ${agentsToRun.length} agents`);
@@ -5037,6 +5060,41 @@ async function generateReport(
     const evidence = score.evidence || {};
     if (evidence.riskLevel === 'High') {
       categoryScores[category].risks.push(score.parameters?.display_name || score.parameters?.name);
+    }
+  }
+
+  // Part 2: Resilience — reconstruct missing categoryScores from agentContent
+  const agentCategoryMap: Record<string, string> = {
+    'CharacterAgent': 'Character',
+    'ConflictAgent': 'Conflict',
+    'EmotionalArcAgent': 'Emotional Arc',
+    'StoryAgent': 'Story',
+    'DialogueAgent': 'Dialogue',
+    'ThemeAgent': 'Theme',
+    'VisualAgent': 'Visual',
+    'PacingAgent': 'Pacing',
+    'HookAgent': 'Hook',
+    'MarketAgent': 'Market',
+    'ExecutionAgent': 'Execution',
+    'FormatAgent': 'Format',
+    'OriginAgent': 'Origin',
+    'WorldBuildingAgent': 'World Building',
+  };
+  
+  for (const [agentName, category] of Object.entries(agentCategoryMap)) {
+    if (!categoryScores[category] && agentContent[agentName]?.scores) {
+      const agentScores = agentContent[agentName].scores;
+      if (Array.isArray(agentScores) && agentScores.length > 0) {
+        console.log(`[generateReport] Reconstructing categoryScores for ${category} from agentContent (${agentScores.length} scores)`);
+        categoryScores[category] = { total: 0, count: 0, risks: [] };
+        for (const s of agentScores) {
+          categoryScores[category].total += (s.score || 0);
+          categoryScores[category].count += 1;
+          if (s.riskLevel === 'High') {
+            categoryScores[category].risks.push(s.parameter || s.displayName || 'Unknown');
+          }
+        }
+      }
     }
   }
 
