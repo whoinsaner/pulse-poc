@@ -640,25 +640,36 @@ function renderAgentNarrative(
 
       // Misinterpretation Risks (Analyst Guidance)
       if (content.misinterpretationRisks && Array.isArray(content.misinterpretationRisks) && content.misinterpretationRisks.length > 0) {
-        y = checkBreak(doc, y, 20, pageNum, sectionName);
-        // Callout box background
-        const riskBoxHeight = 8 + content.misinterpretationRisks.length * 6;
-        doc.setFillColor(255, 247, 237); // warm warning bg
-        doc.roundedRect(MARGINS.left, y - 3, cw, Math.min(riskBoxHeight, 60), 2, 2, 'F');
+        // Pre-calculate actual box height by measuring wrapped text
+        doc.setFontSize(FONTS.small);
+        doc.setFont('helvetica', 'normal');
+        let measuredHeight = 10; // header line + padding
+        for (const risk of content.misinterpretationRisks) {
+          const rLines = wrapText(doc, `• ${risk}`, cw - 14);
+          measuredHeight += rLines.length * 4.5 + 1;
+        }
+        measuredHeight += 4; // bottom padding
+
+        y = checkBreak(doc, y, Math.min(measuredHeight + 6, 80), pageNum, sectionName);
+        const boxStartY = y - 3;
+        // Draw box with measured height
+        doc.setFillColor(255, 247, 237);
+        doc.roundedRect(MARGINS.left, boxStartY, cw, measuredHeight, 2, 2, 'F');
         doc.setDrawColor(...COLORS.warning);
         doc.setLineWidth(0.5);
-        doc.roundedRect(MARGINS.left, y - 3, cw, Math.min(riskBoxHeight, 60), 2, 2, 'S');
+        doc.roundedRect(MARGINS.left, boxStartY, cw, measuredHeight, 2, 2, 'S');
+        // Render title
         doc.setFontSize(FONTS.small);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(...COLORS.warning);
         doc.text('Analyst Guidance — Misinterpretation Risks', MARGINS.left + 4, y + 3);
         y += 8;
+        // Render risks
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(...COLORS.text);
         doc.setFontSize(FONTS.small);
         for (const risk of content.misinterpretationRisks) {
-          y = checkBreak(doc, y, 5, pageNum, sectionName);
-          const rLines = wrapText(doc, `• ${risk}`, cw - 10);
+          const rLines = wrapText(doc, `• ${risk}`, cw - 14);
           for (const line of rLines) { doc.text(line, MARGINS.left + 6, y); y += 4.5; }
           y += 1;
         }
