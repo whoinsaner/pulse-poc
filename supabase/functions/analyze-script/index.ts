@@ -3553,6 +3553,19 @@ async function runStandardAnalysis(
     });
   };
   
+  // ============= Per-agent timeout helper =============
+  const AGENT_CALL_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes per agent call
+  
+  function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error(`[${label}] Agent call timed out after ${ms / 1000}s`)), ms);
+      promise.then(
+        (val) => { clearTimeout(timer); resolve(val); },
+        (err) => { clearTimeout(timer); reject(err); }
+      );
+    });
+  }
+
   // ============= OPTIMIZATION 6: Adaptive batch delays based on script size =============
   const agentCount = agentsToRun.length;
   const isReasoning = !!reasoningEffort;
@@ -3604,62 +3617,75 @@ async function runStandardAnalysis(
         
         await updateAgentProgress(supabase, analysisRunId, agentName, 'running', undefined, modelConfig.model);
 
-        const result = await runAgent(apiKey, agentName, promptConfig, scriptContext, parameterMap, modelConfig, dynamicGlobalInstructions);
+        // Layer 1: Per-agent timeout prevents any single agent from hanging
+        const result = await withTimeout(
+          runAgent(apiKey, agentName, promptConfig, scriptContext, parameterMap, modelConfig, dynamicGlobalInstructions),
+          AGENT_CALL_TIMEOUT_MS,
+          agentName
+        );
 
-        // Delete any existing scores from this agent for this run (prevents duplicates on resume)
-        await supabase
-          .from('parameter_scores')
-          .delete()
-          .eq('analysis_run_id', analysisRunId)
-          .eq('agent_name', agentName);
+        // Layer 2: Atomic score persistence — only mark "completed" after DB writes succeed
+        try {
+          // Delete any existing scores from this agent for this run (prevents duplicates on resume)
+          await supabase
+            .from('parameter_scores')
+            .delete()
+            .eq('analysis_run_id', analysisRunId)
+            .eq('agent_name', agentName);
 
-        // ============= OPTIMIZATION 4: Batch insert parameter scores =============
-        const scoresToInsert = result.scores
-          .filter(score => score.parameterId)
-          .map(score => ({
-            analysis_run_id: analysisRunId,
-            parameter_id: score.parameterId,
-            score: score.score,
-            confidence: score.confidence,
-            evidence: {
-              items: score.evidence,
-              maturity: score.maturity,
-              riskLevel: score.riskLevel,
-              fixCost: score.fixCost,
-              upsideImpact: score.upsideImpact,
-            },
-            rationale: score.rationale,
-            agent_name: agentName,
-          }));
-        
-        if (scoresToInsert.length > 0) {
-          await supabase.from('parameter_scores').insert(scoresToInsert);
+          // ============= OPTIMIZATION 4: Batch insert parameter scores =============
+          const scoresToInsert = result.scores
+            .filter(score => score.parameterId)
+            .map(score => ({
+              analysis_run_id: analysisRunId,
+              parameter_id: score.parameterId,
+              score: score.score,
+              confidence: score.confidence,
+              evidence: {
+                items: score.evidence,
+                maturity: score.maturity,
+                riskLevel: score.riskLevel,
+                fixCost: score.fixCost,
+                upsideImpact: score.upsideImpact,
+              },
+              rationale: score.rationale,
+              agent_name: agentName,
+            }));
+          
+          if (scoresToInsert.length > 0) {
+            await supabase.from('parameter_scores').insert(scoresToInsert);
+          }
+
+          // Batch insert insights too
+          if (result.insights?.length) {
+            const insightsToInsert = result.insights.map(insight => ({
+              analysis_run_id: analysisRunId,
+              category: insight.category,
+              title: insight.title,
+              description: insight.description,
+              priority: insight.priority,
+              actionable: insight.actionable,
+              supporting_evidence: {
+                evidence: insight.supportingEvidence,
+                affectedStakeholders: insight.affectedStakeholders,
+                minimalFix: insight.minimalFix,
+                maximalFix: insight.maximalFix,
+              },
+            }));
+            await supabase.from('insights').insert(insightsToInsert);
+          }
+
+          // Only NOW mark completed — scores are safely persisted
+          await updateAgentProgress(supabase, analysisRunId, agentName, 'completed', undefined, undefined, result.sectionContent);
+          console.log(`[analyze-script] ${agentName} completed${attempt > 0 ? ` (after ${attempt} retries)` : ''}${result.sectionContent ? ' (with sectionContent)' : ''}`);
+          
+          return { agent: agentName, success: true };
+        } catch (dbErr) {
+          const dbErrMsg = dbErr instanceof Error ? dbErr.message : String(dbErr);
+          console.error(`[analyze-script] ${agentName} score persistence failed: ${dbErrMsg}`);
+          await updateAgentProgress(supabase, analysisRunId, agentName, 'failed', `Score persistence failed: ${dbErrMsg}`);
+          return { agent: agentName, success: false, error: `DB write failed: ${dbErrMsg}` };
         }
-
-        // Batch insert insights too
-        if (result.insights?.length) {
-          const insightsToInsert = result.insights.map(insight => ({
-            analysis_run_id: analysisRunId,
-            category: insight.category,
-            title: insight.title,
-            description: insight.description,
-            priority: insight.priority,
-            actionable: insight.actionable,
-            supporting_evidence: {
-              evidence: insight.supportingEvidence,
-              affectedStakeholders: insight.affectedStakeholders,
-              minimalFix: insight.minimalFix,
-              maximalFix: insight.maximalFix,
-            },
-          }));
-          await supabase.from('insights').insert(insightsToInsert);
-        }
-
-        // Store sectionContent in agent progress for later collection by generateReport
-        await updateAgentProgress(supabase, analysisRunId, agentName, 'completed', undefined, undefined, result.sectionContent);
-        console.log(`[analyze-script] ${agentName} completed${attempt > 0 ? ` (after ${attempt} retries)` : ''}${result.sectionContent ? ' (with sectionContent)' : ''}`);
-        
-        return { agent: agentName, success: true };
       } catch (err) {
         lastError = err instanceof Error ? err : new Error(String(err));
         console.error(`[analyze-script] ${agentName} attempt ${attempt + 1} failed:`, lastError.message);
