@@ -1563,44 +1563,33 @@ export async function generateFullReportPDF(
         // Render Narrative Grammar metadata tile if available
         const traditionContent = data.agentContent?.CinemaTraditionAgent;
         if (traditionContent?.narrativeGrammar || traditionContent?.intendedExperience) {
-          const pw = getPageWidth(doc);
           const boxX = MARGINS.left;
-          const boxW = pw - MARGINS.left - MARGINS.right;
+          const boxW = getPageWidth(doc) - MARGINS.left - MARGINS.right;
           
-          // Draw background
-          doc.setFillColor(245, 247, 250);
-          doc.roundedRect(boxX, y, boxW, 0, 3, 3, 'F'); // placeholder height, will adjust
-          
-          let boxY = y + 8;
+          // Pre-calculate box height
           doc.setFontSize(FONTS.tiny);
-          doc.setFont('helvetica', 'bold');
-          doc.setTextColor(...COLORS.primary);
-          doc.text('NARRATIVE GRAMMAR CONTEXT', boxX + 8, boxY);
-          boxY += 10;
-          
           doc.setFont('helvetica', 'normal');
-          doc.setTextColor(...COLORS.text);
-          doc.setFontSize(FONTS.tiny);
-          
           const grammarItems: string[] = [];
           if (traditionContent.narrativeGrammar) grammarItems.push(`Grammar: ${traditionContent.narrativeGrammar}`);
           if (traditionContent.intendedExperience) grammarItems.push(`Intent: ${traditionContent.intendedExperience}`);
           if (traditionContent.realismSpectrum) grammarItems.push(`Realism: ${traditionContent.realismSpectrum}`);
           if (traditionContent.stakesModel) grammarItems.push(`Stakes: ${traditionContent.stakesModel}`);
           
+          let measuredH = 18; // header + padding
           for (const item of grammarItems) {
             const lines = doc.splitTextToSize(item, boxW - 16);
-            doc.text(lines, boxX + 8, boxY);
-            boxY += lines.length * 8;
+            measuredH += lines.length * 8;
           }
+          measuredH += 4; // bottom padding
           
-          // Redraw box with correct height
-          const boxH = boxY - y + 4;
+          y = checkBreak(doc, y, Math.min(measuredH + 4, 80), pageNum, 'Story Diagnosis');
+          
+          // Draw box with correct height
           doc.setFillColor(245, 247, 250);
-          doc.roundedRect(boxX, y, boxW, boxH, 3, 3, 'F');
+          doc.roundedRect(boxX, y, boxW, measuredH, 3, 3, 'F');
           
-          // Re-render text on top of filled box
-          boxY = y + 8;
+          // Render text
+          let boxY = y + 8;
           doc.setFontSize(FONTS.tiny);
           doc.setFont('helvetica', 'bold');
           doc.setTextColor(...COLORS.primary);
