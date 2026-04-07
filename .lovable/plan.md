@@ -1,37 +1,50 @@
 
 
-# Fix: Resume Button Disabled for Stuck Analysis
+# Fix: Missing Character Diagnosis Section After Resume
 
-## Problem
+## Root Cause
 
-The Resume button in `InProgressAnalysis.tsx` (line 358) is disabled when `status === 'processing'`:
+The resume logic (line 2590) skips agents whose `agent_progress` status is "completed" — but the original run's edge function timed out **after** marking CharacterAgent/ConflictAgent/EmotionalArcAgent as completed in `agent_progress`, yet **before** their `parameter_scores` were persisted to the database. The report's `categoryScores` is built entirely from `parameter_scores`, so Character, Conflict, and Emotional Arc categories are absent from navigation.
 
-```tsx
-disabled={isRetrying || (realtimeStatus || analysis.status) === 'processing'}
+**Evidence**: `agent_progress` has full `sectionContent` for all 15 agents, but `parameter_scores` only contains 8 categories (missing Character, Conflict, Emotional Arc).
+
+## Fix: Two-Part Solution
+
+### Part 1 — Resume: Detect "ghost completed" agents (systemic fix)
+
+**File**: `supabase/functions/analyze-script/index.ts` (~line 2588)
+
+After loading `existingProgress`, query `parameter_scores` for this run to get a set of agent names that actually have persisted scores. In the retry filter, treat an agent as needing re-run if it's marked "completed" in progress but has **zero** parameter scores in the database.
+
+```
+Logic change in the resume filter (line 2590):
+1. Query: SELECT DISTINCT agent_name FROM parameter_scores WHERE analysis_run_id = ?
+2. Build a Set of agents with persisted scores
+3. In the filter: also retry agents where progress.status === 'completed' 
+   BUT agent_name is NOT in the persisted scores set
 ```
 
-The Kadavul Valthu run has been stuck in `processing` for over 20 minutes, but the button treats it as actively running and stays disabled.
+This ensures resumed runs recover from the exact scenario that caused this bug.
 
-## Solution
+### Part 2 — Report generation: Reconstruct missing categoryScores from agentContent (resilience layer)
 
-Add a "stuck" detection check: if the run has been in `processing` for more than 5 minutes (matching the existing stuck threshold in `Scripts.tsx`), enable the Resume button regardless of status.
+**File**: `supabase/functions/analyze-script/index.ts` (~line 5028, in `generateReport`)
 
-## Change
+After building `categoryScores` from `parameter_scores`, check if any expected categories are missing but have `agentContent` with scores data. If so, reconstruct those category scores from the `sectionContent.scores` array stored in `agent_progress`. This is a fallback — Part 1 prevents the scenario, Part 2 handles it gracefully if it still occurs.
 
-**File**: `src/components/report/InProgressAnalysis.tsx`
+```
+After line 5041, add:
+- Define expected categories per agent (CharacterAgent→Character, ConflictAgent→Conflict, etc.)
+- For each agent in agentContent, if its category is missing from categoryScores,
+  extract scores from sectionContent and add them to categoryScores
+```
 
-1. Add a `isStuck` calculation that checks if the run has been processing for longer than 5 minutes (using `started_at` or `created_at`).
+### Summary
 
-2. Update the disabled condition on line 358 from:
-   ```tsx
-   disabled={isRetrying || (realtimeStatus || analysis.status) === 'processing'}
-   ```
-   to:
-   ```tsx
-   disabled={isRetrying || ((realtimeStatus || analysis.status) === 'processing' && !isStuck)}
-   ```
+| Change | File | Purpose |
+|--------|------|---------|
+| Ghost-completed detection | analyze-script/index.ts (resume filter) | Re-run agents that completed but lost their scores |
+| categoryScores fallback | analyze-script/index.ts (generateReport) | Resilience layer for reports with partial score data |
 
-3. Optionally update the button label to show "Resume Stuck" when the analysis is stuck, giving the user clear feedback.
-
-This is a single-file, 3-line change. No backend or database modifications needed.
+Both changes are in a single file. No database migrations needed. After deployment, a fresh analysis (or another resume) for Kadavul Valthu will properly persist all parameter scores and show the Character Diagnosis section.
 
