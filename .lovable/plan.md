@@ -1,50 +1,72 @@
 
 
-# Fix: Missing Character Diagnosis Section After Resume
+# Preventing CharacterAgent from Being Skipped or Missed
 
-## Root Cause
+## Current Vulnerability Chain
 
-The resume logic (line 2590) skips agents whose `agent_progress` status is "completed" — but the original run's edge function timed out **after** marking CharacterAgent/ConflictAgent/EmotionalArcAgent as completed in `agent_progress`, yet **before** their `parameter_scores` were persisted to the database. The report's `categoryScores` is built entirely from `parameter_scores`, so Character, Conflict, and Emotional Arc categories are absent from navigation.
+The CharacterAgent can be "lost" through this sequence:
 
-**Evidence**: `agent_progress` has full `sectionContent` for all 15 agents, but `parameter_scores` only contains 8 categories (missing Character, Conflict, Emotional Arc).
+1. CharacterAgent is a `COMPLEX_AGENT` and `CRITICAL_AGENT` — it gets a heavier model, which means longer response times
+2. `runSingleAgent` calls `runAgent()` **without a per-call timeout** — the `fetch()` at line 4415 can hang for the full duration of the global watchdog
+3. The **global watchdog** (25 min) kills the entire pipeline when it fires, but agents that already returned have their `agent_progress` marked "completed" with `sectionContent` saved — while agents still in-flight (or whose score persistence was interrupted) become "ghost completed"
+4. On resume, ghost-completed agents were previously skipped (now fixed), but the timeout that caused the problem in the first place remains
 
-## Fix: Two-Part Solution
+## Three-Layer Fix
 
-### Part 1 — Resume: Detect "ghost completed" agents (systemic fix)
+### Layer 1 — Per-agent timeout on `runAgent` (prevents hang)
 
-**File**: `supabase/functions/analyze-script/index.ts` (~line 2588)
+**File**: `supabase/functions/analyze-script/index.ts` (~line 3607)
 
-After loading `existingProgress`, query `parameter_scores` for this run to get a set of agent names that actually have persisted scores. In the retry filter, treat an agent as needing re-run if it's marked "completed" in progress but has **zero** parameter scores in the database.
+Wrap the `runAgent()` call inside `runSingleAgent` with `withTimeout`:
 
-```
-Logic change in the resume filter (line 2590):
-1. Query: SELECT DISTINCT agent_name FROM parameter_scores WHERE analysis_run_id = ?
-2. Build a Set of agents with persisted scores
-3. In the filter: also retry agents where progress.status === 'completed' 
-   BUT agent_name is NOT in the persisted scores set
-```
-
-This ensures resumed runs recover from the exact scenario that caused this bug.
-
-### Part 2 — Report generation: Reconstruct missing categoryScores from agentContent (resilience layer)
-
-**File**: `supabase/functions/analyze-script/index.ts` (~line 5028, in `generateReport`)
-
-After building `categoryScores` from `parameter_scores`, check if any expected categories are missing but have `agentContent` with scores data. If so, reconstruct those category scores from the `sectionContent.scores` array stored in `agent_progress`. This is a fallback — Part 1 prevents the scenario, Part 2 handles it gracefully if it still occurs.
-
-```
-After line 5041, add:
-- Define expected categories per agent (CharacterAgent→Character, ConflictAgent→Conflict, etc.)
-- For each agent in agentContent, if its category is missing from categoryScores,
-  extract scores from sectionContent and add them to categoryScores
+```typescript
+const result = await withTimeout(
+  runAgent(apiKey, agentName, promptConfig, scriptContext, parameterMap, modelConfig, dynamicGlobalInstructions),
+  AGENT_CALL_TIMEOUT_MS,  // 5 minutes
+  agentName
+);
 ```
 
-### Summary
+This ensures no single agent can hang longer than 5 minutes. If it times out, the retry logic in `runSingleAgent` catches the error and retries up to `maxRetries` times. CharacterAgent gets 3 retries × 5 min = 15 min max before being marked failed (not ghost-completed).
 
-| Change | File | Purpose |
-|--------|------|---------|
-| Ghost-completed detection | analyze-script/index.ts (resume filter) | Re-run agents that completed but lost their scores |
-| categoryScores fallback | analyze-script/index.ts (generateReport) | Resilience layer for reports with partial score data |
+### Layer 2 — Atomic score persistence (prevents ghost-completed)
 
-Both changes are in a single file. No database migrations needed. After deployment, a fresh analysis (or another resume) for Kadavul Valthu will properly persist all parameter scores and show the Character Diagnosis section.
+**File**: `supabase/functions/analyze-script/index.ts` (~line 3609-3659)
+
+Currently, `runSingleAgent` does three sequential DB writes after `runAgent` returns:
+1. Delete old scores
+2. Insert new scores
+3. Update `agent_progress` to "completed"
+
+If the global watchdog fires between step 2 and step 3 (or between 1 and 2), the agent is either ghost-completed or has no scores. Fix: **only mark "completed" after scores are successfully persisted**, and wrap the score persistence in a try-catch that marks the agent as "failed" if the DB writes fail.
+
+```typescript
+// After runAgent returns successfully:
+try {
+  await supabase.from('parameter_scores').delete()...;
+  await supabase.from('parameter_scores').insert(scoresToInsert);
+  await supabase.from('insights').insert(insightsToInsert);
+  // Only NOW mark completed
+  await updateAgentProgress(..., 'completed', ..., result.sectionContent);
+} catch (dbErr) {
+  await updateAgentProgress(..., 'failed', 'Score persistence failed: ' + dbErr.message);
+  return { agent: agentName, success: false, error: 'DB write failed' };
+}
+```
+
+This is actually the current flow already (lines 3609-3659), but the issue is the global watchdog can kill the process between these steps. The per-agent timeout in Layer 1 prevents this by ensuring agents complete well within the global timeout.
+
+### Layer 3 — Ghost-completed recovery (already deployed)
+
+The fix we just deployed handles recovery if Layers 1-2 fail: on resume, agents marked "completed" but with no `parameter_scores` rows are re-run.
+
+## Summary
+
+| Layer | Change | Purpose |
+|-------|--------|---------|
+| 1 | `withTimeout(runAgent(...), 5min)` in `runSingleAgent` | Prevent any single agent from hanging |
+| 2 | Error-guard DB writes, only mark "completed" after persist | Prevent ghost-completed state |
+| 3 | Ghost-completed detection on resume (already live) | Recovery safety net |
+
+All changes are in `supabase/functions/analyze-script/index.ts`. No database migrations needed.
 
