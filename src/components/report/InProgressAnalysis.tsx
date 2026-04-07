@@ -351,19 +351,27 @@ export function InProgressAnalysis({ analysis: initialAnalysis, onRetry, onViewP
                   View Partial
                 </Button>
               )}
-              <Button 
-                variant="default" 
-                size="sm" 
-                onClick={handleResumeAnalysis}
-                disabled={isRetrying || (realtimeStatus || analysis.status) === 'processing'}
-              >
-                {isRetrying ? (
-                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                ) : (
-                  <RefreshCw className="h-3 w-3 mr-1" />
-                )}
-                Resume
-              </Button>
+              {(() => {
+                const startedTime = analysis.started_at || analysis.created_at;
+                const isStuck = (realtimeStatus || analysis.status) === 'processing' 
+                  && startedTime 
+                  && (Date.now() - new Date(startedTime).getTime()) > 5 * 60 * 1000;
+                return (
+                  <Button 
+                    variant="default" 
+                    size="sm" 
+                    onClick={handleResumeAnalysis}
+                    disabled={isRetrying || ((realtimeStatus || analysis.status) === 'processing' && !isStuck)}
+                  >
+                    {isRetrying ? (
+                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                    ) : (
+                      <RefreshCw className="h-3 w-3 mr-1" />
+                    )}
+                    {isStuck ? 'Resume Stuck' : 'Resume'}
+                  </Button>
+                );
+              })()}
             </div>
           </div>
         </CardHeader>
