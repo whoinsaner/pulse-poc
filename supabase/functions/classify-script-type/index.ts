@@ -89,23 +89,27 @@ function patternDetectTradition(text: string, fileName: string): { tradition: st
   
   // Check for strong language/tradition indicators
   const tamilIndicators = [/\b(amma|appa|anna|thambi|akka|thalaiva|mass\s*hero)\b/i, /\b(interval|climax\s*fight|kuthu|item\s*song)\b/i];
+  const malayalamIndicators = [/\b(chetta|chechi|eda|edi|appoppan|ammachi|achcha)\b/i, /\b(kochi|trivandrum|thiruvananthapuram|kerala|malabar)\b/i];
   const hindiIndicators = [/\b(bhai|yaar|ji\b|sahab|beta|babu)\b/i, /\b(interval|mehfil|qawwali|item\s*number)\b/i];
   const koreanIndicators = [/\b(oppa|sunbae|hyung|noona|ajumma|soju)\b/i, /\b(han river|seoul|gangnam)\b/i];
   const japaneseIndicators = [/\b(sensei|senpai|san\b|sama\b|chan\b|kun\b)\b/i, /\b(tokyo|osaka|shinjuku)\b/i];
   
   let tamilScore = tamilIndicators.filter(r => r.test(text)).length;
+  let malayalamScore = malayalamIndicators.filter(r => r.test(text)).length;
   let hindiScore = hindiIndicators.filter(r => r.test(text)).length;
   let koreanScore = koreanIndicators.filter(r => r.test(text)).length;
   let japaneseScore = japaneseIndicators.filter(r => r.test(text)).length;
   
   // File name hints
   if (/tamil|kollywood/i.test(fileNameLower)) tamilScore += 2;
+  if (/malayalam|mollywood/i.test(fileNameLower)) malayalamScore += 2;
   if (/hindi|bollywood/i.test(fileNameLower)) hindiScore += 2;
   if (/korean|k-drama/i.test(fileNameLower)) koreanScore += 2;
   if (/japanese|j-drama/i.test(fileNameLower)) japaneseScore += 2;
   
   const scores = [
     { tradition: 'kollywood', score: tamilScore },
+    { tradition: 'mollywood', score: malayalamScore },
     { tradition: 'bollywood', score: hindiScore },
     { tradition: 'korean', score: koreanScore },
     { tradition: 'japanese', score: japaneseScore },
@@ -124,7 +128,7 @@ async function aiClassify(apiKey: string, textSample: string, fileName: string):
 
 Possible script types: feature (feature film), pilot (TV pilot), episode (TV episode), short (short film), documentary, comic (comic book script), web_series, micro_drama (short-form vertical drama), stage_play, audio_drama, podcast_fiction, game_narrative.
 
-Possible cinema traditions: hollywood_mainstream, hollywood_indie, kollywood (Tamil), bollywood (Hindi), tollywood (Telugu), korean, japanese, chinese, european_arthouse, latin_american, african, middle_eastern, southeast_asian, other.
+Possible cinema traditions: hollywood_mainstream, hollywood_indie, kollywood (Tamil), mollywood (Malayalam), bollywood (Hindi), tollywood (Telugu), korean, japanese, chinese, european_arthouse, latin_american, african, middle_eastern, southeast_asian, other.
 
 Consider these tradition indicators:
 - Character names, honorifics, cultural references

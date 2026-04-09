@@ -612,6 +612,7 @@ export function ScriptUpload({ onUploadComplete, onClose }: ScriptUploadProps) {
               </optgroup>
               <optgroup label="South Asia">
                 <option value="kollywood">Kollywood / Tamil</option>
+                <option value="mollywood">Mollywood / Malayalam</option>
                 <option value="bollywood">Bollywood / Hindi</option>
                 <option value="tollywood">Tollywood / Telugu</option>
               </optgroup>
